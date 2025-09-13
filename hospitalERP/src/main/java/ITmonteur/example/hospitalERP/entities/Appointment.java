@@ -1,9 +1,6 @@
 package ITmonteur.example.hospitalERP.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 
 @Entity
 public class Appointment {
@@ -13,12 +10,18 @@ public class Appointment {
     private long appointmentID;
     private String patientName;
     private String email;
+
+
+
     private  long phoneNo;
     private String gender;
     private int age;
     private String doctor;
+    @ManyToOne
+    @JoinColumn(name = "patient_id") // foreign key in Appointment table
+    private PtInfo ptInfo;
 
-    public Appointment(long appointmentID, String patientName, String email, long phoneNo, String gender, int age, String doctor) {
+    public Appointment(long appointmentID, String patientName, String email, long phoneNo, String gender, int age, String doctor, PtInfo ptInfo) {
         this.appointmentID = appointmentID;
         this.patientName = patientName;
         this.email = email;
@@ -26,6 +29,7 @@ public class Appointment {
         this.gender = gender;
         this.age = age;
         this.doctor = doctor;
+        this.ptInfo = ptInfo;
     }
 
     public Appointment() {
@@ -85,5 +89,12 @@ public class Appointment {
 
     public void setDoctor(String doctor) {
         this.doctor = doctor;
+    }
+    public PtInfo getPtInfo() {
+        return ptInfo;
+    }
+
+    public void setPtInfo(PtInfo ptInfo) {
+        this.ptInfo = ptInfo;
     }
 }

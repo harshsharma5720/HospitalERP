@@ -2,7 +2,9 @@ package ITmonteur.example.hospitalERP.entities;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Entity
 public class PtInfo {
@@ -14,20 +16,20 @@ public class PtInfo {
     private long patientAadharNo;
     private long contactNo;
     private Date dob;
-    @OneToMany
-    private Appointment appointment;
+    @OneToMany(mappedBy = "ptInfo", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Appointment> appointments = new ArrayList<>();
 
     public PtInfo() {
     }
 
-    public PtInfo(long patientId, String patientName, String patientAddress, long patientAadharNo, long contactNo, Date dob, Appointment appointment) {
+    public PtInfo(long patientId, String patientName, String patientAddress, long patientAadharNo, long contactNo, Date dob, List<Appointment> appointment) {
         this.patientId = patientId;
         this.patientName = patientName;
         this.patientAddress = patientAddress;
         this.patientAadharNo = patientAadharNo;
         this.contactNo = contactNo;
         this.dob = dob;
-        this.appointment = appointment;
+        this.appointments = appointment;
     }
 
     public long getPatientId() {
@@ -78,11 +80,11 @@ public class PtInfo {
         this.dob = dob;
     }
 
-    public Appointment getAppointment() {
-        return appointment;
+    public List<Appointment> getAppointment() {
+        return appointments;
     }
 
-    public void setAppointment(Appointment appointment) {
-        this.appointment = appointment;
+    public void setAppointment(List<Appointment> appointment) {
+        this.appointments = appointment;
     }
 }

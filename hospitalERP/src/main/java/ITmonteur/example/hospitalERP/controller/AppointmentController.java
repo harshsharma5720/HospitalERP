@@ -28,6 +28,13 @@ public class AppointmentController {
 
     }
 
+    @GetMapping("appointmentsByDoctor/{doctorName}")
+    public ResponseEntity<List<AppointmentDTO>> getAllAppointmentsByDoctor(@PathVariable String doctorName){
+        List<AppointmentDTO> appointmentDTOList = this.appointmentService.getAppointmentsByDrName(doctorName);
+        return ResponseEntity.ok(appointmentDTOList);
+
+    }
+
     @PostMapping("/NewAppointment")
     public ResponseEntity<String> createNewAppointment(@RequestBody AppointmentDTO appointmentDTO){
         if(this.appointmentService.createAppointment(appointmentDTO)){

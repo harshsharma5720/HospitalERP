@@ -6,12 +6,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/new")
 public class PtInfoController {
 
     @Autowired
     private PtInfoService ptInfoService;
+
+    @GetMapping("/getAll")
+    public ResponseEntity<List<PtInfoDTO>> getAllAccounts(){
+        List<PtInfoDTO> ptInfoDTOs=this.ptInfoService.getAllPtInfo();
+        return ResponseEntity.ok(ptInfoDTOs);
+    }
 
     @GetMapping("/getAccount/{ptId}")
     public ResponseEntity<PtInfoDTO> getAccountById(@PathVariable long ptId){

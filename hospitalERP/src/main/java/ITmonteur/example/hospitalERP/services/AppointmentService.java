@@ -2,10 +2,12 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.entities.Appointment;
+import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.modelmapper.ModelMapper;
+import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,7 +30,7 @@ public class AppointmentService {
     }
     public AppointmentDTO getAppointmentByID(long appointmentID ){
         Appointment appointment = this.appointmentRepository.findById(appointmentID)
-                .orElseThrow(() -> new RuntimeException("Appointment not found with ID: " + appointmentID));
+                .orElseThrow(() -> new ResourceNotFoundException("Patient","appointmentID", appointmentID));
         AppointmentDTO appointmentDTO = this.convertToDTO(appointment);
         return appointmentDTO;
     }
@@ -47,7 +49,7 @@ public class AppointmentService {
     }
     public AppointmentDTO updateAppointmentById(long appointmentID,AppointmentDTO appointmentDTO){
         Appointment appointment = this.appointmentRepository.findById(appointmentID)
-                .orElseThrow(() -> new RuntimeException("Appointment not found with ID: " + appointmentID));
+                .orElseThrow(() -> new ResourceNotFoundException("Patient","appointmentID", appointmentID));
         appointment.setAge(appointmentDTO.getAge());
         appointment.setGender(appointmentDTO.getGender());
         appointment.setPatientName(appointmentDTO.getPatientName());
@@ -57,9 +59,14 @@ public class AppointmentService {
         return convertToDTO(appointmentRepository.save(appointment));
 
     }
-//    public AppointmentDTO getByDrName(String drName){
-//        AppointmentDTO appointmentDTO = this.appointmentRepository.findByDrName()
-//    }
+
+    public List<AppointmentDTO> getAppointmentsByDrName(String doctorName){
+        List<Appointment> appointments = this.appointmentRepository.findAppointmentsByDoctor(doctorName);
+        List<AppointmentDTO> appointmentDTOList= appointments.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        return appointmentDTOList;
+    }
 
     private AppointmentDTO convertToDTO(Appointment appointment) {
         return modelMapper.map(appointment, AppointmentDTO.class);

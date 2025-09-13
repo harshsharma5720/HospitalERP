@@ -2,8 +2,16 @@ package ITmonteur.example.hospitalERP.repositories;
 
 import ITmonteur.example.hospitalERP.entities.Appointment;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
+
+    // Native query to fetch appointments by doctor name
+    @Query(value = "SELECT * FROM appointment a WHERE a.doctor = :doctorName", nativeQuery = true)
+    List<Appointment> findAppointmentsByDoctor(@Param("doctorName") String doctorName);
 }
