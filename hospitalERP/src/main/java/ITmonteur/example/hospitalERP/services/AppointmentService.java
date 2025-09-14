@@ -40,10 +40,16 @@ public class AppointmentService {
         return true;
     }
     public boolean deleteAppointmentByID(long appointmentID){
+        Appointment appointment = this.appointmentRepository.findById(appointmentID)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", appointmentID));
         this.appointmentRepository.deleteById(appointmentID);
         return true;
     }
     public boolean deleteAllAppointments(){
+        long count = appointmentRepository.count();  // check how many doctors exist
+        if (count == 0) {
+            return false;  // no doctors to delete
+        }
         this.appointmentRepository.deleteAll();
         return true;
     }
