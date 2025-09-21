@@ -36,6 +36,7 @@ public class AuthService {
         user.setRole(Role.valueOf(request.getRole().toUpperCase())); // convert string to enum
 
         userRepository.save(user);
+
         return "User registered successfully!";
     }
 
