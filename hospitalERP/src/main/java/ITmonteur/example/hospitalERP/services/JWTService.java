@@ -9,12 +9,18 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+
+import javax.crypto.SecretKey;
 
 @Service
 public class JWTService {
 
+    private static final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
 
-    private String SECRET_KEY = "secret"; // isko env me rakhna best hai
+
+//    private String SECRET_KEY = "secret"; // isko env me rakhna best hai
 
     // 1. extract username
     public String extractUsername(String token) {

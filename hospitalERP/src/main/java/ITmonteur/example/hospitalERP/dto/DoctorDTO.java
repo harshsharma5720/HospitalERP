@@ -6,7 +6,7 @@ public class DoctorDTO {
     private String name;
     private String specialization;
     private String email;
-    private String password; // encrypted
+//    private String password; // encrypted
     private String phoneNumber;
 
     public DoctorDTO() {
@@ -17,7 +17,7 @@ public class DoctorDTO {
         this.name = name;
         this.specialization = specialization;
         this.email = email;
-        this.password = password;
+//        this.password = password;
         this.phoneNumber = phoneNumber;
     }
 
@@ -53,13 +53,13 @@ public class DoctorDTO {
         this.email = email;
     }
 
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
+//    public String getPassword() {
+//        return password;
+//    }
+//
+//    public void setPassword(String password) {
+//        this.password = password;
+//    }
 
     public String getPhoneNumber() {
         return phoneNumber;
