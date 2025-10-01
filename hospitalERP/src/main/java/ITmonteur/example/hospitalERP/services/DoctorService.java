@@ -53,7 +53,6 @@ public class DoctorService {
         doctor.setName(doctorDTO.getName());
         doctor.setEmail(doctorDTO.getEmail());
         doctor.setSpecialization(doctorDTO.getSpecialization());
-        doctor.setPassword(doctorDTO.getPassword());
 
         Doctor updatedDoctor = doctorRepository.save(doctor);
         DoctorDTO doctorDTO1 = this.convertToDTO(updatedDoctor);

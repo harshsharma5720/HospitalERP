@@ -17,11 +17,16 @@ public class Doctor {
 
     @Enumerated(EnumType.STRING)
     private Role role = Role.DOCTOR;
+    @OneToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "id") // FK column in Doctor table
+    private User user;
 
     public Doctor() {
     }
 
-    public Doctor(Long id, String name, String specialization, String email, String password, String phoneNumber, Role role) {
+    public Doctor(Long id, String name, String specialization,
+                  String email, String password, String phoneNumber,
+                  Role role, User user) {
         this.id = id;
         this.name = name;
         this.specialization = specialization;
@@ -29,6 +34,7 @@ public class Doctor {
         this.password = password;
         this.phoneNumber = phoneNumber;
         this.role = role;
+        this.user = user;
     }
 
     public Long getId() {
@@ -85,5 +91,13 @@ public class Doctor {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }

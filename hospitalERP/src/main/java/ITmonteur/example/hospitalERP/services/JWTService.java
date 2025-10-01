@@ -39,8 +39,9 @@ public class JWTService {
     }
 
     // 4. generate token
-    public String generateToken(UserDetails userDetails) {
+    public String generateToken(UserDetails userDetails , Long userId) {
         Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", userId);
         return createToken(claims, userDetails.getUsername());
     }
 
@@ -66,6 +67,10 @@ public class JWTService {
                 .setSigningKey(SECRET_KEY)
                 .parseClaimsJws(token)
                 .getBody();
+    }
+    public Long extractUserId(String token) {
+        final Claims claims = extractAllClaims(token);
+        return claims.get("userId", Long.class);
     }
 
     private boolean isTokenExpired(String token) {

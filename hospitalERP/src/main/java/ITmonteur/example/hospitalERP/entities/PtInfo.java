@@ -18,18 +18,24 @@ public class PtInfo {
     private Date dob;
     @OneToMany(mappedBy = "ptInfo", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Appointment> appointments = new ArrayList<>();
+    @Enumerated(EnumType.STRING)
+    private Role role = Role.PATIENT;
+    @OneToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
+    private User user;
 
     public PtInfo() {
     }
 
-    public PtInfo(long patientId, String patientName, String patientAddress, long patientAadharNo, long contactNo, Date dob, List<Appointment> appointment) {
+    public PtInfo(long patientId, String patientName, String patientAddress, long patientAadharNo, long contactNo, Date dob, List<Appointment> appointments, User user) {
         this.patientId = patientId;
         this.patientName = patientName;
         this.patientAddress = patientAddress;
         this.patientAadharNo = patientAadharNo;
         this.contactNo = contactNo;
         this.dob = dob;
-        this.appointments = appointment;
+        this.appointments = appointments;
+        this.user = user;
     }
 
     public long getPatientId() {
@@ -86,5 +92,29 @@ public class PtInfo {
 
     public void setAppointment(List<Appointment> appointment) {
         this.appointments = appointment;
+    }
+
+    public List<Appointment> getAppointments() {
+        return appointments;
+    }
+
+    public void setAppointments(List<Appointment> appointments) {
+        this.appointments = appointments;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }

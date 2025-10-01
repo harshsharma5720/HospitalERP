@@ -3,6 +3,8 @@ package ITmonteur.example.hospitalERP.controller;
 import ITmonteur.example.hospitalERP.dto.DoctorDTO;
 import ITmonteur.example.hospitalERP.entities.Doctor;
 import ITmonteur.example.hospitalERP.services.DoctorService;
+import ITmonteur.example.hospitalERP.services.JWTService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +17,8 @@ public class DoctorController {
 
     @Autowired
     private DoctorService doctorService;
+    @Autowired
+    private JWTService jwtService;
 
     @PostMapping("/addNewDoctor")
     public ResponseEntity<DoctorDTO> addDoctor(@RequestBody DoctorDTO doctorDTO) {
@@ -40,8 +44,16 @@ public class DoctorController {
 //                .orElse(ResponseEntity.notFound().build());
 //    }
     @PutMapping("/update/{id}")
-    public ResponseEntity<DoctorDTO> updateDoctor(@PathVariable Long id,
-                                                  @RequestBody DoctorDTO doctorDTO) {
+    public ResponseEntity<?> updateDoctor(@PathVariable Long id,
+                                                  @RequestBody DoctorDTO doctorDTO,
+                                                  HttpServletRequest request) {
+        String token = request.getHeader("Authorization").substring(7);
+        String username = jwtService.extractUsername(token);
+        Long tokenUserId = jwtService.extractUserId(token);
+        // Agar doctor apna hi data update nahi kar raha
+        if (!id.equals(tokenUserId)) {
+            return ResponseEntity.status(403).body("You can only update your own profile!");
+        }
         DoctorDTO updatedDoctor = doctorService.updateDoctor(id, doctorDTO);
         return ResponseEntity.ok(updatedDoctor);
     }
