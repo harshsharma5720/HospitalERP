@@ -46,6 +46,8 @@ public class PtInfoService {
                 .orElseThrow(() -> new RuntimeException("Account not found with ID: " + ptId));
         ptInfo.setPatientName(ptInfoDTO.getPatientName());
         ptInfo.setDob(ptInfoDTO.getDob());
+        ptInfo.setEmail(ptInfoDTO.getEmail());
+        ptInfo.setGender(ptInfoDTO.getGender());
         ptInfo.setContactNo(ptInfoDTO.getContactNo());
         ptInfo.setPatientAadharNo(ptInfoDTO.getPatientAadharNo());
         ptInfo.setPatientAddress(ptInfoDTO.getPatientAddress());

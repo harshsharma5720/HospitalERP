@@ -3,6 +3,7 @@ package ITmonteur.example.hospitalERP.entities;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "appointments")
 public class Appointment {
 
     @Id
@@ -10,18 +11,17 @@ public class Appointment {
     private long appointmentID;
     private String patientName;
     private String email;
-
-
-
     private  long phoneNo;
-    private String gender;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Gender gender;
     private int age;
     private String doctor;
     @ManyToOne
     @JoinColumn(name = "patient_id") // foreign key in Appointment table
     private PtInfo ptInfo;
 
-    public Appointment(long appointmentID, String patientName, String email, long phoneNo, String gender, int age, String doctor, PtInfo ptInfo) {
+    public Appointment(long appointmentID, String patientName, String email, long phoneNo, Gender gender, int age, String doctor, PtInfo ptInfo) {
         this.appointmentID = appointmentID;
         this.patientName = patientName;
         this.email = email;
@@ -67,11 +67,11 @@ public class Appointment {
         this.phoneNo = phoneNo;
     }
 
-    public String getGender() {
+    public Gender getGender() {
         return gender;
     }
 
-    public void setGender(String gender) {
+    public void setGender(Gender gender) {
         this.gender = gender;
     }
 

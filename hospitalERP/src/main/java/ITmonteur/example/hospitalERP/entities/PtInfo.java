@@ -7,15 +7,25 @@ import java.util.Date;
 import java.util.List;
 
 @Entity
+@Table(name = "patient")
 public class PtInfo {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long patientId;
+    @Column(nullable = false)
     private String patientName;
+    @Column(unique = true, nullable = false)
+    private String email;
     private String patientAddress;
+    @Column(unique = true, nullable = false)
     private long patientAadharNo;
+    @Column(nullable = false)
     private long contactNo;
+    @Column(nullable = false)
     private Date dob;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Gender gender;
     @OneToMany(mappedBy = "ptInfo", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Appointment> appointments = new ArrayList<>();
     @Enumerated(EnumType.STRING)
@@ -27,13 +37,15 @@ public class PtInfo {
     public PtInfo() {
     }
 
-    public PtInfo(long patientId, String patientName, String patientAddress, long patientAadharNo, long contactNo, Date dob, List<Appointment> appointments, User user) {
+    public PtInfo(long patientId, String patientName,String email , String patientAddress, long patientAadharNo, long contactNo, Date dob,Gender gender, List<Appointment> appointments, User user) {
         this.patientId = patientId;
         this.patientName = patientName;
+        this.email=email;
         this.patientAddress = patientAddress;
         this.patientAadharNo = patientAadharNo;
         this.contactNo = contactNo;
         this.dob = dob;
+        this.gender=gender;
         this.appointments = appointments;
         this.user = user;
     }
@@ -52,6 +64,14 @@ public class PtInfo {
 
     public void setPatientName(String patientName) {
         this.patientName = patientName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getPatientAddress() {
@@ -84,6 +104,14 @@ public class PtInfo {
 
     public void setDob(Date dob) {
         this.dob = dob;
+    }
+
+    public Gender getGender() {
+        return gender;
+    }
+
+    public void setGender(Gender gender) {
+        this.gender = gender;
     }
 
     public List<Appointment> getAppointment() {

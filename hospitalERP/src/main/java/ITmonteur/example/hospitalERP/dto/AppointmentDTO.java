@@ -1,15 +1,17 @@
 package ITmonteur.example.hospitalERP.dto;
 
+import ITmonteur.example.hospitalERP.entities.Gender;
+
 public class AppointmentDTO {
     private long appointmentID;
     private String patientName;
     private String email;
     private  long phoneNo;
-    private String gender;
+    private Gender gender;
     private int age;
     private String doctor;
 
-    public AppointmentDTO(long appointmentID, String patientName, String email, long phoneNo, String gender, int age, String doctor) {
+    public AppointmentDTO(long appointmentID, String patientName, String email, long phoneNo, Gender gender, int age, String doctor) {
         this.appointmentID = appointmentID;
         this.patientName = patientName;
         this.email = email;
@@ -54,11 +56,11 @@ public class AppointmentDTO {
         this.phoneNo = phoneNo;
     }
 
-    public String getGender() {
+    public Gender getGender() {
         return gender;
     }
 
-    public void setGender(String gender) {
+    public void setGender(Gender gender) {
         this.gender = gender;
     }
 

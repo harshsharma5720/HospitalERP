@@ -3,6 +3,7 @@ package ITmonteur.example.hospitalERP.entities;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "doctor")
 public class Doctor {
 
     @Id
@@ -10,10 +11,11 @@ public class Doctor {
     private Long id;
     private String name;
     private String specialization;
+    @Column(unique = true, nullable = false)
     private String email;
     private String password; // encrypted
+    @Column(unique = true, nullable = false)
     private String phoneNumber;
-
 
     @Enumerated(EnumType.STRING)
     private Role role = Role.DOCTOR;

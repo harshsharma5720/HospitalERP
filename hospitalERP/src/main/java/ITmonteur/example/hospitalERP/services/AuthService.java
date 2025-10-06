@@ -44,6 +44,7 @@ public class AuthService {
         }
         User user = new User();
         user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(Role.valueOf(request.getRole().toUpperCase())); // convert string to enum
 
@@ -51,11 +52,13 @@ public class AuthService {
         if (savedUser.getRole() == Role.DOCTOR) {
             Doctor doctor = new Doctor();
 //            doctor.setUsername(savedUser.getUsername()); // foreign key (username)
+            doctor.setEmail(savedUser.getEmail());
             doctor.setUser(savedUser); // link back to User
             doctorRepository.save(doctor);
         } else if (savedUser.getRole() == Role.PATIENT) {
             PtInfo patient = new PtInfo();
 //            patient.setUsername(savedUser.getUsername()); // foreign key (username)
+            patient.setEmail(savedUser.getEmail());
             patient.setUser(savedUser);
             ptInfoRepository.save(patient);
         }
