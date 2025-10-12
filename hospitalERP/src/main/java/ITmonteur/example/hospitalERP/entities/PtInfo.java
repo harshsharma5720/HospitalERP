@@ -31,7 +31,7 @@ public class PtInfo {
     @Enumerated(EnumType.STRING)
     private Role role = Role.PATIENT;
     @OneToOne
-    @JoinColumn(name = "user_id", referencedColumnName = "id")
+    @JoinColumn(name = "username", referencedColumnName = "username")
     private User user;
 
     public PtInfo() {

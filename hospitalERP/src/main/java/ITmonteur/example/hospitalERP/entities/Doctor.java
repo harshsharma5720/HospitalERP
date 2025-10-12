@@ -20,7 +20,7 @@ public class Doctor {
     @Enumerated(EnumType.STRING)
     private Role role = Role.DOCTOR;
     @OneToOne
-    @JoinColumn(name = "user_id", referencedColumnName = "id") // FK column in Doctor table
+    @JoinColumn(name = "username", referencedColumnName = "username") // FK column in Doctor table
     private User user;
 
     public Doctor() {
