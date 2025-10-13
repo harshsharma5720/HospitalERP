@@ -8,17 +8,18 @@ public class DoctorDTO {
     private String email;
 //    private String password; // encrypted
     private String phoneNumber;
+    private String userName;
 
     public DoctorDTO() {
     }
 
-    public DoctorDTO(Long id, String name, String specialization, String email, String password, String phoneNumber) {
+    public DoctorDTO(Long id, String name, String specialization, String email, String phoneNumber , String userName) {
         this.id = id;
         this.name = name;
         this.specialization = specialization;
         this.email = email;
-//        this.password = password;
         this.phoneNumber = phoneNumber;
+        this.userName=userName;
     }
 
     public Long getId() {
@@ -67,5 +68,13 @@ public class DoctorDTO {
 
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 }

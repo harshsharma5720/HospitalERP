@@ -1,5 +1,7 @@
 package ITmonteur.example.hospitalERP.dto;
 
+import ITmonteur.example.hospitalERP.entities.Gender;
+
 public class ReceptionistDTO {
 
     private Long id;

@@ -33,6 +33,7 @@ public class AdminController {
         summary.put("totalDoctors", doctorService.getAllDoctors().size());
         summary.put("totalPatients", ptInfoService.getAllPtInfo().size());
         summary.put("totalAppointments", appointmentService.getAllAppointments().size());
+        summary.put("totalReceptionist" , receptionistService.getAllReceptionist().size());
         return ResponseEntity.ok(summary);
     }
 

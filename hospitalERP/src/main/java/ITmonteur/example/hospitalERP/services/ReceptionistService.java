@@ -3,9 +3,7 @@ package ITmonteur.example.hospitalERP.services;
 import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.dto.DoctorDTO;
 import ITmonteur.example.hospitalERP.dto.ReceptionistDTO;
-import ITmonteur.example.hospitalERP.entities.Appointment;
-import ITmonteur.example.hospitalERP.entities.Doctor;
-import ITmonteur.example.hospitalERP.entities.Receptionist;
+import ITmonteur.example.hospitalERP.entities.*;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
@@ -174,7 +172,7 @@ public class ReceptionistService {
             if (receptionistDTO.getName() != null) receptionist.setName(receptionistDTO.getName());
             if (receptionistDTO.getEmail() != null) receptionist.setEmail(receptionistDTO.getEmail());
             if (receptionistDTO.getPhone() != null) receptionist.setPhone(receptionistDTO.getPhone());
-            if (receptionistDTO.getGender() != null) receptionist.setGender(receptionistDTO.getGender());
+            if (receptionistDTO.getGender() != null) receptionist.setGender(Gender.valueOf(receptionistDTO.getGender().toUpperCase()));//convert String to Gender
             if (receptionistDTO.getAge() != 0) receptionist.setAge(receptionistDTO.getAge());
 
             Receptionist updatedReceptionist = receptionistRepository.save(receptionist);

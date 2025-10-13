@@ -70,6 +70,7 @@ public class DoctorService {
             Doctor doctor = doctorRepository.findById(doctorId)
                     .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
             doctor.setName(doctorDTO.getName());
+            doctor.setUserName(doctorDTO.getUserName());
             doctor.setEmail(doctorDTO.getEmail());
             doctor.setSpecialization(doctorDTO.getSpecialization());
 

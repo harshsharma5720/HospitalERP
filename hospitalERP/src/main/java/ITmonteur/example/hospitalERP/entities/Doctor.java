@@ -14,20 +14,21 @@ public class Doctor {
     @Column(unique = true, nullable = false)
     private String email;
     private String password; // encrypted
-    @Column(unique = true, nullable = false)
+    @Column(unique = true)
     private String phoneNumber;
+    private String userName;
 
     @Enumerated(EnumType.STRING)
     private Role role = Role.DOCTOR;
     @OneToOne
-    @JoinColumn(name = "username", referencedColumnName = "username") // FK column in Doctor table
+    @JoinColumn(name = "user_id", referencedColumnName = "id") // FK column in Doctor table
     private User user;
 
     public Doctor() {
     }
 
     public Doctor(Long id, String name, String specialization,
-                  String email, String password, String phoneNumber,
+                  String email, String password, String phoneNumber,String userName,
                   Role role, User user) {
         this.id = id;
         this.name = name;
@@ -35,6 +36,7 @@ public class Doctor {
         this.email = email;
         this.password = password;
         this.phoneNumber = phoneNumber;
+        this.userName = userName;
         this.role = role;
         this.user = user;
     }
@@ -101,5 +103,13 @@ public class Doctor {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 }

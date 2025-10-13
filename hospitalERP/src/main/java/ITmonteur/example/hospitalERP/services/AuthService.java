@@ -54,26 +54,36 @@ public class AuthService {
         User savedUser = userRepository.save(user);
         logger.info("User {} registered successfully with role {}", savedUser.getUsername(), savedUser.getRole());
         // Role-based entity creation
-        if (savedUser.getRole() == Role.DOCTOR) {
-            Doctor doctor = new Doctor();
-//            doctor.setUsername(savedUser.getUsername()); // foreign key (username)
-            doctor.setEmail(savedUser.getEmail());
-            doctor.setUser(savedUser); // link back to User
-            doctorRepository.save(doctor);
-            logger.info("Doctor entity created for user {}", savedUser.getUsername());
-        } else if (savedUser.getRole() == Role.PATIENT) {
-            PtInfo patient = new PtInfo();
-//            patient.setUsername(savedUser.getUsername()); // foreign key (username)
-            patient.setEmail(savedUser.getEmail());
-            patient.setUser(savedUser);
-            ptInfoRepository.save(patient);
-            logger.info("Patient entity created for user {}", savedUser.getUsername());
-        } else if (savedUser.getRole() == Role.RECEPTIONIST) {
-            Receptionist receptionist = new Receptionist();
-            receptionist.setEmail(savedUser.getEmail());
-            receptionist.setUser(savedUser);
-            receptionistRepository.save(receptionist);
-            logger.info("Receptionist entity created for user {}", savedUser.getUsername());
+        switch (savedUser.getRole()) {
+            case DOCTOR:
+                Doctor doctor = new Doctor();
+                doctor.setEmail(savedUser.getEmail());
+                doctor.setUserName(savedUser.getUsername()); // foreign key (username)
+                doctor.setName(savedUser.getUsername());
+                doctor.setSpecialization("Not assigned yet");
+                doctor.setPhoneNumber("Not provided");
+                doctor.setUser(savedUser);
+                doctorRepository.save(doctor);
+                logger.info("Doctor entity created for user {}", savedUser.getUsername());
+                break;
+            case PATIENT:
+                PtInfo patient = new PtInfo();
+                patient.setEmail(savedUser.getEmail());
+//                patient.setUsername(savedUser.getUsername());
+                patient.setUser(savedUser);
+                ptInfoRepository.save(patient);
+                logger.info("Patient entity created for user {}", savedUser.getUsername());
+                break;
+            case RECEPTIONIST:
+                Receptionist receptionist = new Receptionist();
+                receptionist.setEmail(savedUser.getEmail());
+                receptionist.setUser(savedUser);
+                receptionistRepository.save(receptionist);
+                logger.info("Receptionist entity created for user {}", savedUser.getUsername());
+                break;
+            default:
+                logger.warn("No entity creation logic defined for role {}", savedUser.getRole());
+                break;
         }
         // ye mne is liye kiya h taki register krne ke bad turant ek token generate ho jae bina login kre
         UserDetails userDetails = org.springframework.security.core.userdetails.User
@@ -81,11 +91,8 @@ public class AuthService {
                 .password(savedUser.getPassword())       // encoded password
                 .authorities(new SimpleGrantedAuthority("ROLE_" + savedUser.getRole().name())) // map role
                 .build();
-        // 4. Generate JWT token for the saved user
-        String token = jwtService.generateToken(userDetails, savedUser.getId());
+        String token = jwtService.generateToken(userDetails, savedUser.getId());// 4. Generate JWT token for the saved user
         logger.info("JWT token generated for user {}", savedUser.getUsername());
-
-        // 5. Return token in response object
         return new AuthResponseDTO(token);
     }
 

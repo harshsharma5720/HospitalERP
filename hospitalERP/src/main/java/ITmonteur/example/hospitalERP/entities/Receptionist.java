@@ -16,7 +16,7 @@ public class Receptionist {
     private String phone;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String gender;
+    private Gender gender;
     @Enumerated(EnumType.STRING)
     private Role role = Role.RECEPTIONIST;
     @OneToOne
@@ -40,7 +40,7 @@ public class Receptionist {
     public Receptionist() {
     }
 
-    public Receptionist(Long id, String name, String email, String phone, String gender, Role role, User user, int age) {
+    public Receptionist(Long id, String name, String email, String phone, Gender gender, Role role, User user, int age) {
         this.id = id;
         this.name = name;
         this.email = email;
@@ -83,11 +83,11 @@ public class Receptionist {
         this.phone = phone;
     }
 
-    public String getGender() {
+    public Gender getGender() {
         return gender;
     }
 
-    public void setGender(String gender) {
+    public void setGender(Gender gender) {
         this.gender = gender;
     }
 
