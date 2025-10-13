@@ -7,7 +7,8 @@ import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.modelmapper.ModelMapper;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -15,69 +16,101 @@ import java.util.stream.Collectors;
 @Service
 public class AppointmentService {
 
+    private static final Logger logger = LoggerFactory.getLogger(AppointmentService.class);
+
     @Autowired
     private AppointmentRepository appointmentRepository;
     @Autowired
     private ModelMapper modelMapper;
 
     public List<AppointmentDTO> getAllAppointments(){
+        logger.info("Fetching all appointments");
         List<Appointment> appointments = this.appointmentRepository.findAll();
         List<AppointmentDTO> appointmentDTOList = appointments.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+        logger.info("Total appointments fetched: {}", appointmentDTOList.size());
         return appointmentDTOList;
-
     }
-    public AppointmentDTO getAppointmentByID(long appointmentID ){
+
+    public AppointmentDTO getAppointmentByID(long appointmentID){
+        logger.info("Fetching appointment with ID: {}", appointmentID);
         Appointment appointment = this.appointmentRepository.findById(appointmentID)
-                .orElseThrow(() -> new ResourceNotFoundException("Patient","appointmentID", appointmentID));
+                .orElseThrow(() -> {
+                    logger.warn("Appointment not found with ID: {}", appointmentID);
+                    return new ResourceNotFoundException("Patient","appointmentID", appointmentID);
+                });
         AppointmentDTO appointmentDTO = this.convertToDTO(appointment);
         return appointmentDTO;
     }
+
     public boolean createAppointment(AppointmentDTO appointmentDTO){
+        logger.info("Creating new appointment for patient: {}", appointmentDTO.getPatientName());
         Appointment appointment = this.convertToEntities(appointmentDTO);
         this.appointmentRepository.save(appointment);
+        logger.info("Appointment created successfully for patient: {}", appointmentDTO.getPatientName());
         return true;
     }
+
     public boolean deleteAppointmentByID(long appointmentID){
+        logger.info("Deleting appointment with ID: {}", appointmentID);
         Appointment appointment = this.appointmentRepository.findById(appointmentID)
-                .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", appointmentID));
+                .orElseThrow(() -> {
+                    logger.warn("Appointment not found with ID: {}", appointmentID);
+                    return new ResourceNotFoundException("Appointment", "id", appointmentID);
+                });
         this.appointmentRepository.deleteById(appointmentID);
+        logger.info("Appointment deleted successfully with ID: {}", appointmentID);
         return true;
     }
+
     public boolean deleteAllAppointments(){
-        long count = appointmentRepository.count();  // check how many doctors exist
+        long count = appointmentRepository.count();  // check how many appointments exist
         if (count == 0) {
-            return false;  // no doctors to delete
+            logger.warn("No appointments to delete");
+            return false;  // no appointments to delete
         }
         this.appointmentRepository.deleteAll();
+        logger.info("All appointments deleted successfully");
         return true;
     }
-    public AppointmentDTO updateAppointmentById(long appointmentID,AppointmentDTO appointmentDTO){
+
+    public AppointmentDTO updateAppointmentById(long appointmentID, AppointmentDTO appointmentDTO){
+        logger.info("Updating appointment with ID: {}", appointmentID);
         Appointment appointment = this.appointmentRepository.findById(appointmentID)
-                .orElseThrow(() -> new ResourceNotFoundException("Patient","appointmentID", appointmentID));
+                .orElseThrow(() -> {
+                    logger.warn("Appointment not found with ID: {}", appointmentID);
+                    return new ResourceNotFoundException("Patient","appointmentID", appointmentID);
+                });
+
+        // update appointment fields
         appointment.setAge(appointmentDTO.getAge());
         appointment.setGender(appointmentDTO.getGender());
         appointment.setPatientName(appointmentDTO.getPatientName());
         appointment.setEmail(appointmentDTO.getEmail());
         appointment.setDoctor(appointmentDTO.getDoctor());
         appointment.setPhoneNo(appointmentDTO.getPhoneNo());
-        return convertToDTO(appointmentRepository.save(appointment));
 
+        AppointmentDTO updatedDTO = convertToDTO(appointmentRepository.save(appointment));
+        logger.info("Appointment updated successfully with ID: {}", appointmentID);
+        return updatedDTO;
     }
 
     public List<AppointmentDTO> getAppointmentsByDrName(String doctorName){
+        logger.info("Fetching appointments for doctor: {}", doctorName);
         List<Appointment> appointments = this.appointmentRepository.findAppointmentsByDoctor(doctorName);
-        List<AppointmentDTO> appointmentDTOList= appointments.stream()
+        List<AppointmentDTO> appointmentDTOList = appointments.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+        logger.info("Total appointments fetched for doctor {}: {}", doctorName, appointmentDTOList.size());
         return appointmentDTOList;
     }
 
     private AppointmentDTO convertToDTO(Appointment appointment) {
         return modelMapper.map(appointment, AppointmentDTO.class);
     }
+
     private Appointment convertToEntities(AppointmentDTO appointmentDTO){
-        return modelMapper.map(appointmentDTO,Appointment.class);
+        return modelMapper.map(appointmentDTO, Appointment.class);
     }
 }
