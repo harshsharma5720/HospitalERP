@@ -28,16 +28,17 @@ public class PtInfo {
     private Gender gender;
     @OneToMany(mappedBy = "ptInfo", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Appointment> appointments = new ArrayList<>();
+    private String userName;
     @Enumerated(EnumType.STRING)
     private Role role = Role.PATIENT;
     @OneToOne
-    @JoinColumn(name = "username", referencedColumnName = "username")
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User user;
 
     public PtInfo() {
     }
 
-    public PtInfo(long patientId, String patientName,String email , String patientAddress, long patientAadharNo, long contactNo, Date dob,Gender gender, List<Appointment> appointments, User user) {
+    public PtInfo(long patientId, String patientName,String email , String patientAddress, long patientAadharNo, long contactNo, Date dob,Gender gender, List<Appointment> appointments,String userName ,Role role, User user) {
         this.patientId = patientId;
         this.patientName = patientName;
         this.email=email;
@@ -47,6 +48,8 @@ public class PtInfo {
         this.dob = dob;
         this.gender=gender;
         this.appointments = appointments;
+        this.userName=userName;
+        this.role=role;
         this.user = user;
     }
 
@@ -82,9 +85,7 @@ public class PtInfo {
         this.patientAddress = patientAddress;
     }
 
-    public long getPatientAadharNo() {
-        return patientAadharNo;
-    }
+    public long getPatientAadharNo() { return patientAadharNo;  }
 
     public void setPatientAadharNo(long patientAadharNo) {
         this.patientAadharNo = patientAadharNo;
@@ -144,5 +145,13 @@ public class PtInfo {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 }

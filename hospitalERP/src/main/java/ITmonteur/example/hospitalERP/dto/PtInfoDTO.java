@@ -5,6 +5,7 @@ import ITmonteur.example.hospitalERP.entities.Gender;
 import jakarta.persistence.OneToMany;
 
 import java.util.Date;
+import java.util.List;
 
 public class PtInfoDTO {
     private long patientId;
@@ -15,12 +16,15 @@ public class PtInfoDTO {
     private long contactNo;
     private Date dob;
     private Gender gender;
-    private Appointment appointment;
+    private List<AppointmentDTO> appointment;
+    private String userName;
 
     public PtInfoDTO() {
     }
 
-    public PtInfoDTO(long patientId, String patientName,String email, String patientAddress, long patientAadharNo, long contactNo, Date dob,Gender gender, Appointment appointment) {
+    public PtInfoDTO(long patientId, String patientName,String email, String patientAddress,
+                     long patientAadharNo, long contactNo, Date dob,Gender gender,
+                     List<AppointmentDTO> appointment, String userName) {
         this.patientId = patientId;
         this.patientName = patientName;
         this.email=email;
@@ -30,6 +34,7 @@ public class PtInfoDTO {
         this.dob = dob;
         this.gender = gender;
         this.appointment = appointment;
+        this.userName=userName;
     }
 
     public long getPatientId() {
@@ -96,11 +101,15 @@ public class PtInfoDTO {
         this.gender = gender;
     }
 
-    public Appointment getAppointment() {
+    public List<AppointmentDTO> getAppointment() {
         return appointment;
     }
 
-    public void setAppointment(Appointment appointment) {
+    public void setAppointment(List<AppointmentDTO> appointment) {
         this.appointment = appointment;
     }
+
+    public String getUserName() { return userName;  }
+
+    public void setUserName(String userName) { this.userName = userName; }
 }

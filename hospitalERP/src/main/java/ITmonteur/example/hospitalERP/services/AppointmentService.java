@@ -2,8 +2,10 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.entities.Appointment;
+import ITmonteur.example.hospitalERP.entities.PtInfo;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
+import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.modelmapper.ModelMapper;
@@ -20,6 +22,8 @@ public class AppointmentService {
 
     @Autowired
     private AppointmentRepository appointmentRepository;
+    @Autowired
+    private PtInfoRepository ptInfoRepository;
     @Autowired
     private ModelMapper modelMapper;
 
@@ -44,10 +48,16 @@ public class AppointmentService {
         return appointmentDTO;
     }
 
-    public boolean createAppointment(AppointmentDTO appointmentDTO){
+    public boolean createAppointment(AppointmentDTO appointmentDTO) {
         logger.info("Creating new appointment for patient: {}", appointmentDTO.getPatientName());
-        Appointment appointment = this.convertToEntities(appointmentDTO);
-        this.appointmentRepository.save(appointment);
+        Appointment appointment = convertToEntities(appointmentDTO);
+        PtInfo ptInfo = ptInfoRepository.findById(appointmentDTO.getPtInfoId())
+                .orElseThrow(() -> {
+                    logger.warn("Patient not found with ID: {}", appointmentDTO.getPtInfoId());
+                    return new ResourceNotFoundException("Patient", "id", appointmentDTO.getPtInfoId());
+                });
+        appointment.setPtInfo(ptInfo);
+        appointmentRepository.save(appointment);
         logger.info("Appointment created successfully for patient: {}", appointmentDTO.getPatientName());
         return true;
     }

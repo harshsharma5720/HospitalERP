@@ -67,11 +67,12 @@ public class DoctorService {
     public DoctorDTO updateDoctor(Long doctorId, DoctorDTO doctorDTO) {
         logger.info("Updating doctor with ID: {}", doctorId);
         try {
-            Doctor doctor = doctorRepository.findById(doctorId)
+            Doctor doctor = doctorRepository.findByUserId(doctorId)
                     .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
             doctor.setName(doctorDTO.getName());
             doctor.setUserName(doctorDTO.getUserName());
             doctor.setEmail(doctorDTO.getEmail());
+            doctor.setPhoneNumber(doctorDTO.getPhoneNumber());
             doctor.setSpecialization(doctorDTO.getSpecialization());
 
             Doctor updatedDoctor = doctorRepository.save(doctor);

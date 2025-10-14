@@ -18,7 +18,7 @@ public class Appointment {
     private int age;
     private String doctor;
     @ManyToOne
-    @JoinColumn(name = "patient_id") // foreign key in Appointment table
+    @JoinColumn(name = "patient_id", referencedColumnName = "patientId") // foreign key in Appointment table
     private PtInfo ptInfo;
 
     public Appointment(long appointmentID, String patientName, String email, long phoneNo, Gender gender, int age, String doctor, PtInfo ptInfo) {

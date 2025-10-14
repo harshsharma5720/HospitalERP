@@ -8,17 +8,19 @@ public class ReceptionistDTO {
     private String name;
     private String email;
     private String phone;
+    private String userName;
     private String gender;
     private int age;
 
     public ReceptionistDTO() {
     }
 
-    public ReceptionistDTO(Long id, String name, String email, String phone, String gender, int age) {
+    public ReceptionistDTO(Long id, String name, String email, String phone,String userName ,String gender, int age) {
         this.id = id;
         this.name = name;
         this.email = email;
         this.phone = phone;
+        this.userName=userName;
         this.gender = gender;
         this.age = age;
     }
@@ -53,6 +55,14 @@ public class ReceptionistDTO {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
     public String getGender() {

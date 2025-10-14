@@ -69,7 +69,7 @@ public class AuthService {
             case PATIENT:
                 PtInfo patient = new PtInfo();
                 patient.setEmail(savedUser.getEmail());
-//                patient.setUsername(savedUser.getUsername());
+                patient.setUserName(savedUser.getUsername());
                 patient.setUser(savedUser);
                 ptInfoRepository.save(patient);
                 logger.info("Patient entity created for user {}", savedUser.getUsername());
@@ -77,6 +77,7 @@ public class AuthService {
             case RECEPTIONIST:
                 Receptionist receptionist = new Receptionist();
                 receptionist.setEmail(savedUser.getEmail());
+                receptionist.setUserName(savedUser.getUsername());
                 receptionist.setUser(savedUser);
                 receptionistRepository.save(receptionist);
                 logger.info("Receptionist entity created for user {}", savedUser.getUsername());

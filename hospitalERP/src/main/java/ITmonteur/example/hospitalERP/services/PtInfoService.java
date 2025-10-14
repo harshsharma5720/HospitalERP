@@ -29,7 +29,11 @@ public class PtInfoService {
         logger.info("Fetching all patient information");
         List<PtInfo> ptInfos = ptInfoRepository.findAll();
         List<PtInfoDTO> ptInfoDTOS = ptInfos.stream()
-                .map(this::convertToDto)
+                .map(ptInfo -> {
+                    PtInfoDTO dto = convertToDto(ptInfo);
+                    dto.setAppointment(null);
+                    return dto;
+                })
                 .collect(Collectors.toList());
         logger.info("Total patients retrieved: {}", ptInfoDTOS.size());
         return ptInfoDTOS;
@@ -80,6 +84,7 @@ public class PtInfoService {
             ptInfo.setContactNo(ptInfoDTO.getContactNo());
             ptInfo.setPatientAadharNo(ptInfoDTO.getPatientAadharNo());
             ptInfo.setPatientAddress(ptInfoDTO.getPatientAddress());
+            ptInfo.setUserName(ptInfoDTO.getUserName());
             // ptInfo.setAppointment(ptInfoDTO.getAppointment());
 
             PtInfoDTO updatedPtInfo = convertToDto(ptInfoRepository.save(ptInfo));

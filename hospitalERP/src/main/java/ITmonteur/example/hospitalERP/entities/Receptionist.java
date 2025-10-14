@@ -17,10 +17,11 @@ public class Receptionist {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Gender gender;
+    private String userName;
     @Enumerated(EnumType.STRING)
     private Role role = Role.RECEPTIONIST;
     @OneToOne
-    @JoinColumn(name = "username", referencedColumnName = "username") // FK column in Doctor table
+    @JoinColumn(name = "user_id", referencedColumnName = "id") // FK column in Doctor table
     private User user;
 
     private int age;
@@ -40,12 +41,13 @@ public class Receptionist {
     public Receptionist() {
     }
 
-    public Receptionist(Long id, String name, String email, String phone, Gender gender, Role role, User user, int age) {
+    public Receptionist(Long id, String name, String email, String phone, Gender gender, String userName ,Role role, User user, int age) {
         this.id = id;
         this.name = name;
         this.email = email;
         this.phone = phone;
         this.gender = gender;
+        this.userName=userName;
         this.role = role;
         this.user = user;
         this.age = age;
@@ -89,6 +91,14 @@ public class Receptionist {
 
     public void setGender(Gender gender) {
         this.gender = gender;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
     public int getAge() {

@@ -123,7 +123,6 @@ public class ReceptionistService {
         try {
             Appointment appointment = appointmentRepository.findById(appointmentID)
                     .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", appointmentID));
-
             appointmentRepository.delete(appointment);
             logger.info("Appointment deleted successfully with ID: {}", appointmentID);
             return true;
@@ -172,6 +171,7 @@ public class ReceptionistService {
             if (receptionistDTO.getName() != null) receptionist.setName(receptionistDTO.getName());
             if (receptionistDTO.getEmail() != null) receptionist.setEmail(receptionistDTO.getEmail());
             if (receptionistDTO.getPhone() != null) receptionist.setPhone(receptionistDTO.getPhone());
+            if (receptionistDTO.getUserName() != null) receptionist.setUserName(receptionistDTO.getUserName());
             if (receptionistDTO.getGender() != null) receptionist.setGender(Gender.valueOf(receptionistDTO.getGender().toUpperCase()));//convert String to Gender
             if (receptionistDTO.getAge() != 0) receptionist.setAge(receptionistDTO.getAge());
 
