@@ -2,6 +2,7 @@ package ITmonteur.example.hospitalERP.entities;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -12,19 +13,16 @@ public class PtInfo {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long patientId;
-    @Column(nullable = false)
     private String patientName;
-    @Column(unique = true, nullable = false)
+    @Column(unique = true , nullable = false)
     private String email;
     private String patientAddress;
-    @Column(unique = true, nullable = false)
+    @Column(unique = true)
     private long patientAadharNo;
     @Column(nullable = false)
     private long contactNo;
-    @Column(nullable = false)
-    private Date dob;
+    private LocalDate dob;
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Gender gender;
     @OneToMany(mappedBy = "ptInfo", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Appointment> appointments = new ArrayList<>();
@@ -38,7 +36,7 @@ public class PtInfo {
     public PtInfo() {
     }
 
-    public PtInfo(long patientId, String patientName,String email , String patientAddress, long patientAadharNo, long contactNo, Date dob,Gender gender, List<Appointment> appointments,String userName ,Role role, User user) {
+    public PtInfo(long patientId, String patientName,String email , String patientAddress, long patientAadharNo, long contactNo, LocalDate dob,Gender gender, List<Appointment> appointments,String userName ,Role role, User user) {
         this.patientId = patientId;
         this.patientName = patientName;
         this.email=email;
@@ -99,11 +97,11 @@ public class PtInfo {
         this.contactNo = contactNo;
     }
 
-    public Date getDob() {
+    public LocalDate getDob() {
         return dob;
     }
 
-    public void setDob(Date dob) {
+    public void setDob(LocalDate dob) {
         this.dob = dob;
     }
 

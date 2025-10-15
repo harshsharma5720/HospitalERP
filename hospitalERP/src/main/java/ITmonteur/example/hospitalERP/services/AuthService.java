@@ -19,6 +19,9 @@ import org.springframework.security.core.Authentication;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 @Service
 public class AuthService {
 
@@ -71,6 +74,13 @@ public class AuthService {
                 patient.setEmail(savedUser.getEmail());
                 patient.setUserName(savedUser.getUsername());
                 patient.setUser(savedUser);
+                patient.setPatientName(savedUser.getUsername());
+                patient.setPatientAddress("Not provided");
+                patient.setContactNo(0);
+                patient.setGender(Gender.OTHER);
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                LocalDate defaultDob = LocalDate.parse("0001-01-01", formatter); // earliest valid SQL date
+                patient.setDob(defaultDob);
                 ptInfoRepository.save(patient);
                 logger.info("Patient entity created for user {}", savedUser.getUsername());
                 break;

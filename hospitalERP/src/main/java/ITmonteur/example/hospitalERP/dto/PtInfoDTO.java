@@ -4,6 +4,7 @@ import ITmonteur.example.hospitalERP.entities.Appointment;
 import ITmonteur.example.hospitalERP.entities.Gender;
 import jakarta.persistence.OneToMany;
 
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 
@@ -14,7 +15,7 @@ public class PtInfoDTO {
     private String patientAddress;
     private long patientAadharNo;
     private long contactNo;
-    private Date dob;
+    private LocalDate dob;
     private Gender gender;
     private List<AppointmentDTO> appointment;
     private String userName;
@@ -23,7 +24,7 @@ public class PtInfoDTO {
     }
 
     public PtInfoDTO(long patientId, String patientName,String email, String patientAddress,
-                     long patientAadharNo, long contactNo, Date dob,Gender gender,
+                     long patientAadharNo, long contactNo, LocalDate dob,Gender gender,
                      List<AppointmentDTO> appointment, String userName) {
         this.patientId = patientId;
         this.patientName = patientName;
@@ -85,11 +86,11 @@ public class PtInfoDTO {
         this.contactNo = contactNo;
     }
 
-    public Date getDob() {
+    public LocalDate getDob() {
         return dob;
     }
 
-    public void setDob(Date dob) {
+    public void setDob(LocalDate dob) {
         this.dob = dob;
     }
 
