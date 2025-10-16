@@ -2,9 +2,12 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.entities.Appointment;
+import ITmonteur.example.hospitalERP.entities.Doctor;
 import ITmonteur.example.hospitalERP.entities.PtInfo;
+import ITmonteur.example.hospitalERP.entities.Specialist;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
+import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,8 @@ public class AppointmentService {
     private AppointmentRepository appointmentRepository;
     @Autowired
     private PtInfoRepository ptInfoRepository;
+    @Autowired
+    private DoctorRepository doctorRepository;
     @Autowired
     private ModelMapper modelMapper;
 
@@ -57,6 +62,10 @@ public class AppointmentService {
                     return new ResourceNotFoundException("Patient", "id", appointmentDTO.getPtInfoId());
                 });
         appointment.setPtInfo(ptInfo);
+        Doctor doctor = doctorRepository.findByName(appointmentDTO.getDoctorName())
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "name", appointmentDTO.getDoctorName()));
+        appointment.setDoctor(doctor);
+        appointmentRepository.save(appointment);
         appointmentRepository.save(appointment);
         logger.info("Appointment created successfully for patient: {}", appointmentDTO.getPatientName());
         return true;
@@ -85,26 +94,35 @@ public class AppointmentService {
         return true;
     }
 
-    public AppointmentDTO updateAppointmentById(long appointmentID, AppointmentDTO appointmentDTO){
+    public AppointmentDTO updateAppointmentById(long appointmentID, AppointmentDTO appointmentDTO) {
         logger.info("Updating appointment with ID: {}", appointmentID);
+
         Appointment appointment = this.appointmentRepository.findById(appointmentID)
                 .orElseThrow(() -> {
                     logger.warn("Appointment not found with ID: {}", appointmentID);
-                    return new ResourceNotFoundException("Patient","appointmentID", appointmentID);
+                    return new ResourceNotFoundException("Appointment", "appointmentID", appointmentID);
                 });
 
-        // update appointment fields
+        // Update basic fields
+        appointment.setPatientName(appointmentDTO.getPatientName());
         appointment.setAge(appointmentDTO.getAge());
         appointment.setGender(appointmentDTO.getGender());
-        appointment.setPatientName(appointmentDTO.getPatientName());
-        appointment.setEmail(appointmentDTO.getEmail());
-        appointment.setDoctor(appointmentDTO.getDoctor());
-        appointment.setPhoneNo(appointmentDTO.getPhoneNo());
+        appointment.setShift(appointmentDTO.getShift());
+        appointment.setDate(appointmentDTO.getDate());
+        appointment.setMessage(appointmentDTO.getMessage());
+        if (appointmentDTO.getDoctorName() != null && !appointmentDTO.getDoctorName().isEmpty()) {
+            Doctor doctor = doctorRepository.findByName(appointmentDTO.getDoctorName())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Doctor", "name", appointmentDTO.getDoctorName()));
+            appointment.setDoctor(doctor);
+        }
+        Appointment updatedAppointment = appointmentRepository.save(appointment);
+        AppointmentDTO updatedDTO = convertToDTO(updatedAppointment);
 
-        AppointmentDTO updatedDTO = convertToDTO(appointmentRepository.save(appointment));
         logger.info("Appointment updated successfully with ID: {}", appointmentID);
         return updatedDTO;
     }
+
 
     public List<AppointmentDTO> getAppointmentsByDrName(String doctorName){
         logger.info("Fetching appointments for doctor: {}", doctorName);

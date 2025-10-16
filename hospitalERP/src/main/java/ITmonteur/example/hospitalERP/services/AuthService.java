@@ -63,7 +63,7 @@ public class AuthService {
                 doctor.setEmail(savedUser.getEmail());
                 doctor.setUserName(savedUser.getUsername()); // foreign key (username)
                 doctor.setName(savedUser.getUsername());
-                doctor.setSpecialization("Not assigned yet");
+                doctor.setSpecialist(Specialist.NOT_ASSIGNED);
                 doctor.setPhoneNumber("Not provided");
                 doctor.setUser(savedUser);
                 doctorRepository.save(doctor);

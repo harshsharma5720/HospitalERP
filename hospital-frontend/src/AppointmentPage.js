@@ -4,10 +4,11 @@ import { Link, useNavigate } from "react-router-dom";
 export default function AppointmentPage() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    specialist: "",
-    doctor: "",
+    patientName: "",
+    gender: "",
+    age: "",
+    doctorName: "",
     shift: "",
-    liveConsultation: "No",
     date: "",
     message: "",
   });
@@ -25,13 +26,11 @@ export default function AppointmentPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Top Info Bar */}
       <div className="bg-teal-700 text-white text-sm flex justify-between items-center px-6 py-2 sticky top-0 z-50">
-        {/* Center Section */}
         <div className="flex-1 flex justify-center gap-3 font-bold">
           <span>📧 info@shreyahospital.com</span>
           <span>📞 +91-7838737363</span>
         </div>
 
-        {/* Right Side Buttons */}
         <div className="flex gap-3">
           <Link
             to="/login"
@@ -64,56 +63,77 @@ export default function AppointmentPage() {
       {/* Form Section */}
       <div className="max-w-4xl mx-auto mt-8 bg-white p-6 rounded-xl shadow">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Specialist & Doctor */}
+          {/* Patient Name & Age */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block font-bold text-gray-700">Specialist</label>
-              <select
-                name="specialist"
-                value={formData.specialist}
+              <label className="block font-bold text-gray-700">Patient Name</label>
+              <input
+                type="text"
+                name="patientName"
+                value={formData.patientName}
                 onChange={handleChange}
                 className="w-full border rounded-lg px-5 py-4 mt-2"
-              >
-                <option value="">Select</option>
-                <option value="cardiology">Cardiology</option>
-                <option value="dentistry">Dentistry</option>
-              </select>
+                placeholder="Enter your name"
+              />
             </div>
+
             <div>
-              <label className="block font-bold text-gray-700">Doctor</label>
-              <select
-                name="doctor"
-                value={formData.doctor}
+              <label className="block font-bold text-gray-700">Age</label>
+              <input
+                type="number"
+                name="age"
+                value={formData.age}
                 onChange={handleChange}
-                className="w-full border rounded-lg px-5 py-4 mt-1"
-              >
-                <option value="">Select</option>
-                <option value="drA">Dr. Akshay</option>
-                <option value="drB">Dr. Harsh</option>
-              </select>
+                className="w-full border rounded-lg px-5 py-4 mt-2"
+                placeholder="Enter your age"
+              />
             </div>
           </div>
 
-          {/* Slot Message */}
-          <div className="bg-red-100 font-bold text-red-700 p-3 rounded">
-            No Slot Available
+          {/* Gender */}
+          <div>
+            <label className="block font-bold text-gray-700">Gender</label>
+            <select
+              name="gender"
+              value={formData.gender}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-5 py-4 mt-2"
+            >
+              <option value="">Select</option>
+              <option value="MALE">Male</option>
+              <option value="FEMALE">Female</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+
+          {/* Doctor */}
+          <div>
+            <label className="block font-bold text-gray-700">Doctor</label>
+            <select
+              name="doctorName"
+              value={formData.doctorName}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-5 py-4 mt-2"
+            >
+              <option value="">Select</option>
+              <option value="Dr. Akshay">Dr. Akshay</option>
+              <option value="Dr. Harsh">Dr. Harsh</option>
+            </select>
           </div>
 
           {/* Shift */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block font-bold text-gray-700">Shift</label>
-              <select
-                name="shift"
-                value={formData.shift}
-                onChange={handleChange}
-                className="w-full border rounded-lg px-5 py-4 mt-1"
-              >
-                <option value="">Select</option>
-                <option value="morning">Morning</option>
-                <option value="evening">Evening</option>
-              </select>
-            </div>
+          <div>
+            <label className="block font-bold text-gray-700">Shift</label>
+            <select
+              name="shift"
+              value={formData.shift}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-5 py-4 mt-2"
+            >
+              <option value="">Select</option>
+              <option value="MORNING">Morning</option>
+              <option value="EVENING">Evening</option>
+            </select>
           </div>
 
           {/* Date */}

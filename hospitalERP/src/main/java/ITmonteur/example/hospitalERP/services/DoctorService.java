@@ -2,6 +2,7 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.dto.DoctorDTO;
 import ITmonteur.example.hospitalERP.entities.Doctor;
+import ITmonteur.example.hospitalERP.entities.Specialist;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import org.modelmapper.ModelMapper;
@@ -73,7 +74,7 @@ public class DoctorService {
             doctor.setUserName(doctorDTO.getUserName());
             doctor.setEmail(doctorDTO.getEmail());
             doctor.setPhoneNumber(doctorDTO.getPhoneNumber());
-            doctor.setSpecialization(doctorDTO.getSpecialization());
+            doctor.setSpecialist(Specialist.valueOf(doctorDTO.getSpecialization().toUpperCase()));
 
             Doctor updatedDoctor = doctorRepository.save(doctor);
             DoctorDTO updatedDTO = convertToDTO(updatedDoctor);

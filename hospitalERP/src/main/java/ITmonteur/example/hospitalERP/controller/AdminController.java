@@ -19,37 +19,37 @@ public class AdminController {
 
     // -------------------- Patient --------------------
     @PostMapping("/patient")
-    public ResponseEntity<PtInfoDTO> createPatient(@RequestBody PtInfoDTO ptInfoDTO) {
-        logger.info("Request received to create patient: {}", ptInfoDTO.getPatientName());
-        PtInfoDTO createdPatient = adminService.createPtInfo(ptInfoDTO);
+    public ResponseEntity<PtInfoDTO> createPatient(@RequestBody RegisterRequestDTO registerRequestDTO) {
+        logger.info("Request received to create patient: {}", registerRequestDTO.getUsername());
+        PtInfoDTO createdPatient = adminService.createPatient(registerRequestDTO);
         logger.info("Patient created successfully with username: {}", createdPatient.getUserName());
         return ResponseEntity.ok(createdPatient);
     }
 
     // -------------------- Doctor --------------------
     @PostMapping("/doctor")
-    public ResponseEntity<DoctorDTO> createDoctor(@RequestBody DoctorDTO doctorDTO) {
-        logger.info("Request received to create doctor: {}", doctorDTO.getName());
-        DoctorDTO createdDoctor = adminService.createDoctor(doctorDTO);
+    public ResponseEntity<DoctorDTO> createDoctor(@RequestBody RegisterRequestDTO registerRequestDTO) {
+        logger.info("Request received to create doctor: {}", registerRequestDTO.getUsername());
+        DoctorDTO createdDoctor = adminService.createDoctor(registerRequestDTO);
         logger.info("Doctor created successfully with username: {}", createdDoctor.getUserName());
         return ResponseEntity.ok(createdDoctor);
     }
 
     // -------------------- Receptionist --------------------
     @PostMapping("/receptionist")
-    public ResponseEntity<ReceptionistDTO> createReceptionist(@RequestBody ReceptionistDTO receptionistDTO) {
-        logger.info("Request received to create receptionist: {}", receptionistDTO.getName());
-        ReceptionistDTO createdReceptionist = adminService.createReceptionist(receptionistDTO);
+    public ResponseEntity<ReceptionistDTO> createReceptionist(@RequestBody RegisterRequestDTO registerRequestDTO) {
+        logger.info("Request received to create receptionist: {}", registerRequestDTO.getUsername());
+        ReceptionistDTO createdReceptionist = adminService.createReceptionist(registerRequestDTO);
         logger.info("Receptionist created successfully with username: {}", createdReceptionist.getUserName());
         return ResponseEntity.ok(createdReceptionist);
     }
 
     // -------------------- Appointment --------------------
-    @PostMapping("/appointment")
-    public ResponseEntity<AppointmentDTO> createAppointment(@RequestBody AppointmentDTO appointmentDTO) {
-        logger.info("Request received to create appointment for patient ID: {}", appointmentDTO.getPtInfoId());
-        AppointmentDTO createdAppointment = adminService.createAppointment(appointmentDTO);
-        logger.info("Appointment created successfully with ID: {}", createdAppointment.getAppointmentID());
-        return ResponseEntity.ok(createdAppointment);
-    }
+//    @PostMapping("/appointment")
+//    public ResponseEntity<AppointmentDTO> createAppointment(@RequestBody AppointmentDTO appointmentDTO) {
+//        logger.info("Request received to create appointment for patient ID: {}", appointmentDTO.getPtInfoId());
+//        AppointmentDTO createdAppointment = adminService.createAppointment(appointmentDTO);
+//        logger.info("Appointment created successfully with ID: {}", createdAppointment.getAppointmentID());
+//        return ResponseEntity.ok(createdAppointment);
+//    }
 }

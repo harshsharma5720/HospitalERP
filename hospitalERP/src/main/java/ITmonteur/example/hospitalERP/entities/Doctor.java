@@ -10,7 +10,9 @@ public class Doctor {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
     private String name;
-    private String specialization;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Specialist specialist; // CARDIOLOGY, DENTISTRY, etc.
     @Column(unique = true, nullable = false)
     private String email;
     private String password; // encrypted
@@ -27,12 +29,12 @@ public class Doctor {
     public Doctor() {
     }
 
-    public Doctor(Long id, String name, String specialization,
+    public Doctor(Long id, String name, Specialist specialist,
                   String email, String password, String phoneNumber,String userName,
                   Role role, User user) {
         this.id = id;
         this.name = name;
-        this.specialization = specialization;
+        this.specialist = specialist;
         this.email = email;
         this.password = password;
         this.phoneNumber = phoneNumber;
@@ -57,12 +59,12 @@ public class Doctor {
         this.name = name;
     }
 
-    public String getSpecialization() {
-        return specialization;
+    public Specialist getSpecialist() {
+        return specialist;
     }
 
-    public void setSpecialization(String specialization) {
-        this.specialization = specialization;
+    public void setSpecialist(Specialist specialist) {
+        this.specialist = specialist;
     }
 
     public String getEmail() {
