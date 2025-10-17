@@ -1,177 +1,174 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function AppointmentPage() {
-  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     patientName: "",
-    gender: "",
+    gender: "MALE", // default value
     age: "",
     doctorName: "",
-    shift: "",
+    shift: "MORNING", // default value
     date: "",
     message: "",
+    ptInfoId: "", // optional
   });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert("Form submitted! Data: " + JSON.stringify(formData, null, 2));
+
+    const token = localStorage.getItem("jwtToken");
+    console.log("Token from localStorage:", localStorage.getItem("jwtToken"));
+    if (!token) {
+      alert("Please login first!");
+      return;
+    }
+
+    try {
+      // Convert age and ptInfoId to numbers, date to ISO format
+      const payload = {
+        ...formData,
+        age: Number(formData.age),
+        ptInfoId: formData.ptInfoId ? Number(formData.ptInfoId) : null,
+        date: formData.date, // backend expects LocalDate, ISO string is fine
+      };
+
+      const response = await axios.post(
+        "http://localhost:8080/appointment/NewAppointment",
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      alert(response.data);
+      // Optional: reset form
+      setFormData({
+        patientName: "",
+        gender: "MALE",
+        age: "",
+        doctorName: "",
+        shift: "MORNING",
+        date: "",
+        message: "",
+        ptInfoId: "",
+      });
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      alert("Failed to book appointment. Please try again.");
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top Info Bar */}
-      <div className="bg-teal-700 text-white text-sm flex justify-between items-center px-6 py-2 sticky top-0 z-50">
-        <div className="flex-1 flex justify-center gap-3 font-bold">
-          <span>📧 info@shreyahospital.com</span>
-          <span>📞 +91-7838737363</span>
-        </div>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <h2 className="text-3xl font-bold text-center text-teal-700 mb-6">
+        Book Appointment
+      </h2>
 
-        <div className="flex gap-3">
-          <Link
-            to="/login"
-            className="bg-white text-teal-700 px-4 py-1 rounded shadow font-bold hover:bg-gray-100 transition"
-          >
-            Login
-          </Link>
-          <Link
-            to="/register"
-            className="bg-white text-teal-700 px-4 py-1 rounded shadow font-bold hover:bg-gray-100 transition"
-          >
-            Register
-          </Link>
-        </div>
-      </div>
+      <form
+        onSubmit={handleSubmit}
+        className="max-w-3xl mx-auto space-y-6 bg-white p-6 rounded-xl shadow"
+      >
+        {/* Patient Name */}
+        <input
+          type="text"
+          name="patientName"
+          value={formData.patientName}
+          onChange={handleChange}
+          placeholder="Patient Name"
+          className="w-full p-2 border border-gray-300 rounded"
+          required
+        />
 
-      {/* Navbar with Logo and Home button */}
-      <div className="flex justify-between items-center px-6 py-4 border-b bg-white shadow-sm sticky top-[40px] z-50">
-        <img src="download.jpeg" alt="Logo" className="h-12" />
-        <div className="flex gap-4">
-          <Link
-            to="/"
-            className="font-bold bg-teal-700 text-white px-4 py-2 rounded-lg shadow transition transform hover:-translate-y-1 hover:shadow-md hover:bg-teal-800"
-          >
-            Home
-          </Link>
-        </div>
-      </div>
+        {/* Gender */}
+        <select
+          name="gender"
+          value={formData.gender}
+          onChange={handleChange}
+          className="w-full p-2 border border-gray-300 rounded"
+          required
+        >
+          <option value="MALE">Male</option>
+          <option value="FEMALE">Female</option>
+          <option value="OTHER">Other</option>
+        </select>
 
-      {/* Form Section */}
-      <div className="max-w-4xl mx-auto mt-8 bg-white p-6 rounded-xl shadow">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Patient Name & Age */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block font-bold text-gray-700">Patient Name</label>
-              <input
-                type="text"
-                name="patientName"
-                value={formData.patientName}
-                onChange={handleChange}
-                className="w-full border rounded-lg px-5 py-4 mt-2"
-                placeholder="Enter your name"
-              />
-            </div>
+        {/* Age */}
+        <input
+          type="number"
+          name="age"
+          value={formData.age}
+          onChange={handleChange}
+          placeholder="Age"
+          className="w-full p-2 border border-gray-300 rounded"
+          required
+        />
 
-            <div>
-              <label className="block font-bold text-gray-700">Age</label>
-              <input
-                type="number"
-                name="age"
-                value={formData.age}
-                onChange={handleChange}
-                className="w-full border rounded-lg px-5 py-4 mt-2"
-                placeholder="Enter your age"
-              />
-            </div>
-          </div>
+        {/* Doctor Name */}
+        <input
+          type="text"
+          name="doctorName"
+          value={formData.doctorName}
+          onChange={handleChange}
+          placeholder="Doctor Name"
+          className="w-full p-2 border border-gray-300 rounded"
+          required
+        />
 
-          {/* Gender */}
-          <div>
-            <label className="block font-bold text-gray-700">Gender</label>
-            <select
-              name="gender"
-              value={formData.gender}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-5 py-4 mt-2"
-            >
-              <option value="">Select</option>
-              <option value="MALE">Male</option>
-              <option value="FEMALE">Female</option>
-              <option value="OTHER">Other</option>
-            </select>
-          </div>
+        {/* Shift */}
+        <select
+          name="shift"
+          value={formData.shift}
+          onChange={handleChange}
+          className="w-full p-2 border border-gray-300 rounded"
+          required
+        >
+          <option value="MORNING">Morning</option>
+          <option value="AFTERNOON">Afternoon</option>
+          <option value="EVENING">Evening</option>
+        </select>
 
-          {/* Doctor */}
-          <div>
-            <label className="block font-bold text-gray-700">Doctor</label>
-            <select
-              name="doctorName"
-              value={formData.doctorName}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-5 py-4 mt-2"
-            >
-              <option value="">Select</option>
-              <option value="Dr. Akshay">Dr. Akshay</option>
-              <option value="Dr. Harsh">Dr. Harsh</option>
-            </select>
-          </div>
+        {/* Date */}
+        <input
+          type="date"
+          name="date"
+          value={formData.date}
+          onChange={handleChange}
+          className="w-full p-2 border border-gray-300 rounded"
+          required
+        />
 
-          {/* Shift */}
-          <div>
-            <label className="block font-bold text-gray-700">Shift</label>
-            <select
-              name="shift"
-              value={formData.shift}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-5 py-4 mt-2"
-            >
-              <option value="">Select</option>
-              <option value="MORNING">Morning</option>
-              <option value="EVENING">Evening</option>
-            </select>
-          </div>
+        {/* Message */}
+        <textarea
+          name="message"
+          value={formData.message}
+          onChange={handleChange}
+          placeholder="Message (optional)"
+          className="w-full p-2 border border-gray-300 rounded"
+        />
 
-          {/* Date */}
-          <div>
-            <label className="block font-bold text-gray-700">Date</label>
-            <input
-              type="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-5 py-4 mt-1"
-            />
-          </div>
+        {/* Patient Info ID */}
+        <input
+          type="number"
+          name="ptInfoId"
+          value={formData.ptInfoId}
+          onChange={handleChange}
+          placeholder="Patient Info ID (optional)"
+          className="w-full p-2 border border-gray-300 rounded"
+        />
 
-          {/* Message */}
-          <div>
-            <label className="block font-bold text-gray-700">
-              Message <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              name="message"
-              value={formData.message}
-              onChange={handleChange}
-              rows="3"
-              className="w-full border rounded-lg px-3 py-2 mt-1"
-              placeholder="Enter your message"
-            ></textarea>
-          </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            className="bg-teal-700 text-white font-bold px-6 py-2 rounded-lg shadow transition transform hover:-translate-y-1 hover:shadow-md hover:bg-teal-800"
-          >
-            Submit
-          </button>
-        </form>
-      </div>
+        <button
+          type="submit"
+          className="bg-teal-700 text-white font-bold px-6 py-2 rounded-lg hover:bg-teal-800 transition"
+        >
+          Submit
+        </button>
+      </form>
     </div>
   );
 }
