@@ -135,7 +135,7 @@ export default function HomePage() {
         {/* Right Side Image */}
         <div className="flex items-center justify-center">
           <img
-            src="download.jpeg"
+            src="Shreyahospital.jpg"
             alt="Hospital"
             className="rounded-xl shadow-lg w-full max-w-md"
           />

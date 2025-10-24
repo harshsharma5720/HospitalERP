@@ -4,6 +4,7 @@ import HomePage from "./HomePage";
 import AppointmentPage from "./AppointmentPage";
 import LoginPage from "./Login";
 import RegisterPage from "./Register";
+import Footer from "./Footer";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element = {<RegisterPage />} />
       </Routes>
+      <Footer />
     </Router>
   );
 }

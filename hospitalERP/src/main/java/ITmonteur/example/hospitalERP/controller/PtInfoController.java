@@ -1,5 +1,6 @@
 package ITmonteur.example.hospitalERP.controller;
 
+import ITmonteur.example.hospitalERP.dto.DoctorDTO;
 import ITmonteur.example.hospitalERP.dto.PtInfoDTO;
 import ITmonteur.example.hospitalERP.services.PtInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,14 @@ public class PtInfoController {
         PtInfoDTO ptInfoDTO = this.ptInfoService.getPtInfoById(ptId);
         logger.info("Fetched account for patient: {}", ptInfoDTO.getPatientName());
         return ResponseEntity.ok(ptInfoDTO);
+    }
+
+    @GetMapping("/getAllBySpecialization")
+    public ResponseEntity<List<DoctorDTO>> getDoctorsBySpecialization(@RequestBody String specialization){
+        logger.info("Fetching all doctors od specialization:" +specialization);
+        List<DoctorDTO> doctorDTOS = ptInfoService.findDoctorsBySpecialization(specialization);
+        logger.info("Total doctors fetched: {}", doctorDTOS.size());
+        return ResponseEntity.ok(doctorDTOS);
     }
 
     // Delete account by patient ID

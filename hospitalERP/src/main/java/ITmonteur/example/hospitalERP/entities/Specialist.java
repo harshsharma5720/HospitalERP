@@ -4,6 +4,8 @@ public enum Specialist {
     NOT_ASSIGNED,
     CARDIOLOGY,
     DENTISTRY,
+    ORTHOPEDICS,
     NEUROLOGY,
-    ORTHOPEDICS
+    PEDIATRICS,
+    DERMATOLOGY
 }

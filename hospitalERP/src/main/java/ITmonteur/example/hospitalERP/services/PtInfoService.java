@@ -1,8 +1,11 @@
 package ITmonteur.example.hospitalERP.services;
 
+import ITmonteur.example.hospitalERP.dto.DoctorDTO;
 import ITmonteur.example.hospitalERP.dto.PtInfoDTO;
+import ITmonteur.example.hospitalERP.entities.Doctor;
 import ITmonteur.example.hospitalERP.entities.PtInfo;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
+import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +25,9 @@ public class PtInfoService {
     private PtInfoRepository ptInfoRepository;
 
     @Autowired
+    private DoctorRepository doctorRepository;
+
+    @Autowired
     private ModelMapper modelMapper;
 
     // Get all patients info
@@ -37,6 +43,20 @@ public class PtInfoService {
                 .collect(Collectors.toList());
         logger.info("Total patients retrieved: {}", ptInfoDTOS.size());
         return ptInfoDTOS;
+    }
+    public List<DoctorDTO> findDoctorsBySpecialization(String specialization){
+        logger.info("Fetching all doctors ");
+        List<Doctor> doctors = this.doctorRepository.findBySpecialist(specialization)
+                .orElseThrow(()-> new RuntimeException("Doctors not found with specialization :"+specialization));
+        List<DoctorDTO> doctorDTOS = doctors.stream()
+                .map(doctor ->{
+                    DoctorDTO doctorDTO = convertToDto(doctor);
+                    return doctorDTO;
+                })
+                .collect(Collectors.toList());
+        logger.info("Total doctors retrieved: {}", doctorDTOS.size());
+        return doctorDTOS;
+
     }
 
     // Get patient info by ID
@@ -105,5 +125,8 @@ public class PtInfoService {
     // Convert DTO to entity
     private PtInfo covertToEntities(PtInfoDTO ptInfoDTO) {
         return modelMapper.map(ptInfoDTO, PtInfo.class);
+    }
+    private DoctorDTO convertToDto(Doctor doctor) {
+        return modelMapper.map(doctor, DoctorDTO.class);
     }
 }

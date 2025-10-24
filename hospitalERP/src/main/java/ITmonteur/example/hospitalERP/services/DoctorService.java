@@ -63,6 +63,19 @@ public class DoctorService {
             throw e;
         }
     }
+    public List<DoctorDTO> findDoctorsBySpecialization(Specialist specialization){
+        logger.info("Fetching all doctors ");
+        List<Doctor> doctors = this.doctorRepository.findBySpecialist(specialization)
+                .orElseThrow(()-> new RuntimeException("Doctors not found with specialization :"+specialization));
+        List<DoctorDTO> doctorDTOS = doctors.stream()
+                .map(doctor ->{
+                    DoctorDTO doctorDTO = convertToDTO(doctor);
+                    return doctorDTO;
+                })
+                .collect(Collectors.toList());
+        logger.info("Total doctors retrieved: {}", doctorDTOS.size());
+        return doctorDTOS;
+    }
 
     // Update doctor details
     public DoctorDTO updateDoctor(Long doctorId, DoctorDTO doctorDTO) {

@@ -1,6 +1,7 @@
 package ITmonteur.example.hospitalERP.controller;
 
 import ITmonteur.example.hospitalERP.dto.DoctorDTO;
+import ITmonteur.example.hospitalERP.entities.Specialist;
 import ITmonteur.example.hospitalERP.services.DoctorService;
 import ITmonteur.example.hospitalERP.services.JWTService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,6 +40,19 @@ public class DoctorController {
         List<DoctorDTO> doctors = doctorService.getAllDoctors();
         logger.info("Total doctors fetched: {}", doctors.size());
         return ResponseEntity.ok(doctors);
+    }
+
+    @GetMapping("/getAllBySpecialization")
+    public ResponseEntity<List<DoctorDTO>> getDoctorsBySpecialization(@RequestBody String specialisation){
+        try {
+            logger.info("Fetching all doctors od specialization:" +specialisation);
+            Specialist specEnum = Specialist.valueOf(specialisation.toUpperCase());
+            List<DoctorDTO> doctorDTOS = doctorService.findDoctorsBySpecialization(specEnum);
+            logger.info("Total doctors fetched: {}", doctorDTOS.size());
+            return ResponseEntity.ok(doctorDTOS);
+        }catch (IllegalArgumentException e) {
+            return ResponseEntity.ok(List.of());
+        }
     }
 
     // Get doctor by ID
