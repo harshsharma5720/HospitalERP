@@ -5,6 +5,8 @@ import AppointmentPage from "./AppointmentPage";
 import LoginPage from "./Login";
 import RegisterPage from "./Register";
 import Footer from "./Footer";
+import DoctorPage from "./DoctorPage";
+import ContactUsPage from "./ContactUsPage";
 
 function App() {
   return (
@@ -14,6 +16,8 @@ function App() {
         <Route path="/appointments" element={<AppointmentPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element = {<RegisterPage />} />
+        <Route path="/doctors" element={<DoctorPage />} />
+        <Route path="/contact" element={<ContactUsPage />} />
       </Routes>
       <Footer />
     </Router>

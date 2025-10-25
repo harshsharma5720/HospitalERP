@@ -7,7 +7,7 @@ export default function Footer() {
         {/* Left Section - Contact Info */}
         <div className="bg-teal-700 text-white md:w-1/2 w-full p-10 flex flex-col justify-center space-y-6">
           <div>
-            <img src="hospital-logo.png" alt="Hospital Logo" className="h-12 mb-4" />
+            <img src="download.jpeg" alt="Hospital Logo" className="h-12 mb-4" />
           </div>
 
           {/* Location */}

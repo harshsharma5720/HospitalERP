@@ -7,6 +7,7 @@ import ITmonteur.example.hospitalERP.services.JWTService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 @RestController
+@CrossOrigin(origins = "http://localhost:3000")
 @RequestMapping("/api/doctor")
 public class DoctorController {
 
@@ -35,6 +37,7 @@ public class DoctorController {
 
     // Get all doctors
     @GetMapping("/getAll")
+    @PreAuthorize("hasAnyRole('DOCTOR', 'PATIENT', 'RECEPTIONIST')")
     public ResponseEntity<List<DoctorDTO>> getAllDoctors() {
         logger.info("Fetching all doctors");
         List<DoctorDTO> doctors = doctorService.getAllDoctors();
@@ -43,7 +46,7 @@ public class DoctorController {
     }
 
     @GetMapping("/getAllBySpecialization")
-    public ResponseEntity<List<DoctorDTO>> getDoctorsBySpecialization(@RequestBody String specialisation){
+    public ResponseEntity<List<DoctorDTO>> getDoctorsBySpecialization(@RequestParam String specialisation){
         try {
             logger.info("Fetching all doctors od specialization:" +specialisation);
             Specialist specEnum = Specialist.valueOf(specialisation.toUpperCase());

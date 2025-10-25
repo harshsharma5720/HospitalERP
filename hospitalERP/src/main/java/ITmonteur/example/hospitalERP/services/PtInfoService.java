@@ -4,6 +4,7 @@ import ITmonteur.example.hospitalERP.dto.DoctorDTO;
 import ITmonteur.example.hospitalERP.dto.PtInfoDTO;
 import ITmonteur.example.hospitalERP.entities.Doctor;
 import ITmonteur.example.hospitalERP.entities.PtInfo;
+import ITmonteur.example.hospitalERP.entities.Specialist;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
@@ -44,7 +45,7 @@ public class PtInfoService {
         logger.info("Total patients retrieved: {}", ptInfoDTOS.size());
         return ptInfoDTOS;
     }
-    public List<DoctorDTO> findDoctorsBySpecialization(String specialization){
+    public List<DoctorDTO> findDoctorsBySpecialization(Specialist specialization){
         logger.info("Fetching all doctors ");
         List<Doctor> doctors = this.doctorRepository.findBySpecialist(specialization)
                 .orElseThrow(()-> new RuntimeException("Doctors not found with specialization :"+specialization));

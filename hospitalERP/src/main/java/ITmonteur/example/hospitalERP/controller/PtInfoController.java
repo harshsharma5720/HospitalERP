@@ -2,9 +2,11 @@ package ITmonteur.example.hospitalERP.controller;
 
 import ITmonteur.example.hospitalERP.dto.DoctorDTO;
 import ITmonteur.example.hospitalERP.dto.PtInfoDTO;
+import ITmonteur.example.hospitalERP.entities.Specialist;
 import ITmonteur.example.hospitalERP.services.PtInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 @RestController
+@CrossOrigin(origins = "http://localhost:3000")
 @RequestMapping("/api/patient")
 public class PtInfoController {
 
@@ -39,9 +42,11 @@ public class PtInfoController {
     }
 
     @GetMapping("/getAllBySpecialization")
-    public ResponseEntity<List<DoctorDTO>> getDoctorsBySpecialization(@RequestBody String specialization){
+    @PreAuthorize("hasAnyRole('PATIENT', 'RECEPTIONIST')")
+    public ResponseEntity<List<DoctorDTO>> getDoctorsBySpecialization(@RequestParam String specialization){
         logger.info("Fetching all doctors od specialization:" +specialization);
-        List<DoctorDTO> doctorDTOS = ptInfoService.findDoctorsBySpecialization(specialization);
+        Specialist specEnum = Specialist.valueOf(specialization.toUpperCase());
+        List<DoctorDTO> doctorDTOS = ptInfoService.findDoctorsBySpecialization(specEnum);
         logger.info("Total doctors fetched: {}", doctorDTOS.size());
         return ResponseEntity.ok(doctorDTOS);
     }
