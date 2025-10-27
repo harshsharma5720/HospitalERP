@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-
+import Navbar from "./Navbar";
 function ContactUsPage() {
   const [formData, setFormData] = useState({
     enquiryType: "",
@@ -22,8 +22,10 @@ function ContactUsPage() {
   };
 
   return (
+
     <div className="bg-[#0083a9] min-h-screen text-white">
       {/* Header Section */}
+      <Navbar />
       <div className="py-16 px-6 md:px-20 flex flex-col md:flex-row justify-between items-center">
         <div className="max-w-2xl">
           <h1 className="text-4xl font-bold mb-4">Contact Us</h1>

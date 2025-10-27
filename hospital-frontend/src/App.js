@@ -8,6 +8,7 @@ import Footer from "./Footer";
 import DoctorPage from "./DoctorPage";
 import ContactUsPage from "./ContactUsPage";
 import Treatments from "./Treatments";
+import AboutUs from "./AboutUs";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Route path="/doctors" element={<DoctorPage />} />
         <Route path="/contact" element={<ContactUsPage />} />
         <Route path="/treatments" element={<Treatments />} />
+        <Route path="/about" element={<AboutUs />} />
       </Routes>
       <Footer />
     </Router>

@@ -1,18 +1,20 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import Navbar from "./Navbar";
+import { useNavigate } from "react-router-dom";
+import { User, UserPlus } from "lucide-react";
 
 export default function AppointmentPage() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     patientName: "",
-    gender: "MALE", // default value
+    gender: "MALE",
     age: "",
     doctorName: "",
-    shift: "MORNING", // default value
+    shift: "MORNING",
     date: "",
     message: "",
-    ptInfoId: "", // optional
+    ptInfoId: "",
   });
 
   const handleChange = (e) => {
@@ -21,35 +23,26 @@ export default function AppointmentPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     const token = localStorage.getItem("jwtToken");
-    console.log("Token from localStorage:", localStorage.getItem("jwtToken"));
     if (!token) {
       alert("Please login first!");
       return;
     }
 
     try {
-      // Convert age and ptInfoId to numbers, date to ISO format
       const payload = {
         ...formData,
         age: Number(formData.age),
         ptInfoId: formData.ptInfoId ? Number(formData.ptInfoId) : null,
-        date: formData.date, // backend expects LocalDate, ISO string is fine
       };
 
       const response = await axios.post(
         "http://localhost:8080/appointment/NewAppointment",
         payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       alert(response.data);
-      // Optional: reset form
       setFormData({
         patientName: "",
         gender: "MALE",
@@ -67,50 +60,66 @@ export default function AppointmentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 flex flex-col">
-      {/* Top Info Bar */}
-      <div className="bg-teal-700 text-white text-sm flex justify-between items-center px-6 py-2 sticky top-0 z-50">
-        <div className="flex-1 flex justify-center gap-3 font-bold">
-          <span>📧 info@shreyahospital.com</span>
-          <span>📞 +91-7838737363</span>
+    <div className="min-h-screen bg-gray-50 relative">
+      {/* Top Info Bar (Same as About Us) */}
+      <div className="bg-white shadow-md px-6 py-3 flex items-center border-b">
+        {/* Left: Logo */}
+        <div className="flex items-center gap-2">
+          <img src="download.jpeg" alt="Hospital Logo" className="h-10 w-10" />
+          <h1 className="text-xl font-bold text-teal-700">Shreya Hospital</h1>
         </div>
 
-        <div className="flex gap-3">
-          <Link
-            to="/login"
-            className="bg-white text-teal-700 px-4 py-1 rounded shadow font-bold hover:bg-gray-100 transition"
+        {/* Center: Location + Timings */}
+        <div className="flex-1 flex justify-center">
+          <div className="bg-gray-100 border border-teal-200 shadow-md rounded-lg p-4 max-w-3xl text-center">
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold text-teal-700">📍 Location:</span>{" "}
+              Sahibabad, Plot No. 837, Shalimar Garden Main Rd, Block C,
+              Sahibabad, Ghaziabad, Uttar Pradesh 201006
+            </p>
+            <p className="text-sm text-gray-700 mt-2">
+              <span className="font-semibold text-teal-700">⏰ Service Timings:</span>{" "}
+              24×7
+            </p>
+          </div>
+        </div>
+
+        {/* Right: Login + Register */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/login")}
+            className="flex items-center gap-2 px-3 py-1 rounded-lg bg-teal-700 text-white border border-teal-500 hover:bg-teal-800 transition"
           >
-            Login
-          </Link>
-          <Link
-            to="/register"
-            className="bg-white text-teal-700 px-4 py-1 rounded shadow font-bold hover:bg-gray-100 transition"
+            <User size={20} /> Login
+          </button>
+
+          <button
+            onClick={() => navigate("/register")}
+            className="flex items-center gap-2 px-3 py-1 rounded-lg bg-teal-700 text-white border border-teal-500 hover:bg-teal-800 transition"
           >
-            Register
-          </Link>
+            <UserPlus size={20} /> Register
+          </button>
         </div>
       </div>
 
-      {/* Navbar */}
-      <div className="flex justify-between items-center px-6 py-4 border-b bg-white shadow-sm sticky top-[40px] z-50">
-        <img src="download.jpeg" alt="Logo" className="h-12" />
-        <Link
-          to="/"
-          className="font-bold bg-teal-700 text-white px-4 py-2 rounded-lg shadow transition transform hover:-translate-y-1 hover:shadow-md hover:bg-teal-800"
-        >
-          Home
-        </Link>
-      </div>
+      {/* Navbar (Same as About Us) */}
+      <Navbar />
 
-      {/* Form Section */}
-      <div className="flex flex-1 items-center justify-center px-4 sm:px-6 lg:px-8 mt-8 md:mt-12 lg:mt-16">
-        <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-2xl">
+      {/* Appointment Form Section */}
+      <div className="flex justify-center items-center py-12 px-4 relative">
+        {/* Background image behind the form */}
+        <img
+          src="Shreyahospital.jpg"
+          alt="Hospital Background"
+          className="absolute top-0 left-0 w-full h-full object-cover opacity-20 -z-10"
+        />
+
+        <div className="bg-white bg-opacity-90 backdrop-blur-md shadow-2xl rounded-2xl p-8 w-full max-w-2xl relative z-10">
           <h2 className="text-3xl font-bold text-center text-teal-700 mb-6">
-            Book Appointment
+            Book an Appointment
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Patient Name */}
             <input
               type="text"
               name="patientName"
@@ -121,7 +130,6 @@ export default function AppointmentPage() {
               required
             />
 
-            {/* Gender */}
             <select
               name="gender"
               value={formData.gender}
@@ -134,7 +142,6 @@ export default function AppointmentPage() {
               <option value="OTHER">Other</option>
             </select>
 
-            {/* Age */}
             <input
               type="number"
               name="age"
@@ -145,7 +152,6 @@ export default function AppointmentPage() {
               required
             />
 
-            {/* Doctor Name */}
             <input
               type="text"
               name="doctorName"
@@ -156,7 +162,6 @@ export default function AppointmentPage() {
               required
             />
 
-            {/* Shift */}
             <select
               name="shift"
               value={formData.shift}
@@ -169,7 +174,6 @@ export default function AppointmentPage() {
               <option value="EVENING">Evening</option>
             </select>
 
-            {/* Date */}
             <input
               type="date"
               name="date"
@@ -179,7 +183,6 @@ export default function AppointmentPage() {
               required
             />
 
-            {/* Message */}
             <textarea
               name="message"
               value={formData.message}
@@ -188,7 +191,6 @@ export default function AppointmentPage() {
               className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-600"
             />
 
-            {/* Patient Info ID */}
             <input
               type="number"
               name="ptInfoId"
@@ -208,6 +210,5 @@ export default function AppointmentPage() {
         </div>
       </div>
     </div>
-
   );
 }
