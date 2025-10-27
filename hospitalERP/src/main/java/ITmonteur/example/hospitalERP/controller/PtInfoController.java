@@ -3,6 +3,7 @@ package ITmonteur.example.hospitalERP.controller;
 import ITmonteur.example.hospitalERP.dto.DoctorDTO;
 import ITmonteur.example.hospitalERP.dto.PtInfoDTO;
 import ITmonteur.example.hospitalERP.entities.Specialist;
+import ITmonteur.example.hospitalERP.services.DoctorService;
 import ITmonteur.example.hospitalERP.services.PtInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,9 @@ public class PtInfoController {
     @Autowired
     private PtInfoService ptInfoService;
 
+    @Autowired
+    private DoctorService doctorService;
+
     // Get all patient accounts
     @GetMapping("/getAll")
     public ResponseEntity<List<PtInfoDTO>> getAllAccounts(){
@@ -40,9 +44,16 @@ public class PtInfoController {
         logger.info("Fetched account for patient: {}", ptInfoDTO.getPatientName());
         return ResponseEntity.ok(ptInfoDTO);
     }
+    @GetMapping("/getAllDoctors")
+//    @PreAuthorize("hasAnyRole('DOCTOR', 'PATIENT', 'RECEPTIONIST')")
+    public ResponseEntity<List<DoctorDTO>> getAllDoctors() {
+        logger.info("Fetching all doctors");
+        List<DoctorDTO> doctors = doctorService.getAllDoctors();
+        logger.info("Total doctors fetched: {}", doctors.size());
+        return ResponseEntity.ok(doctors);
+    }
 
     @GetMapping("/getAllBySpecialization")
-    @PreAuthorize("hasAnyRole('PATIENT', 'RECEPTIONIST')")
     public ResponseEntity<List<DoctorDTO>> getDoctorsBySpecialization(@RequestParam String specialization){
         logger.info("Fetching all doctors od specialization:" +specialization);
         Specialist specEnum = Specialist.valueOf(specialization.toUpperCase());

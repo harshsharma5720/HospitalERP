@@ -37,7 +37,7 @@ public class DoctorController {
 
     // Get all doctors
     @GetMapping("/getAll")
-    @PreAuthorize("hasAnyRole('DOCTOR', 'PATIENT', 'RECEPTIONIST')")
+//    @PreAuthorize("hasAnyRole('DOCTOR', 'PATIENT', 'RECEPTIONIST')")
     public ResponseEntity<List<DoctorDTO>> getAllDoctors() {
         logger.info("Fetching all doctors");
         List<DoctorDTO> doctors = doctorService.getAllDoctors();
