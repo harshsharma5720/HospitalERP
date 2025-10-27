@@ -1,7 +1,12 @@
+/* 🌿 Base App Styles */
 .App {
   text-align: center;
+  font-family: "Poppins", sans-serif;
+  background-color: #f8fafc;
+  color: #333;
 }
 
+/* 🌟 Default CRA logo animation (optional) */
 .App-logo {
   height: 40vmin;
   pointer-events: none;
@@ -14,7 +19,7 @@
 }
 
 .App-header {
-  background-color: #282c34;
+  background-color: #0f766e;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -28,6 +33,174 @@
   color: #61dafb;
 }
 
+/* ----------------------------------------------------- */
+/* 🌈 Popup Animations */
+/* ----------------------------------------------------- */
+
+/* Smooth fade-in for backdrop (background overlay) */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Slide-up animation for popup box */
+@keyframes slideUp {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* NEW — Scale-up animation for popup appearance */
+@keyframes scaleUp {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.4s ease-in-out;
+}
+
+/* NEW */
+.animate-scaleUp {
+  animation: scaleUp 0.4s ease-in-out;
+}
+
+/* ----------------------------------------------------- */
+/* 💎 Popup Styling */
+/* ----------------------------------------------------- */
+
+/* Overlay background behind popup */
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Popup box */
+.popup-card {
+  background-color: #ffffff;
+  padding: 2rem;
+  border-radius: 1.25rem;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  position: relative;
+  text-align: center;
+}
+
+/* Close button */
+.popup-card button.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  color: #555;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.popup-card button.close-btn:hover {
+  color: #e11d48; /* red hover */
+}
+
+/* Popup heading and message */
+.popup-card h2 {
+  font-size: 1.25rem;
+  color: #0f766e;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.popup-card p {
+  color: #555;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
+/* Popup buttons */
+.popup-card .popup-btn {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  font-size: 1rem;
+  margin-top: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+/* Login button */
+.popup-card .btn-login {
+  background-color: #0f766e;
+  color: white;
+}
+
+.popup-card .btn-login:hover {
+  background-color: #115e59;
+  transform: translateY(-2px);
+}
+
+/* Register button */
+.popup-card .btn-register {
+  border: 2px solid #0f766e;
+  color: #0f766e;
+  background-color: transparent;
+}
+
+.popup-card .btn-register:hover {
+  background-color: #0f766e;
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* ----------------------------------------------------- */
+/* 💎 Utility Styles for Branding */
+/* ----------------------------------------------------- */
+
+.gradient-bg {
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+}
+
+.shadow-soft {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.transition {
+  transition: all 0.3s ease;
+}
+
+/* ----------------------------------------------------- */
+/* 🌀 Logo Spin (optional) */
+/* ----------------------------------------------------- */
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);

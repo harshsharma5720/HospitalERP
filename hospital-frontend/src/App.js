@@ -19,7 +19,7 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/doctors" element={<DoctorPage />} />
         <Route path="/contact" element={<ContactUsPage />} />
-        <Route path="/treatments" element={<Treatments />} /> {/* fixed */}
+        <Route path="/treatments" element={<Treatments />} />
       </Routes>
       <Footer />
     </Router>
