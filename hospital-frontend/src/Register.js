@@ -44,7 +44,7 @@ export default function RegisterPage() {
       if (token) {
         localStorage.setItem("token", token);
         alert(`Welcome ${formData.username}! Registration successful.`);
-        navigate("/appointment"); // directly go to appointment page
+        navigate("/"); // directly go to appointment page
       } else {
         setError("Registration successful, but token not received.");
       }

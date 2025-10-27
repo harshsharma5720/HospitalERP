@@ -30,6 +30,7 @@ export default function LoginPage() {
       });
 
       const token = response.data.token;
+      console.log(token);
 
       if (token) {
         localStorage.setItem("jwtToken", token);
