@@ -9,6 +9,7 @@ import DoctorPage from "./DoctorPage";
 import ContactUsPage from "./ContactUsPage";
 import Treatments from "./Treatments";
 import AboutUs from "./AboutUs";
+import EditProfilePage from "./EditProfileModal";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         <Route path="/contact" element={<ContactUsPage />} />
         <Route path="/treatments" element={<Treatments />} />
         <Route path="/about" element={<AboutUs />} />
+        <Route path="/edit-profile" element={<EditProfilePage />} />
       </Routes>
       <Footer />
     </Router>
