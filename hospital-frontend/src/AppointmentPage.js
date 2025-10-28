@@ -1,11 +1,9 @@
 import React, { useState } from "react";
 import axios from "axios";
 import Navbar from "./Navbar";
-import { useNavigate } from "react-router-dom";
-import { User, UserPlus } from "lucide-react";
+import TopNavbar from "./TopNavbar";
 
 export default function AppointmentPage() {
-  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     patientName: "",
     gender: "MALE",
@@ -61,53 +59,10 @@ export default function AppointmentPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
-      {/* Top Info Bar (Same as About Us) */}
-      <div className="bg-white shadow-md px-6 py-3 flex items-center border-b">
-        {/* Left: Logo */}
-        <div className="flex items-center gap-2">
-          <img src="download.jpeg" alt="Hospital Logo" className="h-10 w-10" />
-          <h1 className="text-xl font-bold text-teal-700">Shreya Hospital</h1>
-        </div>
-
-        {/* Center: Location + Timings */}
-        <div className="flex-1 flex justify-center">
-          <div className="bg-gray-100 border border-teal-200 shadow-md rounded-lg p-4 max-w-3xl text-center">
-            <p className="text-sm text-gray-700">
-              <span className="font-semibold text-teal-700">📍 Location:</span>{" "}
-              Sahibabad, Plot No. 837, Shalimar Garden Main Rd, Block C,
-              Sahibabad, Ghaziabad, Uttar Pradesh 201006
-            </p>
-            <p className="text-sm text-gray-700 mt-2">
-              <span className="font-semibold text-teal-700">⏰ Service Timings:</span>{" "}
-              24×7
-            </p>
-          </div>
-        </div>
-
-        {/* Right: Login + Register */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate("/login")}
-            className="flex items-center gap-2 px-3 py-1 rounded-lg bg-teal-700 text-white border border-teal-500 hover:bg-teal-800 transition"
-          >
-            <User size={20} /> Login
-          </button>
-
-          <button
-            onClick={() => navigate("/register")}
-            className="flex items-center gap-2 px-3 py-1 rounded-lg bg-teal-700 text-white border border-teal-500 hover:bg-teal-800 transition"
-          >
-            <UserPlus size={20} /> Register
-          </button>
-        </div>
-      </div>
-
-      {/* Navbar (Same as About Us) */}
+      <TopNavbar />
       <Navbar />
 
-      {/* Appointment Form Section */}
       <div className="flex justify-center items-center py-12 px-4 relative">
-        {/* Background image behind the form */}
         <img
           src="Shreyahospital.jpg"
           alt="Hospital Background"

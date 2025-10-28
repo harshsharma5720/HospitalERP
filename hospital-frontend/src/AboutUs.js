@@ -1,5 +1,6 @@
 import React from "react";
 import Navbar from "./Navbar";
+import TopNavbar from "./TopNavbar";
 import { FaHeartbeat, FaUserMd, FaHospital, FaPhoneAlt } from "react-icons/fa";
 
 export default function AboutUs() {
@@ -12,6 +13,8 @@ export default function AboutUs() {
     >
       {/* Dark overlay for faded effect */}
       <div className="bg-black bg-opacity-60 min-h-screen">
+        {/*TopNavbar */}
+        <TopNavbar />
         {/* Navbar */}
         <Navbar />
 

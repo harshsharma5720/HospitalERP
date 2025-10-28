@@ -1,58 +1,17 @@
 import React from "react";
-import { User, UserPlus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
-import PopupForm from "./PopupForm"; // 👈 import popup here
+import TopNavbar from "./TopNavbar";
+import PopupForm from "./PopupForm";
+import { useNavigate } from "react-router-dom";
 
 export default function HomePage() {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Info Bar */}
-      <div className="bg-white shadow-md px-6 py-3 flex items-center border-b">
-        <div className="flex items-center gap-2">
-          <img src="download.jpeg" alt="Hospital Logo" className="h-10 w-10" />
-          <h1 className="text-xl font-bold text-teal-700">Shreya Hospital</h1>
-        </div>
-
-        <div className="flex-1 flex justify-center">
-          <div className="bg-gray-100 border border-teal-200 shadow-md rounded-lg p-4 max-w-3xl text-center">
-            <p className="text-sm text-gray-700">
-              <span className="font-semibold text-teal-700">📍 Location:</span>{" "}
-              Sahibabad, Plot No. 837, Shalimar Garden Main Rd, Block C,
-              Sahibabad, Ghaziabad, Uttar Pradesh 201006
-            </p>
-            <p className="text-sm text-gray-700 mt-2">
-              <span className="font-semibold text-teal-700">
-                ⏰ Service Timings:
-              </span>{" "}
-              24×7
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate("/login")}
-            className="flex items-center gap-2 px-3 py-1 rounded-lg bg-teal-700 text-white hover:bg-teal-800 transition"
-          >
-            <User size={20} /> Login
-          </button>
-
-          <button
-            onClick={() => navigate("/register")}
-            className="flex items-center gap-2 px-3 py-1 rounded-lg bg-teal-700 text-white hover:bg-teal-800 transition"
-          >
-            <UserPlus size={20} /> Register
-          </button>
-        </div>
-      </div>
-
-      {/* Navbar */}
+      <TopNavbar />
       <Navbar />
 
-      {/* Main Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 px-10 py-12">
         {/* Left */}
         <div className="space-y-8">
@@ -95,7 +54,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 👇 Popup will only show on HomePage */}
       <PopupForm />
     </div>
   );

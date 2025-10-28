@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
+import TopNavbar from "./TopNavbar"; // ✅ Added
 
 export default function DoctorPage() {
   const [doctors, setDoctors] = useState([]);
@@ -10,14 +11,13 @@ export default function DoctorPage() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  // ✅ Mounted once when the page loads
+  // ✅ Runs once when the page loads
   useEffect(() => {
-    let isMounted = true; // ✅ Added cleanup flag to prevent memory leaks
+    let isMounted = true;
     console.log("✅ DoctorPage mounted");
 
     const token = localStorage.getItem("jwtToken");
     if (!token) {
-      // ✅ Added token check — redirects if not logged in
       alert("Please login first to access this page.");
       navigate("/login");
       return;
@@ -28,9 +28,9 @@ export default function DoctorPage() {
     return () => {
       isMounted = false;
     };
-  }, [navigate]); // ✅ Added navigate as dependency
+  }, [navigate]);
 
-  // ✅ Fetch all doctors with token
+  // ✅ Fetch all doctors
   const fetchAllDoctors = async (token) => {
     try {
       setLoading(true);
@@ -46,15 +46,12 @@ export default function DoctorPage() {
       setError("");
     } catch (err) {
       console.error("Error fetching doctors:", err);
-
-      // ✅ Added handling for expired/invalid tokens
       if (err.response?.status === 401 || err.response?.status === 403) {
         alert("Session expired. Please login again.");
         localStorage.removeItem("jwtToken");
         navigate("/login");
         return;
       }
-
       setError("Failed to fetch doctors. Please try again.");
     } finally {
       setLoading(false);
@@ -67,7 +64,6 @@ export default function DoctorPage() {
 
     const token = localStorage.getItem("jwtToken");
     if (!token) {
-      // ✅ Added token check for search functionality too
       alert("Please login first to access this page.");
       navigate("/login");
       return;
@@ -80,7 +76,6 @@ export default function DoctorPage() {
 
     try {
       setLoading(true);
-      console.log(`Fetching doctors by specialization: ${searchTerm}`);
       const response = await axios.get(
         `http://localhost:8080/api/patient/getAllBySpecialization?specialization=${searchTerm}`,
         {
@@ -94,7 +89,6 @@ export default function DoctorPage() {
     } catch (err) {
       console.error("Error searching doctors:", err);
       if (err.response?.status === 401 || err.response?.status === 403) {
-        // ✅ Added same token expiry handling for search too
         alert("Session expired. Please login again.");
         localStorage.removeItem("jwtToken");
         navigate("/login");
@@ -113,51 +107,10 @@ export default function DoctorPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Top Navbar */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="flex justify-between items-center px-8 py-3">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <img src="download.jpeg" alt="Hospital Logo" className="h-10 w-auto" />
-          </div>
+      {/* ✅ Reusable Top Navbar */}
+      <TopNavbar />
 
-          {/* Contact Info */}
-          <div className="text-gray-700 font-semibold text-sm text-center">
-            📧 info@shreyahospital.com &nbsp; | &nbsp; 📞 +91-7838737363
-          </div>
-
-          {/* ✅ Conditional rendering for Login/Register or Logout */}
-          {!localStorage.getItem("jwtToken") ? (
-            <div className="flex gap-3">
-              <Link
-                to="/login"
-                className="flex items-center gap-2 px-3 py-1 rounded-lg bg-teal-700 text-white border border-teal-500 hover:bg-teal-800 transition"
-              >
-                Login
-              </Link>
-              <Link
-                to="/register"
-                className="flex items-center gap-2 px-3 py-1 rounded-lg bg-teal-700 text-white border border-teal-500 hover:bg-teal-800 transition"
-              >
-                Register
-              </Link>
-            </div>
-          ) : (
-            <button
-              onClick={() => {
-                // ✅ Logout clears token and navigates to login
-                localStorage.removeItem("jwtToken");
-                navigate("/login");
-              }}
-              className="px-3 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
-            >
-              Logout
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Second Navbar */}
+      {/* ✅ Main Navbar */}
       <Navbar />
 
       {/* Main Content */}

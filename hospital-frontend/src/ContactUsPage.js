@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import Navbar from "./Navbar";
+import TopNavbar from "./TopNavbar";
+
 function ContactUsPage() {
   const [formData, setFormData] = useState({
     enquiryType: "",
@@ -22,10 +24,10 @@ function ContactUsPage() {
   };
 
   return (
-
     <div className="bg-[#0083a9] min-h-screen text-white">
-      {/* Header Section */}
+      <TopNavbar />
       <Navbar />
+
       <div className="py-16 px-6 md:px-20 flex flex-col md:flex-row justify-between items-center">
         <div className="max-w-2xl">
           <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
@@ -55,7 +57,6 @@ function ContactUsPage() {
         </div>
       </div>
 
-      {/* Book Appointment Strip */}
       <div className="bg-[#002b5c] py-4 flex justify-center items-center text-lg">
         <span className="mr-4 font-semibold">📅 To Book an Appointment</span>
         <a
@@ -66,7 +67,6 @@ function ContactUsPage() {
         </a>
       </div>
 
-      {/* Enquiry Form Section */}
       <div className="bg-[#003366] text-white py-12 px-6 md:px-16">
         <div className="max-w-6xl mx-auto bg-white text-gray-800 p-8 rounded-2xl shadow-xl">
           <h2 className="text-2xl font-semibold mb-6 text-[#003366]">
