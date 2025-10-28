@@ -6,10 +6,17 @@ export default function PopupForm() {
   const [showPopup, setShowPopup] = useState(false);
   const navigate = useNavigate();
 
-  // Show popup after 2 seconds
+  // Show popup after 2 seconds, only if user is not logged in
   useEffect(() => {
-    const timer = setTimeout(() => setShowPopup(true), 2000);
-    return () => clearTimeout(timer);
+    const token = localStorage.getItem("jwtToken"); //  token stored during login
+
+    if (!token) {
+      const timer = setTimeout(() => {
+        setShowPopup(true);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   if (!showPopup) return null;
