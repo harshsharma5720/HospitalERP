@@ -2,20 +2,25 @@ import React from "react";
 
 export default function Footer() {
   return (
-    <footer className="bg-white border-t mt-16">
+    <footer className="bg-white border-t shadow-inner mt-16">
       <div className="flex flex-col md:flex-row w-full">
         {/* Left Section - Contact Info */}
-        <div className="bg-teal-700 text-white md:w-1/2 w-full p-10 flex flex-col justify-center space-y-6">
+        <div className="bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white md:w-1/2 w-full p-10 flex flex-col justify-center space-y-6">
+          {/* Logo */}
           <div>
-            <img src="download.jpeg" alt="Hospital Logo" className="h-12 mb-4" />
+            <img
+              src="download.jpeg"
+              alt="Hospital Logo"
+              className="h-14 mb-4 rounded-md shadow-md bg-white p-1"
+            />
           </div>
 
           {/* Location */}
           <div className="flex items-start space-x-3">
             <span className="text-2xl">📍</span>
             <div>
-              <h3 className="font-bold text-lg">Location</h3>
-              <p className="text-sm">
+              <h3 className="font-semibold text-lg">Location</h3>
+              <p className="text-sm leading-relaxed">
                 Amman Street, Next to Bait Al Khair Building, Al Nahda 2,
                 P.O.Box: 7832, Dubai, United Arab Emirates.
               </p>
@@ -26,10 +31,10 @@ export default function Footer() {
           <div className="flex items-start space-x-3">
             <span className="text-2xl">✉️</span>
             <div>
-              <h3 className="font-bold text-lg">Email</h3>
+              <h3 className="font-semibold text-lg">Email</h3>
               <a
                 href="mailto:sphdxb.receptions@nmchospital.ae"
-                className="text-sm hover:underline"
+                className="text-sm hover:underline hover:text-yellow-200 transition"
               >
                 sphdxb.receptions@nmchospital.ae
               </a>
@@ -40,7 +45,7 @@ export default function Footer() {
           <div className="flex items-start space-x-3">
             <span className="text-2xl">📞</span>
             <div>
-              <h3 className="font-bold text-lg">Phone</h3>
+              <h3 className="font-semibold text-lg">Phone</h3>
               <p className="text-sm">Landline: +971 4 267 9999</p>
               <p className="text-sm">Toll Free: 8006624</p>
               <p className="text-sm">Fax: +971 4 267 8889</p>
@@ -58,14 +63,14 @@ export default function Footer() {
             allowFullScreen=""
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
-            className="h-[400px] md:h-full"
+            className="h-[400px] md:h-full border-l-4 border-teal-600"
           ></iframe>
         </div>
       </div>
 
       {/* Bottom Bar */}
-      <div className="bg-gray-900 text-gray-300 text-center py-3 text-sm">
-        © {new Date().getFullYear()} Shreya Hospital. All rights reserved.
+      <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-gray-300 text-center py-3 text-sm tracking-wide">
+        © {new Date().getFullYear()} <span className="font-semibold text-white">Shreya Hospital</span>. All rights reserved.
       </div>
     </footer>
   );

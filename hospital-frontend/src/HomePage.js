@@ -12,11 +12,18 @@ export default function HomePage() {
       <TopNavbar />
       <Navbar />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 px-10 py-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 px-10 py-12"
+      style={{
+           backgroundImage: "url('/doctors-image3.jpg')",
+           backgroundSize: "cover",       // Makes image cover the full area
+           backgroundPosition: "center",  // Keeps the image centered
+           backgroundRepeat: "no-repeat",
+           height: "600px",
+           }}>
         {/* Left */}
-        <div className="space-y-8">
+        <div className="w-[700px] p-4 border-2 border-[#1E63DB] rounded-xl space-y-8 bg-white bg-opacity-20 backdrop-blur-md">
           <div>
-            <h2 className="text-2xl font-bold text-teal-700 mb-2">
+            <h2 className="text-4xl font-extrabold mb-3 text-[#1E63DB] ">
               To Book an Appointment
             </h2>
             <p className="text-lg mb-4">
@@ -24,14 +31,14 @@ export default function HomePage() {
             </p>
             <button
               onClick={() => navigate("/appointments")}
-              className="bg-teal-700 text-white px-4 py-2 rounded-lg shadow hover:bg-teal-800 transition"
+              className="bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white px-4 py-2 rounded-lg shadow hover:bg-teal-800 transition"
             >
               Book Appointment
             </button>
           </div>
 
-          <div className="border-2 border-teal-500 rounded-xl p-6 shadow-md bg-white hover:-translate-y-2 hover:shadow-2xl transition">
-            <h3 className="text-xl font-semibold text-teal-700 mb-3">
+          <div className="w-[600px] mx-auto border-2 border-[#1E63DB] rounded-xl p-6 shadow-md space-x-2 bg-white bg-opacity-30 backdrop-blur-md hover:-translate-y-2 hover:shadow-2xl transition">
+            <h3 className="text-xl font-semibold text-[#1E63DB] mb-3">
               Why Shreya-Hospital Healthcare?
             </h3>
             <ul className="list-disc list-inside space-y-2 text-gray-700">
@@ -44,14 +51,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Right */}
-        <div className="flex items-center justify-center">
-          <img
-            src="Shreyahospital.jpg"
-            alt="Hospital"
-            className="rounded-xl shadow-lg w-full max-w-md"
-          />
-        </div>
+
       </div>
 
       <PopupForm />

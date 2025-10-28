@@ -50,58 +50,81 @@ export default function LoginPage() {
       className="min-h-screen bg-cover bg-center flex items-center justify-center relative"
       style={{ backgroundImage: "url('/background.jpeg')" }}
     >
-      {/* 🔹 Background Overlay */}
-      <div className="absolute inset-0 bg-black bg-opacity-70"></div>
+      {/* Background Overlay */}
+      <div className="absolute inset-0 bg-black bg-opacity-60"></div>
 
-      {/* 🏠 Home Button - Top Left */}
+      {/* Home Button */}
       <button
         onClick={() => navigate("/")}
-        className="absolute top-6 left-6 bg-teal-600 text-white px-5 py-2 rounded-lg font-semibold shadow-lg hover:bg-teal-700 transition"
+        className="absolute top-6 left-6 bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white px-5 py-2 rounded-lg font-semibold shadow-lg hover:bg-[#1e3d59] hover:text-white transition"
       >
-        ⬅ Home
+        Home
       </button>
 
-      {/* 🔹 Login Card */}
-      <div className="relative bg-white bg-opacity-10 backdrop-blur-md p-8 rounded-2xl shadow-[0_10px_25px_rgba(0,0,0,0.7)] w-full max-w-md text-center">
-        <h2 className="text-3xl font-bold text-teal-700 mb-6">Login</h2>
+      {/* Main Card */}
+      <div className="relative z-10 flex flex-col md:flex-row w-[90%] md:w-[70%] lg:w-[60%] rounded-3xl overflow-hidden shadow-2xl border border-white/20 bg-white/10 backdrop-blur-xl">
 
-        {error && <p className="text-red-500 font-semibold mb-4">{error}</p>}
+        {/* Left Section - Welcome */}
+        <div className="md:w-1/2 w-full flex flex-col justify-center items-center text-white text-center p-10 bg-gradient-to-br from-[#1E63DB] to-[#27496d]">
+          <h1 className="text-4xl font-extrabold mb-3 drop-shadow-md">WELCOME</h1>
+          <p className="text-sm text-gray-200">Your trusted health partner</p>
+          <div className="mt-6 w-24 h-1 bg-white rounded-full"></div>
+        </div>
 
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          <input
-            type="text"
-            name="username"
-            placeholder="Enter Username or Email"
-            value={formData.username}
-            onChange={handleChange}
-            className="w-full px-4 py-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 placeholder:text-lg"
-            required
-          />
+        {/* Right Section - Login Form */}
+        <div className="md:w-1/2 w-full bg-white/10 backdrop-blur-sm p-10 flex flex-col justify-center text-white">
+          <h2 className="text-3xl font-bold mb-6 text-center text-[#5A73C4] drop-shadow-md">
+            Sign In / Login
+          </h2>
 
-          <input
-            type="password"
-            name="password"
-            placeholder="Enter your Password"
-            value={formData.password}
-            onChange={handleChange}
-            className="w-full px-4 py-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 placeholder:text-lg"
-            required
-          />
+          {error && <p className="text-red-400 font-semibold mb-4 text-center">{error}</p>}
 
-          <button
-            type="submit"
-            className="w-full bg-teal-700 text-white py-4 rounded-lg font-semibold hover:bg-teal-800 transition shadow-lg"
-          >
-            Login
-          </button>
-        </form>
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            <input
+              type="text"
+              name="username"
+              placeholder="Username or Email"
+              value={formData.username}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-lg bg-white/70 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1e3d59]"
+              required
+            />
 
-        <p className="text-sm text-gray-200 mt-4">
-          Don’t have an account?{" "}
-          <a href="/register" className="text-teal-700 font-bold hover:underline">
-            Register
-          </a>
-        </p>
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-lg bg-white/70 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1e3d59]"
+              required
+            />
+
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-br from-[#1E63DB] to-[#27496d]    text-white py-3 rounded-lg font-semibold hover:bg-[#162c42] transition-all shadow-lg"
+            >
+              Sign In
+            </button>
+
+            <button
+              type="button"
+              className="w-full border border-white/50 text-white py-3 rounded-lg font-semibold hover:bg-white/20 transition-all"
+            >
+              Sign in with other
+            </button>
+          </form>
+
+          <div className="text-center mt-5 text-sm text-gray-200">
+            Don’t have an account?{" "}
+            <a
+              href="/register"
+              className="text-[#1e3d59] font-bold hover:underline"
+            >
+              Sign up
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

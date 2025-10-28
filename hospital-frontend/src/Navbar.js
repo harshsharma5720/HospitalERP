@@ -12,18 +12,23 @@ export default function Navbar() {
   ];
 
   return (
-    <div className="bg-teal-700 text-white px-6 py-3 flex gap-12 shadow-lg text-lg font-medium">
+    <div className="bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white px-8 py-4 flex gap-10 items-center shadow-lg text-lg font-medium sticky top-0 z-50">
       {navItems.map((item) => (
         <NavLink
           key={item.path}
           to={item.path}
           end
           className={({ isActive }) =>
-            `flex items-center gap-2 px-3 py-1 rounded-lg hover:bg-teal-800 transition
-             ${isActive ? "border-b-2 border-white font-semibold" : ""}`
+            `flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200
+            hover:bg-white hover:text-teal-700 ${
+              isActive
+                ? "bg-white text-teal-700 font-semibold shadow-sm"
+                : ""
+            }`
           }
         >
-          {item.icon} {item.name}
+          {item.icon}
+          <span>{item.name}</span>
         </NavLink>
       ))}
     </div>

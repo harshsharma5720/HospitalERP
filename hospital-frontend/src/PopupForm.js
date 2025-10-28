@@ -7,17 +7,22 @@ export default function PopupForm() {
   const navigate = useNavigate();
 
   // Show popup after 2 seconds, only if user is not logged in
-  useEffect(() => {
-    const token = localStorage.getItem("jwtToken"); //  token stored during login
+ useEffect(() => {
+   const token = localStorage.getItem("jwtToken");
+   console.log("Token from localStorage:", token);
 
-    if (!token) {
-      const timer = setTimeout(() => {
-        setShowPopup(true);
-      }, 2000);
+   if (!token) {
+     console.log("No token found → showing popup soon...");
+     const timer = setTimeout(() => {
+       console.log("Triggering popup now");
+       setShowPopup(true);
+     }, 2000);
+     return () => clearTimeout(timer);
+   } else {
+     console.log("Token exists → not showing popup");
+   }
+ }, []);
 
-      return () => clearTimeout(timer);
-    }
-  }, []);
 
   if (!showPopup) return null;
 

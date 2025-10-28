@@ -34,14 +34,14 @@ export default function TopNavbar() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate("/login")}
-          className="flex items-center gap-2 px-3 py-1 rounded-lg bg-teal-700 text-white hover:bg-teal-800 transition"
+          className="flex items-center gap-2 px-3 py-1 rounded-lg bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white hover:bg-teal-800 transition"
         >
           <User size={20} /> Login
         </button>
 
         <button
           onClick={() => navigate("/register")}
-          className="flex items-center gap-2 px-3 py-1 rounded-lg bg-teal-700 text-white hover:bg-teal-800 transition"
+          className="flex items-center gap-2 px-3 py-1 rounded-lg bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white hover:bg-teal-800 transition"
         >
           <UserPlus size={20} /> Register
         </button>
