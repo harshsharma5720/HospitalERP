@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
-import TopNavbar from "./TopNavbar"; // ✅ Added
+import TopNavbar from "./TopNavbar";
 
 export default function DoctorPage() {
   const [doctors, setDoctors] = useState([]);
@@ -11,12 +11,12 @@ export default function DoctorPage() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  // ✅ Runs once when the page loads
+  // Runs once when the page loads
   useEffect(() => {
     let isMounted = true;
-    console.log("✅ DoctorPage mounted");
-
+    console.log("DoctorPage mounted");
     const token = localStorage.getItem("jwtToken");
+    console.log(token);
     if (!token) {
       alert("Please login first to access this page.");
       navigate("/login");
@@ -30,7 +30,7 @@ export default function DoctorPage() {
     };
   }, [navigate]);
 
-  // ✅ Fetch all doctors
+  // Fetch all doctors
   const fetchAllDoctors = async (token) => {
     try {
       setLoading(true);
@@ -58,7 +58,7 @@ export default function DoctorPage() {
     }
   };
 
-  // ✅ Search doctors by specialization
+  // Search doctors by specialization
   const handleSearch = async (e) => {
     e.preventDefault();
 
@@ -100,17 +100,17 @@ export default function DoctorPage() {
     }
   };
 
-  // ✅ Navigate to Appointment Page
+  // Navigate to Appointment Page
   const handleBookAppointment = (doctorName) => {
     navigate("/appointments", { state: { doctorName } });
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* ✅ Reusable Top Navbar */}
+      {/*  Reusable Top Navbar */}
       <TopNavbar />
 
-      {/* ✅ Main Navbar */}
+      {/* Main Navbar */}
       <Navbar />
 
       {/* Main Content */}
