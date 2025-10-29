@@ -9,39 +9,64 @@ export default function DoctorPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [role, setRole] = useState(""); // ✅ Store role from token
   const navigate = useNavigate();
 
-  // Runs once when the page loads
+  // ✅ Decode JWT token to extract role
+  const getRoleFromToken = (token) => {
+    try {
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split("")
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+          .join("")
+      );
+      const payload = JSON.parse(jsonPayload);
+      return payload.role || "";
+    } catch (err) {
+      console.error("Error decoding token:", err);
+      return "";
+    }
+  };
+
+  // ✅ Runs once when the page loads
   useEffect(() => {
     let isMounted = true;
     console.log("DoctorPage mounted");
     const token = localStorage.getItem("jwtToken");
-    console.log(token);
+
     if (!token) {
       alert("Please login first to access this page.");
       navigate("/login");
       return;
     }
 
-    if (isMounted) fetchAllDoctors(token);
+    const extractedRole = getRoleFromToken(token);
+    setRole(extractedRole);
+    console.log("Extracted role:", extractedRole);
+
+    if (isMounted && extractedRole) fetchAllDoctors(token, extractedRole);
 
     return () => {
       isMounted = false;
     };
   }, [navigate]);
 
-  // Fetch all doctors
-  const fetchAllDoctors = async (token) => {
+  // ✅ Fetch all doctors
+  const fetchAllDoctors = async (token, userRole) => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        "http://localhost:8080/api/patient/getAllDoctors",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const baseURL =
+        userRole === "ROLE_DOCTOR"
+          ? "http://localhost:8080/api/doctor/getAllDoctors"
+          : "http://localhost:8080/api/patient/getAllDoctors";
+
+      const response = await axios.get(baseURL, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
       setDoctors(response.data);
       setError("");
     } catch (err) {
@@ -58,7 +83,7 @@ export default function DoctorPage() {
     }
   };
 
-  // Search doctors by specialization
+  // ✅ Search doctors by specialization
   const handleSearch = async (e) => {
     e.preventDefault();
 
@@ -70,20 +95,20 @@ export default function DoctorPage() {
     }
 
     if (!searchTerm.trim()) {
-      fetchAllDoctors(token);
+      fetchAllDoctors(token, role);
       return;
     }
 
     try {
       setLoading(true);
-      const response = await axios.get(
-        `http://localhost:8080/api/patient/getAllBySpecialization?specialization=${searchTerm}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const baseURL =
+        role === "ROLE_DOCTOR"
+          ? `http://localhost:8080/api/doctor/getAllBySpecialization?specialization=${searchTerm}`
+          : `http://localhost:8080/api/patient/getAllBySpecialization?specialization=${searchTerm}`;
+
+      const response = await axios.get(baseURL, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setDoctors(response.data);
       setError("");
     } catch (err) {
@@ -100,14 +125,15 @@ export default function DoctorPage() {
     }
   };
 
-  // Navigate to Appointment Page
+  // ✅ Navigate to Appointment Page
   const handleBookAppointment = (doctorName) => {
     navigate("/appointments", { state: { doctorName } });
   };
 
+  // ✅ UI Rendering (Unchanged Layout)
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/*  Reusable Top Navbar */}
+      {/* Top Navbar */}
       <TopNavbar />
 
       {/* Main Navbar */}
@@ -115,11 +141,13 @@ export default function DoctorPage() {
 
       {/* Main Content */}
       <div className="flex-grow">
-        {/* 🔍 Search Section */}
+        {/* Search Section */}
         <div className="max-w-3xl mx-auto mt-10 text-center">
           <h2 className="text-3xl font-bold text-teal-700 mb-4">Our Doctors</h2>
-          <form onSubmit={handleSearch} className="flex gap-2 justify-center items-center">
-            {/* 🔽 Specialization Dropdown */}
+          <form
+            onSubmit={handleSearch}
+            className="flex gap-2 justify-center items-center"
+          >
             <select
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -168,13 +196,17 @@ export default function DoctorPage() {
                   alt="Doctor"
                   className="h-24 w-24 mx-auto rounded-full mb-4"
                 />
-                <h3 className="text-xl font-bold text-teal-700">{doctor.name}</h3>
+                <h3 className="text-xl font-bold text-teal-700">
+                  {doctor.name}
+                </h3>
                 <p className="text-gray-600 mt-1">
                   Specialization:{" "}
                   <span className="font-semibold">{doctor.specialist}</span>
                 </p>
                 <p className="text-gray-600 mt-1">Email: {doctor.email}</p>
-                <p className="text-gray-600 mt-1">Phone: {doctor.phoneNumber}</p>
+                <p className="text-gray-600 mt-1">
+                  Phone: {doctor.phoneNumber}
+                </p>
                 <button
                   onClick={() => handleBookAppointment(doctor.name)}
                   className="mt-4 bg-teal-700 text-white px-4 py-2 rounded-lg hover:bg-teal-800 transition"

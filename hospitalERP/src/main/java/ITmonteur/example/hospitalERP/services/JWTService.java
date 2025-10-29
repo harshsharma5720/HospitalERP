@@ -46,6 +46,11 @@ public class JWTService {
         logger.info("Generating token for user: {}", userDetails.getUsername());
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
+        // Add role information to the token
+        if (userDetails.getAuthorities() != null && !userDetails.getAuthorities().isEmpty()) {
+            String role = userDetails.getAuthorities().iterator().next().getAuthority();
+            claims.put("role", role);
+        }
         String token = createToken(claims, userDetails.getUsername());
         logger.info("Token generated successfully for user: {}", userDetails.getUsername());
         return token;
@@ -57,6 +62,12 @@ public class JWTService {
         boolean isValid = (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
         logger.info("Token validation for user {}: {}", userDetails.getUsername(), isValid);
         return isValid;
+    }
+
+    //extract role from token
+    public String extractUserRole(String token) {
+        final Claims claims = extractAllClaims(token);
+        return claims.get("role", String.class);
     }
 
     // Private helpers

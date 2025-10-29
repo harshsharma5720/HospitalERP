@@ -4,7 +4,9 @@ import ITmonteur.example.hospitalERP.dto.AuthResponseDTO;
 import ITmonteur.example.hospitalERP.dto.LoginRequestDTO;
 import ITmonteur.example.hospitalERP.dto.RegisterRequestDTO;
 import ITmonteur.example.hospitalERP.services.AuthService;
+import ITmonteur.example.hospitalERP.services.JWTService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
@@ -19,6 +21,9 @@ public class AuthController {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private JWTService jwtService;
 
     // Register a new user (Doctor, Patient, Receptionist)
     @PostMapping("/register")
@@ -37,4 +42,19 @@ public class AuthController {
         logger.info("User logged in successfully: {}", request.getUsername());
         return ResponseEntity.ok(response);
     }
+
+//    @GetMapping("/role")
+//    public ResponseEntity<String> getUserRole(@RequestHeader("Authorization") String authHeader) {
+//        logger.info("Received request to fetch user role.");
+//        try {
+//            String token = authHeader.substring(7);// Extract token
+//            logger.debug("Extracted JWT Token: {}", token);
+//            String role = jwtService.extractUserRole(token);// Extracting the decoded role
+//            logger.info("Decoded role from token: {}", role);
+//            return ResponseEntity.ok(role);
+//        } catch (Exception e) {
+//            logger.error("Error while extracting user role from token: {}", e.getMessage(), e);
+//            return ResponseEntity.status(403).body("Invalid or expired token");
+//        }// returns decoded role like "ROLE_PATIENT" or "ROLE_DOCTOR"
+//    }
 }
