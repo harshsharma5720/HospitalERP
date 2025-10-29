@@ -10,6 +10,7 @@ import ContactUsPage from "./ContactUsPage";
 import Treatments from "./Treatments";
 import AboutUs from "./AboutUs";
 import EditProfilePage from "./EditProfileModal";
+import AppointmentDetails from "./AppointmentDetails";
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/treatments" element={<Treatments />} />
         <Route path="/about" element={<AboutUs />} />
         <Route path="/edit-profile" element={<EditProfilePage />} />
+        <Route path="/appointment-details" element={<AppointmentDetails />} />
       </Routes>
       <Footer />
     </Router>

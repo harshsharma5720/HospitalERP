@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 export default function ProfilePage({ onClose }) {
   const navigate = useNavigate();
 
-  // Load profile data from localStorage (if available)
   const [profile, setProfile] = useState({
     name: "Dr. Shreya Mehta",
     role: "Admin / Doctor",
@@ -23,14 +22,18 @@ export default function ProfilePage({ onClose }) {
   }, []);
 
   const handleEdit = () => {
-    onClose(); // Close popup before navigating
+    onClose();
     navigate("/edit-profile");
+  };
+
+  const handleAboutAppointment = () => {
+    onClose();
+    navigate("/appointment-details");
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
       <div className="relative bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-fadeIn">
-        {/* Close button */}
         <button
           onClick={onClose}
           className="absolute top-3 right-3 text-gray-500 hover:text-red-500 transition"
@@ -38,7 +41,6 @@ export default function ProfilePage({ onClose }) {
           <X size={24} />
         </button>
 
-        {/* Profile Image */}
         <div className="flex flex-col items-center text-center">
           <img
             src={profile.image}
@@ -51,7 +53,6 @@ export default function ProfilePage({ onClose }) {
           <p className="text-[#1E63DB] font-medium">{profile.role}</p>
         </div>
 
-        {/* Profile Details */}
         <div className="mt-6 space-y-3 text-gray-700">
           <div className="flex justify-between">
             <span className="font-medium text-gray-600">Department:</span>
@@ -69,10 +70,16 @@ export default function ProfilePage({ onClose }) {
           </div>
         </div>
 
-        {/* Edit button */}
+        <button
+          onClick={handleAboutAppointment}
+          className="mt-6 w-full bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white py-2 rounded-xl hover:opacity-90 transition-all duration-300"
+        >
+          About Patient Appointment
+        </button>
+
         <button
           onClick={handleEdit}
-          className="mt-6 w-full bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white py-2 rounded-xl hover:opacity-90 transition-all duration-300"
+          className="mt-4 w-full bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white py-2 rounded-xl hover:opacity-90 transition-all duration-300"
         >
           Edit Profile
         </button>

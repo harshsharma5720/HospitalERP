@@ -41,6 +41,11 @@ export default function AppointmentPage() {
       );
 
       alert(response.data);
+
+      // Save the booked appointment locally
+      localStorage.setItem("appointmentData", JSON.stringify(payload));
+
+      // Clear form
       setFormData({
         patientName: "",
         gender: "MALE",
