@@ -14,4 +14,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     // Native query to fetch appointments by doctor name
     @Query(value = "SELECT * FROM appointment a WHERE a.doctor = :doctorName", nativeQuery = true)
     List<Appointment> findAppointmentsByDoctor(@Param("doctorName") String doctorName);
+
+    List<Appointment> findByPtInfo_PatientId(Long patientId);
 }

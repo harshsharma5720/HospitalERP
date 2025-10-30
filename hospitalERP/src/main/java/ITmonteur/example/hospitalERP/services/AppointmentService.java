@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +32,8 @@ public class AppointmentService {
     private DoctorRepository doctorRepository;
     @Autowired
     private ModelMapper modelMapper;
+    @Autowired
+    private JWTService jwtService;
 
     public List<AppointmentDTO> getAllAppointments(){
         logger.info("Fetching all appointments");
@@ -41,6 +44,28 @@ public class AppointmentService {
         logger.info("Total appointments fetched: {}", appointmentDTOList.size());
         return appointmentDTOList;
     }
+
+    public List<AppointmentDTO>  getAppointmentsByToken(String token) {
+        String jwt = token.replace("Bearer ", "");
+        Long userId = this.jwtService.extractUserId(jwt);
+        Optional<PtInfo> patient = this.ptInfoRepository.findByUser_Id(userId);
+        if (patient.isEmpty()) {
+            throw new RuntimeException("No patient found for this user!");
+        }
+        Long patientId = patient.get().getPatientId();
+        logger.info("Fetching appointment with ID: {}", patientId);
+        List<Appointment> appointmentList = this.appointmentRepository.findByPtInfo_PatientId(patientId);
+        return appointmentList.stream()
+                .map(appointment -> modelMapper.map(appointment,AppointmentDTO.class))
+                .collect(Collectors.toList());
+    }
+
+//    public List<AppointmentDTO> getAppointmentsByPatientId(Long patientId) {
+//        List<Appointment> appointments = appointmentRepository.findByPatientId(patientId);
+//        return appointments.stream()
+//                .map(appointment -> modelMapper.map(appointment, AppointmentDTO.class))
+//                .collect(Collectors.toList());
+//    }
 
     public AppointmentDTO getAppointmentByID(long appointmentID){
         logger.info("Fetching appointment with ID: {}", appointmentID);

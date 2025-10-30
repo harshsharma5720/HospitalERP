@@ -29,6 +29,26 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentDTOList);
     }
 
+    @GetMapping("/getPatientAppointments")
+    public ResponseEntity<List<AppointmentDTO>> getAppointmentsForLoggedInPatient(
+            @RequestHeader("Authorization") String token) {
+        logger.info("Fetching appointments for logged-in patient using token");
+        List<AppointmentDTO> appointments = appointmentService.getAppointmentsByToken(token);
+        logger.info("Fetching All Appointments with token :{}",token);
+        return ResponseEntity.ok(appointments);
+    }
+
+
+//    // Get all appointments by Patient ID
+//    @GetMapping("/appointmentsByPatient/{patientId}")
+//    public ResponseEntity<List<AppointmentDTO>> getAppointmentsByPatientId(@PathVariable Long patientId) {
+//        logger.info("Fetching all appointments for patient ID: {}", patientId);
+//        List<AppointmentDTO> appointmentDTOList = this.appointmentService.getAppointmentsByPatientId(patientId);
+//        logger.info("Total appointments found for patient ID {}: {}", patientId, appointmentDTOList.size());
+//        return ResponseEntity.ok(appointmentDTOList);
+//    }
+
+
     // Get appointment by ID
     @GetMapping("appointmentId/{myId}")
     public ResponseEntity<AppointmentDTO> getAppointmentByAppointmentID(@PathVariable long myId) {
