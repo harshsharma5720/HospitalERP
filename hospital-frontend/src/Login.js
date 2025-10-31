@@ -66,7 +66,7 @@ export default function LoginPage() {
 
         {/* Left Section - Welcome */}
         <div className="md:w-1/2 w-full flex flex-col justify-center items-center text-white text-center p-10 bg-gradient-to-br from-[#1E63DB] to-[#27496d]">
-          <h1 className="text-4xl font-extrabold mb-3 drop-shadow-md">WELCOME</h1>
+          <h1 className="text-4xl font-extrabold mb-3 drop-shadow-md">WELCOME BACK</h1>
           <p className="text-sm text-gray-200">Your trusted health partner</p>
           <div className="mt-6 w-24 h-1 bg-white rounded-full"></div>
         </div>
