@@ -2,6 +2,7 @@ package ITmonteur.example.hospitalERP.entities;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "appointments")
@@ -22,6 +23,9 @@ public class Appointment {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Shift shift; // MORNING, EVENING
+    @ManyToOne
+    @JoinColumn(name = "slot_id")
+    private Slot slot;
     @Column(nullable = false)
     private LocalDate date;
     @Column(columnDefinition = "TEXT")
@@ -36,13 +40,14 @@ public class Appointment {
 
     public Appointment(long appointmentID, String patientName,
                        Gender gender, int age, Doctor doctor,
-                       Shift shift, LocalDate date, String message, PtInfo ptInfo) {
+                       Shift shift, Slot slot ,LocalDate date,String message, PtInfo ptInfo) {
         this.appointmentID = appointmentID;
         this.patientName = patientName;
         this.gender = gender;
         this.age = age;
         this.doctor = doctor;
         this.shift = shift;
+        this.slot=slot;
         this.date = date;
         this.message = message;
         this.ptInfo = ptInfo;
@@ -75,4 +80,12 @@ public class Appointment {
 
     public PtInfo getPtInfo() { return ptInfo; }
     public void setPtInfo(PtInfo ptInfo) { this.ptInfo = ptInfo; }
+
+    public Slot getSlot() {
+        return slot;
+    }
+
+    public void setSlot(Slot slot) {
+        this.slot = slot;
+    }
 }

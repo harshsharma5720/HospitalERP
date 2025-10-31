@@ -1,6 +1,8 @@
 package ITmonteur.example.hospitalERP.repositories;
 
 import ITmonteur.example.hospitalERP.entities.Appointment;
+import ITmonteur.example.hospitalERP.entities.Doctor;
+import ITmonteur.example.hospitalERP.entities.Shift;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,4 +18,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findAppointmentsByDoctor(@Param("doctorName") String doctorName);
 
     List<Appointment> findByPtInfo_PatientId(Long patientId);
+
+    @Query("SELECT a FROM Appointment a WHERE a.doctor = :doctor AND a.shift = :shift")
+    List<Appointment> findByDoctorAndShift(@Param("doctor") Doctor doctor,
+                                           @Param("shift") Shift shift);
 }

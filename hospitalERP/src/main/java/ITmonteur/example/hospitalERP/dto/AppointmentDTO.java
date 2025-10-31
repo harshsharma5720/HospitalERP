@@ -2,6 +2,8 @@ package ITmonteur.example.hospitalERP.dto;
 
 import ITmonteur.example.hospitalERP.entities.Gender;
 import ITmonteur.example.hospitalERP.entities.Shift;
+import ITmonteur.example.hospitalERP.entities.Slot;
+
 import java.time.LocalDate;
 
 public class AppointmentDTO {
@@ -15,12 +17,13 @@ public class AppointmentDTO {
     private LocalDate date;        // Appointment date
     private String message;        // Optional note for doctor
     private Long ptInfoId;         // Optional, link to patient info
+    private Long slotId;
 
     public AppointmentDTO() {}
 
     public AppointmentDTO(long appointmentID, String patientName, Gender gender, int age,
                           String doctorName, Shift shift, LocalDate date, String message,
-                          Long ptInfoId) {
+                          Long ptInfoId, Long slotId) {
         this.appointmentID = appointmentID;
         this.patientName = patientName;
         this.gender = gender;
@@ -30,6 +33,7 @@ public class AppointmentDTO {
         this.date = date;
         this.message = message;
         this.ptInfoId = ptInfoId;
+        this.slotId=slotId;
     }
 
     // --- Getters and Setters ---
@@ -59,4 +63,12 @@ public class AppointmentDTO {
 
     public Long getPtInfoId() { return ptInfoId; }
     public void setPtInfoId(Long ptInfoId) { this.ptInfoId = ptInfoId; }
+
+    public Long getSlotId() {
+        return slotId;
+    }
+
+    public void setSlotId(Long slotId) {
+        this.slotId = slotId;
+    }
 }
