@@ -57,6 +57,15 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentDTO);
     }
 
+    @GetMapping("/getDoctorAppointments")
+    public ResponseEntity<List<AppointmentDTO>> getAppointmentsForLoggedInDoctor(
+            @RequestHeader("Authorization") String token) {
+        logger.info("Fetching appointments for logged-in doctor using token");
+        List<AppointmentDTO> appointments = appointmentService.getAppointmentsForDoctor(token);
+        logger.info("Appointments fetched for doctor using token");
+        return ResponseEntity.ok(appointments);
+    }
+
     // Get all appointments by doctor name
     @GetMapping("appointmentsByDoctor/{doctorName}")
     public ResponseEntity<List<AppointmentDTO>> getAllAppointmentsByDoctor(@PathVariable String doctorName) {

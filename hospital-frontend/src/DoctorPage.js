@@ -3,6 +3,7 @@ import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import TopNavbar from "./TopNavbar";
+import { getRoleFromToken } from "./utils/jwtUtils";
 
 export default function DoctorPage() {
   const [doctors, setDoctors] = useState([]);
@@ -12,24 +13,6 @@ export default function DoctorPage() {
   const [role, setRole] = useState("");
   const navigate = useNavigate();
 
-  // ✅ Decode JWT token to extract role
-  const getRoleFromToken = (token) => {
-    try {
-      const base64Url = token.split(".")[1];
-      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split("")
-          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-          .join("")
-      );
-      const payload = JSON.parse(jsonPayload);
-      return payload.role || "";
-    } catch (err) {
-      console.error("Error decoding token:", err);
-      return "";
-    }
-  };
 
   // ✅ Fetch data on mount
   useEffect(() => {

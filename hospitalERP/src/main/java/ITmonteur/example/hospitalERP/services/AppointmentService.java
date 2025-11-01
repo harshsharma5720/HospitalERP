@@ -118,6 +118,26 @@ public class AppointmentService {
         return true;
     }
 
+    public List<AppointmentDTO> getAppointmentsForDoctor(String token) {
+
+        logger.info("Extracting JWT token to fetch doctor appointments");
+        String jwt = token.replace("Bearer ", "");
+        Long userId = jwtService.extractUserId(jwt);
+        logger.info("Extracted userId from token: {}", userId);
+        // Get doctor by userId (because doctor is linked with user)
+        Doctor doctor = doctorRepository.findByUserId(userId)
+                .orElseThrow(() -> {
+                    logger.error("No doctor found for userId: {}", userId);
+                    return new ResourceNotFoundException("Doctor ","userId",userId);
+                });
+        logger.info("Doctor found: {}, fetching appointments", doctor.getName());
+        List<Appointment> appointments = appointmentRepository.findByDoctor_Id(doctor.getId());
+        logger.info("Total appointments found for doctor {}: {}", doctor.getName(), appointments.size());
+        List<AppointmentDTO> appointmentDTOList = appointments.stream()
+                .map(app -> modelMapper.map(app, AppointmentDTO.class))
+                .collect(Collectors.toList());
+        return appointmentDTOList;
+    }
 
     public boolean deleteAppointmentByID(long appointmentID){
         logger.info("Deleting appointment with ID: {}", appointmentID);
