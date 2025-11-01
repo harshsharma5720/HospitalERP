@@ -28,7 +28,7 @@ public class SlotService {
                 .orElseThrow(() -> new RuntimeException("Doctor not found"));
         List<Slot> existingSlots = slotRepository.findByDoctorAndDateAndShift(doctor, date, shift); // Check if slots already exist for this doctor, date, and shift
         if (!existingSlots.isEmpty()) {
-            System.out.println("✅ Slots already exist for Doctor ID: " + doctorId +
+            System.out.println(" Slots already exist for Doctor ID: " + doctorId +
                     " on " + date + " (" + shift + ")");
             return existingSlots; // Return existing slots instead of regenerating
         }
