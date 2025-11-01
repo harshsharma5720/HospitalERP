@@ -95,6 +95,8 @@ export default function AppointmentPage() {
         }
       );
 
+      console.log("🎯 Available slots received:", response.data);
+
       setAvailableSlots(response.data);
     } catch (error) {
       console.error("Error fetching slots:", error);

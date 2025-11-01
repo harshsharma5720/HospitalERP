@@ -1,5 +1,6 @@
 package ITmonteur.example.hospitalERP.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -19,6 +20,7 @@ public class Appointment {
     private int age;
     @ManyToOne
     @JoinColumn(name = "doctor_id", referencedColumnName = "id")
+    @JsonIgnore
     private Doctor doctor; // Doctor entity reference
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
