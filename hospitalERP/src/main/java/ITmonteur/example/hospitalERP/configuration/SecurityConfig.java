@@ -32,7 +32,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable()) //CSRF = Cross-Site Request Forgery (a type of attack).  It’s useful for web forms that use sessions
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))//
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
