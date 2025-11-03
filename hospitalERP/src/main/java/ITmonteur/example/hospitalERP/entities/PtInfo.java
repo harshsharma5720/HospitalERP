@@ -11,7 +11,7 @@ import java.util.List;
 @Table(name = "patient")
 public class PtInfo {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long patientId;
     private String patientName;
     @Column(unique = true , nullable = false)
