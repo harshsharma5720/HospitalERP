@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import TopNavbar from "./TopNavbar";
-import {getRoleFromToken} from "./utils/jwtUtils.js"
+import { getRoleFromToken } from "./utils/jwtUtils.js";
 
 export default function DoctorPage() {
   const [doctors, setDoctors] = useState([]);
@@ -13,85 +13,48 @@ export default function DoctorPage() {
   const [role, setRole] = useState("");
   const navigate = useNavigate();
 
-//  // ✅ Decode JWT token to extract role
-//  const getRoleFromToken = (token) => {
-//    try {
-//      const base64Url = token.split(".")[1];
-//      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-//      const jsonPayload = decodeURIComponent(
-//        atob(base64)
-//          .split("")
-//          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-//          .join("")
-//      );
-//      const payload = JSON.parse(jsonPayload);
-//      return payload.role || "";
-//    } catch (err) {
-//      console.error("Error decoding token:", err);
-//      return "";
-//    }
-//  };
-
   // ✅ Fetch data on mount
   useEffect(() => {
-    let isMounted = true;
     const token = localStorage.getItem("jwtToken");
 
-    if (!token) {
-      alert("Please login first to access this page.");
-      navigate("/login");
-      return;
+    if (token) {
+      const extractedRole = getRoleFromToken(token);
+      setRole(extractedRole);
+      fetchAllDoctors(token, extractedRole);
+    } else {
+      // No login → still fetch doctors (public)
+      fetchAllDoctors(null, null);
     }
+  }, []);
 
-    const extractedRole = getRoleFromToken(token);
-    setRole(extractedRole);
-
-    if (isMounted && extractedRole) fetchAllDoctors(token, extractedRole);
-
-    return () => {
-      isMounted = false;
-    };
-  }, [navigate]);
-
-  // ✅ Fetch all doctors
+  // ✅ Fetch all doctors (public or secure)
   const fetchAllDoctors = async (token, userRole) => {
     try {
       setLoading(true);
-      const baseURL =
-        userRole === "ROLE_DOCTOR"
-          ? "http://localhost:8080/api/doctor/getAllDoctors"
-          : "http://localhost:8080/api/patient/getAllDoctors";
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const response = await axios.get(baseURL, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // Allow public access for all users
+      const response = await axios.get(
+        "http://localhost:8080/api/patient/getAllDoctors",
+        { headers }
+      );
 
       setDoctors(response.data);
       setError("");
     } catch (err) {
       console.error("Error fetching doctors:", err);
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        alert("Session expired. Please login again.");
-        localStorage.removeItem("jwtToken");
-        navigate("/login");
-        return;
-      }
       setError("Failed to fetch doctors. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Search doctors by specialization
+  // ✅ Search doctors by specialization (public + logged-in)
   const handleSearch = async (e) => {
     e.preventDefault();
 
     const token = localStorage.getItem("jwtToken");
-    if (!token) {
-      alert("Please login first to access this page.");
-      navigate("/login");
-      return;
-    }
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
     if (!searchTerm.trim()) {
       fetchAllDoctors(token, role);
@@ -100,24 +63,14 @@ export default function DoctorPage() {
 
     try {
       setLoading(true);
-      const baseURL =
-        role === "ROLE_DOCTOR"
-          ? `http://localhost:8080/api/doctor/getAllBySpecialization?specialization=${searchTerm}`
-          : `http://localhost:8080/api/patient/getAllBySpecialization?specialization=${searchTerm}`;
-
-      const response = await axios.get(baseURL, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        `http://localhost:8080/api/patient/getAllBySpecialization?specialisation=${searchTerm}`,
+        { headers }
+      );
       setDoctors(response.data);
       setError("");
     } catch (err) {
       console.error("Error searching doctors:", err);
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        alert("Session expired. Please login again.");
-        localStorage.removeItem("jwtToken");
-        navigate("/login");
-        return;
-      }
       setError("No doctors found for that specialization.");
     } finally {
       setLoading(false);
@@ -126,10 +79,15 @@ export default function DoctorPage() {
 
   // ✅ Navigate to Appointment Page
   const handleBookAppointment = (doctorName) => {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) {
+      alert("Please login to book an appointment.");
+      navigate("/login");
+      return;
+    }
     navigate("/appointments", { state: { doctorName } });
   };
 
-  // ✅ UI Rendering
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <TopNavbar />
@@ -148,10 +106,7 @@ export default function DoctorPage() {
 
       {/* Search Section */}
       <div className="max-w-3xl mx-auto mb-10 text-center">
-        <form
-          onSubmit={handleSearch}
-          className="flex gap-2 justify-center items-center"
-        >
+        <form onSubmit={handleSearch} className="flex gap-2 justify-center items-center">
           <select
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -165,7 +120,6 @@ export default function DoctorPage() {
             <option value="Pediatrics">Pediatrics</option>
             <option value="Dermatology">Dermatology</option>
           </select>
-
           <button
             type="submit"
             className="bg-gradient-to-r from-[#1E63DB] to-[#27496d] text-white px-6 py-3 rounded-lg hover:opacity-90 transition"
@@ -186,7 +140,7 @@ export default function DoctorPage() {
       )}
 
       {/* Doctor Cards */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 px-8 pb-16 max-w-6xl mx-auto ">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 px-8 pb-16 max-w-6xl mx-auto">
         {doctors.map((doctor) => (
           <div
             key={doctor.id}
@@ -202,11 +156,11 @@ export default function DoctorPage() {
                 {doctor.name}
               </h3>
               <p className="text-gray-600 mt-1">
-                Specialization:{" "}
-                <span className="font-semibold">{doctor.specialist}</span>
+                Specialization: <span className="font-semibold">{doctor.specialist}</span>
               </p>
               <p className="text-gray-600 mt-1">Email: {doctor.email}</p>
               <p className="text-gray-600 mt-1">Phone: {doctor.phoneNumber}</p>
+
               <button
                 onClick={() => handleBookAppointment(doctor.name)}
                 className="mt-4 bg-gradient-to-r from-[#1E63DB] to-[#27496d] text-white px-4 py-2 rounded-lg hover:opacity-90 transition"
