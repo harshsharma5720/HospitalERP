@@ -8,7 +8,7 @@ export default function TopNavbar() {
   const [username, setUsername] = useState("");
 
   const checkLoginStatus = () => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("jwtToken");
 
     if (token) {
       try {
@@ -42,7 +42,7 @@ export default function TopNavbar() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    localStorage.removeItem("jwtToken");
     setIsLoggedIn(false);
     navigate("/login");
     window.dispatchEvent(new Event("storage")); // Trigger manual update
