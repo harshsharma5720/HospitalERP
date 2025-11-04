@@ -77,7 +77,7 @@ export default function TopNavbar() {
         {isLoggedIn ? (
           <>
             <span className="text-teal-700 font-semibold">
-              👤 {username}
+              {username}
             </span>
             <button
               onClick={handleLogout}
