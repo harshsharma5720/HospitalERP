@@ -2,14 +2,17 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Navbar from "./Navbar";
 import TopNavbar from "./TopNavbar";
+import { useLocation } from "react-router-dom";
 
 export default function AppointmentPage() {
+  const location = useLocation();
+  const doctorName = location.state?.doctorName || "";
   const [formData, setFormData] = useState({
     patientName: "",
     gender: "MALE",
     age: "",
     doctorId: "",
-    doctorName: "",
+    doctorName: doctorName,
     shift: "MORNING",
     date: "",
     message: "",
@@ -22,7 +25,8 @@ export default function AppointmentPage() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState(null);
 
-  // ✅ Fetch all doctors on load
+  //  1) Fetch all doctors when page loads (same as before)
+  //  2) If doctorName is sent from previous page → auto-fill doctorName + doctorId
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
@@ -31,26 +35,38 @@ export default function AppointmentPage() {
           alert("Please login first!");
           return;
         }
-
         const response = await axios.get(
           "http://localhost:8080/api/patient/getAllDoctors",
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setDoctors(response.data);
+        //If doctorName is passed from DoctorPage, auto-select doctor
+        if (doctorName) {
+          const selectedDoctor = response.data.find(
+            (doc) => doc.name.toLowerCase() === doctorName.toLowerCase()
+          );
+          if (selectedDoctor) {
+            setFormData((prev) => ({
+              ...prev,
+              doctorId: selectedDoctor.id,
+              doctorName: selectedDoctor.name,
+            }));
+          }
+        }
       } catch (error) {
         console.error("Error fetching doctors:", error);
         alert("Failed to load doctors. Please try again.");
       }
     };
     fetchDoctors();
-  }, []);
+  }, [doctorName]);
 
-  // ✅ Handle input changes
+  // Handle input changes
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ✅ Handle doctor dropdown change
+  // Handle doctor dropdown change
   const handleDoctorChange = (e) => {
     const selected = doctors.find(
       (doc) => doc.id === Number(e.target.value)
@@ -64,7 +80,7 @@ export default function AppointmentPage() {
     }
   };
 
-  // ✅ Generate & Fetch available slots
+  // Generate & Fetch available slots
   const handleSlotFetch = async () => {
     const { doctorId, date, shift } = formData;
     if (!doctorId || !date || !shift) {
@@ -106,7 +122,7 @@ export default function AppointmentPage() {
     }
   };
 
-  // ✅ Handle form submit (book appointment)
+  //  Handle form submit (book appointment)
   const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("jwtToken");
