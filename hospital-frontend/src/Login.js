@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import Lottie from "lottie-react";
+import LoginAnim from "./assets/LoginAnim.json";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -30,8 +32,6 @@ export default function LoginPage() {
       });
 
       const token = response.data.token;
-      console.log(token);
-
       if (token) {
         localStorage.setItem("jwtToken", token);
         alert("Login successful!");
@@ -47,16 +47,21 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center flex items-center justify-center relative"
+      className="min-h-screen bg-cover bg-center flex items-center justify-center relative overflow-hidden"
       style={{ backgroundImage: "url('/background.jpeg')" }}
     >
       {/* Background Overlay */}
       <div className="absolute inset-0 bg-black bg-opacity-60"></div>
 
+      {/* Right-Side Background Animation */}
+      <div className="absolute right-10 bottom-0 w-[300px] h-[300px] opacity-80 pointer-events-none">
+        <Lottie animationData={LoginAnim} loop={true} />
+      </div>
+
       {/* Home Button */}
       <button
         onClick={() => navigate("/")}
-        className="absolute top-6 left-6 bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white px-5 py-2 rounded-lg font-semibold shadow-lg hover:bg-[#1e3d59] hover:text-white transition"
+        className="absolute top-6 left-6 bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white px-5 py-2 rounded-lg font-semibold shadow-lg hover:bg-[#1e3d59] transition"
       >
         Home
       </button>
@@ -64,7 +69,7 @@ export default function LoginPage() {
       {/* Main Card */}
       <div className="relative z-10 flex flex-col md:flex-row w-[90%] md:w-[70%] lg:w-[60%] rounded-3xl overflow-hidden shadow-2xl border border-white/20 bg-white/10 backdrop-blur-xl">
 
-        {/* Left Section - Welcome */}
+        {/* Left Section */}
         <div className="md:w-1/2 w-full flex flex-col justify-center items-center text-white text-center p-10 bg-gradient-to-br from-[#1E63DB] to-[#27496d]">
           <h1 className="text-4xl font-extrabold mb-3 drop-shadow-md">WELCOME BACK</h1>
           <p className="text-sm text-gray-200">Your trusted health partner</p>
@@ -102,7 +107,7 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-br from-[#1E63DB] to-[#27496d]    text-white py-3 rounded-lg font-semibold hover:bg-[#162c42] transition-all shadow-lg"
+              className="w-full bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white py-3 rounded-lg font-semibold hover:bg-[#162c42] transition-all shadow-lg"
             >
               Sign In
             </button>

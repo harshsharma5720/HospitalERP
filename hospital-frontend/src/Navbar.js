@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { Home, Activity, User, Phone, Info, UserCircle } from "lucide-react";
 import ProfilePage from "./ProfilePage";
 
 export default function Navbar() {
   const [showProfile, setShowProfile] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const navItems = [
     { name: "Home", path: "/", icon: <Home size={20} /> },
@@ -13,6 +14,29 @@ export default function Navbar() {
     { name: "Contact Us", path: "/contact", icon: <Phone size={20} /> },
     { name: "About Us", path: "/about", icon: <Info size={20} /> },
   ];
+
+  //  Function to check login state
+  const checkLoginStatus = () => {
+    const token = localStorage.getItem("jwtToken");
+    setIsLoggedIn(!!token);
+  };
+
+  useEffect(() => {
+    checkLoginStatus();
+
+    // Listen for changes in localStorage across the app
+    const handleStorageChange = () => {
+      checkLoginStatus();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("loginStatusChanged", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("loginStatusChanged", handleStorageChange);
+    };
+  }, []);
 
   return (
     <div className="bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white px-8 py-4 flex items-center justify-between shadow-lg text-lg font-medium sticky top-0 z-50">
@@ -39,21 +63,21 @@ export default function Navbar() {
         ))}
       </div>
 
-      {/* Right: Profile button */}
+      {/*  Right: Profile button — only shows after login */}
       <div>
-        <button
-          onClick={() => setShowProfile(true)}
-          className="flex items-center gap-2 bg-white text-teal-700 px-3 py-1 rounded-full shadow-md hover:bg-teal-100 transition"
-        >
-          <UserCircle size={24} />
-          <span className="font-semibold">Profile</span>
-        </button>
+        {isLoggedIn && (
+          <button
+            onClick={() => setShowProfile(true)}
+            className="flex items-center gap-2 bg-white text-teal-700 px-3 py-1 rounded-full shadow-md hover:bg-teal-100 transition"
+          >
+            <UserCircle size={24} />
+            <span className="font-semibold">Profile</span>
+          </button>
+        )}
       </div>
 
       {/* Profile Popup */}
-      {showProfile && (
-        <ProfilePage onClose={() => setShowProfile(false)} />
-      )}
+      {showProfile && <ProfilePage onClose={() => setShowProfile(false)} />}
     </div>
   );
 }

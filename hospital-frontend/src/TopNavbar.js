@@ -15,9 +15,9 @@ export default function TopNavbar() {
         const payload = JSON.parse(atob(token.split(".")[1]));
         setIsLoggedIn(true);
         setUsername(payload.sub || "User");
-        console.log("✅ Logged in user:", payload.sub);
+        console.log(" Logged in user:", payload.sub);
       } catch (error) {
-        console.error("❌ Invalid token:", error);
+        console.error(" Invalid token:", error);
         setIsLoggedIn(false);
       }
     } else {
