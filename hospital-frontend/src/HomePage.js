@@ -1,11 +1,56 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Navbar from "./Navbar";
 import TopNavbar from "./TopNavbar";
 import PopupForm from "./PopupForm";
 import { useNavigate } from "react-router-dom";
+import { LogOut } from "lucide-react"; // ✅ Added logout icon
 
 export default function HomePage() {
   const navigate = useNavigate();
+
+  // ✅ Added state for login tracking
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [username, setUsername] = useState("");
+
+  // ✅ Function to check login status
+  const checkLoginStatus = () => {
+    const token = localStorage.getItem("jwtToken");
+
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        setIsLoggedIn(true);
+        setUsername(payload.sub || "User");
+      } catch (error) {
+        console.error("Invalid token:", error);
+        setIsLoggedIn(false);
+      }
+    } else {
+      setIsLoggedIn(false);
+    }
+  };
+
+  useEffect(() => {
+    checkLoginStatus();
+
+    // ✅ Listen for token changes (when user logs in or out)
+    const handleStorageChange = () => {
+      checkLoginStatus();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
+  // ✅ Logout handler
+  const handleLogout = () => {
+    localStorage.removeItem("jwtToken");
+    setIsLoggedIn(false);
+    navigate("/login");
+    window.dispatchEvent(new Event("storage")); // trigger update
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 relative overflow-hidden">
@@ -58,36 +103,56 @@ export default function HomePage() {
         </div>
       </div>
 
-       {/* ✅ New "Trusted Health Partner" Section */}
-            <section className="text-center py-16 bg-gradient-to-b from-white to-[#f8fbff]">
-              <div className="inline-block bg-blue-100 text-blue-700 font-medium px-4 py-1 rounded-full mb-4 shadow-sm">
-                Welcome to Modern Healthcare
-              </div>
-              <h1 className="text-5xl font-extrabold mb-4">
-                Your Trusted{" "}
-                <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
-                  Health Partner
-                </span>
-              </h1>
-              <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-8">
-                Professional Hospital Management System for seamless patient care,
-                appointment booking, and comprehensive medical services.
-              </p>
-              <div className="flex justify-center gap-6">
-                <button
-                  onClick={() => navigate("/login")}
-                  className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-2 rounded-md shadow hover:opacity-90 transition"
-                >
-                  Sign In →
-                </button>
-                <button
-                  onClick={() => navigate("/register")}
-                  className="border border-gray-300 px-6 py-2 rounded-md text-gray-700 hover:bg-gray-100 transition shadow-sm"
-                >
-                  Create Account
-                </button>
-              </div>
-            </section>
+      {/* ✅ "Trusted Health Partner" Section */}
+      <section className="text-center py-16 bg-gradient-to-b from-white to-[#f8fbff]">
+        <div className="inline-block bg-blue-100 text-blue-700 font-medium px-4 py-1 rounded-full mb-4 shadow-sm">
+          Welcome to Modern Healthcare
+        </div>
+        <h1 className="text-5xl font-extrabold mb-4">
+          Your Trusted{" "}
+          <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
+            Health Partner
+          </span>
+        </h1>
+        <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-8">
+          Professional Hospital Management System for seamless patient care,
+          appointment booking, and comprehensive medical services.
+        </p>
+
+        {/* ✅ Conditional Buttons Section */}
+        <div className="flex justify-center gap-6">
+          {!isLoggedIn ? (
+            <>
+              {/* 👇 Visible when NOT logged in */}
+              <button
+                onClick={() => navigate("/login")}
+                className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-2 rounded-md shadow hover:opacity-90 transition"
+              >
+                Sign In →
+              </button>
+              <button
+                onClick={() => navigate("/register")}
+                className="border border-gray-300 px-6 py-2 rounded-md text-gray-700 hover:bg-gray-100 transition shadow-sm"
+              >
+                Create Account
+              </button>
+            </>
+          ) : (
+            <>
+              {/* 👇 Visible when LOGGED IN */}
+              <span className="text-teal-700 font-semibold">
+                {username}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-6 py-2 rounded-md bg-gradient-to-br from-red-500 to-red-700 text-white hover:from-red-600 hover:to-red-800 transition"
+              >
+                <LogOut size={20} /> Logout
+              </button>
+            </>
+          )}
+        </div>
+      </section>
 
       <PopupForm />
     </div>
