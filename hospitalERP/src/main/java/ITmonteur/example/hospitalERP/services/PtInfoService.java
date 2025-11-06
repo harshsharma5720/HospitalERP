@@ -98,7 +98,7 @@ public class PtInfoService {
             PtInfo ptInfo = ptInfoRepository.findById(ptId)
                     .orElseThrow(() -> new RuntimeException("Patient not found with ID: " + ptId));
 
-            ptInfo.setPatientName(ptInfoDTO.getPatientName());
+            ptInfo.setPatientName(ptInfoDTO.getPatientName()); //ptInfoDTO = ptInfoReqquestDTO
             ptInfo.setDob(ptInfoDTO.getDob());
             ptInfo.setEmail(ptInfoDTO.getEmail());
             ptInfo.setGender(ptInfoDTO.getGender());

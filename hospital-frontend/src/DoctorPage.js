@@ -6,6 +6,10 @@ import TopNavbar from "./TopNavbar";
 import { getRoleFromToken } from "./utils/jwtUtils.js";
 import PopupForm from "./PopupForm";
 
+// ✅ Import Lottie animation
+import Lottie from "lottie-react";
+import doctorAnimation from "./assets/Doctor.json";
+
 export default function DoctorPage() {
   const [doctors, setDoctors] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -69,7 +73,6 @@ export default function DoctorPage() {
     }
   };
 
-  // Now shows popup instead of alert
   const handleBookAppointment = (doctorName) => {
     const token = localStorage.getItem("jwtToken");
     if (!token) {
@@ -80,79 +83,98 @@ export default function DoctorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      <TopNavbar />
-      <Navbar />
-
-      <div className="text-center mt-10">
-        <h2 className="text-4xl md:text-5xl font-extrabold mb-6 bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
-          Our Doctors
-        </h2>
-        <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-8">
-          Meet our experienced and specialized doctors.
-        </p>
+    <div className="min-h-screen bg-gray-100 flex flex-col relative overflow-hidden">
+      {/* ✅ Fullscreen Lottie Background */}
+      <div className="absolute inset-0 opacity-40 pointer-events-none z-0">
+        <Lottie animationData={doctorAnimation} loop={true} />
       </div>
 
-      {/* Search */}
-      <div className="max-w-3xl mx-auto mb-10 text-center">
-        <form onSubmit={handleSearch} className="flex gap-2 justify-center items-center">
-          <select
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-2/3 p-3 border border-gray-300 rounded-lg"
+      <div className="relative z-10">
+        <TopNavbar />
+        <Navbar />
+
+        {/* Header Section */}
+        <div className="text-center mt-10">
+          <h2 className="text-4xl md:text-5xl font-extrabold mb-6 bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
+            Our Doctors
+          </h2>
+          <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-8">
+            Meet our experienced and specialized doctors.
+          </p>
+        </div>
+
+        {/* Search Section */}
+        <div className="max-w-3xl mx-auto mb-10 text-center">
+          <form
+            onSubmit={handleSearch}
+            className="flex gap-2 justify-center items-center"
           >
-            <option value="">-- Select Specialization --</option>
-            <option value="Cardiology">Cardiology</option>
-            <option value="Dentistry">Dentistry</option>
-            <option value="Orthopedics">Orthopedics</option>
-            <option value="Neurology">Neurology</option>
-            <option value="Pediatrics">Pediatrics</option>
-            <option value="Dermatology">Dermatology</option>
-          </select>
-          <button
-            type="submit"
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
-          >
-            Search
-          </button>
-        </form>
-      </div>
+            <select
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-2/3 p-3 border border-gray-300 rounded-lg"
+            >
+              <option value="">-- Select Specialization --</option>
+              <option value="Cardiology">Cardiology</option>
+              <option value="Dentistry">Dentistry</option>
+              <option value="Orthopedics">Orthopedics</option>
+              <option value="Neurology">Neurology</option>
+              <option value="Pediatrics">Pediatrics</option>
+              <option value="Dermatology">Dermatology</option>
+            </select>
+            <button
+              type="submit"
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+            >
+              Search
+            </button>
+          </form>
+        </div>
 
-      {loading && <p className="text-center">Loading...</p>}
-      {error && <p className="text-center text-red-500">{error}</p>}
+        {/* Loading / Error */}
+        {loading && <p className="text-center">Loading...</p>}
+        {error && <p className="text-center text-red-500">{error}</p>}
 
-      {/*Doctor Cards with Email & Phone */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 px-8 pb-16 max-w-6xl mx-auto">
-        {doctors.map((doctor) => (
-          <div key={doctor.id} className="bg-white p-6 rounded-2xl shadow-md">
-            <div className="text-center">
-              <img
-                src="https://cdn-icons-png.flaticon.com/512/387/387561.png"
-                alt="Doctor"
-                className="h-24 w-24 mx-auto rounded-full mb-4"
-              />
-              <h3 className="text-lg font-bold text-blue-600">{doctor.name}</h3>
-              <p className="text-gray-500">Specialist: {doctor.specialist}</p>
-              <p className="text-gray-500">Email: {doctor.email}</p>
-              <p className="text-gray-500">Phone: {doctor.phoneNumber}</p>
+        {/* Doctor Cards */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 px-8 pb-16 max-w-6xl mx-auto">
+          {doctors.map((doctor) => (
+            <div key={doctor.id} className="bg-white p-6 rounded-2xl shadow-md">
+              <div className="text-center">
+                <img
+                  src="https://cdn-icons-png.flaticon.com/512/387/387561.png"
+                  alt="Doctor"
+                  className="h-24 w-24 mx-auto rounded-full mb-4"
+                />
+                <h3 className="text-lg font-bold text-blue-600">
+                  {doctor.name}
+                </h3>
+                <p className="text-gray-500">
+                  Specialist: {doctor.specialist}
+                </p>
+                <p className="text-gray-500">Email: {doctor.email}</p>
+                <p className="text-gray-500">Phone: {doctor.phoneNumber}</p>
 
-              <button
-                onClick={() => handleBookAppointment(doctor.name)}
-                className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-              >
-                Book Appointment
-              </button>
+                <button
+                  onClick={() => handleBookAppointment(doctor.name)}
+                  className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                >
+                  Book Appointment
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {/* Footer */}
+        <footer className="bg-blue-600 text-white py-4 text-center">
+          <p>
+            © {new Date().getFullYear()} Shreya Hospital. All Rights Reserved.
+          </p>
+        </footer>
+
+        {/* Popup Form */}
+        {showLoginPopup && <PopupForm onClose={() => setShowLoginPopup(false)} />}
       </div>
-
-      <footer className="bg-blue-600 text-white py-4 text-center">
-        <p>© {new Date().getFullYear()} Shreya Hospital. All Rights Reserved.</p>
-      </footer>
-
-      {/* Popup */}
-      {showLoginPopup && <PopupForm onClose={() => setShowLoginPopup(false)} />}
     </div>
   );
 }
