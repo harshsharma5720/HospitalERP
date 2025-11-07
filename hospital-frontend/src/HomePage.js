@@ -119,11 +119,11 @@ export default function HomePage() {
           appointment booking, and comprehensive medical services.
         </p>
 
-        {/* ✅ Conditional Buttons Section */}
+        {/*  Conditional Buttons Section */}
         <div className="flex justify-center gap-6">
           {!isLoggedIn ? (
             <>
-              {/* 👇 Visible when NOT logged in */}
+              {/*  Visible when NOT logged in */}
               <button
                 onClick={() => navigate("/login")}
                 className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-2 rounded-md shadow hover:opacity-90 transition"
@@ -139,7 +139,7 @@ export default function HomePage() {
             </>
           ) : (
             <>
-              {/* 👇 Visible when LOGGED IN */}
+              {/*  Visible when LOGGED IN */}
               <span className="text-teal-700 font-semibold">
                 {username}
               </span>
