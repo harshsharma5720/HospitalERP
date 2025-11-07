@@ -1,6 +1,8 @@
 package ITmonteur.example.hospitalERP.entities;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.util.List;
 
@@ -18,7 +20,7 @@ public class Doctor {
     @Column(unique = true, nullable = false)
     private String email;
     private String password; // encrypted
-    @Column(unique = true)
+    @Column(nullable = false)
     private String phoneNumber;
     private String userName;
 
@@ -27,7 +29,8 @@ public class Doctor {
 
     @Enumerated(EnumType.STRING)
     private Role role = Role.DOCTOR;
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "user_id", referencedColumnName = "id") // FK column in Doctor table
     private User user;
 
