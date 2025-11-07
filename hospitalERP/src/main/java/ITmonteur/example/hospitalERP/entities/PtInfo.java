@@ -12,7 +12,7 @@ import java.util.List;
 public class PtInfo {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long patientId;
+    private Long patientId;
     private String patientName;
     @Column(unique = true , nullable = false)
     private String email;
@@ -36,26 +36,28 @@ public class PtInfo {
     public PtInfo() {
     }
 
-    public PtInfo(long patientId, String patientName,String email , String patientAddress, long patientAadharNo, long contactNo, LocalDate dob,Gender gender, List<Appointment> appointments,String userName ,Role role, User user) {
+    public PtInfo(Long patientId, String patientName, String email, String patientAddress,
+                  Long patientAadharNo, Long contactNo, LocalDate dob, Gender gender,
+                  List<Appointment> appointments, String userName, Role role, User user) {
         this.patientId = patientId;
         this.patientName = patientName;
-        this.email=email;
+        this.email = email;
         this.patientAddress = patientAddress;
         this.patientAadharNo = patientAadharNo;
         this.contactNo = contactNo;
         this.dob = dob;
-        this.gender=gender;
+        this.gender = gender;
         this.appointments = appointments;
-        this.userName=userName;
-        this.role=role;
+        this.userName = userName;
+        this.role = role;
         this.user = user;
     }
 
-    public long getPatientId() {
+    public Long getPatientId() {
         return patientId;
     }
 
-    public void setPatientId(long patientId) {
+    public void setPatientId(Long patientId) {
         this.patientId = patientId;
     }
 
@@ -83,17 +85,19 @@ public class PtInfo {
         this.patientAddress = patientAddress;
     }
 
-    public long getPatientAadharNo() { return patientAadharNo;  }
+    public Long getPatientAadharNo() {
+        return patientAadharNo;
+    }
 
-    public void setPatientAadharNo(long patientAadharNo) {
+    public void setPatientAadharNo(Long patientAadharNo) {
         this.patientAadharNo = patientAadharNo;
     }
 
-    public long getContactNo() {
+    public Long getContactNo() {
         return contactNo;
     }
 
-    public void setContactNo(long contactNo) {
+    public void setContactNo(Long contactNo) {
         this.contactNo = contactNo;
     }
 
@@ -113,20 +117,20 @@ public class PtInfo {
         this.gender = gender;
     }
 
-    public List<Appointment> getAppointment() {
-        return appointments;
-    }
-
-    public void setAppointment(List<Appointment> appointment) {
-        this.appointments = appointment;
-    }
-
     public List<Appointment> getAppointments() {
         return appointments;
     }
 
     public void setAppointments(List<Appointment> appointments) {
         this.appointments = appointments;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
     public Role getRole() {
@@ -143,13 +147,5 @@ public class PtInfo {
 
     public void setUser(User user) {
         this.user = user;
-    }
-
-    public String getUserName() {
-        return userName;
-    }
-
-    public void setUserName(String userName) {
-        this.userName = userName;
     }
 }

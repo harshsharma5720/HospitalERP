@@ -76,8 +76,8 @@ public class AuthService {
                 patient.setUser(savedUser);
                 patient.setPatientName(savedUser.getUsername());
                 patient.setPatientAddress("Not provided");
-                patient.setContactNo(0);
-                patient.setPatientAadharNo(0);
+                patient.setContactNo(null);
+                patient.setPatientAadharNo(null);
                 patient.setGender(Gender.OTHER);
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 LocalDate defaultDob = LocalDate.parse("0001-01-01", formatter); // earliest valid SQL date
