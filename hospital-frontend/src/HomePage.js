@@ -3,19 +3,16 @@ import Navbar from "./Navbar";
 import TopNavbar from "./TopNavbar";
 import PopupForm from "./PopupForm";
 import { useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react"; // ✅ Added logout icon
+import { LogOut } from "lucide-react";
 
 export default function HomePage() {
   const navigate = useNavigate();
-
-  // ✅ Added state for login tracking
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState("");
 
-  // ✅ Function to check login status
+  // 🔹 Check login status
   const checkLoginStatus = () => {
     const token = localStorage.getItem("jwtToken");
-
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split(".")[1]));
@@ -32,24 +29,17 @@ export default function HomePage() {
 
   useEffect(() => {
     checkLoginStatus();
-
-    // ✅ Listen for token changes (when user logs in or out)
-    const handleStorageChange = () => {
-      checkLoginStatus();
-    };
-
+    const handleStorageChange = () => checkLoginStatus();
     window.addEventListener("storage", handleStorageChange);
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-    };
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  // ✅ Logout handler
+  // 🔹 Logout handler
   const handleLogout = () => {
     localStorage.removeItem("jwtToken");
     setIsLoggedIn(false);
     navigate("/login");
-    window.dispatchEvent(new Event("storage")); // trigger update
+    window.dispatchEvent(new Event("storage"));
   };
 
   return (
@@ -57,7 +47,7 @@ export default function HomePage() {
       <TopNavbar />
       <Navbar />
 
-      {/* Background Section */}
+      {/* 🔹 Hero Section */}
       <div
         className="relative grid grid-cols-1 md:grid-cols-2 gap-10 px-10 py-12"
         style={{
@@ -68,10 +58,10 @@ export default function HomePage() {
           height: "600px",
         }}
       >
-        {/* ✅ Fade effect overlay */}
+        {/* Fade Overlay */}
         <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-white to-transparent pointer-events-none z-10"></div>
 
-        {/* Left content */}
+        {/* Left Content */}
         <div className="relative z-20 w-[700px] p-4 border-2 border-[#1E63DB] rounded-xl space-y-8 bg-white bg-opacity-20 backdrop-blur-md">
           <div>
             <h2 className="text-4xl font-extrabold mb-3 text-[#1E63DB]">
@@ -103,7 +93,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ✅ "Trusted Health Partner" Section */}
+      {/* 🔹 "Trusted Health Partner" Section */}
       <section className="text-center py-16 bg-gradient-to-b from-white to-[#f8fbff]">
         <div className="inline-block bg-blue-100 text-blue-700 font-medium px-4 py-1 rounded-full mb-4 shadow-sm">
           Welcome to Modern Healthcare
@@ -119,11 +109,10 @@ export default function HomePage() {
           appointment booking, and comprehensive medical services.
         </p>
 
-        {/*  Conditional Buttons Section */}
+        {/* 🔹 Login/Logout Buttons */}
         <div className="flex justify-center gap-6">
           {!isLoggedIn ? (
             <>
-              {/*  Visible when NOT logged in */}
               <button
                 onClick={() => navigate("/login")}
                 className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-2 rounded-md shadow hover:opacity-90 transition"
@@ -139,10 +128,7 @@ export default function HomePage() {
             </>
           ) : (
             <>
-              {/*  Visible when LOGGED IN */}
-              <span className="text-teal-700 font-semibold">
-                {username}
-              </span>
+              <span className="text-teal-700 font-semibold">{username}</span>
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-6 py-2 rounded-md bg-gradient-to-br from-red-500 to-red-700 text-white hover:from-red-600 hover:to-red-800 transition"
@@ -154,6 +140,61 @@ export default function HomePage() {
         </div>
       </section>
 
+{/* 🔹 Our Hospitals & Clinics Section */}
+<section className="py-16 bg-white text-center">
+  <h2 className="text-5xl font-extrabold mb-10">
+    <span className="text-black">Our </span>
+    <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
+      Hospitals & Clinics
+    </span>
+  </h2>
+
+ {/* Underline */}
+  <div className="w-40 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 mx-auto mb-10 rounded-full"></div>
+
+  {/* Subtitle line */}
+  <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-12">
+    Delivering compassionate care through our trusted network of hospitals,
+    clinics, pharmacies, and nursing centers.
+  </p>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 px-10">
+    {[
+      {
+        img: "https://mir-s3-cdn-cf.behance.net/project_modules/1400_webp/67718f100399635.5f07f485280c4.jpg",
+        name: "Shreya's Doctors",
+      },
+      {
+        img: "https://i.pinimg.com/236x/13/d4/82/13d482936ab5d4a6172137d175366303.jpg",
+        name: "Shreya's Clinics",
+      },
+      {
+        img: "https://png.pngtree.com/thumb_back/fw800/background/20250813/pngtree-a-modern-hospital-building-with-sleek-glass-and-steel-facade-image_17907375.webp",
+        name: "Shreya Pharmacy",
+      },
+      {
+        img: "https://manage.nakshewala.com/assets/files/40x100sqft_Hospital_Front_elevation_L_63eb1ed19eb49.webp",
+        name: "Shreya's Nursing",
+      },
+    ].map((item, index) => (
+      <div
+        key={index}
+        className="relative overflow-hidden rounded-2xl shadow-lg group transition-all duration-500"
+      >
+        <img
+          src={item.img}
+          alt={item.name}
+          className="w-full h-[400px] object-cover filter grayscale group-hover:grayscale-0 transition-all duration-700 ease-in-out transform group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-black bg-opacity-30 opacity-0 group-hover:opacity-100 flex items-end justify-center transition-all duration-500">
+          <h3 className="text-white text-lg font-semibold mb-4">
+            {item.name}
+          </h3>
+        </div>
+      </div>
+    ))}
+  </div>
+</section>
       <PopupForm />
     </div>
   );

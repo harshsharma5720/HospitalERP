@@ -17,10 +17,10 @@ public class PtInfo {
     @Column(unique = true , nullable = false)
     private String email;
     private String patientAddress;
-    @Column(unique = true)
-    private long patientAadharNo;
-    @Column(nullable = false)
-    private long contactNo;
+    @Column(unique = false, nullable = true)
+    private Long patientAadharNo;
+    @Column(nullable = true)
+    private Long contactNo;
     private LocalDate dob;
     @Enumerated(EnumType.STRING)
     private Gender gender;
