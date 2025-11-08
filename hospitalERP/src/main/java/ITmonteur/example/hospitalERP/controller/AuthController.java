@@ -5,12 +5,16 @@ import ITmonteur.example.hospitalERP.dto.LoginRequestDTO;
 import ITmonteur.example.hospitalERP.dto.RegisterRequestDTO;
 import ITmonteur.example.hospitalERP.services.AuthService;
 import ITmonteur.example.hospitalERP.services.JWTService;
+import ITmonteur.example.hospitalERP.services.OTPService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:3000")
@@ -24,6 +28,9 @@ public class AuthController {
 
     @Autowired
     private JWTService jwtService;
+
+    @Autowired
+    private OTPService otpService;
 
     // Register a new user (Doctor, Patient, Receptionist)
     @PostMapping("/register")
@@ -57,4 +64,32 @@ public class AuthController {
 //            return ResponseEntity.status(403).body("Invalid or expired token");
 //        }// returns decoded role like "ROLE_PATIENT" or "ROLE_DOCTOR"
 //    }
+
+    @PostMapping("/send-otp")
+    public ResponseEntity<String> sendOtp(@RequestBody Map<String, String> request) {
+        String phoneNumber = request.get("phone");
+        logger.info("OTP request received for phone: {}", phoneNumber);
+        otpService.generateAndSendOTP(phoneNumber);
+        return ResponseEntity.ok("OTP sent successfully to " + phoneNumber);
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<Map<String, Object>> verifyOtp(@RequestBody Map<String, String> request) {
+        String phoneNumber = request.get("phone");
+        logger.info("OTP request received for phone: {}", phoneNumber);
+        String otp = request.get("otp");
+        logger.info("OTP : {}", otp);
+
+        boolean isVerified = otpService.verifyOTP(phoneNumber, otp);
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", isVerified);
+        response.put("message", isVerified ? "OTP verified successfully" : "Invalid or expired OTP");
+
+        if (isVerified) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
 }

@@ -8,12 +8,17 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     email: "",
     username: "",
+    phone: "",
+    otp: "",
     password: "",
     confirmPassword: "",
     role: "",
   });
 
   const [error, setError] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -22,6 +27,46 @@ export default function RegisterPage() {
     });
   };
 
+  // Send OTP
+  const handleSendOtp = async () => {
+    if (!formData.phone) {
+      alert("Please enter your phone number first");
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await axios.post("http://localhost:8080/api/auth/send-otp", {
+        phone: formData.phone,
+      });
+      alert(res.data.message || "OTP sent successfully!");
+      setOtpSent(true);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to send OTP. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Verify OTP
+  const handleVerifyOtp = async () => {
+    try {
+      const res = await axios.post("http://localhost:8080/api/auth/verify-otp", {
+        phone: formData.phone,
+        otp: formData.otp,
+      });
+      if (res.data.success) {
+        alert("OTP Verified!");
+        setOtpVerified(true);
+      } else {
+        alert("Invalid OTP!");
+      }
+    } catch (err) {
+      alert("OTP verification failed!");
+    }
+  };
+
+  // Register user
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -31,16 +76,21 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!otpVerified) {
+      setError("Please verify your phone number before registering!");
+      return;
+    }
+
     try {
       const response = await axios.post("http://localhost:8080/api/auth/register", {
         email: formData.email,
         username: formData.username,
+        phoneNumber: formData.phone,
         password: formData.password,
         role: formData.role,
       });
 
       const token = response.data.token;
-
       if (token) {
         localStorage.setItem("token", token);
         alert(`Welcome ${formData.username}! Registration successful.`);
@@ -59,10 +109,8 @@ export default function RegisterPage() {
       className="min-h-screen bg-cover bg-center flex items-center justify-center relative"
       style={{ backgroundImage: "url('/background.jpeg')" }}
     >
-      {/* Overlay */}
       <div className="absolute inset-0 bg-black bg-opacity-60"></div>
 
-      {/* Home Button */}
       <button
         onClick={() => navigate("/")}
         className="absolute top-6 left-6 bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white px-5 py-2 rounded-lg font-semibold shadow-lg hover:bg-[#1e3d59] hover:text-white transition"
@@ -70,10 +118,7 @@ export default function RegisterPage() {
         Home
       </button>
 
-      {/* Main Card */}
       <div className="relative z-10 flex flex-col md:flex-row w-[90%] md:w-[70%] lg:w-[70%] rounded-3xl overflow-hidden shadow-2xl border border-white/20 bg-white/10 backdrop-blur-xl">
-
-        {/* Left Section - Register Form */}
         <div className="md:w-1/2 w-full bg-white/10 backdrop-blur-sm p-10 flex flex-col justify-center text-white">
           <h2 className="text-3xl font-bold mb-6 text-center text-[#5A73C4] drop-shadow-md">
             Create Account
@@ -82,6 +127,7 @@ export default function RegisterPage() {
           {error && <p className="text-red-400 font-semibold mb-4 text-center">{error}</p>}
 
           <form className="space-y-5" onSubmit={handleSubmit}>
+            {/* Email */}
             <input
               type="email"
               name="email"
@@ -92,6 +138,7 @@ export default function RegisterPage() {
               required
             />
 
+            {/* Username */}
             <input
               type="text"
               name="username"
@@ -102,6 +149,59 @@ export default function RegisterPage() {
               required
             />
 
+            {/* Phone + OTP */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                name="phone"
+                placeholder="Phone Number"
+                value={formData.phone}
+                onChange={handleChange}
+                className="flex-1 px-4 py-3 rounded-lg bg-white/70 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1e3d59]"
+                required
+              />
+              <button
+                type="button"
+                onClick={handleSendOtp}
+                disabled={loading}
+                className="bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white px-4 rounded-lg hover:opacity-90"
+              >
+                {loading ? "Sending..." : "Send OTP"}
+              </button>
+            </div>
+
+            {otpSent && (
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    name="otp"
+                    placeholder="Enter OTP"
+                    value={formData.otp}
+                    onChange={handleChange}
+                    className="flex-1 px-4 py-3 rounded-lg bg-white/70 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1e3d59]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    className="bg-green-600 text-white px-4 rounded-lg hover:opacity-90"
+                  >
+                    Verify
+                  </button>
+                </div>
+
+                {/* ✅ Verification Status Field */}
+                <div className="text-center mt-1">
+                  {otpVerified ? (
+                    <span className="text-green-400 font-semibold">✅ Phone Verified</span>
+                  ) : (
+                    <span className="text-red-400 font-semibold">❌ Not Verified</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Password */}
             <input
               type="password"
               name="password"
@@ -122,6 +222,7 @@ export default function RegisterPage() {
               required
             />
 
+            {/* Role */}
             <select
               name="role"
               value={formData.role}
@@ -136,9 +237,15 @@ export default function RegisterPage() {
               <option value="RECEPTIONIST">Receptionist</option>
             </select>
 
+            {/* Register */}
             <button
               type="submit"
-              className="w-full bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white py-3 rounded-lg font-semibold hover:bg-[#162c42] transition-all shadow-lg"
+              className={`w-full py-3 rounded-lg font-semibold text-white transition-all shadow-lg ${
+                otpVerified
+                  ? "bg-gradient-to-br from-[#1E63DB] to-[#27496d]"
+                  : "bg-gray-400 cursor-not-allowed"
+              }`}
+              disabled={!otpVerified}
             >
               Register
             </button>
@@ -152,7 +259,7 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* Right Section - Welcome Box */}
+        {/* Right Section */}
         <div className="md:w-1/2 w-full flex flex-col justify-center items-center text-white text-center p-10 bg-gradient-to-br from-[#1E63DB] to-[#27496d]">
           <h1 className="text-4xl font-extrabold mb-3 drop-shadow-md">WELCOME</h1>
           <p className="text-sm text-gray-200">Join our trusted health community</p>

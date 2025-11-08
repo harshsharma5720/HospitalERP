@@ -19,8 +19,8 @@ public class PtInfo {
     private String patientAddress;
     @Column(unique = false, nullable = true)
     private Long patientAadharNo;
-    @Column(nullable = true)
-    private Long contactNo;
+    @Column(nullable = true ,length = 15)
+    private String contactNo;
     private LocalDate dob;
     @Enumerated(EnumType.STRING)
     private Gender gender;
@@ -37,7 +37,7 @@ public class PtInfo {
     }
 
     public PtInfo(Long patientId, String patientName, String email, String patientAddress,
-                  Long patientAadharNo, Long contactNo, LocalDate dob, Gender gender,
+                  Long patientAadharNo, String contactNo, LocalDate dob, Gender gender,
                   List<Appointment> appointments, String userName, Role role, User user) {
         this.patientId = patientId;
         this.patientName = patientName;
@@ -93,11 +93,11 @@ public class PtInfo {
         this.patientAadharNo = patientAadharNo;
     }
 
-    public Long getContactNo() {
+    public String getContactNo() {
         return contactNo;
     }
 
-    public void setContactNo(Long contactNo) {
+    public void setContactNo(String contactNo) {
         this.contactNo = contactNo;
     }
 

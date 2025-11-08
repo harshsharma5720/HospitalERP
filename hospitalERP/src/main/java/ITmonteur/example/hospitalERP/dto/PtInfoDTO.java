@@ -14,7 +14,7 @@ public class PtInfoDTO {
     private String email;
     private String patientAddress;
     private long patientAadharNo;
-    private long contactNo;
+    private String contactNo;
     private LocalDate dob;
     private Gender gender;
     private List<AppointmentDTO> appointment;
@@ -24,7 +24,7 @@ public class PtInfoDTO {
     }
 
     public PtInfoDTO(long patientId, String patientName,String email, String patientAddress,
-                     long patientAadharNo, long contactNo, LocalDate dob,Gender gender,
+                     long patientAadharNo,String contactNo, LocalDate dob,Gender gender,
                      List<AppointmentDTO> appointment, String userName) {
         this.patientId = patientId;
         this.patientName = patientName;
@@ -78,11 +78,11 @@ public class PtInfoDTO {
         this.patientAadharNo = patientAadharNo;
     }
 
-    public long getContactNo() {
+    public String getContactNo() {
         return contactNo;
     }
 
-    public void setContactNo(long contactNo) {
+    public void setContactNo(String contactNo) {
         this.contactNo = contactNo;
     }
 

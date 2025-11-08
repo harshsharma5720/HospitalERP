@@ -40,6 +40,8 @@ public class AuthService {
     @Autowired
     private PtInfoRepository ptInfoRepository;
     @Autowired
+    private OTPService otpService;
+    @Autowired
     private ReceptionistRepository receptionistRepository;
 
     public AuthResponseDTO register(RegisterRequestDTO request) {
@@ -49,11 +51,15 @@ public class AuthService {
             logger.warn("Registration failed: Username {} already exists", request.getUsername());
             throw new RuntimeException("Username already exists");
         }
+//        if (!otpService.isPhoneVerified(request.getPhoneNumber())) {
+//            throw new RuntimeException("Phone number not verified!");
+//        }
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(Role.valueOf(request.getRole().toUpperCase())); // convert string to enum
+        user.setPhoneNumber(request.getPhoneNumber());
         User savedUser = userRepository.save(user);
         logger.info("User {} registered successfully with role {}", savedUser.getUsername(), savedUser.getRole());
         // Role-based entity creation
@@ -64,7 +70,7 @@ public class AuthService {
                 doctor.setUserName(savedUser.getUsername()); // foreign key (username)
                 doctor.setName(savedUser.getUsername());
                 doctor.setSpecialist(Specialist.NOT_ASSIGNED);
-                doctor.setPhoneNumber("Not provided");
+                doctor.setPhoneNumber(savedUser.getPhoneNumber());
                 doctor.setUser(savedUser);
                 doctorRepository.save(doctor);
                 logger.info("Doctor entity created for user {}", savedUser.getUsername());
@@ -76,7 +82,7 @@ public class AuthService {
                 patient.setUser(savedUser);
                 patient.setPatientName(savedUser.getUsername());
                 patient.setPatientAddress("Not provided");
-                patient.setContactNo(null);
+                patient.setContactNo(savedUser.getPhoneNumber());
                 patient.setPatientAadharNo(null);
                 patient.setGender(Gender.OTHER);
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -89,6 +95,7 @@ public class AuthService {
                 Receptionist receptionist = new Receptionist();
                 receptionist.setEmail(savedUser.getEmail());
                 receptionist.setUserName(savedUser.getUsername());
+                receptionist.setPhone(savedUser.getPhoneNumber());
                 receptionist.setUser(savedUser);
                 receptionistRepository.save(receptionist);
                 logger.info("Receptionist entity created for user {}", savedUser.getUsername());
