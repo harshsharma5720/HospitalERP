@@ -98,6 +98,8 @@ export default function DoctorPage() {
           <h2 className="text-4xl md:text-5xl font-extrabold mb-6 bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
             Our Doctors
           </h2>
+          {/* Underline */}
+          <div className="w-40 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 mx-auto mb-10 rounded-full"></div>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-8">
             Meet our experienced and specialized doctors.
           </p>
@@ -138,25 +140,24 @@ export default function DoctorPage() {
         {/* Doctor Cards */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 px-8 pb-16 max-w-6xl mx-auto">
           {doctors.map((doctor) => (
-            <div key={doctor.id} className="bg-white p-6 rounded-2xl shadow-md">
+            <div
+              key={doctor.id}
+              className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] p-6 rounded-2xl shadow-2xl hover:shadow-3xl transition-transform transform hover:scale-105"
+            >
               <div className="text-center">
                 <img
                   src="https://cdn-icons-png.flaticon.com/512/387/387561.png"
                   alt="Doctor"
                   className="h-24 w-24 mx-auto rounded-full mb-4"
                 />
-                <h3 className="text-lg font-bold text-blue-600">
-                  {doctor.name}
-                </h3>
-                <p className="text-gray-500">
-                  Specialist: {doctor.specialist}
-                </p>
-                <p className="text-gray-500">Email: {doctor.email}</p>
-                <p className="text-gray-500">Phone: {doctor.phoneNumber}</p>
+                <h3 className="text-lg font-bold text-[#003366]">{doctor.name}</h3>
+                <p className="text-gray-600">Specialist: {doctor.specialist}</p>
+                <p className="text-gray-600">Email: {doctor.email}</p>
+                <p className="text-gray-600">Phone: {doctor.phoneNumber}</p>
 
                 <button
                   onClick={() => handleBookAppointment(doctor.name)}
-                  className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                  className="mt-4 bg-gradient-to-r from-[#007B9E] to-[#00A2B8] text-white px-4 py-2 rounded-full font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-transform duration-300"
                 >
                   Book Appointment
                 </button>

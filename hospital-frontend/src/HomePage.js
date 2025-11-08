@@ -140,6 +140,34 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* 🔹 Medical Banner Section */}
+      <section className="relative mx-10 my-10 rounded-2xl overflow-hidden shadow-lg">
+        <div
+          className="relative text-white text-center py-12 px-6"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, #1E63DB, #27496d)",
+            backgroundBlendMode: "overlay",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-center gap-6">
+            {/* Left Side */}
+            <div className="text-3xl md:text-4xl font-extrabold text-white tracking-wide">
+              SHREYA HOSPITAL
+            </div>
+            {/* Divider */}
+            <div className="hidden md:block w-[2px] h-10 bg-white/50"></div>
+            {/* Right Side Text */}
+            <div className="text-2xl md:text-3xl font-semibold text-yellow-300">
+              Advanced Care. Modern Equipment. Trusted Hands.
+            </div>
+          </div>
+        </div>
+      </section>
+
+
 {/* 🔹 Our Hospitals & Clinics Section */}
 <section className="py-16 bg-white text-center">
   <h2 className="text-5xl font-extrabold mb-10">
