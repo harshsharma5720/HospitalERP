@@ -25,6 +25,19 @@ export default function PopupForm() {
     }
   }, []);
 
+  // Stop background scroll when popup is open
+  useEffect(() => {
+    if (showPopup) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [showPopup]);
+
   if (!showPopup) return null;
 
   return (
@@ -37,7 +50,7 @@ export default function PopupForm() {
       {/* Dark overlay on top of the image */}
       <div className="popup-overlay">
         <div className="popup-card animate-scaleUp relative overflow-hidden">
-          {/* ✅ Background Lottie Animation (behind content) */}
+          {/*  Background Lottie Animation (behind content) */}
           <div className="absolute inset-0 opacity-30 pointer-events-none">
             <Lottie
               animationData={heartbeatAnimation}
