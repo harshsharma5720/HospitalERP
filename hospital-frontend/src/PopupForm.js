@@ -8,31 +8,22 @@ export default function PopupForm() {
   const [showPopup, setShowPopup] = useState(false);
   const navigate = useNavigate();
 
-  // Show popup after 2 seconds, only if user is not logged in
   useEffect(() => {
     const token = localStorage.getItem("jwtToken");
-    console.log("Token from localStorage:", token);
-
     if (!token) {
-      console.log("No token found → showing popup soon...");
       const timer = setTimeout(() => {
-        console.log("Triggering popup now");
         setShowPopup(true);
       }, 2000);
       return () => clearTimeout(timer);
-    } else {
-      console.log("Token exists → not showing popup");
     }
   }, []);
 
-  // Stop background scroll when popup is open
   useEffect(() => {
     if (showPopup) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "auto";
     }
-
     return () => {
       document.body.style.overflow = "auto";
     };
@@ -47,10 +38,11 @@ export default function PopupForm() {
         if (e.target.classList.contains("popup-background")) setShowPopup(false);
       }}
     >
-      {/* Dark overlay on top of the image */}
+      {/* Overlay */}
       <div className="popup-overlay">
-        <div className="popup-card animate-scaleUp relative overflow-hidden">
-          {/*  Background Lottie Animation (behind content) */}
+        {/* ✅ Background changed to gradient theme */}
+        <div className="popup-card animate-scaleUp relative overflow-hidden bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] shadow-2xl rounded-3xl p-8 md:p-10">
+          {/* Background Lottie Animation */}
           <div className="absolute inset-0 opacity-30 pointer-events-none">
             <Lottie
               animationData={heartbeatAnimation}
@@ -62,30 +54,28 @@ export default function PopupForm() {
 
           {/* Close Button */}
           <button
-            className="close-btn relative z-10"
+            className="close-btn relative z-10 text-gray-600 hover:text-[#007B9E] transition"
             onClick={() => setShowPopup(false)}
           >
             &times;
           </button>
 
+          {/* ✅ Text & Button Theme Updated */}
           <div className="relative z-10 text-center">
-            <h2>🏥 Welcome</h2>
-            <p>You are a registered user?</p>
-            <p>If not, then register first.</p>
+            <h2 className="text-3xl font-extrabold mb-4 bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
+              🏥 Welcome
+            </h2>
+            <p className="text-gray-700">Are you a registered user?</p>
+            <p className="text-gray-700 mb-6">If not, then register first.</p>
+            <div className="flex flex-col items-center space-y-6 mt-6">
+              <button className="w-72 py-3 bg-gradient-to-r from-blue-600 to-cyan-400 text-white text-lg font-semibold rounded-xl shadow-lg hover:scale-105 transition-transform">
+                Login
+              </button>
+              <button className="w-72 py-3 bg-gradient-to-r from-cyan-400 to-blue-600 text-white text-lg font-semibold rounded-xl shadow-lg hover:scale-105 transition-transform">
+                Register
+              </button>
+            </div>
 
-            <button
-              className="popup-btn btn-login"
-              onClick={() => navigate("/login")}
-            >
-              Login
-            </button>
-
-            <button
-              className="popup-btn btn-register"
-              onClick={() => navigate("/register")}
-            >
-              Register
-            </button>
           </div>
         </div>
       </div>
