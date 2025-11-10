@@ -7,11 +7,14 @@ import { useLocation } from "react-router-dom";
 export default function AppointmentPage() {
   const location = useLocation();
   const doctorName = location.state?.doctorName || "";
+  const doctorId = location.state?.doctorId || "";
+  const rescheduleData = location.state?.rescheduleAppointment || null;
+
   const [formData, setFormData] = useState({
     patientName: "",
     gender: "MALE",
     age: "",
-    doctorId: "",
+    doctorId: doctorId,
     doctorName: doctorName,
     shift: "MORNING",
     date: "",
@@ -25,8 +28,7 @@ export default function AppointmentPage() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState(null);
 
-  //  1) Fetch all doctors when page loads (same as before)
-  //  2) If doctorName is sent from previous page → auto-fill doctorName + doctorId
+  // ✅ Fetch doctors and prefill doctor if passed from DoctorPage
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
@@ -35,12 +37,14 @@ export default function AppointmentPage() {
           alert("Please login first!");
           return;
         }
+
         const response = await axios.get(
           "http://localhost:8080/api/patient/getAllDoctors",
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setDoctors(response.data);
-        //If doctorName is passed from DoctorPage, auto-select doctor
+
+        // Prefill doctor if passed from DoctorPage
         if (doctorName) {
           const selectedDoctor = response.data.find(
             (doc) => doc.name.toLowerCase() === doctorName.toLowerCase()
@@ -58,19 +62,47 @@ export default function AppointmentPage() {
         alert("Failed to load doctors. Please try again.");
       }
     };
+
     fetchDoctors();
   }, [doctorName]);
 
-  // Handle input changes
+  // ✅ Prefill reschedule data if available
+  useEffect(() => {
+    if (rescheduleData) {
+      setFormData((prev) => ({
+        ...prev,
+        patientName: rescheduleData.patientName || "",
+        doctorName: rescheduleData.doctorName || "",
+        message: rescheduleData.message || "",
+        ptInfoId: rescheduleData.ptInfoId || "",
+        shift: rescheduleData.shift || "MORNING",
+        date: "",
+      }));
+
+      if (rescheduleData.doctorName && doctors.length > 0) {
+        const selectedDoctor = doctors.find(
+          (doc) =>
+            doc.name.toLowerCase() === rescheduleData.doctorName.toLowerCase()
+        );
+        if (selectedDoctor) {
+          setFormData((prev) => ({
+            ...prev,
+            doctorId: selectedDoctor.id,
+            doctorName: selectedDoctor.name,
+          }));
+        }
+      }
+    }
+  }, [rescheduleData, doctors]);
+
+  // ✅ Handle input changes
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Handle doctor dropdown change
+  // ✅ Handle doctor dropdown
   const handleDoctorChange = (e) => {
-    const selected = doctors.find(
-      (doc) => doc.id === Number(e.target.value)
-    );
+    const selected = doctors.find((doc) => doc.id === Number(e.target.value));
     if (selected) {
       setFormData({
         ...formData,
@@ -80,7 +112,7 @@ export default function AppointmentPage() {
     }
   };
 
-  // Generate & Fetch available slots
+  // ✅ Fetch available slots
   const handleSlotFetch = async () => {
     const { doctorId, date, shift } = formData;
     if (!doctorId || !date || !shift) {
@@ -92,7 +124,6 @@ export default function AppointmentPage() {
     const token = localStorage.getItem("jwtToken");
 
     try {
-      // Step 1: Generate slots for selected doctor/date/shift
       await axios.post(
         `http://localhost:8080/api/slots/generate/${doctorId}`,
         null,
@@ -102,7 +133,6 @@ export default function AppointmentPage() {
         }
       );
 
-      // Step 2: Fetch available slots
       const response = await axios.get(
         `http://localhost:8080/api/slots/available/${doctorId}`,
         {
@@ -110,8 +140,6 @@ export default function AppointmentPage() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-
-      console.log("🎯 Available slots received:", response.data);
 
       setAvailableSlots(response.data);
     } catch (error) {
@@ -122,7 +150,7 @@ export default function AppointmentPage() {
     }
   };
 
-  //  Handle form submit (book appointment)
+  // ✅ Handle appointment booking / rescheduling
   const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("jwtToken");
@@ -150,10 +178,12 @@ export default function AppointmentPage() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert("Appointment booked successfully!");
-      localStorage.setItem("appointmentData", JSON.stringify(payload));
+      alert(
+        rescheduleData
+          ? "Appointment rescheduled successfully!"
+          : "Appointment booked successfully!"
+      );
 
-      // Reset form
       setFormData({
         patientName: "",
         gender: "MALE",
@@ -186,11 +216,11 @@ export default function AppointmentPage() {
           className="absolute top-0 left-0 w-full h-full object-cover opacity-20 -z-10"
         />
 
-        <div className="bg-white bg-opacity-95 backdrop-blur-md shadow-2xl rounded-2xl p-8 w-full max-w-6xl relative z-10 grid md:grid-cols-2 gap-10">
-          {/* Form Section */}
+        <div className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] shadow-2xl rounded-3xl p-8 md:p-10 w-full max-w-6xl relative z-10 grid md:grid-cols-2 gap-10">
+          {/* ✅ Form Section */}
           <div>
             <h2 className="text-3xl font-bold text-center text-teal-700 mb-6">
-              Book an Appointment
+              {rescheduleData ? "Reschedule Appointment" : "Book an Appointment"}
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -281,7 +311,7 @@ export default function AppointmentPage() {
               <button
                 type="button"
                 onClick={handleSlotFetch}
-                className="w-full bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700 transition"
+                className="w-full bg-[#1E63DB] text-white py-3 rounded-lg font-semibold hover:opacity-90 transition"
               >
                 Show Available Slots
               </button>
@@ -290,19 +320,21 @@ export default function AppointmentPage() {
                 type="submit"
                 className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition"
               >
-                Book Appointment
+                {rescheduleData
+                  ? "Reschedule Appointment"
+                  : "Book Appointment"}
               </button>
             </form>
           </div>
 
-          {/* Slots Section */}
+          {/* ✅ Slots Section */}
           <div>
-            <h3 className="text-2xl font-semibold text-center text-teal-700 mb-4">
+            <h3 className="text-2xl font-semibold text-center text-[#1E63DB] mb-4">
               Available Slots
             </h3>
 
             {loadingSlots ? (
-              <p className="text-center text-teal-700 font-semibold">
+              <p className="text-center text-[#1E63DB] font-semibold">
                 Loading slots...
               </p>
             ) : availableSlots.length > 0 ? (
@@ -313,8 +345,8 @@ export default function AppointmentPage() {
                     onClick={() => setSelectedSlotId(slot.id)}
                     className={`p-3 rounded-lg border text-sm font-medium transition ${
                       selectedSlotId === slot.id
-                        ? "bg-teal-700 text-white"
-                        : "bg-gray-100 hover:bg-teal-100"
+                        ? "bg-[#1E63DB] text-white"
+                        : "bg-gray-100 hover:bg-[#e7f0ff]"
                     }`}
                   >
                     {slot.startTime} - {slot.endTime}

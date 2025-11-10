@@ -23,18 +23,14 @@ export default function AppointmentDetails() {
           "http://localhost:8080/appointment/getPatientAppointments",
           {
             method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch appointments");
-        }
+        if (!response.ok) throw new Error("Failed to fetch appointments");
 
         const data = await response.json();
-        setAppointments(data);
+        setAppointments(data.appointments || data);
       } catch (err) {
         console.error("Error fetching appointments:", err);
         alert("Could not load your appointments. Please try again later.");
@@ -46,7 +42,14 @@ export default function AppointmentDetails() {
     fetchAppointments();
   }, [navigate]);
 
-  // ✅ Cancel specific appointment by ID
+  // ✅ Helper: check if appointment date has passed
+  const isPastAppointment = (dateStr) => {
+    const appointmentDate = new Date(dateStr);
+    const today = new Date();
+    return appointmentDate < today;
+  };
+
+  // ✅ Cancel appointment
   const handleCancel = async (appointmentID) => {
     const confirmCancel = window.confirm(
       "Are you sure you want to cancel this appointment?"
@@ -59,9 +62,7 @@ export default function AppointmentDetails() {
         `http://localhost:8080/appointment/CancelAppointment/${appointmentID}`,
         {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -69,7 +70,6 @@ export default function AppointmentDetails() {
       alert(result);
 
       if (response.ok) {
-        // ✅ Remove the cancelled appointment from the UI instantly
         setAppointments((prev) =>
           prev.filter((a) => a.appointmentID !== appointmentID)
         );
@@ -79,6 +79,24 @@ export default function AppointmentDetails() {
       alert("Failed to cancel appointment. Please try again.");
     }
   };
+
+  // ✅ Edit appointment (future)
+  const handleEdit = (appointment) => {
+    localStorage.setItem("editAppointment", JSON.stringify(appointment));
+    navigate("/edit-appointment");
+  };
+
+  // ✅ Reschedule appointment (past)
+  const handleReschedule = (appointment) => {
+    const confirmReschedule = window.confirm(
+      "Do you want to reschedule this past appointment?"
+    );
+    if (!confirmReschedule) return;
+
+    // Prefer passing via location.state (no localStorage required)
+    navigate("/appointments", { state: { rescheduleAppointment: appointment } });
+  };
+
 
   if (loading) {
     return (
@@ -113,52 +131,83 @@ export default function AppointmentDetails() {
             </p>
           ) : (
             <div className="grid md:grid-cols-2 gap-6">
-              {appointments.map((appointment) => (
-                <div
-                  key={appointment.appointmentID}
-                  className="border border-gray-200 p-6 rounded-xl shadow hover:shadow-lg bg-white transition-all"
-                >
-                  <h3 className="text-lg font-semibold text-[#1E63DB] mb-2">
-                    Appointment ID: {appointment.appointmentID}
-                  </h3>
-                  <p>
-                    <strong>Patient Name:</strong> {appointment.patientName}
-                  </p>
-                  <p>
-                    <strong>Gender:</strong> {appointment.gender}
-                  </p>
-                  <p>
-                    <strong>Age:</strong> {appointment.age}
-                  </p>
-                  <p>
-                    <strong>Doctor:</strong>{" "}
-                    {appointment.doctorName || "N/A"}
-                  </p>
-                  <p>
-                    <strong>Shift:</strong> {appointment.shift}
-                  </p>
-                  <p>
-                    <strong>Date:</strong> {appointment.date}
-                  </p>
-                  <p>
-                    <strong>Message:</strong>{" "}
-                    {appointment.message || "No message"}
-                  </p>
-
-                  <button
-                    onClick={() => handleCancel(appointment.appointmentID)}
-                    className="mt-4 w-full bg-gradient-to-br from-red-600 to-red-800 text-white py-2 rounded-lg hover:opacity-90 transition-all"
+              {appointments.map((appointment) => {
+                const past = isPastAppointment(appointment.date);
+                return (
+                  <div
+                    key={appointment.appointmentID}
+                    className="border border-gray-200 p-6 rounded-xl shadow hover:shadow-lg bg-white transition-all"
                   >
-                    Cancel Appointment
-                  </button>
-                </div>
-              ))}
+                    <h3 className="text-lg font-semibold text-[#1E63DB] mb-2">
+                      Appointment ID: {appointment.appointmentID}
+                    </h3>
+                    <p>
+                      <strong>Patient Name:</strong> {appointment.patientName}
+                    </p>
+                    <p>
+                      <strong>Doctor:</strong> {appointment.doctorName || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Date:</strong> {appointment.date}
+                    </p>
+                    <p>
+                      <strong>Shift:</strong> {appointment.shift}
+                    </p>
+                    <p>
+                      <strong>Slot:</strong> {appointment.slotId || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Message:</strong>{" "}
+                      {appointment.message || "No message"}
+                    </p>
+
+                    <div className="flex flex-col gap-3 mt-4">
+                      {past ? (
+                        <>
+                          {/* ✅ Theme color applied to Reschedule */}
+                          <button
+                            onClick={() => handleReschedule(appointment)}
+                            className="w-full bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white py-2 rounded-lg font-semibold hover:opacity-90 transition-all"
+                          >
+                            Reschedule Appointment
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleCancel(appointment.appointmentID)
+                            }
+                            className="w-full bg-gradient-to-br from-gray-600 to-gray-800 text-white py-2 rounded-lg font-semibold hover:opacity-90 transition-all"
+                          >
+                            Delete Appointment
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleEdit(appointment)}
+                            className="w-full bg-gradient-to-br from-green-500 to-emerald-700 text-white py-2 rounded-lg font-semibold hover:opacity-90 transition-all"
+                          >
+                            Edit Appointment
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleCancel(appointment.appointmentID)
+                            }
+                            className="w-full bg-gradient-to-br from-red-600 to-red-800 text-white py-2 rounded-lg font-semibold hover:opacity-90 transition-all"
+                          >
+                            Cancel Appointment
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
           <button
             onClick={() => navigate("/appointments")}
-            className="mt-8 w-full bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white py-3 rounded-xl hover:opacity-90 transition-all duration-300"
+            className="mt-8 w-full bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-all duration-300"
           >
             Book New Appointment
           </button>
