@@ -19,13 +19,14 @@ public class PtInfoDTO {
     private Gender gender;
     private List<AppointmentDTO> appointment;
     private String userName;
+    private String profileImage;
 
     public PtInfoDTO() {
     }
 
     public PtInfoDTO(long patientId, String patientName,String email, String patientAddress,
                      long patientAadharNo,String contactNo, LocalDate dob,Gender gender,
-                     List<AppointmentDTO> appointment, String userName) {
+                     List<AppointmentDTO> appointment, String userName, String profileImage) {
         this.patientId = patientId;
         this.patientName = patientName;
         this.email=email;
@@ -36,6 +37,7 @@ public class PtInfoDTO {
         this.gender = gender;
         this.appointment = appointment;
         this.userName=userName;
+        this.profileImage=profileImage;
     }
 
     public long getPatientId() {
@@ -113,4 +115,12 @@ public class PtInfoDTO {
     public String getUserName() { return userName;  }
 
     public void setUserName(String userName) { this.userName = userName; }
+
+    public String getProfileImage() {
+        return profileImage;
+    }
+
+    public void setProfileImage(String profileImage) {
+        this.profileImage = profileImage;
+    }
 }

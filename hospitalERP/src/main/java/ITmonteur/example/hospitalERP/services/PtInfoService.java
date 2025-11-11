@@ -64,7 +64,7 @@ public class PtInfoService {
     public PtInfoDTO getPtInfoById(long ptId) {
         logger.info("Fetching patient information with ID: {}", ptId);
         try {
-            PtInfo ptInfo = ptInfoRepository.findById(ptId)
+            PtInfo ptInfo = ptInfoRepository.findByUser_Id(ptId)
                     .orElseThrow(() -> new ResourceNotFoundException("Patient", "patientID", ptId));
             PtInfoDTO ptInfoDTO = convertToDto(ptInfo);
             logger.info("Patient information retrieved: {}", ptInfoDTO.getPatientName());
@@ -107,6 +107,9 @@ public class PtInfoService {
             ptInfo.setPatientAddress(ptInfoDTO.getPatientAddress());
             ptInfo.setUserName(ptInfoDTO.getUserName());
             // ptInfo.setAppointment(ptInfoDTO.getAppointment());
+            if (ptInfoDTO.getProfileImage() != null && !ptInfoDTO.getProfileImage().isEmpty()) {
+                ptInfo.setProfileImage(ptInfoDTO.getProfileImage());
+            }
 
             PtInfoDTO updatedPtInfo = convertToDto(ptInfoRepository.save(ptInfo));
             logger.info("Patient information updated successfully for ID: {}", ptId);

@@ -23,6 +23,7 @@ public class Doctor {
     @Column(nullable = false)
     private String phoneNumber;
     private String userName;
+    private String profileImage;
 
     @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Appointment> appointments;
@@ -38,7 +39,7 @@ public class Doctor {
     }
 
     public Doctor(Long id, String name, Specialist specialist,
-                  String email, String password, String phoneNumber,String userName,
+                  String email, String password, String phoneNumber,String profileImage,String userName,
                   List<Appointment> appointments, Role role, User user) {
         this.id = id;
         this.name = name;
@@ -47,6 +48,7 @@ public class Doctor {
         this.password = password;
         this.phoneNumber = phoneNumber;
         this.userName = userName;
+        this.profileImage=profileImage;
         this.appointments=appointments;
         this.role = role;
         this.user = user;
@@ -130,5 +132,13 @@ public class Doctor {
 
     public void setAppointments(List<Appointment> appointments) {
         this.appointments = appointments;
+    }
+
+    public String getProfileImage() {
+        return profileImage;
+    }
+
+    public void setProfileImage(String profileImage) {
+        this.profileImage = profileImage;
     }
 }

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -143,24 +144,32 @@ public class ReceptionistController {
         }
     }
 
-    // Update receptionist
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<ReceptionistDTO> updateReceptionist(
             @PathVariable("id") Long id,
-            @RequestBody ReceptionistDTO receptionistDTO) {
+            @RequestPart("receptionistDTO") ReceptionistDTO receptionistDTO,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
 
         logger.info("PUT request received to update receptionist with ID: {}", id);
-
+        if (profileImage != null && !profileImage.isEmpty()) {
+            try {
+                String uploadDir = System.getProperty("user.dir") + "/uploads/profileImages/";
+                java.nio.file.Path filePath = java.nio.file.Paths.get(uploadDir + profileImage.getOriginalFilename());
+                java.nio.file.Files.createDirectories(filePath.getParent());
+                profileImage.transferTo(filePath.toFile());
+                receptionistDTO.setProfileImage("/uploads/profileImages/" + profileImage.getOriginalFilename());
+            } catch (Exception e) {
+                logger.error("Failed to upload profile image: {}", e.getMessage());
+            }
+        }
         try {
             ReceptionistDTO updatedReceptionist = receptionistService.updateReceptionist(id, receptionistDTO);
             logger.info("Receptionist updated successfully: {}", updatedReceptionist.getName());
             return ResponseEntity.ok(updatedReceptionist);
-        } catch (ResourceNotFoundException e) {
-            logger.warn("Receptionist not found with ID: {}", id);
-            return ResponseEntity.status(404).body(null);
         } catch (Exception e) {
             logger.error("Error updating receptionist with ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(500).body(null);
         }
     }
+
 }

@@ -44,7 +44,7 @@ public class ReceptionistService {
 
     public ReceptionistDTO getReceptionistByID(Long receptionistId) {
         logger.info("Fetching receptionist by ID: {}", receptionistId);
-        Receptionist receptionist = receptionistRepository.findById(receptionistId)
+        Receptionist receptionist = receptionistRepository.findByUser_Id(receptionistId)
                 .orElseThrow(() -> {
                     logger.warn("Receptionist not found with ID: {}", receptionistId);
                     return new ResourceNotFoundException("Receptionist", "id", receptionistId);
@@ -174,6 +174,9 @@ public class ReceptionistService {
             if (receptionistDTO.getUserName() != null) receptionist.setUserName(receptionistDTO.getUserName());
             if (receptionistDTO.getGender() != null) receptionist.setGender(Gender.valueOf(receptionistDTO.getGender().toUpperCase()));//convert String to Gender
             if (receptionistDTO.getAge() != 0) receptionist.setAge(receptionistDTO.getAge());
+            if (receptionistDTO.getProfileImage() != null && !receptionistDTO.getProfileImage().isEmpty()) {
+                receptionist.setProfileImage(receptionistDTO.getProfileImage());
+            }
 
             Receptionist updatedReceptionist = receptionistRepository.save(receptionist);
             logger.info("Receptionist updated successfully with ID: {}", receptionistID);

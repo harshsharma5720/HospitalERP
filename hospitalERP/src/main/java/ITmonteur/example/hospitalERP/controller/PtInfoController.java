@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -76,10 +77,25 @@ public class PtInfoController {
     }
 
     // Update patient account by ID
-    @PutMapping("/updateAccount/{ptId}")
-    public ResponseEntity<PtInfoDTO> updateAccountById(@RequestBody PtInfoDTO ptInfoDTO,
-                                                       @PathVariable long ptId){
+    @PutMapping(value = "/updateAccount/{ptId}", consumes = {"multipart/form-data"})
+    public ResponseEntity<PtInfoDTO> updateAccountById(
+            @PathVariable long ptId,
+            @RequestPart("ptInfoDTO") PtInfoDTO ptInfoDTO,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
+
         logger.info("Updating patient account with ID: {}", ptId);
+        // ✅ Handle file upload
+        if (profileImage != null && !profileImage.isEmpty()) {
+            try {
+                String uploadDir = System.getProperty("user.dir") + "/uploads/profileImages/";
+                java.nio.file.Path filePath = java.nio.file.Paths.get(uploadDir + profileImage.getOriginalFilename());
+                java.nio.file.Files.createDirectories(filePath.getParent());
+                profileImage.transferTo(filePath.toFile());
+                ptInfoDTO.setProfileImage("/uploads/profileImages/" + profileImage.getOriginalFilename());
+            } catch (Exception e) {
+                logger.error("Failed to upload profile image for patient ID {}: {}", ptId, e.getMessage());
+            }
+        }
         PtInfoDTO updatedPtInfoDTO = this.ptInfoService.updatePtInfoById(ptInfoDTO, ptId);
         logger.info("Patient account updated successfully for ID: {}", ptId);
         return ResponseEntity.ok(updatedPtInfoDTO);

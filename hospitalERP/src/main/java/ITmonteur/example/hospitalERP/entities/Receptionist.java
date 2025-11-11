@@ -18,6 +18,7 @@ public class Receptionist {
     @Column(nullable = false)
     private Gender gender;
     private String userName;
+    private String profileImage;
     @Enumerated(EnumType.STRING)
     private Role role = Role.RECEPTIONIST;
     @OneToOne
@@ -41,13 +42,15 @@ public class Receptionist {
     public Receptionist() {
     }
 
-    public Receptionist(Long id, String name, String email, String phone, Gender gender, String userName ,Role role, User user, int age) {
+    public Receptionist(Long id, String name, String email, String phone, Gender gender, String userName
+            ,String profileImage ,Role role, User user, int age) {
         this.id = id;
         this.name = name;
         this.email = email;
         this.phone = phone;
         this.gender = gender;
         this.userName=userName;
+        this.profileImage=profileImage;
         this.role = role;
         this.user = user;
         this.age = age;
@@ -123,5 +126,13 @@ public class Receptionist {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public String getProfileImage() {
+        return profileImage;
+    }
+
+    public void setProfileImage(String profileImage) {
+        this.profileImage = profileImage;
     }
 }

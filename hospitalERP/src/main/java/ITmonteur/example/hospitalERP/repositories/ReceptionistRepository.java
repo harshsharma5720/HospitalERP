@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface ReceptionistRepository extends JpaRepository<Receptionist,Long> {
 
     Optional<Receptionist> findByUserName(String userName);
+    Optional<Receptionist> findByUser_Id(Long userId);
 }

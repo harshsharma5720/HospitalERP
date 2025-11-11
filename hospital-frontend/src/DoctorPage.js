@@ -24,6 +24,7 @@ export default function DoctorPage() {
     if (token) {
       const extractedRole = getRoleFromToken(token);
       setRole(extractedRole);
+      console.log("Extracted Role:", extractedRole);
       fetchAllDoctors(token, extractedRole);
     } else {
       fetchAllDoctors(null, null);

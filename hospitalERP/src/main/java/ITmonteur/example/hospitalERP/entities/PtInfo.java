@@ -27,6 +27,7 @@ public class PtInfo {
     @OneToMany(mappedBy = "ptInfo", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Appointment> appointments = new ArrayList<>();
     private String userName;
+    private String profileImage;
     @Enumerated(EnumType.STRING)
     private Role role = Role.PATIENT;
     @OneToOne
@@ -38,7 +39,7 @@ public class PtInfo {
 
     public PtInfo(Long patientId, String patientName, String email, String patientAddress,
                   Long patientAadharNo, String contactNo, LocalDate dob, Gender gender,
-                  List<Appointment> appointments, String userName, Role role, User user) {
+                  List<Appointment> appointments, String userName, String profileImage,Role role, User user) {
         this.patientId = patientId;
         this.patientName = patientName;
         this.email = email;
@@ -49,6 +50,7 @@ public class PtInfo {
         this.gender = gender;
         this.appointments = appointments;
         this.userName = userName;
+        this.profileImage=profileImage;
         this.role = role;
         this.user = user;
     }
@@ -147,5 +149,13 @@ public class PtInfo {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public String getProfileImage() {
+        return profileImage;
+    }
+
+    public void setProfileImage(String profileImage) {
+        this.profileImage = profileImage;
     }
 }

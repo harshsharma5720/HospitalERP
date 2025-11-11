@@ -50,7 +50,7 @@ public class DoctorService {
     public DoctorDTO getDoctorById(Long doctorId) {
         logger.info("Fetching doctor with ID: {}", doctorId);
         try {
-            Doctor doctor = doctorRepository.findById(doctorId)
+            Doctor doctor = doctorRepository.findByUserId(doctorId)
                     .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
             DoctorDTO doctorDTO = convertToDTO(doctor);
             logger.info("Doctor retrieved: {}", doctorDTO.getName());
@@ -88,6 +88,9 @@ public class DoctorService {
             doctor.setEmail(doctorDTO.getEmail());
             doctor.setPhoneNumber(doctorDTO.getPhoneNumber());
             doctor.setSpecialist(Specialist.valueOf(doctorDTO.getSpecialization().toUpperCase()));
+            if (doctorDTO.getProfileImage() != null && !doctorDTO.getProfileImage().isEmpty()) {
+                doctor.setProfileImage(doctorDTO.getProfileImage());
+            }
 
             Doctor updatedDoctor = doctorRepository.save(doctor);
             DoctorDTO updatedDTO = convertToDTO(updatedDoctor);

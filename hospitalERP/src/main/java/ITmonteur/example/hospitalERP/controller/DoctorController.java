@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -68,18 +69,33 @@ public class DoctorController {
     }
 
     // Update doctor by ID (only self-update allowed)
-    @PutMapping("/update/{id}")
-    public ResponseEntity<?> updateDoctor(@PathVariable Long id,
-                                          @RequestBody DoctorDTO doctorDTO,
-                                          HttpServletRequest request) {
+    @PutMapping(value = "/update/{id}", consumes = {"multipart/form-data"})
+    public ResponseEntity<?> updateDoctor(
+            @PathVariable Long id,
+            @RequestPart("doctorDTO") DoctorDTO doctorDTO,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
+            HttpServletRequest request) {
+
         String token = request.getHeader("Authorization").substring(7);
         String username = jwtService.extractUsername(token);
         Long tokenUserId = jwtService.extractUserId(token);
         logger.info("Update request by user: {} for doctor ID: {}", username, id);
-        // Check if the doctor is updating own profile
         if (!id.equals(tokenUserId)) {
             logger.warn("User {} tried to update doctor ID {} without permission", username, id);
             return ResponseEntity.status(403).body("You can only update your own profile!");
+        }
+        // ✅ Save image if provided
+        if (profileImage != null && !profileImage.isEmpty()) {
+            try {
+                String uploadDir = System.getProperty("user.dir") + "/uploads/profileImages/";
+                java.nio.file.Path filePath = java.nio.file.Paths.get(uploadDir + profileImage.getOriginalFilename());
+                java.nio.file.Files.createDirectories(filePath.getParent());
+                profileImage.transferTo(filePath.toFile());
+                doctorDTO.setProfileImage("/uploads/profileImages/" + profileImage.getOriginalFilename());
+            } catch (Exception e) {
+                logger.error("Failed to upload profile image: {}", e.getMessage());
+                return ResponseEntity.status(500).body("Image upload failed!");
+            }
         }
         DoctorDTO updatedDoctor = doctorService.updateDoctor(id, doctorDTO);
         logger.info("Doctor updated successfully with ID: {}", id);

@@ -11,11 +11,13 @@ public class ReceptionistDTO {
     private String userName;
     private String gender;
     private int age;
+    private String profileImage;
 
     public ReceptionistDTO() {
     }
 
-    public ReceptionistDTO(Long id, String name, String email, String phone,String userName ,String gender, int age) {
+    public ReceptionistDTO(Long id, String name, String email, String phone,String userName
+            ,String gender, int age, String profileImage) {
         this.id = id;
         this.name = name;
         this.email = email;
@@ -23,6 +25,7 @@ public class ReceptionistDTO {
         this.userName=userName;
         this.gender = gender;
         this.age = age;
+        this.profileImage=profileImage;
     }
 
     public Long getId() {
@@ -79,5 +82,13 @@ public class ReceptionistDTO {
 
     public void setAge(int age) {
         this.age = age;
+    }
+
+    public String getProfileImage() {
+        return profileImage;
+    }
+
+    public void setProfileImage(String profileImage) {
+        this.profileImage = profileImage;
     }
 }
