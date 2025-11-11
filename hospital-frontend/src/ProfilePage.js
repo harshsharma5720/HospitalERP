@@ -32,11 +32,11 @@ export default function ProfilePage({ onClose }) {
 
         let url = "";
         if (userRole === "ROLE_DOCTOR") {
-          url = `http://localhost:8080/api/doctor/getByUserId/${userId}`;
+          url = `http://localhost:8080/api/doctor/get/${userId}`;
         } else if (userRole === "ROLE_PATIENT") {
           url = `http://localhost:8080/api/patient/getAccount/${userId}`;
         } else if (userRole === "ROLE_RECEPTIONIST") {
-          url = `http://localhost:8080/api/receptionist/getByUserId/${userId}`;
+          url = `http://localhost:8080/api/receptionist/getReceptionist/${userId}`;
         } else {
           alert("Invalid user role detected!");
           return;
@@ -82,7 +82,7 @@ export default function ProfilePage({ onClose }) {
     <>
 
       <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-        <div className="w-full max-w-2xl bg-white shadow-lg rounded-2xl p-6 border border-gray-200">
+        <div className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] text-[#003366] p-6 rounded-xl shadow-xl w-full max-w-md mx-auto transform transition-all">
          {/* Close Button (top-right corner) */}
           <button
               onClick={handleClose}
