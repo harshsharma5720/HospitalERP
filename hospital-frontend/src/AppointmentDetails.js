@@ -136,7 +136,7 @@ export default function AppointmentDetails() {
                 return (
                   <div
                     key={appointment.appointmentID}
-                    className="border border-gray-200 p-6 rounded-xl shadow hover:shadow-lg bg-white transition-all"
+                    className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] border border-gray-200 p-6 rounded-2xl shadow-2xl hover:shadow-3xl transition-transform transform hover:scale-105 duration-300"
                   >
                     <h3 className="text-lg font-semibold text-[#1E63DB] mb-2">
                       Appointment ID: {appointment.appointmentID}
