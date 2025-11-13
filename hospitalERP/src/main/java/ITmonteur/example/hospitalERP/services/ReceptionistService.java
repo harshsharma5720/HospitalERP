@@ -165,7 +165,7 @@ public class ReceptionistService {
     public ReceptionistDTO updateReceptionist(Long receptionistID, ReceptionistDTO receptionistDTO) {
         logger.info("Updating receptionist with ID: {}", receptionistID);
         try {
-            Receptionist receptionist = receptionistRepository.findById(receptionistID)
+            Receptionist receptionist = receptionistRepository.findByUser_Id(receptionistID)
                     .orElseThrow(() -> new ResourceNotFoundException("Receptionist", "id", receptionistID));
 
             if (receptionistDTO.getName() != null) receptionist.setName(receptionistDTO.getName());

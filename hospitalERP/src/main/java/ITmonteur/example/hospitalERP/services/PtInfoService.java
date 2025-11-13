@@ -95,7 +95,7 @@ public class PtInfoService {
     public PtInfoDTO updatePtInfoById(PtInfoDTO ptInfoDTO, long ptId) {
         logger.info("Updating patient information with ID: {}", ptId);
         try {
-            PtInfo ptInfo = ptInfoRepository.findById(ptId)
+            PtInfo ptInfo = ptInfoRepository.findByUser_Id(ptId)
                     .orElseThrow(() -> new RuntimeException("Patient not found with ID: " + ptId));
 
             ptInfo.setPatientName(ptInfoDTO.getPatientName()); //ptInfoDTO = ptInfoReqquestDTO

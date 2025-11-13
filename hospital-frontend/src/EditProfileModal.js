@@ -236,7 +236,7 @@ export default function ProfilePage({ onClose }) {
                     readOnly={!isEditing || field.key === "patientId" || field.key === "doctorId" || field.key === "receptionistId"}
                     onChange={handleChange}
                     className={`p-2 border rounded-lg ${
-                      isEditing || field.key === "patientId" || field.key === "doctorId" || field.key === "receptionistId"
+                      !isEditing || field.key === "patientId" || field.key === "doctorId" || field.key === "receptionistId"
                         ? "border-gray-200 bg-gray-100 cursor-not-allowed"
                         : "border-blue-400 bg-white"
                     }`}

@@ -84,7 +84,7 @@ public class DoctorController {
             logger.warn("User {} tried to update doctor ID {} without permission", username, id);
             return ResponseEntity.status(403).body("You can only update your own profile!");
         }
-        // ✅ Save image if provided
+        // Save image if provided
         if (profileImage != null && !profileImage.isEmpty()) {
             try {
                 String uploadDir = System.getProperty("user.dir") + "/uploads/profileImages/";

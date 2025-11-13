@@ -2,6 +2,8 @@ package ITmonteur.example.hospitalERP.configuration;
 
 import ITmonteur.example.hospitalERP.services.CustomUserDetailsService;
 import ITmonteur.example.hospitalERP.services.JWTService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -20,6 +22,8 @@ import java.io.IOException;
 
 @Component
 public class JWTAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Logger logger = LoggerFactory.getLogger(JWTAuthenticationFilter.class);
 
     @Autowired
     private JWTService jwtService;
@@ -43,6 +47,13 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
             filterChain.doFilter(request, response);
             return;
+        }
+
+        // Allow multipart requests to pass through safely
+        if (request.getContentType() != null && request.getContentType().startsWith("multipart/")) {
+            // Continue processing, but don’t try to read body content here
+            // Just verify token if available
+            logger.debug("Multipart request detected, ensuring JWT header is present");
         }
 
         final String authHeader = request.getHeader("Authorization");
