@@ -1,3 +1,4 @@
+// Part 1 of 2 — AppointmentPage (neon dark theme) - TOP
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Navbar from "./Navbar";
@@ -28,7 +29,7 @@ export default function AppointmentPage() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState(null);
 
-  // ✅ Fetch doctors and prefill doctor if passed from DoctorPage
+  // Fetch doctors and prefill doctor if passed from DoctorPage
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
@@ -66,7 +67,7 @@ export default function AppointmentPage() {
     fetchDoctors();
   }, [doctorName]);
 
-  // ✅ Prefill reschedule data if available
+  // Prefill reschedule data if available
   useEffect(() => {
     if (rescheduleData) {
       setFormData((prev) => ({
@@ -95,12 +96,12 @@ export default function AppointmentPage() {
     }
   }, [rescheduleData, doctors]);
 
-  // ✅ Handle input changes
+  // Handle input changes
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ✅ Handle doctor dropdown
+  // Handle doctor dropdown
   const handleDoctorChange = (e) => {
     const selected = doctors.find((doc) => doc.id === Number(e.target.value));
     if (selected) {
@@ -112,7 +113,7 @@ export default function AppointmentPage() {
     }
   };
 
-  // ✅ Fetch available slots
+  // Fetch available slots
   const handleSlotFetch = async () => {
     const { doctorId, date, shift } = formData;
     if (!doctorId || !date || !shift) {
@@ -150,7 +151,7 @@ export default function AppointmentPage() {
     }
   };
 
-  // ✅ Handle appointment booking / rescheduling
+  // Handle appointment booking / rescheduling
   const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("jwtToken");
@@ -205,21 +206,24 @@ export default function AppointmentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
+    <div className="min-h-screen bg-white dark:bg-[#0a1330] text-gray-900 dark:text-[#50d4f2] transition-all">
       <TopNavbar />
       <Navbar />
 
       <div className="flex justify-center items-start py-12 px-6 relative">
+        {/* subtle decorative background image with low opacity */}
         <img
           src="Shreyahospital.jpg"
           alt="Hospital Background"
-          className="absolute top-0 left-0 w-full h-full object-cover opacity-20 -z-10"
+          className="absolute top-0 left-0 w-full h-full object-cover opacity-10 dark:opacity-20 -z-10"
         />
 
-        <div className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] shadow-2xl rounded-3xl p-8 md:p-10 w-full max-w-6xl relative z-10 grid md:grid-cols-2 gap-10">
-          {/* ✅ Form Section */}
+        <div
+          className="bg-white/90 dark:bg-[#111a3b]/80 shadow-2xl rounded-3xl p-8 md:p-10 w-full max-w-6xl relative z-10 grid md:grid-cols-2 gap-10 transition"
+        >
+          {/* Form Section */}
           <div>
-            <h2 className="text-3xl font-bold text-center text-teal-700 mb-6">
+            <h2 className="text-3xl font-bold text-center text-[#1E63DB] dark:text-[#50d4f2] mb-6">
               {rescheduleData ? "Reschedule Appointment" : "Book an Appointment"}
             </h2>
 
@@ -230,7 +234,7 @@ export default function AppointmentPage() {
                 value={formData.patientName}
                 onChange={handleChange}
                 placeholder="Patient Name"
-                className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-teal-600"
+                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-[#50d4f2]"
                 required
               />
 
@@ -238,7 +242,7 @@ export default function AppointmentPage() {
                 name="gender"
                 value={formData.gender}
                 onChange={handleChange}
-                className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-teal-600"
+                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
                 required
               >
                 <option value="MALE">Male</option>
@@ -252,7 +256,7 @@ export default function AppointmentPage() {
                 value={formData.age}
                 onChange={handleChange}
                 placeholder="Age"
-                className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-teal-600"
+                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
                 required
               />
 
@@ -260,7 +264,7 @@ export default function AppointmentPage() {
                 name="doctorId"
                 value={formData.doctorId}
                 onChange={handleDoctorChange}
-                className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-teal-600"
+                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
                 required
               >
                 <option value="">Select Doctor</option>
@@ -275,7 +279,7 @@ export default function AppointmentPage() {
                 name="shift"
                 value={formData.shift}
                 onChange={handleChange}
-                className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-teal-600"
+                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
                 required
               >
                 <option value="MORNING">Morning</option>
@@ -287,7 +291,7 @@ export default function AppointmentPage() {
                 name="date"
                 value={formData.date}
                 onChange={handleChange}
-                className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-teal-600"
+                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
                 required
               />
 
@@ -296,7 +300,7 @@ export default function AppointmentPage() {
                 value={formData.message}
                 onChange={handleChange}
                 placeholder="Message (optional)"
-                className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-teal-600"
+                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
               />
 
               <input
@@ -305,36 +309,34 @@ export default function AppointmentPage() {
                 value={formData.ptInfoId}
                 onChange={handleChange}
                 placeholder="Patient Info ID (optional)"
-                className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-teal-600"
+                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
               />
 
               <button
                 type="button"
                 onClick={handleSlotFetch}
-                className="w-full bg-[#1E63DB] text-white py-3 rounded-lg font-semibold hover:opacity-90 transition"
+                className="w-full bg-gradient-to-br from-[#1E63DB] to-[#27496d] dark:from-[#50d4f2] dark:to-[#3bc2df] text-white dark:text-black py-3 rounded-lg font-semibold hover:opacity-90 transition"
               >
                 Show Available Slots
               </button>
 
               <button
                 type="submit"
-                className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition"
+                className="w-full bg-green-600 text-white dark:bg-green-600 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
               >
-                {rescheduleData
-                  ? "Reschedule Appointment"
-                  : "Book Appointment"}
+                {rescheduleData ? "Reschedule Appointment" : "Book Appointment"}
               </button>
             </form>
           </div>
 
-          {/* ✅ Slots Section */}
+          {/* Slots Section */}
           <div>
-            <h3 className="text-2xl font-semibold text-center text-[#1E63DB] mb-4">
+            <h3 className="text-2xl font-semibold text-center text-[#1E63DB] dark:text-[#50d4f2] mb-4">
               Available Slots
             </h3>
 
             {loadingSlots ? (
-              <p className="text-center text-[#1E63DB] font-semibold">
+              <p className="text-center text-[#1E63DB] font-semibold dark:text-[#50d4f2]">
                 Loading slots...
               </p>
             ) : availableSlots.length > 0 ? (
@@ -345,8 +347,8 @@ export default function AppointmentPage() {
                     onClick={() => setSelectedSlotId(slot.id)}
                     className={`p-3 rounded-lg border text-sm font-medium transition ${
                       selectedSlotId === slot.id
-                        ? "bg-[#1E63DB] text-white"
-                        : "bg-gray-100 hover:bg-[#e7f0ff]"
+                        ? "bg-[#1E63DB] text-white dark:bg-[#50d4f2] dark:text-black"
+                        : "bg-gray-100 hover:bg-[#e7f0ff] dark:bg-[#0f172a] dark:hover:bg-[#16224a] dark:text-[#50d4f2]"
                     }`}
                   >
                     {slot.startTime} - {slot.endTime}
@@ -354,7 +356,7 @@ export default function AppointmentPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-center text-gray-500">
+              <p className="text-center text-gray-500 dark:text-[#8ddff8]">
                 No slots available. Please select doctor, date & shift.
               </p>
             )}

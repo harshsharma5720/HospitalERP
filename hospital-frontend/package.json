@@ -16,7 +16,8 @@
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.9.4",
     "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "zustand": "^5.0.8"
   },
   "scripts": {
     "start": "react-scripts start",

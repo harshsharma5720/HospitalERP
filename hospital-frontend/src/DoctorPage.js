@@ -6,7 +6,7 @@ import TopNavbar from "./TopNavbar";
 import { getRoleFromToken } from "./utils/jwtUtils.js";
 import PopupForm from "./PopupForm";
 
-// ✅ Import Lottie animation
+// Lottie
 import Lottie from "lottie-react";
 import doctorAnimation from "./assets/Doctor.json";
 
@@ -24,7 +24,6 @@ export default function DoctorPage() {
     if (token) {
       const extractedRole = getRoleFromToken(token);
       setRole(extractedRole);
-      console.log("Extracted Role:", extractedRole);
       fetchAllDoctors(token, extractedRole);
     } else {
       fetchAllDoctors(null, null);
@@ -42,7 +41,6 @@ export default function DoctorPage() {
       setDoctors(response.data);
       setError("");
     } catch (err) {
-      console.error("Error fetching doctors:", err);
       setError("Failed to fetch doctors.");
     } finally {
       setLoading(false);
@@ -84,9 +82,10 @@ export default function DoctorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col relative overflow-hidden">
-      {/* ✅ Fullscreen Lottie Background */}
-      <div className="absolute inset-0 opacity-40 pointer-events-none z-0">
+    <div className="min-h-screen bg-gray-100 dark:bg-[#0a1124] flex flex-col relative overflow-hidden">
+
+      {/* Background Lottie */}
+      <div className="absolute inset-0 opacity-30 pointer-events-none z-0">
         <Lottie animationData={doctorAnimation} loop={true} />
       </div>
 
@@ -94,28 +93,33 @@ export default function DoctorPage() {
         <TopNavbar />
         <Navbar />
 
-        {/* Header Section */}
+        {/* Header */}
         <div className="text-center mt-10">
-          <h2 className="text-4xl md:text-5xl font-extrabold mb-6 bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
+          <h2 className="
+            text-4xl md:text-5xl font-extrabold mb-6
+            bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent
+            dark:from-[#50d4f2] dark:to-[#63e6ff]
+          ">
             Our Doctors
           </h2>
-          {/* Underline */}
-          <div className="w-40 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 mx-auto mb-10 rounded-full"></div>
-          <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-8">
+
+          <div className="w-40 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 dark:from-[#50d4f2] dark:to-[#63e6ff] mx-auto mb-10 rounded-full"></div>
+
+          <p className="text-gray-700 dark:text-gray-300 text-lg max-w-2xl mx-auto mb-8">
             Meet our experienced and specialized doctors.
           </p>
         </div>
 
-        {/* Search Section */}
+        {/* Search */}
         <div className="max-w-3xl mx-auto mb-10 text-center">
-          <form
-            onSubmit={handleSearch}
-            className="flex gap-2 justify-center items-center"
-          >
+          <form onSubmit={handleSearch} className="flex gap-2 justify-center items-center">
             <select
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-2/3 p-3 border border-gray-300 rounded-lg"
+              className="
+                w-2/3 p-3 border border-gray-300 rounded-lg
+                dark:bg-[#111a3b] dark:border-[#233565] dark:text-[#50d4f2]
+              "
             >
               <option value="">-- Select Specialization --</option>
               <option value="Cardiology">Cardiology</option>
@@ -125,9 +129,13 @@ export default function DoctorPage() {
               <option value="Pediatrics">Pediatrics</option>
               <option value="Dermatology">Dermatology</option>
             </select>
+
             <button
               type="submit"
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+              className="
+                bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition
+                dark:bg-[#1E63DB] dark:hover:bg-[#27496d]
+              "
             >
               Search
             </button>
@@ -135,7 +143,7 @@ export default function DoctorPage() {
         </div>
 
         {/* Loading / Error */}
-        {loading && <p className="text-center">Loading...</p>}
+        {loading && <p className="text-center dark:text-[#50d4f2]">Loading...</p>}
         {error && <p className="text-center text-red-500">{error}</p>}
 
         {/* Doctor Cards */}
@@ -143,7 +151,13 @@ export default function DoctorPage() {
           {doctors.map((doctor) => (
             <div
               key={doctor.id}
-              className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] p-6 rounded-2xl shadow-2xl hover:shadow-3xl transition-transform transform hover:scale-105"
+              className="
+                bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF]
+                dark:from-[#111a3b] dark:to-[#0f172a]
+                p-6 rounded-2xl shadow-2xl hover:shadow-3xl
+                transition-transform transform hover:scale-105
+                dark:border dark:border-[#233565]
+              "
             >
               <div className="text-center">
                 <img
@@ -151,14 +165,31 @@ export default function DoctorPage() {
                   alt="Doctor"
                   className="h-24 w-24 mx-auto rounded-full mb-4"
                 />
-                <h3 className="text-lg font-bold text-[#003366]">{doctor.name}</h3>
-                <p className="text-gray-600">Specialist: {doctor.specialist}</p>
-                <p className="text-gray-600">Email: {doctor.email}</p>
-                <p className="text-gray-600">Phone: {doctor.phoneNumber}</p>
+
+                <h3 className="text-lg font-bold text-[#003366] dark:text-[#50d4f2]">
+                  {doctor.name}
+                </h3>
+
+                <p className="text-gray-600 dark:text-gray-300">
+                  Specialist: {doctor.specialist}
+                </p>
+
+                <p className="text-gray-600 dark:text-gray-300">
+                  Email: {doctor.email}
+                </p>
+
+                <p className="text-gray-600 dark:text-gray-300">
+                  Phone: {doctor.phoneNumber}
+                </p>
 
                 <button
                   onClick={() => handleBookAppointment(doctor.name)}
-                  className="mt-4 bg-gradient-to-r from-[#007B9E] to-[#00A2B8] text-white px-4 py-2 rounded-full font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-transform duration-300"
+                  className="
+                    mt-4 bg-gradient-to-r from-[#007B9E] to-[#00A2B8]
+                    text-white px-4 py-2 rounded-full font-semibold shadow-md
+                    hover:shadow-lg hover:scale-105 transition-transform duration-300
+                    dark:from-[#1E63DB] dark:to-[#27496d]
+                  "
                 >
                   Book Appointment
                 </button>
@@ -168,13 +199,13 @@ export default function DoctorPage() {
         </div>
 
         {/* Footer */}
-        <footer className="bg-blue-600 text-white py-4 text-center">
+        <footer className="bg-blue-600 dark:bg-[#111a3b] text-white py-4 text-center">
           <p>
             © {new Date().getFullYear()} Shreya Hospital. All Rights Reserved.
           </p>
         </footer>
 
-        {/* Popup Form */}
+        {/* Popup */}
         {showLoginPopup && <PopupForm onClose={() => setShowLoginPopup(false)} />}
       </div>
     </div>

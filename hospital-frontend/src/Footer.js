@@ -2,10 +2,25 @@ import React from "react";
 
 export default function Footer() {
   return (
-    <footer className="bg-white border-t shadow-inner mt-16">
+    <footer
+      className="
+        bg-white dark:bg-[#0a1330]
+        border-t shadow-inner mt-16
+        dark:border-[#111a3b]
+        transition-all duration-300
+      "
+    >
       <div className="flex flex-col md:flex-row w-full">
         {/* Left Section - Contact Info */}
-        <div className="bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white md:w-1/2 w-full p-10 flex flex-col justify-center space-y-6">
+        <div
+          className="
+            bg-gradient-to-br from-[#1E63DB] to-[#27496d]
+            dark:from-[#111a3b] dark:to-[#0a1330]
+            text-white dark:text-[#50d4f2]
+            md:w-1/2 w-full p-10 flex flex-col justify-center space-y-6
+            transition-all
+          "
+        >
           {/* Logo */}
           <div>
             <img
@@ -19,8 +34,8 @@ export default function Footer() {
           <div className="flex items-start space-x-3">
             <span className="text-2xl">📍</span>
             <div>
-              <h3 className="font-semibold text-lg">Location</h3>
-              <p className="text-sm leading-relaxed">
+              <h3 className="font-semibold text-lg dark:text-[#50d4f2]">Location</h3>
+              <p className="text-sm leading-relaxed dark:text-[#50d4f2]">
                 Amman Street, Next to Bait Al Khair Building, Al Nahda 2,
                 P.O.Box: 7832, Dubai, United Arab Emirates.
               </p>
@@ -31,10 +46,16 @@ export default function Footer() {
           <div className="flex items-start space-x-3">
             <span className="text-2xl">✉️</span>
             <div>
-              <h3 className="font-semibold text-lg">Email</h3>
+              <h3 className="font-semibold text-lg dark:text-[#50d4f2]">Email</h3>
               <a
                 href="mailto:sphdxb.receptions@nmchospital.ae"
-                className="text-sm hover:underline hover:text-yellow-200 transition"
+                className="
+                  text-sm hover:underline
+                  hover:text-yellow-300
+                  dark:text-[#50d4f2]
+                  dark:hover:text-[#3bc2df]
+                  transition
+                "
               >
                 sphdxb.receptions@nmchospital.ae
               </a>
@@ -45,10 +66,10 @@ export default function Footer() {
           <div className="flex items-start space-x-3">
             <span className="text-2xl">📞</span>
             <div>
-              <h3 className="font-semibold text-lg">Phone</h3>
-              <p className="text-sm">Landline: +971 4 267 9999</p>
-              <p className="text-sm">Toll Free: 8006624</p>
-              <p className="text-sm">Fax: +971 4 267 8889</p>
+              <h3 className="font-semibold text-lg dark:text-[#50d4f2]">Phone</h3>
+              <p className="text-sm dark:text-[#50d4f2]">Landline: +971 4 267 9999</p>
+              <p className="text-sm dark:text-[#50d4f2]">Toll Free: 8006624</p>
+              <p className="text-sm dark:text-[#50d4f2]">Fax: +971 4 267 8889</p>
             </div>
           </div>
         </div>
@@ -63,14 +84,31 @@ export default function Footer() {
             allowFullScreen=""
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
-            className="h-[400px] md:h-full border-l-4 border-teal-600"
+            className="
+              h-[400px] md:h-full
+              border-l-4 border-teal-600
+              dark:border-[#50d4f2]
+              transition-all
+            "
           ></iframe>
         </div>
       </div>
 
       {/* Bottom Bar */}
-      <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-gray-300 text-center py-3 text-sm tracking-wide">
-        © {new Date().getFullYear()} <span className="font-semibold text-white">Shreya Hospital</span>. All rights reserved.
+      <div
+        className="
+        bg-gradient-to-r from-gray-900 to-gray-800
+        dark:from-[#111a3b] dark:to-[#0a1330]
+        text-gray-300 dark:text-[#50d4f2]
+        text-center py-3 text-sm tracking-wide
+        transition
+      "
+      >
+        © {new Date().getFullYear()}{" "}
+        <span className="font-semibold text-white dark:text-[#3bc2df]">
+          Shreya Hospital
+        </span>
+        . All rights reserved.
       </div>
     </footer>
   );

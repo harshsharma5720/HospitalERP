@@ -106,21 +106,44 @@ export default function RegisterPage() {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center flex items-center justify-center relative"
+      className="
+        min-h-screen bg-cover bg-center flex items-center justify-center relative
+        dark:bg-[#0a1330] dark:text-[#50d4f2]
+      "
       style={{ backgroundImage: "url('/background.jpeg')" }}
     >
-      <div className="absolute inset-0 bg-black bg-opacity-60"></div>
+      <div className="absolute inset-0 bg-black bg-opacity-60 dark:bg-[#050b1f]/70"></div>
 
       <button
         onClick={() => navigate("/")}
-        className="absolute top-6 left-6 bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white px-5 py-2 rounded-lg font-semibold shadow-lg hover:bg-[#1e3d59] hover:text-white transition"
+        className="
+          absolute top-6 left-6
+          bg-gradient-to-br from-[#1E63DB] to-[#27496d]
+          dark:from-[#50d4f2] dark:to-[#3bc2df]
+          text-white dark:text-black px-5 py-2 rounded-lg font-semibold shadow-lg
+          hover:opacity-90 transition
+        "
       >
         Home
       </button>
 
-      <div className="relative z-10 flex flex-col md:flex-row w-[90%] md:w-[70%] lg:w-[70%] rounded-3xl overflow-hidden shadow-2xl border border-white/20 bg-white/10 backdrop-blur-xl">
-        <div className="md:w-1/2 w-full bg-white/10 backdrop-blur-sm p-10 flex flex-col justify-center text-white">
-          <h2 className="text-3xl font-bold mb-6 text-center text-[#5A73C4] drop-shadow-md">
+      <div
+        className="
+          relative z-10 flex flex-col md:flex-row w-[90%] md:w-[70%] lg:w-[70%]
+          rounded-3xl overflow-hidden shadow-2xl border border-white/20
+          bg-white/10 backdrop-blur-xl
+          dark:bg-[#111a3b]/70 dark:border-[#16224a]
+        "
+      >
+        {/* LEFT FORM SECTION */}
+        <div
+          className="
+            md:w-1/2 w-full bg-white/10 dark:bg-[#0f172a]/70
+            backdrop-blur-sm p-10 flex flex-col justify-center
+            text-white dark:text-[#50d4f2]
+          "
+        >
+          <h2 className="text-3xl font-bold mb-6 text-center text-[#5A73C4] dark:text-[#50d4f2] drop-shadow-md">
             Create Account
           </h2>
 
@@ -134,7 +157,12 @@ export default function RegisterPage() {
               placeholder="Email Address"
               value={formData.email}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg bg-white/70 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1e3d59]"
+              className="
+                w-full px-4 py-3 rounded-lg
+                bg-white/70 text-gray-900 placeholder-gray-500
+                dark:bg-[#0f172a] dark:text-[#50d4f2] dark:placeholder-gray-400
+                focus:outline-none focus:ring-2 focus:ring-[#1e3d59] dark:focus:ring-[#50d4f2]
+              "
               required
             />
 
@@ -145,7 +173,12 @@ export default function RegisterPage() {
               placeholder="Username"
               value={formData.username}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg bg-white/70 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1e3d59]"
+              className="
+                w-full px-4 py-3 rounded-lg
+                bg-white/70 text-gray-900 placeholder-gray-500
+                dark:bg-[#0f172a] dark:text-[#50d4f2] dark:placeholder-gray-400
+                focus:outline-none focus:ring-2 focus:ring-[#1e3d59] dark:focus:ring-[#50d4f2]
+              "
               required
             />
 
@@ -157,14 +190,24 @@ export default function RegisterPage() {
                 placeholder="Phone Number"
                 value={formData.phone}
                 onChange={handleChange}
-                className="flex-1 px-4 py-3 rounded-lg bg-white/70 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1e3d59]"
+                className="
+                  flex-1 px-4 py-3 rounded-lg
+                  bg-white/70 text-gray-900 placeholder-gray-500
+                  dark:bg-[#0f172a] dark:text-[#50d4f2] dark:placeholder-gray-400
+                  focus:outline-none focus:ring-2 focus:ring-[#1e3d59] dark:focus:ring-[#50d4f2]
+                "
                 required
               />
               <button
                 type="button"
                 onClick={handleSendOtp}
                 disabled={loading}
-                className="bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white px-4 rounded-lg hover:opacity-90"
+                className="
+                  bg-gradient-to-br from-[#1E63DB] to-[#27496d]
+                  dark:from-[#50d4f2] dark:to-[#3bc2df]
+                  text-white dark:text-black px-4 rounded-lg
+                  hover:opacity-90 transition
+                "
               >
                 {loading ? "Sending..." : "Send OTP"}
               </button>
@@ -179,7 +222,12 @@ export default function RegisterPage() {
                     placeholder="Enter OTP"
                     value={formData.otp}
                     onChange={handleChange}
-                    className="flex-1 px-4 py-3 rounded-lg bg-white/70 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1e3d59]"
+                    className="
+                      flex-1 px-4 py-3 rounded-lg
+                      bg-white/70 text-gray-900 placeholder-gray-500
+                      dark:bg-[#0f172a] dark:text-[#50d4f2] dark:placeholder-gray-400
+                      focus:outline-none focus:ring-2 focus:ring-[#1e3d59] dark:focus:ring-[#50d4f2]
+                    "
                   />
                   <button
                     type="button"
@@ -190,7 +238,6 @@ export default function RegisterPage() {
                   </button>
                 </div>
 
-                {/* ✅ Verification Status Field */}
                 <div className="text-center mt-1">
                   {otpVerified ? (
                     <span className="text-green-400 font-semibold">✅ Phone Verified</span>
@@ -208,7 +255,12 @@ export default function RegisterPage() {
               placeholder="Password"
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg bg-white/70 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1e3d59]"
+              className="
+                w-full px-4 py-3 rounded-lg
+                bg-white/70 text-gray-900 placeholder-gray-500
+                dark:bg-[#0f172a] dark:text-[#50d4f2] dark:placeholder-gray-400
+                focus:outline-none focus:ring-2 focus:ring-[#1e3d59] dark:focus:ring-[#50d4f2]
+              "
               required
             />
 
@@ -218,7 +270,12 @@ export default function RegisterPage() {
               placeholder="Confirm Password"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg bg-white/70 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1e3d59]"
+              className="
+                w-full px-4 py-3 rounded-lg
+                bg-white/70 text-gray-900 placeholder-gray-500
+                dark:bg-[#0f172a] dark:text-[#50d4f2] dark:placeholder-gray-400
+                focus:outline-none focus:ring-2 focus:ring-[#1e3d59] dark:focus:ring-[#50d4f2]
+              "
               required
             />
 
@@ -227,7 +284,12 @@ export default function RegisterPage() {
               name="role"
               value={formData.role}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg bg-white/70 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1e3d59]"
+              className="
+                w-full px-4 py-3 rounded-lg
+                bg-white/70 text-gray-900 placeholder-gray-500
+                dark:bg-[#0f172a] dark:text-[#50d4f2] dark:placeholder-gray-400
+                focus:outline-none focus:ring-2 focus:ring-[#1e3d59] dark:focus:ring-[#50d4f2]
+              "
               required
             >
               <option value="">Select Role</option>
@@ -240,30 +302,44 @@ export default function RegisterPage() {
             {/* Register */}
             <button
               type="submit"
-              className={`w-full py-3 rounded-lg font-semibold text-white transition-all shadow-lg ${
-                otpVerified
-                  ? "bg-gradient-to-br from-[#1E63DB] to-[#27496d]"
-                  : "bg-gray-400 cursor-not-allowed"
-              }`}
+              className={`
+                w-full py-3 rounded-lg font-semibold text-white dark:text-black
+                transition-all shadow-lg
+                ${
+                  otpVerified
+                    ? "bg-gradient-to-br from-[#1E63DB] to-[#27496d] dark:from-[#50d4f2] dark:to-[#3bc2df]"
+                    : "bg-gray-400 cursor-not-allowed"
+                }
+              `}
               disabled={!otpVerified}
             >
               Register
             </button>
           </form>
 
-          <div className="text-center mt-5 text-sm text-gray-200">
+          <div className="text-center mt-5 text-sm text-gray-200 dark:text-[#8ddff8]">
             Already have an account?{" "}
-            <a href="/login" className="text-[#1e3d59] font-bold hover:underline">
+            <a href="/login" className="text-[#1e3d59] dark:text-[#50d4f2] font-bold hover:underline">
               Sign in
             </a>
           </div>
         </div>
 
-        {/* Right Section */}
-        <div className="md:w-1/2 w-full flex flex-col justify-center items-center text-white text-center p-10 bg-gradient-to-br from-[#1E63DB] to-[#27496d]">
-          <h1 className="text-4xl font-extrabold mb-3 drop-shadow-md">WELCOME</h1>
-          <p className="text-sm text-gray-200">Join our trusted health community</p>
-          <div className="mt-6 w-24 h-1 bg-white rounded-full"></div>
+        {/* RIGHT SIDE */}
+        <div
+          className="
+            md:w-1/2 w-full flex flex-col justify-center items-center text-white text-center p-10
+            bg-gradient-to-br from-[#1E63DB] to-[#27496d]
+            dark:from-[#0f172a] dark:to-[#111a3b]
+          "
+        >
+          <h1 className="text-4xl font-extrabold mb-3 drop-shadow-md">
+            WELCOME
+          </h1>
+          <p className="text-sm text-gray-200 dark:text-[#8ddff8]">
+            Join our trusted health community
+          </p>
+          <div className="mt-6 w-24 h-1 bg-white dark:bg-[#50d4f2] rounded-full"></div>
         </div>
       </div>
     </div>

@@ -19,7 +19,6 @@ export default function ProfilePage({ onClose }) {
           return;
         }
 
-        // ✅ Extract role and userId using utility methods
         const userRole = getRoleFromToken(token)?.toUpperCase();
         const userId = getUserIdFromToken(token);
 
@@ -56,7 +55,6 @@ export default function ProfilePage({ onClose }) {
     fetchProfile();
   }, []);
 
-  // This will handle closing the modal
   const handleClose = () => {
     if (onClose) onClose();
   };
@@ -72,25 +70,47 @@ export default function ProfilePage({ onClose }) {
   };
 
   if (loading)
-    return <p className="text-center mt-10 text-lg">Loading profile...</p>;
+    return <p className="text-center mt-10 text-lg dark:text-[#50d4f2]">Loading profile...</p>;
+
   if (!userData)
     return (
-      <p className="text-center mt-10 text-red-600">No profile data found.</p>
+      <p className="text-center mt-10 text-red-600 dark:text-red-400">
+        No profile data found.
+      </p>
     );
 
   return (
     <>
-
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-        <div className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] text-[#003366] p-6 rounded-xl shadow-xl w-full max-w-md mx-auto transform transition-all">
-         {/* Close Button (top-right corner) */}
+      {/* Background Overlay + Center Modal */}
+      <div className="
+        fixed inset-0 bg-black bg-opacity-50
+        dark:bg-[#050b1f]/70
+        flex justify-center items-center z-50
+      ">
+        <div
+          className="
+            relative
+            bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF]
+            dark:from-[#0f172a] dark:to-[#111a3b]
+            text-[#003366] dark:text-[#50d4f2]
+            p-6 rounded-xl shadow-2xl w-full max-w-md mx-auto
+            transition-all
+          "
+        >
+          {/* Close Button */}
           <button
-              onClick={handleClose}
-              className="absolute top-3 right-3 text-gray-500 hover:text-red-600 transition"
-              aria-label="Close"
+            onClick={handleClose}
+            className="
+              absolute top-3 right-3
+              text-gray-500 hover:text-red-500
+              dark:text-gray-300 dark:hover:text-red-400
+              transition
+            "
           >
-             <X size={24} />
+            <X size={24} />
           </button>
+
+          {/* PROFILE IMAGE + NAME */}
           <div className="flex flex-col items-center">
             <img
               src={
@@ -99,88 +119,79 @@ export default function ProfilePage({ onClose }) {
                   : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
               }
               alt="Profile"
-              className="w-32 h-32 rounded-full shadow-md border-2 border-gray-300 mb-4"
+              className="
+                w-32 h-32 rounded-full shadow-md
+                border-2 border-gray-200 dark:border-[#50d4f2]
+                mb-4 object-cover
+              "
             />
-            <h2 className="text-2xl font-semibold text-gray-800">
+
+            <h2 className="text-2xl font-semibold text-gray-800 dark:text-[#50d4f2]">
               {userData.name || userData.patientName || userData.username}
             </h2>
-            <p className="text-gray-500">{role}</p>
+            <p className="text-gray-500 dark:text-gray-300">{role}</p>
           </div>
 
-          <div className="mt-6 space-y-3 text-gray-700">
+          {/* ROLE SPECIFIC DETAILS */}
+          <div className="mt-6 space-y-3 text-gray-700 dark:text-gray-300">
+
             {role === "ROLE_DOCTOR" && (
               <>
-                <p>
-                  <strong>Specialization:</strong> {userData.specialisation}
-                </p>
-                <p>
-                  <strong>Email:</strong> {userData.email}
-                </p>
-                <p>
-                  <strong>Experience:</strong> {userData.experience || "N/A"}{" "}
-                  years
-                </p>
-                <p>
-                  <strong>Phone:</strong> {userData.phone || "N/A"}
-                </p>
+                <p><strong>Specialization:</strong> {userData.specialisation}</p>
+                <p><strong>Email:</strong> {userData.email}</p>
+                <p><strong>Experience:</strong> {userData.experience || "N/A"} years</p>
+                <p><strong>Phone:</strong> {userData.phone || "N/A"}</p>
               </>
             )}
 
             {role === "ROLE_PATIENT" && (
               <>
-                <p>
-                  <strong>Name:</strong> {userData.patientName}
-                </p>
-                <p>
-                  <strong>Email:</strong> {userData.email}
-                </p>
-                <p>
-                  <strong>Phone:</strong> {userData.phone || "N/A"}
-                </p>
-                <p>
-                  <strong>Gender:</strong> {userData.gender || "N/A"}
-                </p>
-                <p>
-                  <strong>Date of Birth:</strong> {userData.dob || "N/A"}
-                </p>
-                <p>
-                  <strong>Address:</strong> {userData.address || "N/A"}
-                </p>
+                <p><strong>Name:</strong> {userData.patientName}</p>
+                <p><strong>Email:</strong> {userData.email}</p>
+                <p><strong>Phone:</strong> {userData.phone || "N/A"}</p>
+                <p><strong>Gender:</strong> {userData.gender || "N/A"}</p>
+                <p><strong>Date of Birth:</strong> {userData.dob || "N/A"}</p>
+                <p><strong>Address:</strong> {userData.address || "N/A"}</p>
               </>
             )}
 
             {role === "ROLE_RECEPTIONIST" && (
               <>
-                <p>
-                  <strong>Name:</strong> {userData.name}
-                </p>
-                <p>
-                  <strong>Email:</strong> {userData.email}
-                </p>
-                <p>
-                  <strong>Phone:</strong> {userData.phone || "N/A"}
-                </p>
-                <p>
-                  <strong>Shift:</strong> {userData.shift || "N/A"}
-                </p>
+                <p><strong>Name:</strong> {userData.name}</p>
+                <p><strong>Email:</strong> {userData.email}</p>
+                <p><strong>Phone:</strong> {userData.phone || "N/A"}</p>
+                <p><strong>Shift:</strong> {userData.shift || "N/A"}</p>
               </>
             )}
           </div>
 
+          {/* ACTION BUTTONS */}
           <div className="mt-8 space-y-3 text-center">
+
             <button
               onClick={handleAboutAppointment}
-              className="w-full px-6 py-2 bg-gradient-to-br from-blue-600 to-indigo-700 hover:opacity-90 text-white rounded-lg shadow-md transition"
+              className="
+                w-full px-6 py-2 rounded-lg shadow-md transition
+                bg-gradient-to-br from-blue-600 to-indigo-700
+                hover:opacity-90
+                text-white dark:text-white
+              "
             >
               About Patient Appointment
             </button>
 
             <button
               onClick={handleEdit}
-              className="w-full px-6 py-2 bg-gradient-to-br from-blue-600 to-indigo-700 hover:opacity-90 text-white rounded-lg shadow-md transition"
+              className="
+                w-full px-6 py-2 rounded-lg shadow-md transition
+                bg-gradient-to-br from-blue-600 to-indigo-700
+                hover:opacity-90
+                text-white dark:text-white
+              "
             >
               Edit Profile
             </button>
+
           </div>
         </div>
       </div>

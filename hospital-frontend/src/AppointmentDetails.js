@@ -8,7 +8,6 @@ export default function AppointmentDetails() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // ✅ Fetch all appointments for logged-in patient using token
   useEffect(() => {
     const fetchAppointments = async () => {
       const token = localStorage.getItem("jwtToken");
@@ -42,14 +41,12 @@ export default function AppointmentDetails() {
     fetchAppointments();
   }, [navigate]);
 
-  // ✅ Helper: check if appointment date has passed
   const isPastAppointment = (dateStr) => {
     const appointmentDate = new Date(dateStr);
     const today = new Date();
     return appointmentDate < today;
   };
 
-  // ✅ Cancel appointment
   const handleCancel = async (appointmentID) => {
     const confirmCancel = window.confirm(
       "Are you sure you want to cancel this appointment?"
@@ -80,28 +77,24 @@ export default function AppointmentDetails() {
     }
   };
 
-  // ✅ Edit appointment (future)
   const handleEdit = (appointment) => {
     localStorage.setItem("editAppointment", JSON.stringify(appointment));
     navigate("/edit-appointment");
   };
 
-  // ✅ Reschedule appointment (past)
   const handleReschedule = (appointment) => {
     const confirmReschedule = window.confirm(
       "Do you want to reschedule this past appointment?"
     );
     if (!confirmReschedule) return;
 
-    // Prefer passing via location.state (no localStorage required)
     navigate("/appointments", { state: { rescheduleAppointment: appointment } });
   };
 
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <p className="text-lg font-medium text-gray-600">
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-[#0a1124]">
+        <p className="text-lg font-medium text-gray-600 dark:text-[#50d4f2]">
           Loading appointments...
         </p>
       </div>
@@ -109,7 +102,7 @@ export default function AppointmentDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0a1124] relative">
       <TopNavbar />
       <Navbar />
 
@@ -120,13 +113,22 @@ export default function AppointmentDetails() {
           className="absolute top-0 left-0 w-full h-full object-cover opacity-20 -z-10"
         />
 
-        <div className="bg-white bg-opacity-90 backdrop-blur-md shadow-2xl rounded-2xl p-8 w-full max-w-5xl relative z-10">
-          <h2 className="text-3xl font-bold text-center text-[#1E63DB] mb-6">
+        <div className="
+          bg-white bg-opacity-90
+          dark:bg-[#111a3b]/70 dark:text-[#50d4f2]
+          backdrop-blur-md shadow-2xl rounded-2xl
+          p-8 w-full max-w-5xl relative z-10
+        ">
+          <h2 className="
+            text-3xl font-bold text-center
+            text-[#1E63DB] dark:text-[#50d4f2]
+            mb-6
+          ">
             Your Appointments
           </h2>
 
           {appointments.length === 0 ? (
-            <p className="text-center text-gray-600">
+            <p className="text-center text-gray-600 dark:text-gray-300">
               No appointments found. Book one below!
             </p>
           ) : (
@@ -136,26 +138,27 @@ export default function AppointmentDetails() {
                 return (
                   <div
                     key={appointment.appointmentID}
-                    className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] border border-gray-200 p-6 rounded-2xl shadow-2xl hover:shadow-3xl transition-transform transform hover:scale-105 duration-300"
+                    className="
+                      bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF]
+                      dark:from-[#0f172a] dark:to-[#111a3b]
+                      border border-gray-200 dark:border-[#233565]
+                      p-6 rounded-2xl shadow-2xl
+                      hover:shadow-3xl transition-transform
+                      transform hover:scale-105 duration-300
+                    "
                   >
-                    <h3 className="text-lg font-semibold text-[#1E63DB] mb-2">
+                    <h3 className="
+                      text-lg font-semibold
+                      text-[#1E63DB] dark:text-[#50d4f2] mb-2
+                    ">
                       Appointment ID: {appointment.appointmentID}
                     </h3>
-                    <p>
-                      <strong>Patient Name:</strong> {appointment.patientName}
-                    </p>
-                    <p>
-                      <strong>Doctor:</strong> {appointment.doctorName || "N/A"}
-                    </p>
-                    <p>
-                      <strong>Date:</strong> {appointment.date}
-                    </p>
-                    <p>
-                      <strong>Shift:</strong> {appointment.shift}
-                    </p>
-                    <p>
-                      <strong>Slot:</strong> {appointment.slotId || "N/A"}
-                    </p>
+
+                    <p><strong>Patient Name:</strong> {appointment.patientName}</p>
+                    <p><strong>Doctor:</strong> {appointment.doctorName || "N/A"}</p>
+                    <p><strong>Date:</strong> {appointment.date}</p>
+                    <p><strong>Shift:</strong> {appointment.shift}</p>
+                    <p><strong>Slot:</strong> {appointment.slotId || "N/A"}</p>
                     <p>
                       <strong>Message:</strong>{" "}
                       {appointment.message || "No message"}
@@ -164,10 +167,14 @@ export default function AppointmentDetails() {
                     <div className="flex flex-col gap-3 mt-4">
                       {past ? (
                         <>
-                          {/* ✅ Theme color applied to Reschedule */}
                           <button
                             onClick={() => handleReschedule(appointment)}
-                            className="w-full bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white py-2 rounded-lg font-semibold hover:opacity-90 transition-all"
+                            className="
+                              w-full bg-gradient-to-br
+                              from-[#1E63DB] to-[#27496d]
+                              text-white py-2 rounded-lg font-semibold
+                              hover:opacity-90 transition-all
+                            "
                           >
                             Reschedule Appointment
                           </button>
@@ -175,7 +182,12 @@ export default function AppointmentDetails() {
                             onClick={() =>
                               handleCancel(appointment.appointmentID)
                             }
-                            className="w-full bg-gradient-to-br from-gray-600 to-gray-800 text-white py-2 rounded-lg font-semibold hover:opacity-90 transition-all"
+                            className="
+                              w-full bg-gradient-to-br
+                              from-gray-600 to-gray-800
+                              text-white py-2 rounded-lg font-semibold
+                              hover:opacity-90 transition-all
+                            "
                           >
                             Delete Appointment
                           </button>
@@ -184,7 +196,12 @@ export default function AppointmentDetails() {
                         <>
                           <button
                             onClick={() => handleEdit(appointment)}
-                            className="w-full bg-gradient-to-br from-green-500 to-emerald-700 text-white py-2 rounded-lg font-semibold hover:opacity-90 transition-all"
+                            className="
+                              w-full bg-gradient-to-br
+                              from-green-500 to-emerald-700
+                              text-white py-2 rounded-lg font-semibold
+                              hover:opacity-90 transition-all
+                            "
                           >
                             Edit Appointment
                           </button>
@@ -192,7 +209,12 @@ export default function AppointmentDetails() {
                             onClick={() =>
                               handleCancel(appointment.appointmentID)
                             }
-                            className="w-full bg-gradient-to-br from-red-600 to-red-800 text-white py-2 rounded-lg font-semibold hover:opacity-90 transition-all"
+                            className="
+                              w-full bg-gradient-to-br
+                              from-red-600 to-red-800
+                              text-white py-2 rounded-lg font-semibold
+                              hover:opacity-90 transition-all
+                            "
                           >
                             Cancel Appointment
                           </button>
@@ -207,7 +229,12 @@ export default function AppointmentDetails() {
 
           <button
             onClick={() => navigate("/appointments")}
-            className="mt-8 w-full bg-gradient-to-br from-[#1E63DB] to-[#27496d] text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-all duration-300"
+            className="
+              mt-8 w-full bg-gradient-to-br
+              from-[#1E63DB] to-[#27496d]
+              text-white py-3 rounded-xl font-semibold
+              hover:opacity-90 transition-all duration-300
+            "
           >
             Book New Appointment
           </button>

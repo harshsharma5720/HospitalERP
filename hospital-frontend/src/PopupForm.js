@@ -40,9 +40,17 @@ export default function PopupForm() {
     >
       {/* Overlay */}
       <div className="popup-overlay">
-        {/* ✅ Background changed to gradient theme */}
-        <div className="popup-card animate-scaleUp relative overflow-hidden bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] shadow-2xl rounded-3xl p-8 md:p-10">
-          {/* Background Lottie Animation */}
+        {/* POPUP CARD */}
+        <div
+          className="
+            popup-card animate-scaleUp relative overflow-hidden
+            bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF]
+            dark:from-[#111a3b] dark:to-[#0a1330]
+            rounded-3xl shadow-2xl p-8 md:p-10
+            transition-all duration-300
+          "
+        >
+          {/* Background Animation */}
           <div className="absolute inset-0 opacity-30 pointer-events-none">
             <Lottie
               animationData={heartbeatAnimation}
@@ -54,28 +62,66 @@ export default function PopupForm() {
 
           {/* Close Button */}
           <button
-            className="close-btn relative z-10 text-gray-600 hover:text-[#007B9E] transition"
+            className="
+              close-btn relative z-10
+              text-gray-700 dark:text-[#50d4f2]
+              hover:text-[#007B9E] dark:hover:text-[#3bc2df]
+              transition
+            "
             onClick={() => setShowPopup(false)}
           >
             &times;
           </button>
 
-          {/* ✅ Text & Button Theme Updated */}
+          {/* TEXT + BUTTONS */}
           <div className="relative z-10 text-center">
-            <h2 className="text-3xl font-extrabold mb-4 bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
+            <h2
+              className="
+                text-3xl font-extrabold mb-4
+                bg-gradient-to-r from-blue-600 to-cyan-400
+                dark:from-[#50d4f2] dark:to-[#3bc2df]
+                bg-clip-text text-transparent
+              "
+            >
               🏥 Welcome
             </h2>
-            <p className="text-gray-700">Are you a registered user?</p>
-            <p className="text-gray-700 mb-6">If not, then register first.</p>
+
+            <p className="text-gray-700 dark:text-[#8ddff8]">
+              Are you a registered user?
+            </p>
+            <p className="text-gray-700 dark:text-[#8ddff8] mb-6">
+              If not, then register first.
+            </p>
+
             <div className="flex flex-col items-center space-y-6 mt-6">
-              <button className="w-72 py-3 bg-gradient-to-r from-blue-600 to-cyan-400 text-white text-lg font-semibold rounded-xl shadow-lg hover:scale-105 transition-transform">
+              {/* LOGIN BUTTON */}
+              <button
+                onClick={() => navigate("/login")}
+                className="
+                  w-72 py-3 rounded-xl text-lg font-semibold shadow-lg
+                  bg-gradient-to-r from-blue-600 to-cyan-400
+                  dark:from-[#50d4f2] dark:to-[#3bc2df]
+                  text-white dark:text-black
+                  hover:scale-105 transition-transform
+                "
+              >
                 Login
               </button>
-              <button className="w-72 py-3 bg-gradient-to-r from-cyan-400 to-blue-600 text-white text-lg font-semibold rounded-xl shadow-lg hover:scale-105 transition-transform">
+
+              {/* REGISTER BUTTON */}
+              <button
+                onClick={() => navigate("/register")}
+                className="
+                  w-72 py-3 rounded-xl text-lg font-semibold shadow-lg
+                  bg-gradient-to-r from-cyan-400 to-blue-600
+                  dark:from-[#3bc2df] dark:to-[#50d4f2]
+                  text-white dark:text-black
+                  hover:scale-105 transition-transform
+                "
+              >
                 Register
               </button>
             </div>
-
           </div>
         </div>
       </div>

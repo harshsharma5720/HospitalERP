@@ -51,12 +51,11 @@ export default function ProfilePage({ onClose }) {
     }
   };
 
-  // Function to return fields based on role
   const getFieldsForRole = (role) => {
     switch (role) {
       case "ROLE_DOCTOR":
         return [
-          { label: "Name", key: "name" , readOnly: true },
+          { label: "Name", key: "name", readOnly: true },
           { label: "Username", key: "userName" },
           { label: "Email", key: "email" },
           { label: "Phone Number", key: "phoneNumber" },
@@ -65,7 +64,7 @@ export default function ProfilePage({ onClose }) {
 
       case "ROLE_PATIENT":
         return [
-          { label: "Patient ID", key: "patientId" , readOnly: true  },
+          { label: "Patient ID", key: "patientId", readOnly: true },
           { label: "Patient Name", key: "patientName" },
           { label: "Username", key: "userName" },
           { label: "Email", key: "email" },
@@ -87,28 +86,25 @@ export default function ProfilePage({ onClose }) {
         ];
 
       default:
-        return [
-          { label: "Name", key: "name" },
-          { label: "Email", key: "email" },
-        ];
+        return [{ label: "Name", key: "name" }, { label: "Email", key: "email" }];
     }
   };
 
   const fetchUserData = async (role, id, token) => {
     try {
-          const urls = getRoleEndpoints(role);
+      const urls = getRoleEndpoints(role);
       if (!urls) return;
+
       const response = await axios.get(urls.getUrl(id), {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       let data = response.data;
-      if (data.patientName && !data.name) {
-        data.name = data.patientName;
-      } else if (data.doctorName && !data.name) {
-        data.name = data.doctorName;
-      } else if (data.receptionistName && !data.name) {
-        data.name = data.receptionistName;
-      }
+
+      if (data.patientName && !data.name) data.name = data.patientName;
+      else if (data.doctorName && !data.name) data.name = data.doctorName;
+      else if (data.receptionistName && !data.name) data.name = data.receptionistName;
+
       setUserData(data);
       setFormData(data);
     } catch (err) {
@@ -120,9 +116,11 @@ export default function ProfilePage({ onClose }) {
     try {
       const urls = getRoleEndpoints(role);
       if (!urls) return;
+
       const response = await axios.get(urls.appointmentUrl, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       const data = response.data.appointments || response.data;
       setAppointments(data);
     } catch (err) {
@@ -143,24 +141,18 @@ export default function ProfilePage({ onClose }) {
 
     try {
       const formDataToSend = new FormData();
-
-      //Choose the correct JSON key based on role
       let dtoKey = "";
+
       if (role === "ROLE_PATIENT") dtoKey = "ptInfoDTO";
       else if (role === "ROLE_DOCTOR") dtoKey = "doctorDTO";
       else if (role === "ROLE_RECEPTIONIST") dtoKey = "receptionistDTO";
-      // Add DTO JSON blob
-      formDataToSend.append(
-        dtoKey,
-        new Blob([JSON.stringify(formData)], { type: "application/json" })
-      );
 
-      // Attach profile image if selected
+      formDataToSend.append(dtoKey, new Blob([JSON.stringify(formData)], { type: "application/json" }));
+
       if (formData.profileImage instanceof File) {
         formDataToSend.append("profileImage", formData.profileImage);
       }
 
-      // API call
       await axios.put(urls.updateUrl(userId), formDataToSend, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -178,68 +170,76 @@ export default function ProfilePage({ onClose }) {
   };
 
   if (!userData)
-    return <p className="text-center mt-10 text-gray-600">Loading...</p>;
+    return <p className="text-center mt-10 text-gray-600 dark:text-gray-200">Loading...</p>;
 
   const role = getRoleFromToken(localStorage.getItem("jwtToken"));
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col w-full">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0a1124] flex flex-col w-full">
       <TopNavbar />
       <Navbar />
 
-      <div className="flex flex-col lg:flex-row w-full h-[calc(100vh-6rem)] mt-0 bg-white shadow-lg overflow-hidden">
-        {/* Left Sidebar */}
-        <div className="lg:w-1/3 h-full bg-gradient-to-b from-blue-600 to-blue-400 text-white p-8 flex flex-col items-center justify-center">
-          {/* Wrap the image and button inside a relative container */}
-            <div className="relative">
-              <img
-                src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
-                alt="Profile"
-                className="h-44 w-44 lg:h-52 lg:w-52 rounded-full border-4 border-white shadow-lg mb-6 object-cover transition-transform duration-300 hover:scale-105"
-              />
-              {/* Pencil icon overlay for editing */}
-              <button
-                className="absolute bottom-3 right-3 bg-white text-blue-600 p-2 rounded-full shadow-md opacity-90 hover:opacity-100 hover:scale-105 transition"
-                onClick={() => alert('Edit profile image feature coming soon!')}
-              >
-                <Pencil size={18} />
-              </button>
-            </div>
-          <h2 className="text-2xl font-semibold">{userData.name || userData.username || userData.patientName || "User"}</h2>
-          <p className="text-blue-100 text-sm mt-2 uppercase">{role}</p>
+      <div className="flex flex-col lg:flex-row w-full h-[calc(100vh-6rem)] bg-white dark:bg-[#0f172a] shadow-lg overflow-hidden">
+
+        {/* LEFT SIDE */}
+        <div className="lg:w-1/3 h-full bg-gradient-to-b from-blue-600 to-blue-400 dark:from-[#111a3b] dark:to-[#0f172a] text-white p-8 flex flex-col items-center justify-center">
+
+          <div className="relative">
+            <img
+              src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+              alt="Profile"
+              className="h-44 w-44 lg:h-52 lg:w-52 rounded-full border-4 border-white shadow-xl object-cover"
+            />
+            <button
+              className="absolute bottom-3 right-3 bg-white text-blue-600 dark:bg-[#50d4f2] dark:text-black p-2 rounded-full shadow-md"
+              onClick={() => alert("Edit image coming soon")}
+            >
+              <Pencil size={18} />
+            </button>
+          </div>
+
+          <h2 className="text-2xl font-semibold dark:text-[#50d4f2]">
+            {userData.name || userData.username}
+          </h2>
+
+          <p className="text-blue-100 dark:text-[#63e6ff] text-sm mt-2 uppercase">{role}</p>
 
           <button
             onClick={onClose || (() => navigate(-1))}
-            className="mt-6 bg-white text-blue-600 px-5 py-2 rounded-full font-semibold hover:bg-blue-50 transition"
+            className="mt-6 bg-white dark:bg-[#50d4f2] text-blue-600 dark:text-black px-5 py-2 rounded-full font-semibold hover:opacity-90"
           >
             Close
           </button>
         </div>
 
-        {/* Right Section */}
+        {/* RIGHT SIDE */}
         <div className="lg:w-2/3 h-full p-8 flex flex-col gap-10 overflow-y-auto">
-          {/* Top Section - Profile Info */}
-          <section className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] rounded-2xl p-6 shadow-2xl transition-transform transform hover:scale-[1.01] duration-300">
-            <h3 className="text-2xl font-semibold text-gray-800 mb-4">
-              Profile Information
-            </h3>
+
+          {/* PROFILE INFO */}
+          <section className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] dark:from-[#111a3b] dark:to-[#0f172a] rounded-2xl p-6 shadow-2xl">
+
+            <h3 className="text-2xl font-semibold text-gray-800 dark:text-[#50d4f2] mb-4">Profile Information</h3>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {getFieldsForRole(role).map((field) => (
-                <div key={field.key} className="flex flex-col">
-                  <label className="text-gray-600 font-medium mb-1">
+                <div key={field.key}>
+                  <label className="text-gray-600 dark:text-gray-300 font-medium mb-1">
                     {field.label}
                   </label>
+
                   <input
                     type="text"
                     name={field.key}
                     value={formData[field.key] || ""}
-                    readOnly={!isEditing || field.key === "patientId" || field.key === "doctorId" || field.key === "receptionistId"}
+                    readOnly={!isEditing || field.readOnly}
                     onChange={handleChange}
-                    className={`p-2 border rounded-lg ${
-                      !isEditing || field.key === "patientId" || field.key === "doctorId" || field.key === "receptionistId"
-                        ? "border-gray-200 bg-gray-100 cursor-not-allowed"
-                        : "border-blue-400 bg-white"
-                    }`}
+                    className={`
+                      p-2 border rounded-lg w-full
+                      ${!isEditing || field.readOnly
+                        ? "bg-gray-100 dark:bg-[#1e293b] border-gray-300 dark:border-[#233565] text-gray-600 dark:text-gray-400"
+                        : "bg-white dark:bg-[#0a1124] border-blue-400 dark:border-[#50d4f2] text-black dark:text-[#63e6ff]"
+                      }
+                    `}
                   />
                 </div>
               ))}
@@ -249,14 +249,14 @@ export default function ProfilePage({ onClose }) {
               {!isEditing ? (
                 <button
                   onClick={handleEditToggle}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+                  className="bg-blue-600 dark:bg-[#1E63DB] text-white px-6 py-2 rounded-lg hover:opacity-90"
                 >
                   Edit Profile
                 </button>
               ) : (
                 <button
                   onClick={handleSave}
-                  className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
+                  className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700"
                 >
                   Save Changes
                 </button>
@@ -264,16 +264,17 @@ export default function ProfilePage({ onClose }) {
             </div>
           </section>
 
-          {/* Bottom Section - Appointment Summary */}
-          <section className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] rounded-2xl p-6 shadow-2xl transition-transform transform hover:scale-[1.01] duration-300">
-            {/* Header with title + button in one line */}
+          {/* APPOINTMENT SUMMARY */}
+          <section className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] dark:from-[#111a3b] dark:to-[#0f172a] rounded-2xl p-6 shadow-2xl">
+
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-2xl font-semibold text-gray-800">
+              <h3 className="text-2xl font-semibold text-gray-800 dark:text-[#50d4f2]">
                 Appointment Summary
               </h3>
+
               <button
                 onClick={() => navigate("/appointment-details")}
-                className="text-sm font-semibold text-blue-700 border border-blue-600 px-4 py-2 rounded-lg hover:bg-blue-600 hover:text-white transition-all duration-300"
+                className="text-sm font-semibold px-4 py-2 rounded-lg border border-blue-600 dark:border-[#50d4f2] text-blue-700 dark:text-[#63e6ff] hover:bg-blue-600 hover:text-white dark:hover:bg-[#27496d] transition"
               >
                 View All
               </button>
@@ -281,35 +282,36 @@ export default function ProfilePage({ onClose }) {
 
             {appointments.length > 0 ? (
               <div className="grid md:grid-cols-3 gap-6">
-                <div className="bg-white p-4 rounded-lg shadow text-center">
-                  <h4 className="text-lg font-semibold text-blue-600">
+                <div className="bg-white dark:bg-[#1e293b] p-4 rounded-lg shadow text-center">
+                  <h4 className="text-lg font-semibold text-blue-600 dark:text-[#50d4f2]">
                     Total Appointments
                   </h4>
-                  <p className="text-2xl font-bold">{appointments.length}</p>
+                  <p className="text-2xl font-bold dark:text-white">{appointments.length}</p>
                 </div>
 
-                <div className="bg-white p-4 rounded-lg shadow text-center">
-                  <h4 className="text-lg font-semibold text-green-600">
+                <div className="bg-white dark:bg-[#1e293b] p-4 rounded-lg shadow text-center">
+                  <h4 className="text-lg font-semibold text-green-600 dark:text-green-400">
                     Completed
                   </h4>
-                  <p className="text-2xl font-bold">
+                  <p className="text-2xl font-bold dark:text-white">
                     {appointments.filter((a) => a.status?.toLowerCase() === "completed").length}
                   </p>
                 </div>
 
-                <div className="bg-white p-4 rounded-lg shadow text-center">
-                  <h4 className="text-lg font-semibold text-yellow-600">
+                <div className="bg-white dark:bg-[#1e293b] p-4 rounded-lg shadow text-center">
+                  <h4 className="text-lg font-semibold text-yellow-600 dark:text-yellow-300">
                     Upcoming
                   </h4>
-                  <p className="text-2xl font-bold">
+                  <p className="text-2xl font-bold dark:text-white">
                     {appointments.filter((a) => a.status?.toLowerCase() === "upcoming").length}
                   </p>
                 </div>
               </div>
             ) : (
-              <p className="text-gray-600">No appointments found.</p>
+              <p className="text-gray-600 dark:text-gray-300">No appointments found.</p>
             )}
           </section>
+
         </div>
       </div>
     </div>

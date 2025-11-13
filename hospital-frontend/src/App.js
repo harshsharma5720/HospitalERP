@@ -15,19 +15,31 @@ import AppointmentDetails from "./AppointmentDetails";
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/appointments" element={<AppointmentPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/doctors" element={<DoctorPage />} />
-        <Route path="/contact" element={<ContactUsPage />} />
-        <Route path="/treatments" element={<Treatments />} />
-        <Route path="/about" element={<AboutUs />} />
-        <Route path="/edit-profile" element={<EditProfilePage />} />
-        <Route path="/appointment-details" element={<AppointmentDetails />} />
-      </Routes>
-      <Footer />
+
+      {/* GLOBAL WRAPPER FOR LIGHT + DARK MODE */}
+      <div
+        className="
+          min-h-screen
+          bg-[#f8fafc] text-gray-900
+          dark:bg-[#0f172a] dark:text-gray-100
+          transition-colors duration-300
+        "
+      >
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/appointments" element={<AppointmentPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/doctors" element={<DoctorPage />} />
+          <Route path="/contact" element={<ContactUsPage />} />
+          <Route path="/treatments" element={<Treatments />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/edit-profile" element={<EditProfilePage />} />
+          <Route path="/appointment-details" element={<AppointmentDetails />} />
+        </Routes>
+
+        <Footer />
+      </div>
     </Router>
   );
 }
