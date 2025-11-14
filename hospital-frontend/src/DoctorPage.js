@@ -5,8 +5,6 @@ import Navbar from "./Navbar";
 import TopNavbar from "./TopNavbar";
 import { getRoleFromToken } from "./utils/jwtUtils.js";
 import PopupForm from "./PopupForm";
-
-// Lottie
 import Lottie from "lottie-react";
 import doctorAnimation from "./assets/Doctor.json";
 
@@ -24,13 +22,13 @@ export default function DoctorPage() {
     if (token) {
       const extractedRole = getRoleFromToken(token);
       setRole(extractedRole);
-      fetchAllDoctors(token, extractedRole);
+      fetchAllDoctors(token);
     } else {
-      fetchAllDoctors(null, null);
+      fetchAllDoctors(null);
     }
   }, []);
 
-  const fetchAllDoctors = async (token, userRole) => {
+  const fetchAllDoctors = async (token) => {
     try {
       setLoading(true);
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -46,6 +44,7 @@ export default function DoctorPage() {
       setLoading(false);
     }
   };
+  console.log("Doctors Data:", doctors);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -53,7 +52,7 @@ export default function DoctorPage() {
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
     if (!searchTerm.trim()) {
-      fetchAllDoctors(token, role);
+      fetchAllDoctors(token);
       return;
     }
 
@@ -81,9 +80,14 @@ export default function DoctorPage() {
     navigate("/appointments", { state: { doctorName } });
   };
 
+  // ✅ Navigate to profile page with doctorId
+  const handleViewProfile = (doctorId) => {
+    console.log("Doctor ID being fetched:", doctorId);
+    navigate(`/doctor-profile/${doctorId}`);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-[#0a1124] flex flex-col relative overflow-hidden">
-
       {/* Background Lottie */}
       <div className="absolute inset-0 opacity-30 pointer-events-none z-0">
         <Lottie animationData={doctorAnimation} loop={true} />
@@ -95,31 +99,36 @@ export default function DoctorPage() {
 
         {/* Header */}
         <div className="text-center mt-10">
-          <h2 className="
-            text-4xl md:text-5xl font-extrabold mb-6
-            bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent
-            dark:from-[#50d4f2] dark:to-[#63e6ff]
-          ">
-            Our Doctors
-          </h2>
+          <h1 className="text-5xl font-extrabold mb-4">
+            Our{" "}
+              <span
+                 className="
+                    bg-gradient-to-r from-blue-600 to-cyan-400
+                    bg-clip-text text-transparent
+                 "
+              >
+                Doctors
+              </span>
+          </h1>
 
           <div className="w-40 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 dark:from-[#50d4f2] dark:to-[#63e6ff] mx-auto mb-10 rounded-full"></div>
 
-          <p className="text-gray-700 dark:text-gray-300 text-lg max-w-2xl mx-auto mb-8">
+          <p className="text-gray-900 dark:text-gray-300 text-lg max-w-2xl mx-auto mb-8">
             Meet our experienced and specialized doctors.
           </p>
         </div>
 
         {/* Search */}
         <div className="max-w-3xl mx-auto mb-10 text-center">
-          <form onSubmit={handleSearch} className="flex gap-2 justify-center items-center">
+          <form
+            onSubmit={handleSearch}
+            className="flex gap-2 justify-center items-center"
+          >
             <select
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="
-                w-2/3 p-3 border border-gray-300 rounded-lg
-                dark:bg-[#111a3b] dark:border-[#233565] dark:text-[#50d4f2]
-              "
+              className="w-2/3 p-3 border border-gray-300 rounded-lg
+                dark:bg-[#111a3b] dark:border-[#233565] dark:text-[#50d4f2]"
             >
               <option value="">-- Select Specialization --</option>
               <option value="Cardiology">Cardiology</option>
@@ -132,10 +141,8 @@ export default function DoctorPage() {
 
             <button
               type="submit"
-              className="
-                bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition
-                dark:bg-[#1E63DB] dark:hover:bg-[#27496d]
-              "
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition
+              dark:bg-[#1E63DB] dark:hover:bg-[#27496d]"
             >
               Search
             </button>
@@ -151,13 +158,11 @@ export default function DoctorPage() {
           {doctors.map((doctor) => (
             <div
               key={doctor.id}
-              className="
-                bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF]
-                dark:from-[#111a3b] dark:to-[#0f172a]
-                p-6 rounded-2xl shadow-2xl hover:shadow-3xl
-                transition-transform transform hover:scale-105
-                dark:border dark:border-[#233565]
-              "
+              className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF]
+              dark:from-[#111a3b] dark:to-[#0f172a]
+              p-6 rounded-2xl shadow-2xl hover:shadow-3xl
+              transition-transform transform hover:scale-105
+              dark:border dark:border-[#233565]"
             >
               <div className="text-center">
                 <img
@@ -182,17 +187,26 @@ export default function DoctorPage() {
                   Phone: {doctor.phoneNumber}
                 </p>
 
-                <button
-                  onClick={() => handleBookAppointment(doctor.name)}
-                  className="
-                    mt-4 bg-gradient-to-r from-[#007B9E] to-[#00A2B8]
-                    text-white px-4 py-2 rounded-full font-semibold shadow-md
-                    hover:shadow-lg hover:scale-105 transition-transform duration-300
-                    dark:from-[#1E63DB] dark:to-[#27496d]
-                  "
-                >
-                  Book Appointment
-                </button>
+                <div className="flex justify-center gap-3 mt-4 w-full">
+                  <button
+                    onClick={() => handleViewProfile(doctor.id)}
+                    className="flex-1 bg-gradient-to-r from-[#1E63DB] to-[#27496d]
+                      text-white py-2 rounded-lg font-semibold shadow-md
+                      hover:shadow-lg hover:scale-105 transition-transform duration-300"
+                  >
+                    View Profile
+                  </button>
+
+                  <button
+                    onClick={() => handleBookAppointment(doctor.name)}
+                    className="flex-1 bg-gradient-to-r from-[#007B9E] to-[#00A2B8]
+                      text-white py-2 rounded-lg font-semibold shadow-md
+                      hover:shadow-lg hover:scale-105 transition-transform duration-300"
+                  >
+                    Book Appointment
+                  </button>
+                </div>
+
               </div>
             </div>
           ))}
@@ -206,7 +220,9 @@ export default function DoctorPage() {
         </footer>
 
         {/* Popup */}
-        {showLoginPopup && <PopupForm onClose={() => setShowLoginPopup(false)} />}
+        {showLoginPopup && (
+          <PopupForm onClose={() => setShowLoginPopup(false)} />
+        )}
       </div>
     </div>
   );

@@ -59,11 +59,20 @@ public class DoctorController {
         }
     }
 
-    // Get doctor by ID
+    // Get doctor by user ID
     @GetMapping("/get/{id}")
-    public ResponseEntity<DoctorDTO> getDoctorById(@PathVariable Long id) {
+    public ResponseEntity<DoctorDTO> getDoctorByUserId(@PathVariable Long id) {
         logger.info("Fetching doctor with ID: {}", id);
-        DoctorDTO doctorDTO = doctorService.getDoctorById(id);
+        DoctorDTO doctorDTO = doctorService.getDoctorByUserId(id);
+        logger.info("Fetched doctor: {}", doctorDTO.getName());
+        return ResponseEntity.ok(doctorDTO);
+    }
+
+    // Get doctor by doctor ID
+    @GetMapping("/getDoctor/{id}")
+    public ResponseEntity<DoctorDTO> getDoctorByDoctorId(@PathVariable Long id) {
+        logger.info("Fetching doctor with ID: {}", id);
+        DoctorDTO doctorDTO = doctorService.getDoctorByDoctorId(id);
         logger.info("Fetched doctor: {}", doctorDTO.getName());
         return ResponseEntity.ok(doctorDTO);
     }

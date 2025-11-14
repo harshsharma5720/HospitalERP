@@ -70,14 +70,18 @@ export default function Treatments() {
         `}
       >
         <div className="relative z-10 max-w-5xl py-20">
-          <h2
-            className="
-            text-4xl md:text-5xl font-extrabold mb-6 drop-shadow-lg text-center
-            bg-gradient-to-r from-[#50d4f2] to-[#3bc2df] bg-clip-text text-transparent
-          "
-          >
-            Our Treatments
-          </h2>
+          <h1 className="text-center text-5xl font-extrabold mb-4">
+            Our{" "}
+              <span
+                 className="
+                    bg-gradient-to-r from-blue-600 to-cyan-400
+                    bg-clip-text text-transparent
+                 "
+              >
+                Treatments
+              </span>
+          </h1>
+          <div className="w-40 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 dark:from-[#50d4f2] dark:to-[#63e6ff] mx-auto mb-10 rounded-full"></div>
 
           <p className="text-lg md:text-xl text-gray-800 dark:text-[#50d4f2] text-center font-semibold">
             We offer comprehensive medical services across multiple

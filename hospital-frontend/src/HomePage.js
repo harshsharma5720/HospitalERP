@@ -9,6 +9,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState("");
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const checkLoginStatus = () => {
     const token = localStorage.getItem("jwtToken");
@@ -30,6 +31,23 @@ export default function HomePage() {
     const handleStorageChange = () => checkLoginStatus();
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  useEffect(() => {
+    const html = document.documentElement;
+
+    const updateTheme = () => {
+      setIsDarkMode(html.classList.contains("dark"));
+    };
+
+    // Check initial
+    updateTheme();
+
+    // Listen for changes (whenever toggle button switches)
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(html, { attributes: true, attributeFilter: ["class"] });
+
+    return () => observer.disconnect();
   }, []);
 
   const handleLogout = () => {
@@ -56,7 +74,9 @@ export default function HomePage() {
       <div
         className="relative grid grid-cols-1 md:grid-cols-2 gap-10 px-10 py-12"
         style={{
-          backgroundImage: "url('/doctors-image3.jpg')",
+          backgroundImage: isDarkMode
+                ? "url('/doctor_black_theam.jpg')"
+                : "url('/doctors-image3.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           height: "600px",
@@ -212,6 +232,49 @@ export default function HomePage() {
           )}
         </div>
       </section>
+      <section className="py-10 bg-white dark:bg-[#0a1330] transition">
+        <div className="max-w-7xl mx-auto flex justify-between items-center px-4 md:px-10">
+
+          {/* Facilities */}
+          <div className="px-5 flex-1 text-center">
+            <h2 className="text-4xl font-extrabold text-blue-600 dark:text-[#50d4f2]">70</h2>
+            <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">Facilities</p>
+            <p className="text-gray-500 dark:text-gray-400 text-base">Multi-specialty hospitals and clinics</p>
+          </div>
+
+          {/* Thin Vertical Line */}
+          <div className="hidden md:block h-16 w-[0.5px] bg-gray-300 dark:bg-gray-600"></div>
+
+          {/* Staff */}
+          <div className="px-5 flex-1 text-center">
+            <h2 className="text-4xl font-extrabold text-blue-600 dark:text-[#50d4f2]">5,300+</h2>
+            <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">Allied & Nursing Staff</p>
+            <p className="text-gray-500 dark:text-gray-400 text-base">Compassionate care and rehabilitation</p>
+          </div>
+
+          {/* Thin Vertical Line */}
+          <div className="hidden md:block h-16 w-[0.5px] bg-gray-300 dark:bg-gray-600"></div>
+
+          {/* Doctors */}
+          <div className="px-5 flex-1 text-center">
+            <h2 className="text-4xl font-extrabold text-blue-600 dark:text-[#50d4f2]">1,700+</h2>
+            <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">Doctors</p>
+            <p className="text-gray-500 dark:text-gray-400 text-base">Providing personalised care that matters</p>
+          </div>
+
+          {/* Thin Vertical Line */}
+          <div className="hidden md:block h-16 w-[0.5px] bg-gray-300 dark:bg-gray-600"></div>
+
+          {/* Patients */}
+          <div className="px-5 flex-1 text-center">
+            <h2 className="text-4xl font-extrabold text-blue-600 dark:text-[#50d4f2]">5.3 Million</h2>
+            <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">Patients</p>
+            <p className="text-gray-500 dark:text-gray-400 text-base">Treated every year</p>
+          </div>
+
+        </div>
+      </section>
+
 
       {/* BANNER */}
       <section className="relative mx-10 my-10 rounded-2xl overflow-hidden shadow-lg">

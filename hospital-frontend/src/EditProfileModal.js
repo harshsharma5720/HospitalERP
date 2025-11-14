@@ -35,8 +35,7 @@ export default function ProfilePage({ onClose }) {
         return {
           getUrl: (id) => `http://localhost:8080/api/doctor/get/${id}`,
           updateUrl: (id) => `http://localhost:8080/api/doctor/update/${id}`,
-          appointmentUrl: (id) =>
-            `http://localhost:8080/api/doctor/appointments/${id}`,
+          appointmentUrl: `http://localhost:8080/appointment/getDoctorAppointments`,
         };
       case "ROLE_RECEPTIONIST":
         return {

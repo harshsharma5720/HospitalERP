@@ -11,6 +11,7 @@ import Treatments from "./Treatments";
 import AboutUs from "./AboutUs";
 import EditProfilePage from "./EditProfileModal";
 import AppointmentDetails from "./AppointmentDetails";
+import DoctorProfile from "./DoctorProfile";
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
           <Route path="/about" element={<AboutUs />} />
           <Route path="/edit-profile" element={<EditProfilePage />} />
           <Route path="/appointment-details" element={<AppointmentDetails />} />
+          <Route path="/doctor-profile/:doctorId" element={<DoctorProfile />} />
         </Routes>
 
         <Footer />

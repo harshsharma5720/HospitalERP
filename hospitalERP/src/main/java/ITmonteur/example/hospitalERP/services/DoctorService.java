@@ -45,9 +45,25 @@ public class DoctorService {
         logger.info("Total doctors retrieved: {}", doctorDTOList.size());
         return doctorDTOList;
     }
+    public DoctorDTO getDoctorByDoctorId(Long doctorId) {
+        logger.info("Fetching doctor with ID: {}", doctorId);
+        try {
+            Doctor doctor = doctorRepository.findById(doctorId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
+            DoctorDTO doctorDTO = convertToDTO(doctor);
+            logger.info("Doctor retrieved: {}", doctorDTO.getName());
+            return doctorDTO;
+        } catch (ResourceNotFoundException e) {
+            logger.warn("Doctor not found with ID: {}", doctorId);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Error fetching doctor with ID {}: {}", doctorId, e.getMessage(), e);
+            throw e;
+        }
+    }
 
     // Get doctor by ID
-    public DoctorDTO getDoctorById(Long doctorId) {
+    public DoctorDTO getDoctorByUserId(Long doctorId) {
         logger.info("Fetching doctor with ID: {}", doctorId);
         try {
             Doctor doctor = doctorRepository.findByUserId(doctorId)

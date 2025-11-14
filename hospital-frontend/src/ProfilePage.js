@@ -140,7 +140,7 @@ export default function ProfilePage({ onClose }) {
                 <p><strong>Specialization:</strong> {userData.specialisation}</p>
                 <p><strong>Email:</strong> {userData.email}</p>
                 <p><strong>Experience:</strong> {userData.experience || "N/A"} years</p>
-                <p><strong>Phone:</strong> {userData.phone || "N/A"}</p>
+                <p><strong>Phone:</strong> {userData.phoneNumber || "N/A"}</p>
               </>
             )}
 
@@ -148,10 +148,10 @@ export default function ProfilePage({ onClose }) {
               <>
                 <p><strong>Name:</strong> {userData.patientName}</p>
                 <p><strong>Email:</strong> {userData.email}</p>
-                <p><strong>Phone:</strong> {userData.phone || "N/A"}</p>
+                <p><strong>Phone:</strong> {userData.contactNo || "N/A"}</p>
                 <p><strong>Gender:</strong> {userData.gender || "N/A"}</p>
                 <p><strong>Date of Birth:</strong> {userData.dob || "N/A"}</p>
-                <p><strong>Address:</strong> {userData.address || "N/A"}</p>
+                <p><strong>Address:</strong> {userData.patientAddress || "N/A"}</p>
               </>
             )}
 

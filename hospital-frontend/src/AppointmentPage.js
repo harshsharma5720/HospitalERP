@@ -219,7 +219,7 @@ export default function AppointmentPage() {
         />
 
         <div
-          className="bg-white/90 dark:bg-[#111a3b]/80 shadow-2xl rounded-3xl p-8 md:p-10 w-full max-w-6xl relative z-10 grid md:grid-cols-2 gap-10 transition"
+          className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] dark:bg-[#111a3b]/80 shadow-2xl rounded-3xl p-8 md:p-10 w-full max-w-6xl relative z-10 grid md:grid-cols-2 gap-10 transition"
         >
           {/* Form Section */}
           <div>
