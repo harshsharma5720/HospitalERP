@@ -103,7 +103,7 @@ public class DoctorService {
             doctor.setUserName(doctorDTO.getUserName());
             doctor.setEmail(doctorDTO.getEmail());
             doctor.setPhoneNumber(doctorDTO.getPhoneNumber());
-            doctor.setSpecialist(Specialist.valueOf(doctorDTO.getSpecialization().toUpperCase()));
+            doctor.setSpecialist(Specialist.valueOf(doctorDTO.getSpecialist().toUpperCase()));
             if (doctorDTO.getProfileImage() != null && !doctorDTO.getProfileImage().isEmpty()) {
                 doctor.setProfileImage(doctorDTO.getProfileImage());
             }

@@ -4,7 +4,7 @@ public class DoctorDTO {
 
     private Long id;
     private String name;
-    private String specialization;
+    private String specialist;
     private String email;
 //    private String password; // encrypted
     private String phoneNumber;
@@ -14,11 +14,11 @@ public class DoctorDTO {
     public DoctorDTO() {
     }
 
-    public DoctorDTO(Long id, String name, String specialization, String email, String phoneNumber
+    public DoctorDTO(Long id, String name, String specialist, String email, String phoneNumber
             , String userName, String profileImage) {
         this.id = id;
         this.name = name;
-        this.specialization = specialization;
+        this.specialist = specialist;
         this.email = email;
         this.phoneNumber = phoneNumber;
         this.userName=userName;
@@ -41,12 +41,12 @@ public class DoctorDTO {
         this.name = name;
     }
 
-    public String getSpecialization() {
-        return specialization;
+    public String getSpecialist() {
+        return specialist;
     }
 
-    public void setSpecialization(String specialization) {
-        this.specialization = specialization;
+    public void setSpecialist(String specialist) {
+        this.specialist = specialist;
     }
 
     public String getEmail() {

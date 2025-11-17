@@ -270,7 +270,7 @@ export default function AppointmentPage() {
                 <option value="">Select Doctor</option>
                 {doctors.map((doctor) => (
                   <option key={doctor.id} value={doctor.id}>
-                    {doctor.name} — {doctor.specialist}
+                    {doctor.name}
                   </option>
                 ))}
               </select>

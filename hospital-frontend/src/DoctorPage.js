@@ -59,7 +59,7 @@ export default function DoctorPage() {
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://localhost:8080/api/patient/getAllBySpecialization?specialisation=${searchTerm}`,
+        `http://localhost:8080/api/patient/getAllBySpecialization?specialization=${searchTerm}`,
         { headers }
       );
       setDoctors(response.data);

@@ -45,6 +45,7 @@ export default function ProfilePage({ onClose }) {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUserData(response.data);
+        console.log("Fetched profile data:", response.data);
       } catch (error) {
         console.error("Error fetching profile:", error);
       } finally {
@@ -137,8 +138,8 @@ export default function ProfilePage({ onClose }) {
 
             {role === "ROLE_DOCTOR" && (
               <>
-                <p><strong>Specialization:</strong> {userData.specialisation}</p>
-                <p><strong>Email:</strong> {userData.email}</p>
+                <p><strong>Specialization:</strong> {userData.specialist || "N/A"}</p>
+                <p><strong>Email:</strong> {userData.email || "N/A"}</p>
                 <p><strong>Experience:</strong> {userData.experience || "N/A"} years</p>
                 <p><strong>Phone:</strong> {userData.phoneNumber || "N/A"}</p>
               </>

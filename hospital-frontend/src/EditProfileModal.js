@@ -58,7 +58,7 @@ export default function ProfilePage({ onClose }) {
           { label: "Username", key: "userName" },
           { label: "Email", key: "email" },
           { label: "Phone Number", key: "phoneNumber" },
-          { label: "Specialization", key: "specialization" },
+          { label: "Specialization", key: "specialist" },
         ];
 
       case "ROLE_PATIENT":
@@ -185,16 +185,32 @@ export default function ProfilePage({ onClose }) {
 
           <div className="relative">
             <img
-              src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+              src={
+                formData.profileImage instanceof File
+                  ? URL.createObjectURL(formData.profileImage)
+                  : formData.profileImage
+                  ? `http://localhost:8080${formData.profileImage}`
+                  : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+              }
               alt="Profile"
               className="h-44 w-44 lg:h-52 lg:w-52 rounded-full border-4 border-white shadow-xl object-cover"
             />
             <button
               className="absolute bottom-3 right-3 bg-white text-blue-600 dark:bg-[#50d4f2] dark:text-black p-2 rounded-full shadow-md"
-              onClick={() => alert("Edit image coming soon")}
+              onClick={() => document.getElementById("profileImageInput").click()}
             >
               <Pencil size={18} />
             </button>
+
+            <input
+              type="file"
+              id="profileImageInput"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) =>
+                setFormData({ ...formData, profileImage: e.target.files[0] })
+              }
+            />
           </div>
 
           <h2 className="text-2xl font-semibold dark:text-[#50d4f2]">
