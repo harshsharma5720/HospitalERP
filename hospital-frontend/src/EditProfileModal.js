@@ -12,6 +12,8 @@ export default function ProfilePage({ onClose }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
   const navigate = useNavigate();
+  const [relatives, setRelatives] = useState([]);
+
 
   useEffect(() => {
     const token = localStorage.getItem("jwtToken");
@@ -22,6 +24,14 @@ export default function ProfilePage({ onClose }) {
     fetchUserData(role, userId, token);
     fetchAppointments(role, userId, token);
   }, []);
+  useEffect(() => {
+    const token = localStorage.getItem("jwtToken");
+
+    if (userData?.patientId && token) {
+      // Fetch relatives when patient data becomes available
+      fetchRelatives(userData.patientId, token);
+    }
+  }, [userData]);
 
   const getRoleEndpoints = (role) => {
     switch (role) {
@@ -108,6 +118,20 @@ export default function ProfilePage({ onClose }) {
       setFormData(data);
     } catch (err) {
       console.error("Error fetching user data:", err);
+    }
+  };
+
+  const fetchRelatives = async (patientId, token) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:8080/api/patient/relative/patient/${patientId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setRelatives(response.data);
+    } catch (err) {
+      console.error("Error fetching relatives:", err);
     }
   };
 
@@ -279,6 +303,42 @@ export default function ProfilePage({ onClose }) {
             </div>
           </section>
 
+          <section className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] dark:from-[#111a3b] dark:to-[#0f172a] rounded-2xl p-6 shadow-2xl">
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-xl font-bold">Your Relatives</h2>
+                <button
+                  onClick={() => navigate("/add-relative",{ state: { patientId: userData.patientId } })}
+                  className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:opacity-90"
+                >
+                  Add Relative
+                </button>
+                <button
+                  onClick={() => navigate("/relatives",{ state: { patientId: userData.patientId } })}
+                  className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:opacity-90"
+                >
+                  View All
+                </button>
+              </div>
+
+              {relatives && relatives.length > 0 ? (
+                <ul className="space-y-2">
+                  {relatives.map((relative) => (
+                    <li
+                      key={relative.id}
+                      className="p-3 bg-gray-50 rounded-lg shadow-sm border"
+                    >
+                      <p className="font-semibold">{relative.name}</p>
+                      <p className="text-sm text-gray-600">
+                        {relative.relationship} • {relative.gender}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500">No relatives added yet.</p>
+              )}
+          </section>
+
           {/* APPOINTMENT SUMMARY */}
           <section className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] dark:from-[#111a3b] dark:to-[#0f172a] rounded-2xl p-6 shadow-2xl">
 
@@ -287,12 +347,27 @@ export default function ProfilePage({ onClose }) {
                 Appointment Summary
               </h3>
 
-              <button
-                onClick={() => navigate("/appointment-details")}
-                className="text-sm font-semibold px-4 py-2 rounded-lg border border-blue-600 dark:border-[#50d4f2] text-blue-700 dark:text-[#63e6ff] hover:bg-blue-600 hover:text-white dark:hover:bg-[#27496d] transition"
-              >
-                View All
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => navigate("/appointments")}
+                  className="text-sm font-semibold px-4 py-2 rounded-lg
+                             bg-blue-600 text-white
+                             border border-blue-600
+                             hover:bg-blue-700 transition"
+                >
+                  Book One
+                </button>
+
+                <button
+                  onClick={() => navigate("/appointment-details")}
+                  className="text-sm font-semibold px-4 py-2 rounded-lg
+                             border border-blue-600
+                             text-blue-700 hover:bg-blue-600 hover:text-white transition"
+                >
+                  View All
+                </button>
+              </div>
+
             </div>
 
             {appointments.length > 0 ? (

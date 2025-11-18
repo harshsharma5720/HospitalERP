@@ -30,6 +30,8 @@ public class PtInfo {
     private String profileImage;
     @Enumerated(EnumType.STRING)
     private Role role = Role.PATIENT;
+    @OneToMany(mappedBy = "ptInfo", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PtRelative> relatives = new ArrayList<>();
     @OneToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User user;
@@ -39,7 +41,8 @@ public class PtInfo {
 
     public PtInfo(Long patientId, String patientName, String email, String patientAddress,
                   Long patientAadharNo, String contactNo, LocalDate dob, Gender gender,
-                  List<Appointment> appointments, String userName, String profileImage,Role role, User user) {
+                  List<Appointment> appointments, String userName, String profileImage,Role role,
+                  List<PtRelative> relatives ,User user) {
         this.patientId = patientId;
         this.patientName = patientName;
         this.email = email;
@@ -52,6 +55,7 @@ public class PtInfo {
         this.userName = userName;
         this.profileImage=profileImage;
         this.role = role;
+        this.relatives=relatives;
         this.user = user;
     }
 
@@ -157,5 +161,13 @@ public class PtInfo {
 
     public void setProfileImage(String profileImage) {
         this.profileImage = profileImage;
+    }
+
+    public List<PtRelative> getRelatives() {
+        return relatives;
+    }
+
+    public void setRelatives(List<PtRelative> relatives) {
+        this.relatives = relatives;
     }
 }

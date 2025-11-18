@@ -104,9 +104,13 @@ export default function HomePage() {
             transition
           "
         >
-          <h2 className="text-4xl font-extrabold mb-3 text-[#1E63DB] dark:text-[#50d4f2]">
-            To Book an Appointment
-          </h2>
+
+           <h2 className="text-5xl font-extrabold mb-4">
+              To Book An{" "}
+              <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
+                 Appointment
+              </span>
+           </h2>
 
           <p className="text-lg mb-4 dark:text-gray-300">
             📞 <span className="font-semibold">Call Us:</span> +91 92895 20303

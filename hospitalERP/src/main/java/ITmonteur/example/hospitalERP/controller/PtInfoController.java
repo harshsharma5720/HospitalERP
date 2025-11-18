@@ -84,7 +84,7 @@ public class PtInfoController {
             @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
 
         logger.info("Updating patient account with ID: {}", ptId);
-        // ✅ Handle file upload
+        // Handle file upload
         if (profileImage != null && !profileImage.isEmpty()) {
             try {
                 String uploadDir = System.getProperty("user.dir") + "/uploads/profileImages/";

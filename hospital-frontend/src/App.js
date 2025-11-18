@@ -12,6 +12,8 @@ import AboutUs from "./AboutUs";
 import EditProfilePage from "./EditProfileModal";
 import AppointmentDetails from "./AppointmentDetails";
 import DoctorProfile from "./DoctorProfile";
+import AddRelativePage from "./AddRelativePage";
+import RelativesList from "./RelativesList";
 
 function App() {
   return (
@@ -38,6 +40,8 @@ function App() {
           <Route path="/edit-profile" element={<EditProfilePage />} />
           <Route path="/appointment-details" element={<AppointmentDetails />} />
           <Route path="/doctor-profile/:doctorId" element={<DoctorProfile />} />
+          <Route path="/add-relative" element={<AddRelativePage />} />
+          <Route path="/relatives" element={<RelativesList />} />
         </Routes>
 
         <Footer />

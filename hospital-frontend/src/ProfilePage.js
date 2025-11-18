@@ -178,7 +178,7 @@ export default function ProfilePage({ onClose }) {
                 text-white dark:text-white
               "
             >
-              About Patient Appointment
+              View Appointments
             </button>
 
             <button
@@ -190,7 +190,7 @@ export default function ProfilePage({ onClose }) {
                 text-white dark:text-white
               "
             >
-              Edit Profile
+              View Profile
             </button>
 
           </div>
