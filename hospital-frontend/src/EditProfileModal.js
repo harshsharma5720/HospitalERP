@@ -306,18 +306,27 @@ export default function ProfilePage({ onClose }) {
           <section className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] dark:from-[#111a3b] dark:to-[#0f172a] rounded-2xl p-6 shadow-2xl">
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-xl font-bold">Your Relatives</h2>
-                <button
-                  onClick={() => navigate("/add-relative",{ state: { patientId: userData.patientId } })}
-                  className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:opacity-90"
-                >
-                  Add Relative
-                </button>
-                <button
-                  onClick={() => navigate("/relatives",{ state: { patientId: userData.patientId } })}
-                  className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:opacity-90"
-                >
-                  View All
-                </button>
+                <div className="flex gap-4 mt-4">
+                  <button
+                    onClick={() => navigate("/add-relative", { state: { patientId: userData.patientId } })}
+                    className="text-sm font-semibold px-4 py-2 rounded-lg
+                               bg-blue-600 text-white
+                               border border-blue-600
+                               hover:bg-blue-700 transition"
+                  >
+                    Add Relative
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/relatives", { state: { patientId: userData.patientId } })}
+                    className="text-sm font-semibold px-4 py-2 rounded-lg
+                               border border-blue-600
+                               text-blue-700 hover:bg-blue-600 hover:text-white transition"
+                  >
+                    View All
+                  </button>
+                </div>
+
               </div>
 
               {relatives && relatives.length > 0 ? (

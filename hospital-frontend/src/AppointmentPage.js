@@ -4,6 +4,8 @@ import axios from "axios";
 import Navbar from "./Navbar";
 import TopNavbar from "./TopNavbar";
 import { useLocation } from "react-router-dom";
+import { getUserIdFromToken } from "./utils/jwtUtils";
+import { calculateAgeFromDOB } from "./utils/calculateAgeFromDOB";
 
 export default function AppointmentPage() {
   const location = useLocation();
@@ -28,6 +30,8 @@ export default function AppointmentPage() {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState(null);
+  const [patientOptions, setPatientOptions] = useState([]);
+  const [userDetails, setUserDetails] = useState(null);
 
   // Fetch doctors and prefill doctor if passed from DoctorPage
   useEffect(() => {
@@ -96,6 +100,54 @@ export default function AppointmentPage() {
     }
   }, [rescheduleData, doctors]);
 
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        const token = localStorage.getItem("jwtToken");
+        if (!token) return;
+        // 1. Fetch logged-in user
+        const userId = getUserIdFromToken(token);
+        const userRes = await axios.get(
+          `http://localhost:8080/api/patient/getAccount/${userId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const user = userRes.data;
+        setUserDetails(user);
+        // 2. Fetch all relatives of user
+        const relRes = await axios.get(
+          `http://localhost:8080/api/patient/relative/patient/${user.patientId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const relatives = relRes.data;
+        const age = calculateAgeFromDOB(user.dob);
+        // 3. Dropdown options = user + relatives
+        const options = [
+          {
+            id: user.patientId,
+            name: user.patientName,
+            gender: user.gender,
+            age: age,
+            type: "USER",
+          },
+          ...relatives.map((rel) => ({
+            id: rel.patientId,
+            name: rel.name,
+            gender: rel.gender,
+            age: calculateAgeFromDOB(rel.dob),
+            type: "RELATIVE",
+          })),
+        ];
+
+        setPatientOptions(options);
+      } catch (error) {
+        console.error("Error fetching patient list:", error);
+      }
+    };
+
+    fetchPatients();
+  }, []);
+
+
   // Handle input changes
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -112,6 +164,21 @@ export default function AppointmentPage() {
       });
     }
   };
+
+  const handlePatientSelect = (selectedName) => {
+    const selected = patientOptions.find((p) => p.name === selectedName);
+    if (!selected) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      patientName: selected.name,
+      gender: selected.gender,
+      age: selected.age,
+      ptInfoId: selected.type === "USER" ? selected.id : "",
+      relativeId: selected.type === "RELATIVE" ? selected.id : "",
+    }));
+  };
+
 
   // Fetch available slots
   const handleSlotFetch = async () => {
@@ -228,15 +295,20 @@ export default function AppointmentPage() {
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              <input
-                type="text"
-                name="patientName"
-                value={formData.patientName}
-                onChange={handleChange}
-                placeholder="Patient Name"
-                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-[#50d4f2]"
-                required
-              />
+             <select
+               name="patientName"
+               value={formData.patientName}
+               onChange={(e) => handlePatientSelect(e.target.value)}
+               className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2]"
+               required
+             >
+               <option value="">Select Patient</option>
+               {patientOptions.map((p, index) => (
+                 <option key={`${p.type}-${p.id}-${index}`} value={p.name}>
+                   {p.name}
+                 </option>
+               ))}
+             </select>
 
               <select
                 name="gender"
