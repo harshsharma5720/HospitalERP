@@ -27,7 +27,6 @@ public class Doctor {
 
     @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Appointment> appointments;
-
     @Enumerated(EnumType.STRING)
     private Role role = Role.DOCTOR;
     @OneToOne(cascade = CascadeType.ALL)

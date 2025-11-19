@@ -33,6 +33,15 @@ export default function AppointmentPage() {
   const [patientOptions, setPatientOptions] = useState([]);
   const [userDetails, setUserDetails] = useState(null);
 
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  });
+
+  const today = new Date();
+  const maxDate = new Date();
+  maxDate.setDate(today.getDate() + 6);
+
   // Fetch doctors and prefill doctor if passed from DoctorPage
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -70,6 +79,14 @@ export default function AppointmentPage() {
 
     fetchDoctors();
   }, [doctorName]);
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      date: selectedDate,
+    }));
+  }, [selectedDate]);
+
 
   // Prefill reschedule data if available
   useEffect(() => {
@@ -178,6 +195,29 @@ export default function AppointmentPage() {
       relativeId: selected.type === "RELATIVE" ? selected.id : "",
     }));
   };
+
+  const changeDate = (direction) => {
+    const current = new Date(selectedDate);
+
+    if (direction === "prev") {
+      const prev = new Date(current);
+      prev.setDate(current.getDate() - 1);
+
+      if (prev >= today) {
+        setSelectedDate(prev.toISOString().split("T")[0]);
+      }
+    }
+
+    if (direction === "next") {
+      const next = new Date(current);
+      next.setDate(current.getDate() + 1);
+
+      if (next <= maxDate) {
+        setSelectedDate(next.toISOString().split("T")[0]);
+      }
+    }
+  };
+
 
 
   // Fetch available slots
@@ -358,22 +398,43 @@ export default function AppointmentPage() {
                 <option value="EVENING">Evening</option>
               </select>
 
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleChange}
-                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
-                required
-              />
+              <div className="space-y-1 relative">
+                <label className="block text-xs text-gray-600 font-medium">Date</label>
 
-              <textarea
-                name="message"
-                value={formData.message}
-                onChange={handleChange}
-                placeholder="Message (optional)"
-                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
-              />
+                <div className="flex items-center gap-2">
+
+                  {/* Left Arrow */}
+                  <button
+                    type="button"
+                    onClick={() => changeDate("prev")}
+                    className="px-2 py-1 bg-gray-200 rounded-lg hover:bg-gray-300"
+                  >
+                    ◀
+                  </button>
+
+                  {/* Date Input */}
+                  <input
+                    type="date"
+                    name="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    min={today.toISOString().split("T")[0]}
+                    max={maxDate.toISOString().split("T")[0]}
+                    className="w-full bg-white p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4CAF50]"
+                  />
+
+                  {/* Right Arrow */}
+                  <button
+                    type="button"
+                    onClick={() => changeDate("next")}
+                    className="px-2 py-1 bg-gray-200 rounded-lg hover:bg-gray-300"
+                  >
+                    ▶
+                  </button>
+
+                </div>
+              </div>
+
 
               <input
                 type="number"

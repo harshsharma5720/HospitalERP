@@ -306,7 +306,7 @@ export default function HomePage() {
       {/* HOSPITALS & CLINICS */}
       <section className="py-16 bg-white dark:bg-[#0a1330] text-center transition">
         <h2 className="text-5xl font-extrabold mb-10">
-          <span className="text-black dark:text-white">Our </span>
+          <span className="text-black dark:text-white">Featured </span>
           <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
             Hospitals & Clinics
           </span>
