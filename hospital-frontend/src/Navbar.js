@@ -67,13 +67,15 @@ export default function Navbar() {
               hover:bg-white hover:text-teal-700
 
               /* DARK MODE */
-              dark:hover:bg-[#16224a] dark:hover:text-[#50d4f2]
+              dark:hover:bg-gradient-to-br
+              dark:hover:from-[#50d4f2]
+              dark:hover:to-[#3bc2df] dark:hover:text-black
 
               ${
                 isActive
                   ? `
                     bg-white text-teal-700 font-semibold shadow-sm
-                    dark:bg-[#16224a] dark:text-[#50d4f2]
+                    dark:bg-[#50d4f2] dark:text-black
                     `
                   : ""
               }`

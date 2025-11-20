@@ -27,8 +27,8 @@ function ContactUsPage() {
     <div
       className="
         min-h-screen
-        bg-white dark:bg-[#0a1330]
-        text-gray-800 dark:text-[#50d4f2]
+        bg-white dark:bg-[#0a1124]
+        text-gray-800 dark:text-white
         transition-all duration-300
       "
     >
@@ -58,7 +58,7 @@ function ContactUsPage() {
 
           <div className="w-80 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full"></div>
 
-          <p className="text-lg text-gray-700 dark:text-[#8ddff8] leading-relaxed">
+          <p className="text-lg text-gray-700 dark:text-white leading-relaxed">
             We’re here to help. Whether you want to book an appointment, provide
             feedback, or ask a question — please fill in the form and our team
             will get back to you promptly.

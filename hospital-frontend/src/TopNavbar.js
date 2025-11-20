@@ -93,9 +93,9 @@ export default function TopNavbar() {
               onClick={handleLogout}
               className="
                 flex items-center gap-2 px-4 py-2 rounded-xl
-                bg-gradient-to-br from-red-500 to-red-700
-                dark:from-red-600 dark:to-red-800
-                text-white shadow-lg hover:opacity-90 transition
+                bg-[#1E63DB] dark:bg-[#50d4f2]
+                text-white dark:text-black
+                shadow-lg hover:opacity-90 transition
               "
             >
               <LogOut size={18} /> Logout
@@ -107,7 +107,10 @@ export default function TopNavbar() {
               onClick={() => navigate("/login")}
               className="
                 flex items-center gap-2 px-4 py-2 rounded-xl
-                bg-[#1E63DB] dark:bg-[#50d4f2]
+                bg-gradient-to-br
+                from-[#1E63DB] to-[#27496d]
+                dark:from-[#50d4f2] dark:to-[#3bc2df]
+                dark:text-black
                 text-white dark:text-black
                 shadow-lg hover:opacity-90 transition
               "

@@ -334,7 +334,7 @@ export default function ProfilePage({ onClose }) {
                   {relatives.map((relative) => (
                     <li
                       key={relative.id}
-                      className="p-3 bg-gray-50 rounded-lg shadow-sm border"
+                      className="p-3 bg-gray-50 rounded-lg shadow-sm border dark:bg-[#1e293b]"
                     >
                       <p className="font-semibold">{relative.name}</p>
                       <p className="text-sm text-gray-600">

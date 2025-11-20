@@ -87,7 +87,7 @@ export default function HomePage() {
           className="
             absolute bottom-0 left-0 w-full h-40
             bg-gradient-to-t
-            from-white dark:from-[#0a1330]
+            from-white dark:from-[#0a1124]
             to-transparent
             z-10 pointer-events-none
           "

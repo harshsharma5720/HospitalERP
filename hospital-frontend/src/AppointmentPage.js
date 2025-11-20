@@ -313,7 +313,7 @@ export default function AppointmentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0a1330] text-gray-900 dark:text-[#50d4f2] transition-all">
+    <div className="min-h-screen bg-white dark:bg-[#0a1124] text-gray-900 dark:text-[#50d4f2] transition-all">
       <TopNavbar />
       <Navbar />
 
@@ -326,7 +326,7 @@ export default function AppointmentPage() {
         />
 
         <div
-          className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] dark:bg-[#111a3b]/80 shadow-2xl rounded-3xl p-8 md:p-10 w-full max-w-6xl relative z-10 grid md:grid-cols-2 gap-10 transition"
+          className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] dark:from-[#111a3b] dark:to-[#0a1330] shadow-2xl rounded-3xl p-8 md:p-10 w-full max-w-6xl relative z-10 grid md:grid-cols-2 gap-10 transition"
         >
           {/* Form Section */}
           <div>
@@ -401,13 +401,13 @@ export default function AppointmentPage() {
               <div className="space-y-1 relative">
                 <label className="block text-xs text-gray-600 font-medium">Date</label>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a]">
 
                   {/* Left Arrow */}
                   <button
                     type="button"
                     onClick={() => changeDate("prev")}
-                    className="px-2 py-1 bg-gray-200 rounded-lg hover:bg-gray-300"
+                    className="px-2 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a]"
                   >
                     ◀
                   </button>
@@ -420,14 +420,14 @@ export default function AppointmentPage() {
                     onChange={(e) => setSelectedDate(e.target.value)}
                     min={today.toISOString().split("T")[0]}
                     max={maxDate.toISOString().split("T")[0]}
-                    className="w-full bg-white p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4CAF50]"
+                    className="w-full bg-white p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4CAF50] dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a]"
                   />
 
                   {/* Right Arrow */}
                   <button
                     type="button"
                     onClick={() => changeDate("next")}
-                    className="px-2 py-1 bg-gray-200 rounded-lg hover:bg-gray-300"
+                    className="px-2 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a]"
                   >
                     ▶
                   </button>

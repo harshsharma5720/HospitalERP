@@ -23,13 +23,16 @@ export default function AboutUs() {
 
         {/* HEADER */}
         <div className="text-center py-20">
-          <h1
-             className="
-             text-4xl md:text-5xl font-extrabold mb-6 drop-shadow-lg text-center
-             bg-gradient-to-r from-[#50d4f2] to-[#3bc2df] bg-clip-text text-transparent
-          "
-          >
-            About Our Hospital
+          <h1 className="text-5xl text-white font-extrabold mb-4">
+              About/{" "}
+              <span
+                className="
+                     bg-gradient-to-r from-blue-600 to-cyan-400
+                     bg-clip-text text-transparent
+                "
+              >
+                 Our Hospital
+             </span>
           </h1>
           <div className="w-40 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 dark:from-[#50d4f2] dark:to-[#63e6ff] mx-auto mb-10 rounded-full"></div>
           <p className="text-white max-w-2xl mx-auto dark:text-gray-300">
