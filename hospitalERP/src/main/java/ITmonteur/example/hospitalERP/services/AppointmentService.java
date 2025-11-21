@@ -36,6 +36,8 @@ public class AppointmentService {
     private SlotRepository slotRepository;
     @Autowired
     private SlotService slotService;
+    @Autowired
+    private EmailService emailService;
 
     public List<AppointmentDTO> getAllAppointments(){
         logger.info("Fetching all appointments");
@@ -115,6 +117,36 @@ public class AppointmentService {
         slotService.bookSlot(slot.getId());
         appointmentRepository.save(appointment);
         logger.info("Appointment created successfully for slot {}", slot.getId());
+        try {
+            emailService.sendBookingEmail(
+                    ptInfo.getEmail(),
+                    ptInfo.getPatientName(),
+                    doctor.getName(),
+                    slot.getDate().toString(),
+                    slot.getStartTime() + " - " + slot.getEndTime()
+            );
+            logger.info("Appointment email sent to {}", ptInfo.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send appointment email: {}", e.getMessage());
+        }
+
+
+        // 8. Send SMS Notification (if mobile exists)
+//        try {
+//            if (patient.getContactNo() != null) {
+//                String smsMessage =
+//                        "Hello " + patient.getPatientName() +
+//                                ", your appointment is booked on " + slot.getDate() +
+//                                " with Dr. " + doctor.getName() +
+//                                " at " + slot.getStartTime() + ". - Hospital ERP";
+//
+//                smsService.sendSms(patient.getContactNo(), smsMessage);
+//
+//                logger.info("Appointment SMS sent to {}", patient.getContactNo());
+//            }
+//        } catch (Exception e) {
+//            logger.error("Failed to send SMS notification: {}", e.getMessage());
+//        }
         return true;
     }
 
