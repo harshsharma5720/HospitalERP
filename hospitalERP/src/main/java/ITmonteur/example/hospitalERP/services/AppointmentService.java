@@ -64,13 +64,6 @@ public class AppointmentService {
                 .collect(Collectors.toList());
     }
 
-//    public List<AppointmentDTO> getAppointmentsByPatientId(Long patientId) {
-//        List<Appointment> appointments = appointmentRepository.findByPatientId(patientId);
-//        return appointments.stream()
-//                .map(appointment -> modelMapper.map(appointment, AppointmentDTO.class))
-//                .collect(Collectors.toList());
-//    }
-
     public AppointmentDTO getAppointmentByID(long appointmentID){
         logger.info("Fetching appointment with ID: {}", appointmentID);
         Appointment appointment = this.appointmentRepository.findById(appointmentID)
@@ -81,23 +74,6 @@ public class AppointmentService {
         AppointmentDTO appointmentDTO = this.convertToDTO(appointment);
         return appointmentDTO;
     }
-
-//    public boolean createAppointment(AppointmentDTO appointmentDTO) {
-//        logger.info("Creating new appointment for patient: {}", appointmentDTO.getPatientName());
-//        Appointment appointment = convertToEntities(appointmentDTO);
-//        PtInfo ptInfo = ptInfoRepository.findById(appointmentDTO.getPtInfoId())
-//                .orElseThrow(() -> {
-//                    logger.warn("Patient not found with ID: {}", appointmentDTO.getPtInfoId());
-//                    return new ResourceNotFoundException("Patient", "id", appointmentDTO.getPtInfoId());
-//                });
-//        appointment.setPtInfo(ptInfo);
-//        Doctor doctor = doctorRepository.findByName(appointmentDTO.getDoctorName())
-//                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "name", appointmentDTO.getDoctorName()));
-//        appointment.setDoctor(doctor);
-//        appointmentRepository.save(appointment);
-//        logger.info("Appointment created successfully for patient: {}", appointmentDTO.getPatientName());
-//        return true;
-//    }
 
     public boolean createAppointment(AppointmentDTO appointmentDTO) {
         Slot slot = slotRepository.findById(appointmentDTO.getSlotId())
@@ -130,23 +106,6 @@ public class AppointmentService {
             logger.error("Failed to send appointment email: {}", e.getMessage());
         }
 
-
-        // 8. Send SMS Notification (if mobile exists)
-//        try {
-//            if (patient.getContactNo() != null) {
-//                String smsMessage =
-//                        "Hello " + patient.getPatientName() +
-//                                ", your appointment is booked on " + slot.getDate() +
-//                                " with Dr. " + doctor.getName() +
-//                                " at " + slot.getStartTime() + ". - Hospital ERP";
-//
-//                smsService.sendSms(patient.getContactNo(), smsMessage);
-//
-//                logger.info("Appointment SMS sent to {}", patient.getContactNo());
-//            }
-//        } catch (Exception e) {
-//            logger.error("Failed to send SMS notification: {}", e.getMessage());
-//        }
         return true;
     }
 
@@ -156,7 +115,6 @@ public class AppointmentService {
         String jwt = token.replace("Bearer ", "");
         Long userId = jwtService.extractUserId(jwt);
         logger.info("Extracted userId from token: {}", userId);
-        // Get doctor by userId (because doctor is linked with user)
         Doctor doctor = doctorRepository.findByUserId(userId)
                 .orElseThrow(() -> {
                     logger.error("No doctor found for userId: {}", userId);
@@ -173,21 +131,57 @@ public class AppointmentService {
 
     public boolean deleteAppointmentByID(long appointmentID){
         logger.info("Deleting appointment with ID: {}", appointmentID);
+
         Appointment appointment = this.appointmentRepository.findById(appointmentID)
                 .orElseThrow(() -> {
                     logger.warn("Appointment not found with ID: {}", appointmentID);
                     return new ResourceNotFoundException("Appointment", "id", appointmentID);
                 });
+
+        // ---------------------------------------
+        // 🔥 ADDED: Extract data for delete email
+        // ---------------------------------------
+        PtInfo ptInfo = appointment.getPtInfo();
+        Doctor doctor = appointment.getDoctor();
+        Slot slot = appointment.getSlot();
+
+        String patientEmail = ptInfo.getEmail();
+        String patientName = ptInfo.getPatientName();
+        String doctorName = doctor.getName();
+        String date = slot.getDate().toString();
+        String time = slot.getStartTime() + " - " + slot.getEndTime();
+
+        // Delete appointment
         this.appointmentRepository.deleteById(appointmentID);
         logger.info("Appointment deleted successfully with ID: {}", appointmentID);
+
+        // Release slot
+        slotService.releaseSlot(slot.getId());
+
+        // ---------------------------------------
+        // 🔥 ADDED: Send delete confirmation email
+        // ---------------------------------------
+        try {
+            emailService.sendDeleteEmail(
+                    patientEmail,
+                    patientName,
+                    doctorName,
+                    date,
+                    time
+            );
+            logger.info("Delete email sent successfully to {}", patientEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send delete email: {}", e.getMessage());
+        }
+
         return true;
     }
 
     public boolean deleteAllAppointments(){
-        long count = appointmentRepository.count();  // check how many appointments exist
+        long count = appointmentRepository.count();
         if (count == 0) {
             logger.warn("No appointments to delete");
-            return false;  // no appointments to delete
+            return false;
         }
         this.appointmentRepository.deleteAll();
         logger.info("All appointments deleted successfully");
@@ -200,66 +194,44 @@ public class AppointmentService {
                 .orElseThrow(() -> {
                     logger.warn("Appointment not found with ID: {}", appointmentID);
                     return new ResourceNotFoundException("Appointment", "appointmentID", appointmentID);
-                });  // Fetch existing appointment
-        appointment.setPatientName(appointmentDTO.getPatientName());  // Update patient details
+                });
+
+        appointment.setPatientName(appointmentDTO.getPatientName());
         appointment.setAge(appointmentDTO.getAge());
         appointment.setGender(appointmentDTO.getGender());
         appointment.setShift(appointmentDTO.getShift());
         appointment.setDate(appointmentDTO.getDate());
         appointment.setMessage(appointmentDTO.getMessage());
-        if (appointmentDTO.getDoctorName() != null && !appointmentDTO.getDoctorName().isEmpty()) {// Update doctor (if provided)
+
+        if (appointmentDTO.getDoctorName() != null && !appointmentDTO.getDoctorName().isEmpty()) {
             Doctor doctor = doctorRepository.findByName(appointmentDTO.getDoctorName())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Doctor", "name", appointmentDTO.getDoctorName()));
             appointment.setDoctor(doctor);
         }
-        if (appointmentDTO.getSlotId() != null) {  // Update slot (if provided)
+
+        if (appointmentDTO.getSlotId() != null) {
             Slot newSlot = slotRepository.findById(appointmentDTO.getSlotId())
                     .orElseThrow(() -> new ResourceNotFoundException("Slot", "id", appointmentDTO.getSlotId()));
-            Slot oldSlot = appointment.getSlot();// Release previous slot if changed
+            Slot oldSlot = appointment.getSlot();
+
             if (oldSlot != null && !oldSlot.getId().equals(newSlot.getId())) {
                 slotService.releaseSlot(oldSlot.getId());
             }
-            if (!newSlot.isAvailable()) {  // Check slot availability
+
+            if (!newSlot.isAvailable()) {
                 throw new RuntimeException("Selected slot is already booked!");
             }
-            slotService.bookSlot(newSlot.getId());  // Book the new slot
+
+            slotService.bookSlot(newSlot.getId());
             appointment.setSlot(newSlot);
         }
-        Appointment updatedAppointment = appointmentRepository.save(appointment);  // Save and map updated appointment
+
+        Appointment updatedAppointment = appointmentRepository.save(appointment);
         AppointmentDTO updatedDTO = convertToDTO(updatedAppointment);
         logger.info("Appointment updated successfully with ID: {}", appointmentID);
         return updatedDTO;
     }
-
-//    public AppointmentDTO updateAppointmentById(long appointmentID, AppointmentDTO appointmentDTO) {
-//        logger.info("Updating appointment with ID: {}", appointmentID);
-//
-//        Appointment appointment = this.appointmentRepository.findById(appointmentID)
-//                .orElseThrow(() -> {
-//                    logger.warn("Appointment not found with ID: {}", appointmentID);
-//                    return new ResourceNotFoundException("Appointment", "appointmentID", appointmentID);
-//                });
-//
-//        // Update basic fields
-//        appointment.setPatientName(appointmentDTO.getPatientName());
-//        appointment.setAge(appointmentDTO.getAge());
-//        appointment.setGender(appointmentDTO.getGender());
-//        appointment.setShift(appointmentDTO.getShift());
-//        appointment.setDate(appointmentDTO.getDate());
-//        appointment.setMessage(appointmentDTO.getMessage());
-//        if (appointmentDTO.getDoctorName() != null && !appointmentDTO.getDoctorName().isEmpty()) {
-//            Doctor doctor = doctorRepository.findByName(appointmentDTO.getDoctorName())
-//                    .orElseThrow(() -> new ResourceNotFoundException(
-//                            "Doctor", "name", appointmentDTO.getDoctorName()));
-//            appointment.setDoctor(doctor);
-//        }
-//        Appointment updatedAppointment = appointmentRepository.save(appointment);
-//        AppointmentDTO updatedDTO = convertToDTO(updatedAppointment);
-//
-//        logger.info("Appointment updated successfully with ID: {}", appointmentID);
-//        return updatedDTO;
-//    }
 
     public List<AppointmentDTO> getAppointmentsByDrName(String doctorName){
         logger.info("Fetching appointments for doctor: {}", doctorName);

@@ -28,4 +28,22 @@ public class EmailService {
 
         mailSender.send(message);
     }
+
+    public void sendDeleteEmail(String toEmail, String patientName, String doctorName, String date, String time) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Appointment Cancelled");
+
+        message.setText(
+                "Dear " + patientName + ",\n\n" +
+                        "Your appointment has been successfully cancelled.\n" +
+                        "Doctor: " + doctorName + "\n" +
+                        "Date: " + date + "\n" +
+                        "Time: " + time + "\n\n" +
+                        "If this was a mistake, please book again.\n" +
+                        "Thank you."
+        );
+
+        mailSender.send(message);
+    }
 }
