@@ -40,8 +40,8 @@ export default function DarkThemeToggle() {
     <button
       onClick={handleClick}
       className="
-        px-4 py-2 rounded-lg shadow-md
-        bg-gray-200 dark:bg-gray-700
+        gap-2 px-3 py-1 rounded-md transition-all duration-200 shadow-md
+        bg-white dark:bg-gray-700
         text-black dark:text-white
         transition
       "

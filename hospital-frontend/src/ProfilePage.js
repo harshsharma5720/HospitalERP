@@ -84,7 +84,7 @@ export default function ProfilePage({ onClose }) {
     <>
       {/* Background Overlay + Center Modal */}
       <div className="
-        fixed inset-0 bg-black bg-opacity-50
+        fixed inset-0 animate-scaleUp bg-black bg-opacity-50
         dark:bg-[#050b1f]/70
         flex justify-center items-center z-50
       ">

@@ -99,9 +99,9 @@ export default function Navbar() {
             onClick={() => setShowProfile(true)}
             className="
               flex items-center gap-2
-              bg-white text-teal-700
+              bg-white text-black
               dark:bg-[#16224a] dark:text-[#50d4f2]
-              px-3 py-1 rounded-full shadow-md
+              px-3 py-1 rounded-md shadow-md
               hover:bg-teal-100
               dark:hover:bg-[#1e2a4a]
               transition

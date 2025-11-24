@@ -11,6 +11,10 @@
   height: 40vmin;
   pointer-events: none;
 }
+body, html {
+  font-family: 'SF Pro Display', sans-serif !important;
+}
+
 
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {

@@ -4,6 +4,7 @@ import TopNavbar from "./TopNavbar";
 import PopupForm from "./PopupForm";
 import { useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
+import ScrollAnimate from "./utils/ScrollAnimate";
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ export default function HomePage() {
     <div
       className="
         min-h-screen
-        bg-gray-50 dark:bg-[#0a1330]
+        bg-gray-50 dark:bg-[#0a1124]
         text-gray-900 dark:text-gray-200
         relative overflow-hidden
         transition-colors duration-300
@@ -104,17 +105,20 @@ export default function HomePage() {
             transition
           "
         >
+         <ScrollAnimate>
+          <h2 className="text-5xl font-extrabold mb-4">
+                To Book {" "}
+                <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
+                  An Appointment
+                </span>
+          </h2>
 
-           <h2 className="text-5xl font-extrabold mb-4">
-              To Book An{" "}
-              <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
-                 Appointment
-              </span>
-           </h2>
+          <div className="w-80 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full"></div>
 
-          <p className="text-lg mb-4 dark:text-gray-300">
+           <p className="mt-4 text-lg mb-4 dark:text-gray-300">
             📞 <span className="font-semibold">Call Us:</span> +91 92895 20303
-          </p>
+           </p>
+          </ScrollAnimate>
 
           <button
             onClick={() => navigate("/appointments")}
@@ -160,32 +164,45 @@ export default function HomePage() {
         className="
           text-center py-16
           bg-gradient-to-b from-white to-[#f8fbff]
-          dark:from-[#0a1330] dark:to-[#111a3b]
+          dark:from-[#0a1330] dark:to-[#0a1124]
           transition
         "
       >
-        <div
-          className="
-            inline-block
-            bg-blue-100 dark:bg-[#16224a]
-            text-blue-700 dark:text-[#50d4f2]
-            font-medium px-4 py-1 rounded-full mb-4 shadow-sm
-          "
-        >
-          Welcome to Modern Healthcare
-        </div>
+        <ScrollAnimate>
+          <div
+            className="
+                inline-block
+                bg-blue-100 dark:bg-[#16224a]
+                text-blue-700 dark:text-[#50d4f2]
+                font-medium px-4 py-1 rounded-full mb-4 shadow-sm
+                "
+            >
+              Welcome to Modern Healthcare
+          </div>
+        </ScrollAnimate>
 
-        <h1 className="text-5xl font-extrabold mb-4">
-          Your Trusted{" "}
-          <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
-            Health Partner
-          </span>
-        </h1>
 
-        <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl mx-auto mb-8">
-          Professional Hospital Management System for seamless patient care,
-          appointment booking, and modern services.
-        </p>
+
+
+        <ScrollAnimate>
+          <h1 className="text-5xl font-extrabold mb-4">
+                    Your Trusted{" "}
+                    <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
+                      Health Partner
+                    </span>
+          </h1>
+        </ScrollAnimate>
+
+        <ScrollAnimate>
+          <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl mx-auto mb-8">
+                    <b>Professional Hospital Management System</b> designed for seamless patient care,
+                    efficient appointment scheduling, real-time medical records, and modern healthcare services.
+                    Empowering hospitals with <b>faster workflows, improved doctor–patient communication,
+                    and a secure, intuitive platform for better decision-making.</b>
+          </p>
+        </ScrollAnimate>
+
+
 
         <div className="flex justify-center gap-6">
           {!isLoggedIn ? (
@@ -217,17 +234,17 @@ export default function HomePage() {
             </>
           ) : (
             <>
-              <span className="text-teal-700 dark:text-[#50d4f2] font-semibold">
+              <span className="text-black dark:text-white font-semibold">
                 {username}
               </span>
 
               <button
                 onClick={handleLogout}
                 className="
-                  flex items-center gap-2 px-6 py-2 rounded-md
-                  bg-gradient-to-br from-red-500 to-red-700
-                  dark:from-red-600 dark:to-red-800
-                  text-white hover:opacity-90 transition
+                  flex items-center gap-2 px-4 py-2 rounded-xl
+                  bg-[#1E63DB] dark:bg-[#50d4f2]
+                  text-white dark:text-black
+                  shadow-lg hover:opacity-90 transition
                 "
               >
                 <LogOut size={20} /> Logout
@@ -236,7 +253,7 @@ export default function HomePage() {
           )}
         </div>
       </section>
-      <section className="py-10 bg-white dark:bg-[#0a1330] transition">
+      <section className="py-10 bg-white dark:bg-[#0a1124] transition">
         <div className="max-w-7xl mx-auto flex justify-between items-center px-4 md:px-10">
 
           {/* Facilities */}
@@ -281,41 +298,47 @@ export default function HomePage() {
 
 
       {/* BANNER */}
-      <section className="relative mx-10 my-10 rounded-2xl overflow-hidden shadow-lg">
-        <div
-          className="
-            relative text-white text-center py-12 px-6
-            bg-gradient-to-r from-[#1E63DB] to-[#27496d]
-            dark:from-[#111a3b] dark:to-[#0a1330]
-          "
-        >
-          <div className="relative z-10 flex flex-col md:flex-row items-center justify-center gap-6">
-            <div className="text-3xl md:text-4xl font-extrabold tracking-wide">
-              SHREYA HOSPITAL
-            </div>
+      <ScrollAnimate>
+       <section className="relative mx-10 my-10 rounded-2xl overflow-hidden shadow-lg">
+               <div
+                 className="
+                   relative text-white text-center py-12 px-6
+                   bg-gradient-to-r from-[#1E63DB] to-[#27496d]
+                   dark:from-[#111a3b] dark:to-[#0a1330]
+                 "
+               >
+                 <div className="relative z-10 flex flex-col md:flex-row items-center justify-center gap-6">
+                   <div className="text-3xl md:text-4xl font-extrabold tracking-wide">
+                     SHREYA HOSPITAL
+                   </div>
 
-            <div className="hidden md:block w-[2px] h-10 bg-white/50"></div>
+                   <div className="hidden md:block w-[2px] h-10 bg-white/50"></div>
 
-            <div className="text-2xl md:text-3xl font-semibold text-yellow-300 dark:text-yellow-400">
-              Advanced Care. Modern Equipment. Trusted Hands.
-            </div>
-          </div>
-        </div>
-      </section>
+                   <div className="text-2xl md:text-3xl font-semibold text-yellow-300 dark:text-yellow-400">
+                     Advanced Care. Modern Equipment. Trusted Hands.
+                   </div>
+                 </div>
+               </div>
+       </section>
+      </ScrollAnimate>
+
 
       {/* HOSPITALS & CLINICS */}
-      <section className="py-16 bg-white dark:bg-[#0a1330] text-center transition">
-        <h2 className="text-5xl font-extrabold mb-10">
-          <span className="text-black dark:text-white">Featured </span>
-          <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
-            Hospitals & Clinics
-          </span>
-        </h2>
+      <section className="py-16 bg-white dark:bg-[#0a1124] text-center transition">
+        <ScrollAnimate>
+          <h2 className="text-5xl font-extrabold mb-10">
+             <span className="text-black dark:text-white">Featured </span>
+             <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
+                      Hospitals & Clinics
+             </span>
+          </h2>
 
-        <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl mx-auto mb-12">
-          Delivering compassionate care through our trusted network of hospitals,
-          clinics, pharmacies, and nursing centers.
-        </p>
+          <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl mx-auto mb-12">
+             Delivering compassionate care through our trusted network of hospitals,
+             clinics, pharmacies, and nursing centers.
+          </p>
+        </ScrollAnimate>
+
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 px-10">
           {[

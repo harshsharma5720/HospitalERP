@@ -8,7 +8,7 @@ export default function AboutUs() {
     <div
       className="
         min-h-screen
-        bg-gray-50 dark:bg-[#0a1330]
+        bg-gray-50 dark:bg-[#0a1124]
         text-gray-900 dark:text-gray-200
         transition-all duration-300
         bg-no-repeat bg-cover

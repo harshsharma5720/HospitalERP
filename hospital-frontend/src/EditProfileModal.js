@@ -202,7 +202,7 @@ export default function ProfilePage({ onClose }) {
       <TopNavbar />
       <Navbar />
 
-      <div className="flex flex-col lg:flex-row w-full h-[calc(100vh-6rem)] bg-white dark:bg-[#0f172a] shadow-lg overflow-hidden">
+      <div className="flex flex-col animate-scaleUp lg:flex-row w-full h-[calc(100vh-6rem)] bg-white dark:bg-[#0f172a] shadow-lg overflow-hidden">
 
         {/* LEFT SIDE */}
         <div className="lg:w-1/3 h-full bg-gradient-to-b from-blue-600 to-blue-400 dark:from-[#111a3b] dark:to-[#0f172a] text-white p-8 flex flex-col items-center justify-center">

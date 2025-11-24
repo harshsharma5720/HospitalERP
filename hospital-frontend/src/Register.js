@@ -129,7 +129,7 @@ export default function RegisterPage() {
 
       <div
         className="
-          relative z-10 flex flex-col md:flex-row w-[90%] md:w-[70%] lg:w-[70%]
+          relative z-10 animate-scaleUp flex flex-col md:flex-row w-[90%] md:w-[70%] lg:w-[70%]
           rounded-3xl overflow-hidden shadow-2xl border border-white/20
           bg-white/10 backdrop-blur-xl
           dark:bg-[#111a3b]/70 dark:border-[#16224a]
@@ -143,8 +143,16 @@ export default function RegisterPage() {
             text-white dark:text-[#50d4f2]
           "
         >
-          <h2 className="text-3xl font-bold mb-6 text-center text-[#5A73C4] dark:text-[#50d4f2] drop-shadow-md">
-            Create Account
+          <h2 className="text-3xl font-extrabold mb-4 text-center">
+             Create {" "}
+               <span
+                  className="
+                    bg-gradient-to-r from-blue-600 to-cyan-400
+                    bg-clip-text text-transparent
+                  "
+               >
+                 Account
+               </span>
           </h2>
 
           {error && <p className="text-red-400 font-semibold mb-4 text-center">{error}</p>}
@@ -333,7 +341,7 @@ export default function RegisterPage() {
             dark:from-[#0f172a] dark:to-[#111a3b]
           "
         >
-          <h1 className="text-4xl font-extrabold mb-3 drop-shadow-md">
+          <h1 className="text-5xl font-extrabold mb-3 drop-shadow-md">
             WELCOME
           </h1>
           <p className="text-sm text-gray-200 dark:text-[#8ddff8]">

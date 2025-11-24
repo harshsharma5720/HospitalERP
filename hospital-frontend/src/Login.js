@@ -75,7 +75,7 @@ export default function LoginPage() {
       {/* MAIN CARD */}
       <div
         className="
-          relative z-10 flex flex-col md:flex-row w-[90%] md:w-[70%] lg:w-[60%]
+          relative z-10 animate-scaleUp flex flex-col md:flex-row w-[90%] md:w-[70%] lg:w-[60%]
           rounded-3xl overflow-hidden shadow-2xl border border-white/20
           bg-white/10 backdrop-blur-xl
           dark:bg-[#111a3b]/60 dark:border-[#16224a]

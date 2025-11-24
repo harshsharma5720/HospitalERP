@@ -120,12 +120,21 @@ export default function AppointmentDetails() {
           p-8 w-full max-w-5xl relative z-10
         ">
           <h2 className="
-            text-3xl font-bold text-center
-            text-[#1E63DB] dark:text-[#50d4f2]
+            text-6xl md:text-7xl font-black tracking-tight leading-tight text-center
+            text-black dark:text-[#50d4f2]
             mb-6
           ">
-            Your Appointments
+            Your{" "}
+              <span
+                 className="
+                    bg-gradient-to-r from-blue-600 to-cyan-400
+                    bg-clip-text text-transparent
+                 "
+              >
+                Appointments
+              </span>
           </h2>
+          <div className="w-40 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 dark:from-[#50d4f2] dark:to-[#63e6ff] mx-auto mb-10 rounded-full"></div>
 
           {appointments.length === 0 ? (
             <p className="text-center text-gray-600 dark:text-gray-300">

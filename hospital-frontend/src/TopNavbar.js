@@ -41,7 +41,7 @@ export default function TopNavbar() {
     <div
       className="
         bg-white
-        dark:bg-[#0a1330]      /* DEEP NAVY */
+        dark:bg-[#0a1124]      /* DEEP NAVY */
         dark:text-[#50d4f2]   /* NEON TEXT */
         shadow-lg px-6 py-4 flex items-center
         border-b dark:border-[#111a3b]

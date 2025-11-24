@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import Navbar from "./Navbar";
 import TopNavbar from "./TopNavbar";
+import ScrollAnimate from "./utils/ScrollAnimate";
+import { FaInstagram, FaFacebook, FaXTwitter, FaLinkedin, FaYoutube } from "react-icons/fa6";
 
 function ContactUsPage() {
   const [formData, setFormData] = useState({
@@ -44,25 +46,28 @@ function ContactUsPage() {
       >
         {/* Left Section */}
         <div className="md:w-1/2 space-y-6 text-left">
-          <h1 className="text-5xl font-extrabold mb-4">
-            Contact /{" "}
-            <span
-              className="
-                bg-gradient-to-r from-blue-600 to-cyan-400
-                bg-clip-text text-transparent
-              "
-            >
-              Contact Us
-            </span>
-          </h1>
+          <ScrollAnimate>
+            <h1 className="text-5xl font-extrabold mb-4">
+                Contact /{" "}
+                  <span
+                     className="
+                       bg-gradient-to-r from-blue-600 to-cyan-400
+                       bg-clip-text text-transparent
+                     "
+                  >
+                    Contact Us
+                  </span>
+            </h1>
+            <div className="w-80 h-1  bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full"></div>
 
-          <div className="w-80 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full"></div>
+            <p className="text-lg pt-4 text-gray-700 dark:text-white leading-relaxed">
+              We’re here to help. Whether you want to book an appointment, share feedback, or ask a question, simply fill out the form and our team will get back to you promptly.
+              Your concerns matter to us, and we ensure every query is handled with care and priority.
+            </p>
+          </ScrollAnimate>
 
-          <p className="text-lg text-gray-700 dark:text-white leading-relaxed">
-            We’re here to help. Whether you want to book an appointment, provide
-            feedback, or ask a question — please fill in the form and our team
-            will get back to you promptly.
-          </p>
+
+
 
           <div className="mt-6 space-y-3 text-gray-800 dark:text-[#50d4f2]">
             <p>
@@ -75,6 +80,35 @@ function ContactUsPage() {
               <strong>🏥 Address:</strong> Max Healthcare, Ghaziabad, India
             </p>
           </div>
+          {/* Social Media Icons */}
+          <div className="mt-8 flex items-center gap-6 text-3xl">
+
+                    <a href="https://instagram.com" target="_blank"
+                       className="text-pink-600 dark:text-pink-400 hover:scale-110 transition">
+                      <FaInstagram />
+                    </a>
+
+                    <a href="https://facebook.com" target="_blank"
+                       className="text-blue-700 dark:text-blue-400 hover:scale-110 transition">
+                      <FaFacebook />
+                    </a>
+
+                    <a href="https://twitter.com" target="_blank"
+                       className="text-black dark:text-white hover:scale-110 transition">
+                      <FaXTwitter />
+                    </a>
+
+                    <a href="https://linkedin.com" target="_blank"
+                       className="text-blue-800 dark:text-blue-500 hover:scale-110 transition">
+                      <FaLinkedin />
+                    </a>
+
+                    <a href="https://youtube.com" target="_blank"
+                       className="text-red-600 dark:text-red-500 hover:scale-110 transition">
+                      <FaYoutube />
+                    </a>
+
+          </div>
         </div>
 
         {/* Right Section - Form */}
@@ -82,7 +116,7 @@ function ContactUsPage() {
           <div
             className="
               bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF]
-              dark:from-[#111a3b] dark:to-[#0a1330]
+              dark:from-[#111a3b] dark:to-[#0a1330] animate-scaleUp
               shadow-2xl rounded-3xl p-8 md:p-10
               transition-all
             "

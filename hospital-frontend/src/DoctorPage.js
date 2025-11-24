@@ -7,6 +7,7 @@ import { getRoleFromToken } from "./utils/jwtUtils.js";
 import PopupForm from "./PopupForm";
 import Lottie from "lottie-react";
 import doctorAnimation from "./assets/Doctor.json";
+import ScrollAnimate from "./utils/ScrollAnimate";
 
 export default function DoctorPage() {
   const [doctors, setDoctors] = useState([]);
@@ -99,17 +100,20 @@ export default function DoctorPage() {
 
         {/* Header */}
         <div className="text-center mt-10">
-          <h1 className="text-5xl font-extrabold mb-4">
-            Our{" "}
-              <span
-                 className="
-                    bg-gradient-to-r from-blue-600 to-cyan-400
-                    bg-clip-text text-transparent
-                 "
-              >
-                Doctors
-              </span>
-          </h1>
+         <ScrollAnimate>
+           <h1 className="text-5xl font-extrabold mb-4">
+              Our{" "}
+                <span
+                   className="
+                     bg-gradient-to-r from-blue-600 to-cyan-400
+                     bg-clip-text text-transparent
+                   "
+                >
+                   Doctors
+                </span>
+           </h1>
+         </ScrollAnimate>
+
 
           <div className="w-40 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 dark:from-[#50d4f2] dark:to-[#63e6ff] mx-auto mb-10 rounded-full"></div>
 
