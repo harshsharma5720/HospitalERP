@@ -1,9 +1,12 @@
 package ITmonteur.example.hospitalERP.services;
 
+import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.dto.DoctorDTO;
+import ITmonteur.example.hospitalERP.entities.Appointment;
 import ITmonteur.example.hospitalERP.entities.Doctor;
 import ITmonteur.example.hospitalERP.entities.Specialist;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
+import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -21,6 +24,8 @@ public class DoctorService {
 
     @Autowired
     private DoctorRepository doctorRepository;
+    @Autowired
+    private AppointmentRepository appointmentRepository;
 
     @Autowired
     private ModelMapper modelMapper;
@@ -151,6 +156,52 @@ public class DoctorService {
         logger.info("All doctors deleted successfully");
         return true;
     }
+    public String markAsCompleted(long appointmentId) {
+
+        logger.info("Attempting to mark appointment {} as completed...", appointmentId);
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> {
+                    logger.warn("Appointment with ID {} not found.", appointmentId);
+                    return new RuntimeException("Appointment not found with ID: " + appointmentId);
+                });
+        if (appointment.isCompleted()) {
+            logger.info("Appointment {} is already completed.", appointmentId);
+            return "Appointment is already marked as completed.";
+        }
+        appointment.setCompleted(true);
+        appointmentRepository.save(appointment);
+        logger.debug("Database updated: appointment {} is now completed.", appointmentId);
+        return "Appointment marked as completed successfully.";
+    }
+
+    public List<AppointmentDTO> getAllPendingAppointmentsByDoctorId(Long userId) {
+        logger.info("Fetching pending appointments for doctor ID: {}", userId);
+        Doctor doctor = doctorRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "userId", userId));
+        Long doctorId = doctor.getId();
+        List<Appointment> appointments = appointmentRepository.findByDoctor_IdAndIsCompletedFalse(doctorId);
+        List<AppointmentDTO> appointmentDTOList = appointments.stream()
+                .map(appointment -> modelMapper.map(appointment, AppointmentDTO.class))
+                .collect(Collectors.toList());
+        logger.info("Total pending appointments retrieved for doctor ID {}: {}", doctorId, appointmentDTOList.size());
+        return appointmentDTOList;
+    }
+
+    public List<AppointmentDTO> getAllCompletedAppointmentsByDoctorId(Long userId) {
+        logger.info("Fetching completed appointments for doctor ID: {}", userId);
+        Doctor doctor = doctorRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "userId", userId));
+        Long doctorId = doctor.getId();
+        List<Appointment> appointments = appointmentRepository.findByDoctor_IdAndIsCompletedTrue(doctorId);
+        List<AppointmentDTO> appointmentDTOList = appointments.stream()
+                .map(appointment -> modelMapper.map(appointment, AppointmentDTO.class))
+                .collect(Collectors.toList());
+        logger.info("Total completed appointments retrieved for doctor ID {}: {}", doctorId, appointmentDTOList.size());
+        return appointmentDTOList;
+    }
+
+
+
 
     // Convert entity to DTO
     private DoctorDTO convertToDTO(Doctor doctor) {

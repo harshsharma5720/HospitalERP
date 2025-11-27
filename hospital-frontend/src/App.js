@@ -14,6 +14,7 @@ import AppointmentDetails from "./AppointmentDetails";
 import DoctorProfile from "./DoctorProfile";
 import AddRelativePage from "./AddRelativePage";
 import RelativesList from "./RelativesList";
+import DoctorAppointments from "./DoctorAppointments";
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
           <Route path="/doctor-profile/:doctorId" element={<DoctorProfile />} />
           <Route path="/add-relative" element={<AddRelativePage />} />
           <Route path="/relatives" element={<RelativesList />} />
+          <Route path="/doctor-appointments" element={<DoctorAppointments />} />
         </Routes>
 
         <Footer />

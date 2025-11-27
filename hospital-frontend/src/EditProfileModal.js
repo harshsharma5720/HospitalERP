@@ -13,6 +13,8 @@ export default function ProfilePage({ onClose }) {
   const [formData, setFormData] = useState({});
   const navigate = useNavigate();
   const [relatives, setRelatives] = useState([]);
+  const [completedAppointment, setCompletedAppointment] = useState([]);
+  const [pendingAppointment, setPendingAppointment] = useState([]);
 
 
   useEffect(() => {
@@ -23,6 +25,8 @@ export default function ProfilePage({ onClose }) {
     const userId = getUserIdFromToken(token);
     fetchUserData(role, userId, token);
     fetchAppointments(role, userId, token);
+    fetchCompletedAppointments(role, userId , token);
+    fetchPendingAppointments(role, userId , token);
   }, []);
   useEffect(() => {
     const token = localStorage.getItem("jwtToken");
@@ -40,6 +44,8 @@ export default function ProfilePage({ onClose }) {
           getUrl: (id) => `http://localhost:8080/api/patient/getAccount/${id}`,
           updateUrl: (id) => `http://localhost:8080/api/patient/updateAccount/${id}`,
           appointmentUrl: `http://localhost:8080/appointment/getPatientAppointments`,
+          completedAppointmentUrl: (id) => `http://localhost:8080/appointment/patientCompletedAppointments/${id}`,
+          pendingAppointmentUrl: (id) => `http://localhost:8080/appointment/patientPendingAppointments/${id}`,
         };
       case "ROLE_DOCTOR":
         return {
@@ -150,6 +156,38 @@ export default function ProfilePage({ onClose }) {
       console.error("Error fetching appointments:", err);
     }
   };
+
+  const fetchCompletedAppointments = async (role, id, token) => {
+    try {
+      const urls = getRoleEndpoints(role);
+      if (!urls || !urls.completedAppointmentUrl) return;
+
+      const response = await axios.get(urls.completedAppointmentUrl(id), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = response.data.appointments || response.data;
+      setCompletedAppointment(data);
+    } catch (err) {
+      console.error("Error fetching completed appointments:", err);
+    }
+  }
+
+  const fetchPendingAppointments = async (role, id, token) => {
+      try {
+        const urls = getRoleEndpoints(role);
+        if (!urls || !urls.pendingAppointmentUrl) return;
+
+        const response = await axios.get(urls.pendingAppointmentUrl(id), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const data = response.data.appointments || response.data;
+        setPendingAppointment(data);
+      } catch (err) {
+        console.error("Error fetching completed appointments:", err);
+      }
+    }
 
   const handleEditToggle = () => setIsEditing(!isEditing);
 
@@ -393,7 +431,7 @@ export default function ProfilePage({ onClose }) {
                     Completed
                   </h4>
                   <p className="text-2xl font-bold dark:text-white">
-                    {appointments.filter((a) => a.status?.toLowerCase() === "completed").length}
+                    {completedAppointment.length}
                   </p>
                 </div>
 
@@ -402,7 +440,7 @@ export default function ProfilePage({ onClose }) {
                     Upcoming
                   </h4>
                   <p className="text-2xl font-bold dark:text-white">
-                    {appointments.filter((a) => a.status?.toLowerCase() === "upcoming").length}
+                    {pendingAppointment.length}
                   </p>
                 </div>
               </div>

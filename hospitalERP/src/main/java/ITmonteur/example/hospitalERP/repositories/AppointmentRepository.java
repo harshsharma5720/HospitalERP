@@ -24,4 +24,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
                                            @Param("shift") Shift shift);
 
     List<Appointment> findByDoctor_Id(Long doctorId);
+    List<Appointment> findByPtInfo_PatientIdAndIsCompletedTrue(Long patientId);
+    List<Appointment> findByPtInfo_PatientIdAndIsCompletedFalse(Long patientId);
+
+    List<Appointment> findAllByIsCompletedFalse();
+    List<Appointment> findAllByIsCompletedTrue();
+
+    List<Appointment> findByDoctor_IdAndIsCompletedFalse(Long doctorId);
+    List<Appointment> findByDoctor_IdAndIsCompletedTrue(Long doctorId);
 }

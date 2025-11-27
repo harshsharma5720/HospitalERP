@@ -1,11 +1,13 @@
 package ITmonteur.example.hospitalERP.controller;
 
+import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.dto.DoctorDTO;
 import ITmonteur.example.hospitalERP.entities.Specialist;
 import ITmonteur.example.hospitalERP.services.DoctorService;
 import ITmonteur.example.hospitalERP.services.JWTService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -76,6 +78,35 @@ public class DoctorController {
         logger.info("Fetched doctor: {}", doctorDTO.getName());
         return ResponseEntity.ok(doctorDTO);
     }
+    @PutMapping("/complete/{appointmentId}")
+    public ResponseEntity<?> markAppointmentCompleted(@PathVariable long appointmentId) {
+        logger.info("Received request to complete appointment with ID: {}", appointmentId);
+        try {
+            String response = doctorService.markAsCompleted(appointmentId);
+            logger.info("Appointment {} marked as completed successfully.", appointmentId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException ex) {
+            logger.error("Error completing appointment with ID {}: {}", appointmentId, ex.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+        }
+    }
+
+    @GetMapping("/doctorPendingAppointments/{userId}")
+    public ResponseEntity<List<AppointmentDTO>> getPendingAppointmentsForDoctor(@PathVariable Long userId) {
+        logger.info("Fetching pending appointments for doctor ID: {}", userId);
+        List<AppointmentDTO> appointments = doctorService.getAllPendingAppointmentsByDoctorId(userId);
+        logger.info("Total pending appointments found for doctor ID {}: {}", userId, appointments.size());
+        return ResponseEntity.ok(appointments);
+    }
+
+    @GetMapping("/doctorCompletedAppointments/{userId}")
+    public ResponseEntity<List<AppointmentDTO>> getCompletedAppointmentsForDoctor(@PathVariable Long userId) {
+        logger.info("Fetching completed appointments for doctor ID: {}", userId);
+        List<AppointmentDTO> appointments = doctorService.getAllCompletedAppointmentsByDoctorId(userId);
+        logger.info("Total completed appointments found for doctor ID {}: {}", userId, appointments.size());
+        return ResponseEntity.ok(appointments);
+    }
+
 
     // Update doctor by ID (only self-update allowed)
     @PutMapping(value = "/update/{id}", consumes = {"multipart/form-data"})

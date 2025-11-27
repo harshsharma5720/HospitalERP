@@ -36,13 +36,15 @@ public class Appointment {
     @ManyToOne
     @JoinColumn(name = "patient_id", referencedColumnName = "patientId")
     private PtInfo ptInfo;
+    @Column(nullable = false)
+    private boolean isCompleted = false;
 
     // --- Constructors ---
     public Appointment() {}
 
-    public Appointment(long appointmentID, String patientName,
-                       Gender gender, int age, Doctor doctor,
-                       Shift shift, Slot slot ,LocalDate date,String message, PtInfo ptInfo) {
+    public Appointment(long appointmentID, String patientName,Gender gender, int age,
+                       Doctor doctor,Shift shift, Slot slot ,LocalDate date,
+                       String message, PtInfo ptInfo , boolean isCompleted) {
         this.appointmentID = appointmentID;
         this.patientName = patientName;
         this.gender = gender;
@@ -53,6 +55,7 @@ public class Appointment {
         this.date = date;
         this.message = message;
         this.ptInfo = ptInfo;
+        this.isCompleted = isCompleted;
     }
 
     // --- Getters and Setters ---
@@ -89,5 +92,13 @@ public class Appointment {
 
     public void setSlot(Slot slot) {
         this.slot = slot;
+    }
+
+    public boolean isCompleted() {
+        return isCompleted;
+    }
+
+    public void setCompleted(boolean completed) {
+        isCompleted = completed;
     }
 }

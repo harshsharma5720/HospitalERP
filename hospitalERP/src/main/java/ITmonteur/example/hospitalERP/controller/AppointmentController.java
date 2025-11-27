@@ -57,6 +57,21 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentDTO);
     }
 
+    @GetMapping("/patientCompletedAppointments/{userId}")
+    public ResponseEntity<List<AppointmentDTO>> getAllPatientCompletedAppointments(@PathVariable Long userId) {
+        logger.info("Fetching completed appointments for patient ID: {}", userId);
+        List<AppointmentDTO> appointmentDTOList = this.appointmentService.getAllPatientCompletedAppointments(userId);
+        logger.info("Total completed appointments found for patient ID {}: {}", userId, appointmentDTOList.size());
+        return ResponseEntity.ok(appointmentDTOList);
+    }
+    @GetMapping("/patientPendingAppointments/{userId}")
+    public ResponseEntity<List<AppointmentDTO>> getAllPatientPendingAppointments(@PathVariable Long userId) {
+        logger.info("Fetching pending appointments for patient ID: {}", userId);
+        List<AppointmentDTO> appointmentDTOList = this.appointmentService.getAllPatientPendingAppointments(userId);
+        logger.info("Total pending appointments found for patient ID {}: {}", userId, appointmentDTOList.size());
+        return ResponseEntity.ok(appointmentDTOList);
+    }
+
     @GetMapping("/getDoctorAppointments")
     public ResponseEntity<List<AppointmentDTO>> getAppointmentsForLoggedInDoctor(
             @RequestHeader("Authorization") String token) {

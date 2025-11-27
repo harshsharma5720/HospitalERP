@@ -109,6 +109,37 @@ public class AppointmentService {
         return true;
     }
 
+    public List<AppointmentDTO> getAllPatientCompletedAppointments(Long userId){
+        logger.info("Fetching completed appointments for patient ID: {}", userId);
+        Optional<PtInfo> patient = this.ptInfoRepository.findByUser_Id(userId);
+        if (patient.isEmpty()) {
+            throw new ResourceNotFoundException("Patient","userId", userId);
+        }
+        Long patientId = patient.get().getPatientId();
+        List<Appointment> appointments = this.appointmentRepository.findByPtInfo_PatientIdAndIsCompletedTrue(patientId);
+        List<AppointmentDTO> appointmentDTOList = appointments.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        logger.info("Total completed appointments fetched for patient ID {}: {}", patientId, appointmentDTOList.size());
+        return appointmentDTOList;
+
+    }
+
+    public List<AppointmentDTO> getAllPatientPendingAppointments(Long userId){
+        logger.info("Fetching pending appointments for patient ID: {}", userId);
+        Optional<PtInfo> patient = this.ptInfoRepository.findByUser_Id(userId);
+        if (patient.isEmpty()) {
+            throw new ResourceNotFoundException("Patient","userId", userId);
+        }
+        Long patientId = patient.get().getPatientId();
+        List<Appointment> appointments = this.appointmentRepository.findByPtInfo_PatientIdAndIsCompletedFalse(patientId);
+        List<AppointmentDTO> appointmentDTOList = appointments.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        logger.info("Total pending appointments fetched for patient ID {}: {}", patientId, appointmentDTOList.size());
+        return appointmentDTOList;
+    }
+
     public List<AppointmentDTO> getAppointmentsForDoctor(String token) {
 
         logger.info("Extracting JWT token to fetch doctor appointments");
@@ -138,9 +169,6 @@ public class AppointmentService {
                     return new ResourceNotFoundException("Appointment", "id", appointmentID);
                 });
 
-        // ---------------------------------------
-        // 🔥 ADDED: Extract data for delete email
-        // ---------------------------------------
         PtInfo ptInfo = appointment.getPtInfo();
         Doctor doctor = appointment.getDoctor();
         Slot slot = appointment.getSlot();
@@ -157,10 +185,6 @@ public class AppointmentService {
 
         // Release slot
         slotService.releaseSlot(slot.getId());
-
-        // ---------------------------------------
-        // 🔥 ADDED: Send delete confirmation email
-        // ---------------------------------------
         try {
             emailService.sendDeleteEmail(
                     patientEmail,

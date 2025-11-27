@@ -400,9 +400,7 @@ export default function AppointmentPage() {
 
               <div className="space-y-1 relative">
                 <label className="block text-xs text-gray-600 font-medium">Date</label>
-
                 <div className="flex items-center gap-2 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a]">
-
                   {/* Left Arrow */}
                   <button
                     type="button"
@@ -434,6 +432,15 @@ export default function AppointmentPage() {
 
                 </div>
               </div>
+
+              <textarea
+                name="message"
+                value={formData.message}
+                onChange={handleChange}
+                rows="3"
+                placeholder="Enter message (optional)"
+                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
+              ></textarea>
 
 
               <input
