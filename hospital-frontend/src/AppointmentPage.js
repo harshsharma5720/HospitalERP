@@ -81,6 +81,13 @@ export default function AppointmentPage() {
   }, [doctorName]);
 
   useEffect(() => {
+    const { doctorId, date, shift } = formData;
+    if (doctorId && date && shift) {
+      handleSlotFetch(); // auto trigger
+    }
+  }, [formData.doctorId, formData.date, formData.shift]);
+
+  useEffect(() => {
     setFormData((prev) => ({
       ...prev,
       date: selectedDate,
@@ -451,14 +458,6 @@ export default function AppointmentPage() {
                 placeholder="Patient Info ID (optional)"
                 className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
               />
-
-              <button
-                type="button"
-                onClick={handleSlotFetch}
-                className="w-full bg-gradient-to-br from-[#1E63DB] to-[#27496d] dark:from-[#50d4f2] dark:to-[#3bc2df] text-white dark:text-black py-3 rounded-lg font-semibold hover:opacity-90 transition"
-              >
-                Show Available Slots
-              </button>
 
               <button
                 type="submit"

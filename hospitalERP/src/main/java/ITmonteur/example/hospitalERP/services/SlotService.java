@@ -80,7 +80,12 @@ public class SlotService {
     public List<Slot> getAvailableSlots(Long doctorId, LocalDate date, Shift shift) {
         Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new RuntimeException("Doctor not found"));
-        return slotRepository.findByDoctorAndDateAndShiftAndAvailableTrue(doctor, date, shift);
+        List<Slot> slots= slotRepository.findByDoctorAndDateAndShiftAndAvailableTrue(doctor, date, shift);
+        if (date.equals(LocalDate.now())) {
+            LocalTime now = LocalTime.now();
+            slots.removeIf(slot -> slot.getStartTime().isBefore(now));
+        }
+        return slots;
     }
 
     public void bookSlot(Long slotId) {
