@@ -38,6 +38,8 @@ public class AppointmentService {
     private SlotService slotService;
     @Autowired
     private EmailService emailService;
+    @Autowired
+    private SmsService smsService;
 
     public List<AppointmentDTO> getAllAppointments(){
         logger.info("Fetching all appointments");
@@ -94,7 +96,7 @@ public class AppointmentService {
         appointmentRepository.save(appointment);
         logger.info("Appointment created successfully for slot {}", slot.getId());
         try {
-            emailService.sendBookingEmail(
+            this.emailService.sendBookingEmail(
                     ptInfo.getEmail(),
                     ptInfo.getPatientName(),
                     doctor.getName(),
@@ -102,6 +104,31 @@ public class AppointmentService {
                     slot.getStartTime() + " - " + slot.getEndTime()
             );
             logger.info("Appointment email sent to {}", ptInfo.getEmail());
+            this.smsService.sendAppointmentSms(
+                    ptInfo.getContactNo(),
+                    ptInfo.getPatientName(),doctor.getName(),
+                    slot.getDate().toString(),
+                    slot.getStartTime() + " - " + slot.getEndTime()
+            );
+            logger.info("Appointment SMS sent to {}", ptInfo.getContactNo());
+            Doctor doctor1 = this.doctorRepository.findByName(doctor.getName())
+                    .orElseThrow(() -> new ResourceNotFoundException("Doctor", "name", doctor.getName()));
+            this.emailService.sendDoctorNotificationEmail(
+                    doctor1.getEmail(),
+                    ptInfo.getPatientName(),
+                    doctor.getName(),
+                    slot.getDate().toString(),
+                    slot.getStartTime() + " - " + slot.getEndTime()
+            );
+            logger.info("Appointment email sent to {}", doctor1.getEmail());
+            this.smsService.sendDoctorSms(
+                    doctor1.getPhoneNumber(),
+                    ptInfo.getPatientName(),
+                    doctor.getName(),
+                    slot.getDate().toString(),
+                    slot.getStartTime() + " - " + slot.getEndTime()
+            );
+            logger.info("Appointment SMS sent to {}", doctor1.getPhoneNumber());
         } catch (Exception e) {
             logger.error("Failed to send appointment email: {}", e.getMessage());
         }
@@ -173,12 +200,6 @@ public class AppointmentService {
         Doctor doctor = appointment.getDoctor();
         Slot slot = appointment.getSlot();
 
-        String patientEmail = ptInfo.getEmail();
-        String patientName = ptInfo.getPatientName();
-        String doctorName = doctor.getName();
-        String date = slot.getDate().toString();
-        String time = slot.getStartTime() + " - " + slot.getEndTime();
-
         // Delete appointment
         this.appointmentRepository.deleteById(appointmentID);
         logger.info("Appointment deleted successfully with ID: {}", appointmentID);
@@ -186,14 +207,24 @@ public class AppointmentService {
         // Release slot
         slotService.releaseSlot(slot.getId());
         try {
-            emailService.sendDeleteEmail(
-                    patientEmail,
-                    patientName,
-                    doctorName,
-                    date,
-                    time
+            this.emailService.sendDeleteEmail(
+                    ptInfo.getEmail(), ptInfo.getPatientName(),
+                    doctor.getName(), slot.getDate().toString(),
+                    slot.getStartTime() + " - " + slot.getEndTime()
             );
-            logger.info("Delete email sent successfully to {}", patientEmail);
+            logger.info("Delete email sent successfully to {}", ptInfo.getEmail());
+            this.smsService.sendAppointmentCancelSms(
+                    ptInfo.getContactNo(), ptInfo.getPatientName(),
+                    doctor.getName(), slot.getDate().toString(),
+                    slot.getStartTime() + " - " + slot.getEndTime()
+            );
+            logger.info("Delete SMS sent successfully to {}", ptInfo.getContactNo());
+            this.smsService.sendDoctorCancelSms(
+                    doctor.getPhoneNumber(),ptInfo.getPatientName(),
+                    doctor.getName(), slot.getDate().toString(),
+                    slot.getStartTime() + " - " + slot.getEndTime()
+            );
+            logger.info("Delete SMS sent successfully to {}", doctor.getPhoneNumber());
         } catch (Exception e) {
             logger.error("Failed to send delete email: {}", e.getMessage());
         }
