@@ -340,6 +340,16 @@ export default function ProfilePage({ onClose }) {
               )}
             </div>
           </section>
+          {(role === "ROLE_DOCTOR" || role === "ROLE_RECEPTIONIST") && (
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => navigate("/leave-management")}
+                className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded-lg font-semibold shadow-md"
+              >
+                Manage Leaves
+              </button>
+            </div>
+          )}
 
           <section className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] dark:from-[#111a3b] dark:to-[#0f172a] rounded-2xl p-6 shadow-2xl">
               <div className="flex justify-between items-center mb-3">

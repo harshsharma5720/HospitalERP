@@ -15,4 +15,7 @@ public interface SlotRepository extends JpaRepository<Slot,Long> {
     List<Slot> findByDoctorAndDateAndShiftAndAvailableTrue(Doctor doctor, LocalDate date, Shift shift);
 
     List<Slot> findByDoctorAndDateAndShift(Doctor doctor, LocalDate date, Shift shift);
+    List<Slot> findByDoctor_IdAndDateBetween(Long doctorId, LocalDate start, LocalDate end);
+
+
 }

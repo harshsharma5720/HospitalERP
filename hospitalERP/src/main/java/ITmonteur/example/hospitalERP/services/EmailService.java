@@ -106,4 +106,34 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    public void sendDoctorLeaveCancelEmail(String toEmail, String patientName, String doctorName, String date) throws MessagingException {
+
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+        helper.setTo(toEmail);
+        helper.setSubject("Appointment Cancelled Due to Doctor Leave - Hospital ERP");
+
+        String htmlContent =
+                "<div style='font-family: Arial, sans-serif; padding: 20px; border-radius:10px; border:1px solid #ddd;'>"
+                        + "<h2 style='color:#C0392B;'>Appointment Cancelled ❌</h2>"
+                        + "<p>Dear <strong>" + patientName + "</strong>,</p>"
+                        + "<p>Your appointment with <strong>Dr. " + doctorName + "</strong> has been cancelled due to doctor's leave.</p>"
+                        + "<table style='width:100%; font-size:14px;'>"
+                        + "<tr><td><strong>Date:</strong></td><td>" + date + "</td></tr>"
+                        + "</table>"
+                        + "<br/>"
+                        + "<p>Please <strong>rebook</strong> your appointment from the portal.</p>"
+                        + "<br/>"
+                        + "<p>Thank you,</p>"
+                        + "<h3 style='color:#1B4F72;'>Hospital ERP Team</h3>"
+                        + "<hr style='border-top:1px solid #ccc;'/>"
+                        + "<small style='color:#777;'>This is an automated email. Please do not reply.</small>"
+                        + "</div>";
+
+        helper.setText(htmlContent, true);
+        mailSender.send(message);
+    }
+
+
 }

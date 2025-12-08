@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Lottie from "lottie-react";
 import LoginAnim from "./assets/LoginAnim.json";
+import { getRoleFromToken, getUserIdFromToken } from "./utils/jwtUtils";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -32,7 +33,17 @@ export default function LoginPage() {
       if (token) {
         localStorage.setItem("jwtToken", token);
         alert("Login successful!");
-        navigate("/appointments");
+        const role = getRoleFromToken(token);
+        if (role === "ROLE_ADMIN") {
+          navigate("/admin/dashboard");
+        } else if (role === "ROLE_DOCTOR") {
+          navigate("/"); // doctor → home page
+        } else if (role === "ROLE_PATIENT") {
+          navigate("/appointments"); // patient → appointments page
+        } else {
+          navigate("/");
+        }
+
       } else {
         setError("Login successful, but token not received.");
       }

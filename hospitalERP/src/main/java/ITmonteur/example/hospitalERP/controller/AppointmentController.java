@@ -90,6 +90,22 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentDTOList);
     }
 
+    @GetMapping("/allPendingAppointments")
+    public ResponseEntity<List<AppointmentDTO>> getAllPendingAppointments() {
+        logger.info("Fetching all pending appointments");
+        List<AppointmentDTO> appointmentDTOList = this.appointmentService.getAllPendingAppointments();
+        logger.info("Total pending appointments fetched: {}", appointmentDTOList.size());
+        return ResponseEntity.ok(appointmentDTOList);
+    }
+
+    @GetMapping("/allCompletedAppointments")
+    public ResponseEntity<List<AppointmentDTO>> getAllCompletedAppointments() {
+        logger.info("Fetching all completed appointments");
+        List<AppointmentDTO> appointmentDTOList = this.appointmentService.getAllCompletedAppointments();
+        logger.info("Total completed appointments fetched: {}", appointmentDTOList.size());
+        return ResponseEntity.ok(appointmentDTOList);
+    }
+
     // Create a new appointment
     @PostMapping("/NewAppointment")
     public ResponseEntity<String> createNewAppointment(@RequestBody AppointmentDTO appointmentDTO) {

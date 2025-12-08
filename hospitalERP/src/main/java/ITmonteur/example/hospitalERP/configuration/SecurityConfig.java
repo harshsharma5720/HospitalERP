@@ -47,6 +47,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/doctor/**").hasAnyRole("DOCTOR", "ADMIN")
                         .requestMatchers("/api/patient/**").hasAnyRole("PATIENT", "ADMIN")
                         .requestMatchers("/api/receptionist/**").hasAnyRole("RECEPTIONIST", "ADMIN")
+                        .requestMatchers("/api/leaves/**").hasAnyRole("ADMIN", "DOCTOR", "RECEPTIONIST")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

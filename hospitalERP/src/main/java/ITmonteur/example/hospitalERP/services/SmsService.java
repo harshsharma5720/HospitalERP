@@ -79,8 +79,18 @@ public class SmsService {
                 messageBody
         ).create();
     }
+    public void sendDoctorLeaveCancelSms(String phoneNumber, String patientName, String doctorName, String date) {
 
+        String messageBody = "Dear " + patientName + ",\n"
+                + "Your appointment with Dr. " + doctorName + " on " + date + " is cancelled due to doctor's leave.\n"
+                + "Please reschedule your appointment by selecting another date.\n"
+                + "- Hospital ERP";
 
-
+        Message.creator(
+                new PhoneNumber(phoneNumber),
+                new PhoneNumber(twilioConfig.getTrialNumber()),
+                messageBody
+        ).create();
+    }
 
 }

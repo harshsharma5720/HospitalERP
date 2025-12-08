@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -22,7 +23,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query("SELECT a FROM Appointment a WHERE a.doctor = :doctor AND a.shift = :shift")
     List<Appointment> findByDoctorAndShift(@Param("doctor") Doctor doctor,
                                            @Param("shift") Shift shift);
-
+    List<Appointment> findByDoctor_IdAndDateBetween(Long doctorId, LocalDate start, LocalDate end);
     List<Appointment> findByDoctor_Id(Long doctorId);
     List<Appointment> findByPtInfo_PatientIdAndIsCompletedTrue(Long patientId);
     List<Appointment> findByPtInfo_PatientIdAndIsCompletedFalse(Long patientId);

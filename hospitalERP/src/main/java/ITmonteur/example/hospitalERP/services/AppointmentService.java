@@ -250,7 +250,11 @@ public class AppointmentService {
                     logger.warn("Appointment not found with ID: {}", appointmentID);
                     return new ResourceNotFoundException("Appointment", "appointmentID", appointmentID);
                 });
-
+        if(appointment.getStatus() == AppointmentStatus.CANCELLED_BY_DOCTOR ||
+                appointment.getStatus() == AppointmentStatus.CANCELLED_BY_PATIENT ||
+                appointment.getStatus() == AppointmentStatus.COMPLETED) {
+            throw new RuntimeException("Cannot update a cancelled or completed appointment. Please create a new one.");
+        }
         appointment.setPatientName(appointmentDTO.getPatientName());
         appointment.setAge(appointmentDTO.getAge());
         appointment.setGender(appointmentDTO.getGender());
@@ -286,6 +290,26 @@ public class AppointmentService {
         AppointmentDTO updatedDTO = convertToDTO(updatedAppointment);
         logger.info("Appointment updated successfully with ID: {}", appointmentID);
         return updatedDTO;
+    }
+
+    public List<AppointmentDTO> getAllPendingAppointments(){
+        logger.info("Fetching all pending appointments");
+        List<Appointment> appointments = this.appointmentRepository.findAllByIsCompletedFalse();
+        List<AppointmentDTO> appointmentDTOList = appointments.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        logger.info("Total pending appointments fetched: {}", appointmentDTOList.size());
+        return appointmentDTOList;
+    }
+
+    public List<AppointmentDTO> getAllCompletedAppointments(){
+        logger.info("Fetching all completed appointments");
+        List<Appointment> appointments = this.appointmentRepository.findAllByIsCompletedTrue();
+        List<AppointmentDTO> appointmentDTOList = appointments.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        logger.info("Total completed appointments fetched: {}", appointmentDTOList.size());
+        return appointmentDTOList;
     }
 
     public List<AppointmentDTO> getAppointmentsByDrName(String doctorName){

@@ -32,6 +32,9 @@ public class Appointment {
     private LocalDate date;
     @Column(columnDefinition = "TEXT")
     private String message;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AppointmentStatus status = AppointmentStatus.SCHEDULED; // SCHEDULED, COMPLETED, CANCELLED
 
     @ManyToOne
     @JoinColumn(name = "patient_id", referencedColumnName = "patientId")
@@ -44,7 +47,7 @@ public class Appointment {
 
     public Appointment(long appointmentID, String patientName,Gender gender, int age,
                        Doctor doctor,Shift shift, Slot slot ,LocalDate date,
-                       String message, PtInfo ptInfo , boolean isCompleted) {
+                       String message, AppointmentStatus status ,PtInfo ptInfo , boolean isCompleted) {
         this.appointmentID = appointmentID;
         this.patientName = patientName;
         this.gender = gender;
@@ -54,6 +57,7 @@ public class Appointment {
         this.slot=slot;
         this.date = date;
         this.message = message;
+        this.status = status;
         this.ptInfo = ptInfo;
         this.isCompleted = isCompleted;
     }
@@ -82,6 +86,14 @@ public class Appointment {
 
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
+
+    public AppointmentStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(AppointmentStatus status) {
+        this.status = status;
+    }
 
     public PtInfo getPtInfo() { return ptInfo; }
     public void setPtInfo(PtInfo ptInfo) { this.ptInfo = ptInfo; }
