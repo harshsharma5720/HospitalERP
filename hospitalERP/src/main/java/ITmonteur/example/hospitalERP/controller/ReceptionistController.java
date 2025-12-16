@@ -3,6 +3,7 @@ package ITmonteur.example.hospitalERP.controller;
 import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.dto.ReceptionistDTO;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
+import ITmonteur.example.hospitalERP.services.DoctorService;
 import ITmonteur.example.hospitalERP.services.ReceptionistService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,12 +24,14 @@ public class ReceptionistController {
 
     @Autowired
     private ReceptionistService receptionistService;
+    @Autowired
+    private DoctorService doctorService;
 
     // Get all receptionists
     @GetMapping("/getAll")
     public ResponseEntity<List<ReceptionistDTO>> getAllReceptionist() {
         logger.info("GET request received to fetch all receptionists");
-        List<ReceptionistDTO> receptionistDTOList = receptionistService.getAllReceptionist();
+        List<ReceptionistDTO> receptionistDTOList = this.receptionistService.getAllReceptionist();
         logger.info("Total receptionists retrieved: {}", receptionistDTOList.size());
         return ResponseEntity.ok(receptionistDTOList);
     }
@@ -38,7 +41,7 @@ public class ReceptionistController {
     public ResponseEntity<ReceptionistDTO> getReceptionistByID(@PathVariable long receptionistId) {
         logger.info("GET request received for receptionist ID: {}", receptionistId);
         try {
-            ReceptionistDTO receptionistDTO = receptionistService.getReceptionistByID(receptionistId);
+            ReceptionistDTO receptionistDTO = this.receptionistService.getReceptionistByID(receptionistId);
             logger.info("Receptionist retrieved: {}", receptionistDTO.getName());
             return ResponseEntity.ok(receptionistDTO);
         } catch (ResourceNotFoundException e) {
@@ -54,7 +57,7 @@ public class ReceptionistController {
     @GetMapping("/getAppointments")
     public ResponseEntity<List<AppointmentDTO>> getAllAppointments() {
         logger.info("GET request received to fetch all appointments");
-        List<AppointmentDTO> appointmentDTOList = receptionistService.getAllAppointments();
+        List<AppointmentDTO> appointmentDTOList = this.receptionistService.getAllAppointments();
         logger.info("Total appointments retrieved: {}", appointmentDTOList.size());
         return ResponseEntity.ok(appointmentDTOList);
     }
@@ -64,7 +67,7 @@ public class ReceptionistController {
     public ResponseEntity<List<AppointmentDTO>> getAllAppointmentsOfDoctor(@PathVariable String doctorName) {
         logger.info("GET request received for appointments of doctor: {}", doctorName);
         try {
-            List<AppointmentDTO> appointmentDTOList = receptionistService.getAllAppointmentsByDoctorName(doctorName);
+            List<AppointmentDTO> appointmentDTOList = this.receptionistService.getAllAppointmentsByDoctorName(doctorName);
             logger.info("Appointments retrieved for doctor {}: {}", doctorName, appointmentDTOList.size());
             return ResponseEntity.ok(appointmentDTOList);
         } catch (Exception e) {
@@ -77,7 +80,7 @@ public class ReceptionistController {
     @PostMapping("/NewAppointment")
     public ResponseEntity<String> createNewAppointment(@RequestBody AppointmentDTO appointmentDTO) {
         logger.info("POST request received to create appointment for patient: {}", appointmentDTO.getPatientName());
-        boolean success = receptionistService.createAppointment(appointmentDTO);
+        boolean success = this.receptionistService.createAppointment(appointmentDTO);
         if (success) {
             logger.info("Appointment created successfully for patient: {}", appointmentDTO.getPatientName());
             return ResponseEntity.ok("Your slot has been booked");
@@ -87,11 +90,27 @@ public class ReceptionistController {
         }
     }
 
+    @GetMapping("/doctorPendingAppointments/{userId}")
+    public ResponseEntity<List<AppointmentDTO>> getPendingAppointmentsForDoctor(@PathVariable Long userId) {
+        logger.info("Fetching pending appointments for doctor ID: {}", userId);
+        List<AppointmentDTO> appointments = this.doctorService.getAllPendingAppointmentsByDoctorId(userId);
+        logger.info("Total pending appointments found for doctor ID {}: {}", userId, appointments.size());
+        return ResponseEntity.ok(appointments);
+    }
+
+    @GetMapping("/doctorCompletedAppointments/{userId}")
+    public ResponseEntity<List<AppointmentDTO>> getCompletedAppointmentsForDoctor(@PathVariable Long userId) {
+        logger.info("Fetching completed appointments for doctor ID: {}", userId);
+        List<AppointmentDTO> appointments = this.doctorService.getAllCompletedAppointmentsByDoctorId(userId);
+        logger.info("Total completed appointments found for doctor ID {}: {}", userId, appointments.size());
+        return ResponseEntity.ok(appointments);
+    }
+
     // Delete receptionist
     @DeleteMapping("/delete/{receptionistId}")
     public ResponseEntity<String> deleteReceptionist(@PathVariable Long receptionistId) {
         logger.info("DELETE request received for receptionist ID: {}", receptionistId);
-        boolean deleted = receptionistService.deleteReceptionist(receptionistId);
+        boolean deleted = this.receptionistService.deleteReceptionist(receptionistId);
         if (deleted) {
             logger.info("Receptionist deleted successfully with ID: {}", receptionistId);
             return ResponseEntity.ok("Receptionist deleted successfully!");
@@ -105,7 +124,7 @@ public class ReceptionistController {
     @DeleteMapping("/deleteAppointment/{appointmentId}")
     public ResponseEntity<String> deleteAppointment(@PathVariable Long appointmentId) {
         logger.info("DELETE request received for appointment ID: {}", appointmentId);
-        boolean deleted = receptionistService.deleteAppointment(appointmentId);
+        boolean deleted = this.receptionistService.deleteAppointment(appointmentId);
         if (deleted) {
             logger.info("Appointment deleted successfully with ID: {}", appointmentId);
             return ResponseEntity.ok("Appointment deleted successfully!");
@@ -119,7 +138,7 @@ public class ReceptionistController {
     @DeleteMapping("/deleteAllAppointments")
     public ResponseEntity<String> deleteAllAppointments() {
         logger.info("DELETE request received to delete all appointments");
-        boolean deleted = receptionistService.deleteAllAppointments();
+        boolean deleted = this.receptionistService.deleteAllAppointments();
         if (deleted) {
             logger.info("All appointments deleted successfully");
             return ResponseEntity.ok("Appointments deleted successfully!");
@@ -133,7 +152,7 @@ public class ReceptionistController {
     @DeleteMapping("/receptionists")
     public ResponseEntity<String> deleteAllReceptionists() {
         logger.info("DELETE request received to delete all receptionists");
-        boolean isDeleted = receptionistService.deleteAllReceptionist();
+        boolean isDeleted = this.receptionistService.deleteAllReceptionist();
         if (isDeleted) {
             logger.info("All receptionists deleted successfully");
             return ResponseEntity.ok("All receptionists deleted successfully.");
@@ -163,7 +182,7 @@ public class ReceptionistController {
             }
         }
         try {
-            ReceptionistDTO updatedReceptionist = receptionistService.updateReceptionist(id, receptionistDTO);
+            ReceptionistDTO updatedReceptionist = this.receptionistService.updateReceptionist(id, receptionistDTO);
             logger.info("Receptionist updated successfully: {}", updatedReceptionist.getName());
             return ResponseEntity.ok(updatedReceptionist);
         } catch (Exception e) {

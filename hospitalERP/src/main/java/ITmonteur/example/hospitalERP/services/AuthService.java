@@ -95,8 +95,10 @@ public class AuthService {
                 Receptionist receptionist = new Receptionist();
                 receptionist.setEmail(savedUser.getEmail());
                 receptionist.setUserName(savedUser.getUsername());
+                receptionist.setName(savedUser.getUsername());
                 receptionist.setPhone(savedUser.getPhoneNumber());
                 receptionist.setUser(savedUser);
+                receptionist.setGender(Gender.OTHER);
                 receptionistRepository.save(receptionist);
                 logger.info("Receptionist entity created for user {}", savedUser.getUsername());
                 break;

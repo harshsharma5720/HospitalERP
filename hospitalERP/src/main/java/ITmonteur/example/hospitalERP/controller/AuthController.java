@@ -6,6 +6,7 @@ import ITmonteur.example.hospitalERP.dto.RegisterRequestDTO;
 import ITmonteur.example.hospitalERP.services.AuthService;
 import ITmonteur.example.hospitalERP.services.JWTService;
 import ITmonteur.example.hospitalERP.services.OTPService;
+import ITmonteur.example.hospitalERP.services.SmsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +32,8 @@ public class AuthController {
 
     @Autowired
     private OTPService otpService;
+    @Autowired
+    private SmsService smsService;
 
     // Register a new user (Doctor, Patient, Receptionist)
     @PostMapping("/register")
@@ -69,7 +72,7 @@ public class AuthController {
     public ResponseEntity<String> sendOtp(@RequestBody Map<String, String> request) {
         String phoneNumber = request.get("phone");
         logger.info("OTP request received for phone: {}", phoneNumber);
-        otpService.generateAndSendOTP(phoneNumber);
+        this.smsService.sendOtp(phoneNumber);
         return ResponseEntity.ok("OTP sent successfully to " + phoneNumber);
     }
 
@@ -80,7 +83,7 @@ public class AuthController {
         String otp = request.get("otp");
         logger.info("OTP : {}", otp);
 
-        boolean isVerified = otpService.verifyOTP(phoneNumber, otp);
+        boolean isVerified = this.smsService.verifyOtp(phoneNumber, otp);
         Map<String, Object> response = new HashMap<>();
         response.put("success", isVerified);
         response.put("message", isVerified ? "OTP verified successfully" : "Invalid or expired OTP");

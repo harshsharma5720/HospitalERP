@@ -2,6 +2,7 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.dto.*;
 import ITmonteur.example.hospitalERP.entities.*;
+import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.*;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class AdminService {
@@ -37,6 +39,8 @@ public class AdminService {
     private SmsService smsService;
     @Autowired
     private SlotRepository slotRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(AdminService.class);
 
@@ -123,6 +127,79 @@ public class AdminService {
                     leave.getStartDate(), leave.getEndDate(), doctor.getId());
         }
         return leave;
+    }
+
+
+    public List<UserDTO> getAllUsers() {
+        logger.info("Fetching all users...");
+        List<UserDTO> users = userRepository.findAll()
+                .stream()
+                .map(this::convertToDto)
+                .toList();
+        if (users.isEmpty()) {
+            logger.warn("No users found in the system.");
+        } else {
+            logger.info("Total users fetched: {}", users.size());
+        }
+        return users;
+    }
+
+
+    public UserDTO getUserById(Long userId) {
+        logger.info("Fetching user by id={}", userId);
+
+        return userRepository.findById(userId)
+                .map(user -> {
+                    logger.info("User found: username={}, id={}", user.getUsername(), user.getId());
+                    return convertToDto(user);
+                })
+                .orElseThrow(() -> {
+                    logger.warn("User not found for id={}", userId);
+                    return new ResourceNotFoundException("User", "id", userId);
+                });
+    }
+
+
+    public boolean deleteUserById(Long userId) {
+        logger.info("Request received to delete userId={}", userId);
+        if (!userRepository.existsById(userId)) {
+            logger.warn("Delete failed — user not found with id={}", userId);
+            throw new ResourceNotFoundException("User", "id", userId);
+        }
+        try {
+            this.userRepository.deleteById(userId);
+            logger.info("User successfully deleted: id={}", userId);
+            return true;
+        } catch (Exception ex) {
+            logger.error("Error occurred while deleting user id={}: {}", userId, ex.getMessage());
+            throw new RuntimeException("Failed to delete user. Please try again.");
+        }
+    }
+
+    public boolean deleteAllUsers() {
+        logger.info("Request received to delete all users");
+        long count = userRepository.count();
+        if (count == 0) {
+            logger.warn("No users found to delete");
+            return false;
+        }
+        try {
+            this.userRepository.deleteAll();
+            logger.info("All users deleted successfully");
+            return true;
+        } catch (Exception ex) {
+            logger.error("Error occurred while deleting all users: {}", ex.getMessage());
+            throw new RuntimeException("Failed to delete all users. Please try again.");
+        }
+    }
+
+
+
+    private UserDTO convertToDto(User user) {
+        return modelMapper.map(user, UserDTO.class);
+    }
+    private User convertToEntity(UserDTO userDTO) {
+        return modelMapper.map(userDTO, User.class);
     }
 
 

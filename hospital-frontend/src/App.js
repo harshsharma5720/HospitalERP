@@ -19,6 +19,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import { getRoleFromToken, getUserIdFromToken } from "./utils/jwtUtils";
 import React, { useState, useEffect } from "react";
 import AdminLayout from "./pages/admin/AdminLayout";
+import ReceptionistAppointmentDashboard from "./ReceptionistAppointmentDashboard";
 
 function App() {
 const [role, setRole] = useState("");
@@ -62,6 +63,7 @@ useEffect(() => {
               <Route path="/relatives" element={<RelativesList />} />
               <Route path="/doctor-appointments" element={<DoctorAppointments />} />
               <Route path="/leave-management" element={<LeaveManagementPage />} />
+              <Route path="/receptionist-appointments" element={<ReceptionistAppointmentDashboard />} />
             </Routes>
 
             <Footer />

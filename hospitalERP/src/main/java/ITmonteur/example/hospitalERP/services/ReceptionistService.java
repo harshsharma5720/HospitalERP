@@ -79,6 +79,8 @@ public class ReceptionistService {
                     logger.warn("Doctor not found with name: {}", name);
                     return new RuntimeException("Doctor not found with name: " + name);
                 });
+        Long userId = doctor.getUser().getId();
+        logger.info("Doctor found with user ID: {}", userId);
 
         List<Appointment> appointments = appointmentRepository.findAppointmentsByDoctor(name);
         logger.info("Appointments found for doctor {}: {}", name, appointments.size());

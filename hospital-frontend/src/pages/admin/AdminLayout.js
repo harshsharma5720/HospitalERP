@@ -5,6 +5,8 @@ import TopNavbar from "../../components/TopNavbar";
 import Navbar from "../../components/Navbar";
 import AdminDashboard from "./AdminDashboard";
 import LeaveApproval from "./LeaveApproval";
+import ManageUsers from "./ManageUsers";
+import RegisterUser from "./RegisterUser";
 
 export default function AdminLayout({ children }) {
   return (
@@ -19,6 +21,8 @@ export default function AdminLayout({ children }) {
           <Routes>
                       <Route path="dashboard" element={<AdminDashboard />} />
                       <Route path="leave-approval" element={<LeaveApproval />} />
+                      <Route path="manage-users" element={<ManageUsers />} />
+                      <Route path="register-user" element={<RegisterUser />} />
           </Routes>
         </div>
       </div>

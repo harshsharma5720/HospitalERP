@@ -55,9 +55,9 @@ export default function ProfilePage({ onClose }) {
         };
       case "ROLE_RECEPTIONIST":
         return {
-          getUrl: (id) => `http://localhost:8080/api/receptionist/get/${id}`,
+          getUrl: (id) => `http://localhost:8080/api/receptionist/getReceptionist/${id}`,
           updateUrl: (id) =>
-            `http://localhost:8080/api/receptionist/update/${id}`,
+            `http://localhost:8080/api/receptionist/${id}`,
           appointmentUrl: (id) =>
             `http://localhost:8080/api/receptionist/appointments/${id}`,
         };
@@ -351,12 +351,17 @@ export default function ProfilePage({ onClose }) {
             </div>
           )}
 
-          <section className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] dark:from-[#111a3b] dark:to-[#0f172a] rounded-2xl p-6 shadow-2xl">
+          {/* SHOW RELATIVES ONLY FOR PATIENT */}
+          {role === "ROLE_PATIENT" && (
+            <section className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] dark:from-[#111a3b] dark:to-[#0f172a] rounded-2xl p-6 shadow-2xl">
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-xl font-bold">Your Relatives</h2>
+
                 <div className="flex gap-4 mt-4">
                   <button
-                    onClick={() => navigate("/add-relative", { state: { patientId: userData.patientId } })}
+                    onClick={() =>
+                      navigate("/add-relative", { state: { patientId: userData.patientId } })
+                    }
                     className="text-sm font-semibold px-4 py-2 rounded-lg
                                bg-blue-600 text-white
                                border border-blue-600
@@ -366,7 +371,9 @@ export default function ProfilePage({ onClose }) {
                   </button>
 
                   <button
-                    onClick={() => navigate("/relatives", { state: { patientId: userData.patientId } })}
+                    onClick={() =>
+                      navigate("/relatives", { state: { patientId: userData.patientId } })
+                    }
                     className="text-sm font-semibold px-4 py-2 rounded-lg
                                border border-blue-600
                                text-blue-700 hover:bg-blue-600 hover:text-white transition"
@@ -374,7 +381,6 @@ export default function ProfilePage({ onClose }) {
                     View All
                   </button>
                 </div>
-
               </div>
 
               {relatives && relatives.length > 0 ? (
@@ -394,7 +400,9 @@ export default function ProfilePage({ onClose }) {
               ) : (
                 <p className="text-gray-500">No relatives added yet.</p>
               )}
-          </section>
+            </section>
+          )}
+
 
           {/* APPOINTMENT SUMMARY */}
           <section className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] dark:from-[#111a3b] dark:to-[#0f172a] rounded-2xl p-6 shadow-2xl">

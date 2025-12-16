@@ -131,6 +131,34 @@ export default function Navbar() {
                <span>My Appointments</span>
           </NavLink>
         )}
+        {role === "ROLE_RECEPTIONIST" && (
+          <NavLink
+            to={`/receptionist-appointments`}
+               className={({ isActive }) =>
+                                      `flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200
+
+                                      /* LIGHT MODE */
+                                      hover:bg-white hover:text-teal-700
+
+                                      /* DARK MODE */
+                                      dark:hover:bg-gradient-to-br
+                                      dark:hover:from-[#50d4f2]
+                                      dark:hover:to-[#3bc2df] dark:hover:text-black
+
+                                      ${
+                                        isActive
+                                          ? `
+                                            bg-white text-teal-700 font-semibold shadow-sm
+                                            dark:bg-[#50d4f2] dark:text-black
+                                            `
+                                          : ""
+                                      }`
+                        }
+          >
+               <Activity size={20} />
+               <span>My Appointments</span>
+          </NavLink>
+        )}
       </div>
 
       {/* RIGHT SIDE */}
