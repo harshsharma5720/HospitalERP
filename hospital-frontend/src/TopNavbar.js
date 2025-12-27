@@ -33,7 +33,7 @@ export default function TopNavbar() {
   const handleLogout = () => {
     localStorage.removeItem("jwtToken");
     setIsLoggedIn(false);
-    navigate("/login");
+    navigate("/");
     window.dispatchEvent(new Event("storage"));
   };
 

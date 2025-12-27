@@ -37,7 +37,7 @@ export default function LoginPage() {
         if (role === "ROLE_ADMIN") {
           navigate("/admin/dashboard");
         } else if (role === "ROLE_DOCTOR") {
-          navigate("/"); // doctor → home page
+          navigate("/doctor/dashboard"); // doctor → home page
         } else if (role === "ROLE_PATIENT") {
           navigate("/appointments"); // patient → appointments page
         } else {
