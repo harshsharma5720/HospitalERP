@@ -181,7 +181,7 @@ export default function DoctorDashboard() {
         </button>
 
         <button
-          onClick={() => navigate("/leave-management")}
+          onClick={() => navigate("/doctor/leave-management")}
           className="px-6 py-2 rounded-lg
                      bg-blue-600 text-white hover:bg-blue-700"
         >

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
-import Navbar from "./Navbar";
-import TopNavbar from "./TopNavbar";
-import { getRoleFromToken, getUserIdFromToken } from "./utils/jwtUtils";
+import TopNavbar from "../../components/TopNavbar";
+import { getRoleFromToken, getUserIdFromToken } from "../../utils/jwtUtils";
 import { useNavigate } from "react-router-dom";
 
 export default function LeaveManagementPage() {
@@ -81,8 +80,6 @@ export default function LeaveManagementPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-[#0a1124]">
-      <TopNavbar />
-      <Navbar />
 
       <div className="max-w-5xl mx-auto animate-scaleUp mt-10 p-6 bg-white dark:bg-[#111a3b] rounded-xl shadow-xl">
         <h2 className="text-5xl text-center font-extrabold mb-6">

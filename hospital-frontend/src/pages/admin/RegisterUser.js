@@ -2,27 +2,32 @@ import React, { useState } from "react";
 import axios from "axios";
 
 export default function RegisterUser() {
-  const [role, setRole] = useState("");
-  const [user, setUser] = useState({ username: "", password: "" });
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    phone: "",
+    password: "",
+    role: "",
+  });
 
-  const token = localStorage.getItem("token"); // ⬅️ Token added here
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async () => {
-    let url = "";
-
-    if (role === "PATIENT") url = "http://localhost:8080/api/admin/patient";
-    if (role === "DOCTOR") url = "http://localhost:8080/api/admin/doctor";
-    if (role === "RECEPTIONIST") url = "http://localhost:8080/api/admin/receptionist";
-
     try {
-      await axios.post(url, user, {
-        headers: { Authorization: `Bearer ${token}` }, // ⬅️ Token added to headers
+      await axios.post("http://localhost:8080/api/auth/register", {
+        email: formData.email,
+        username: formData.username,
+        phoneNumber: formData.phone,
+        password: formData.password,
+        role: formData.role,
       });
 
       alert("User registered successfully!");
     } catch (error) {
       alert("Registration failed!");
-      console.error(error);
+      console.error(error.response || error);
     }
   };
 
@@ -31,27 +36,45 @@ export default function RegisterUser() {
       <h1 className="text-3xl font-bold mb-6">Register New User</h1>
 
       <select
+        name="role"
         className="w-full border p-2 rounded mb-4"
-        onChange={(e) => setRole(e.target.value)}
+        onChange={handleChange}
       >
         <option value="">Select Role</option>
-        <option value="PATIENT">Patient</option>
+        <option value="ADMIN">Admin</option>
         <option value="DOCTOR">Doctor</option>
+        <option value="PATIENT">Patient</option>
         <option value="RECEPTIONIST">Receptionist</option>
       </select>
 
       <input
-        type="text"
+        name="username"
         placeholder="Username"
         className="w-full border p-2 rounded mb-4"
-        onChange={(e) => setUser({ ...user, username: e.target.value })}
+        onChange={handleChange}
       />
 
       <input
+        name="email"
+        type="email"
+        placeholder="Email"
+        className="w-full border p-2 rounded mb-4"
+        onChange={handleChange}
+      />
+
+      <input
+        name="phone"
+        placeholder="Phone Number"
+        className="w-full border p-2 rounded mb-4"
+        onChange={handleChange}
+      />
+
+      <input
+        name="password"
         type="password"
         placeholder="Password"
         className="w-full border p-2 rounded mb-4"
-        onChange={(e) => setUser({ ...user, password: e.target.value })}
+        onChange={handleChange}
       />
 
       <button
