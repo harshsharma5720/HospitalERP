@@ -12,7 +12,7 @@ export default function RegisterPage() {
     otp: "",
     password: "",
     confirmPassword: "",
-    role: "",
+    role: "PATIENT",
   });
 
   const [error, setError] = useState("");
@@ -286,26 +286,6 @@ export default function RegisterPage() {
               "
               required
             />
-
-            {/* Role */}
-            <select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className="
-                w-full px-4 py-3 rounded-lg
-                bg-white/70 text-gray-900 placeholder-gray-500
-                dark:bg-[#0f172a] dark:text-[#50d4f2] dark:placeholder-gray-400
-                focus:outline-none focus:ring-2 focus:ring-[#1e3d59] dark:focus:ring-[#50d4f2]
-              "
-              required
-            >
-              <option value="">Select Role</option>
-              <option value="ADMIN">Admin</option>
-              <option value="DOCTOR">Doctor</option>
-              <option value="PATIENT">Patient</option>
-              <option value="RECEPTIONIST">Receptionist</option>
-            </select>
 
             {/* Register */}
             <button
