@@ -117,7 +117,7 @@ export default function DoctorPage() {
 
           <div className="w-40 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 dark:from-[#50d4f2] dark:to-[#63e6ff] mx-auto mb-10 rounded-full"></div>
 
-          <p className="text-gray-900 dark:text-gray-300 text-lg max-w-2xl mx-auto mb-8">
+          <p className="text-gray-900 dark:text-gray-300 text-lg max-w-2xl mx-auto mb-8 mt-1">
             Meet our experienced and specialized doctors.
           </p>
         </div>
@@ -145,7 +145,7 @@ export default function DoctorPage() {
 
             <button
               type="submit"
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition
+              className="bg-gradient-to-r from-[#1E63DB] to-[#27496d] text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition
               dark:bg-[#1E63DB] dark:hover:bg-[#27496d]"
             >
               Search

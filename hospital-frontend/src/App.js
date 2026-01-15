@@ -20,7 +20,7 @@ import ReceptionistAppointmentDashboard from "./ReceptionistAppointmentDashboard
 import AdminLayout from "./pages/admin/AdminLayout";
 import DoctorLayout from "./pages/doctor/DoctorLayout";
 
-import { getRoleFromToken } from "./utils/jwtUtils";
+import { getRoleFromToken,isTokenExpired } from "./utils/jwtUtils";
 
 function App() {
   const [role, setRole] = useState("");
@@ -32,6 +32,20 @@ function App() {
       const extractedRole = getRoleFromToken(token);
       setRole(extractedRole);
     }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("jwtToken");
+
+    if (!token || isTokenExpired(token)) {
+      localStorage.removeItem("jwtToken");
+      setRole("");
+    } else {
+      const extractedRole = getRoleFromToken(token);
+      setRole(extractedRole);
+    }
+
     setLoading(false);
   }, []);
 

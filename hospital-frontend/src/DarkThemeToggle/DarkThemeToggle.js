@@ -46,7 +46,7 @@ export default function DarkThemeToggle() {
         transition
       "
     >
-      {darkMode ? "🌙 Dark" : "☀️ Light"}
+      {darkMode ? "🌙 Dark" : "☀ Light"}
     </button>
   );
 }

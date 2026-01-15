@@ -50,7 +50,8 @@ export default function TopNavbar() {
     >
       {/* LEFT: LOGO */}
       <div className="flex items-center gap-2">
-        <img src="download.jpeg" alt="Hospital Logo" className="h-10 rounded-full" />
+        <img src="favicon.png" alt="Hospital Logo" className="h-10 rounded-full" />
+        <h1 className="text-2xl font-bold text-black dark:text-[#50d4f2]">HospitalERP</h1>
       </div>
 
       {/* CENTER: INFO */}
@@ -85,7 +86,7 @@ export default function TopNavbar() {
       <div className="flex items-center gap-3">
         {isLoggedIn ? (
           <>
-            <span className="text-teal-700 dark:text-[#50d4f2] font-semibold">
+            <span className="text-black dark:text-[#50d4f2] font-semibold">
               {username}
             </span>
 
@@ -93,7 +94,7 @@ export default function TopNavbar() {
               onClick={handleLogout}
               className="
                 flex items-center gap-2 px-4 py-2 rounded-xl
-                bg-[#1E63DB] dark:bg-[#50d4f2]
+                bg-gradient-to-r from-[#1E63DB] to-[#27496d] dark:bg-[#50d4f2]
                 text-white dark:text-black
                 shadow-lg hover:opacity-90 transition
               "
