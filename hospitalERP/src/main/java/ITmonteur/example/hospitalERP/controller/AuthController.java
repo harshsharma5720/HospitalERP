@@ -39,7 +39,7 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<AuthResponseDTO> register(@RequestBody RegisterRequestDTO request) {
         logger.info("Register request received for username: {}", request.getUsername());
-        AuthResponseDTO response = authService.register(request);
+        AuthResponseDTO response = this.authService.register(request);
         logger.info("User registered successfully: {} | Role: {}", request.getUsername(), request.getRole());
         return ResponseEntity.ok(response);
     }
@@ -48,7 +48,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponseDTO> login(@RequestBody LoginRequestDTO request) {
         logger.info("Login request received for username: {}", request.getUsername());
-        AuthResponseDTO response = authService.login(request);
+        AuthResponseDTO response = this.authService.login(request);
         logger.info("User logged in successfully: {}", request.getUsername());
         return ResponseEntity.ok(response);
     }

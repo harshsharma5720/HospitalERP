@@ -49,7 +49,7 @@ public class PtInfoController {
 //    @PreAuthorize("hasAnyRole('DOCTOR', 'PATIENT', 'RECEPTIONIST')")
     public ResponseEntity<List<DoctorDTO>> getAllDoctors() {
         logger.info("Fetching all doctors");
-        List<DoctorDTO> doctors = doctorService.getAllDoctors();
+        List<DoctorDTO> doctors = this.doctorService.getAllDoctors();
         logger.info("Total doctors fetched: {}", doctors.size());
         return ResponseEntity.ok(doctors);
     }

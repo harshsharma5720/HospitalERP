@@ -53,6 +53,16 @@ export default function LeaveApproval() {
       {/* FILTER BUTTONS */}
       <div className="flex gap-3 mb-5">
         <button
+           className={`px-4 py-2 rounded-lg font-semibold ${
+             filter === "APPROVED"
+               ? "bg-green-600 text-white"
+               : "bg-gray-200 dark:bg-gray-700 dark:text-white"
+           }`}
+           onClick={() => setFilter("APPROVED")}
+        >
+          Approved Leaves
+        </button>
+        <button
           className={`px-4 py-2 rounded-lg font-semibold ${
             filter === "PENDING"
               ? "bg-blue-600 text-white"
@@ -63,16 +73,7 @@ export default function LeaveApproval() {
           Pending Leaves
         </button>
 
-        <button
-          className={`px-4 py-2 rounded-lg font-semibold ${
-            filter === "APPROVED"
-              ? "bg-green-600 text-white"
-              : "bg-gray-200 dark:bg-gray-700 dark:text-white"
-          }`}
-          onClick={() => setFilter("APPROVED")}
-        >
-          Approved Leaves
-        </button>
+
       </div>
 
       {/* TABLE */}

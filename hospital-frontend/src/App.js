@@ -1,6 +1,7 @@
-import { BrowserRouter as Router, Routes, Route , Navigate } from "react-router-dom";
-import React, { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 
+/* PUBLIC / PATIENT */
 import HomePage from "./HomePage";
 import AppointmentPage from "./AppointmentPage";
 import LoginPage from "./Login";
@@ -17,103 +18,100 @@ import AddRelativePage from "./AddRelativePage";
 import RelativesList from "./RelativesList";
 import ReceptionistAppointmentDashboard from "./ReceptionistAppointmentDashboard";
 
+/* ADMIN / DOCTOR */
 import AdminLayout from "./pages/admin/AdminLayout";
 import DoctorLayout from "./pages/doctor/DoctorLayout";
 
-import { getRoleFromToken,isTokenExpired } from "./utils/jwtUtils";
+/* UTILS */
+import { getRoleFromToken, isTokenExpired } from "./utils/jwtUtils";
 
 function App() {
-  const [role, setRole] = useState("");
+  const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const token = localStorage.getItem("jwtToken");
-    if (token) {
-      const extractedRole = getRoleFromToken(token);
-      setRole(extractedRole);
-    }
-    setLoading(false);
-  }, []);
-
+  // 🔐 Auth bootstrap (runs once)
   useEffect(() => {
     const token = localStorage.getItem("jwtToken");
 
     if (!token || isTokenExpired(token)) {
       localStorage.removeItem("jwtToken");
-      setRole("");
+      setRole(null);
     } else {
-      const extractedRole = getRoleFromToken(token);
-      setRole(extractedRole);
+      setRole(getRoleFromToken(token));
     }
 
     setLoading(false);
   }, []);
 
+  // ⏳ Prevent early routing
+  if (loading) {
+    return <div className="text-center mt-20 text-lg">Loading...</div>;
+  }
+
   return (
     <Router>
-
-      {/* ADMIN */}
-      {role === "ROLE_ADMIN" && (
-        <Routes>
-          <Route path="/admin/*" element={<AdminLayout />} />
-        </Routes>
-      )}
-
-      {/* DOCTOR */}
-      {role === "ROLE_DOCTOR" && (
-        <Routes>
-          <Route path="/doctor/*" element={<DoctorLayout />} />
-        </Routes>
-      )}
-
-      {/* PATIENT / PUBLIC */}
-      {!role && (
-        <div
-          className="
-            min-h-screen
-            bg-[#f8fafc] text-gray-900
-            dark:bg-[#0f172a] dark:text-gray-100
-            transition-colors duration-300
-          "
-        >
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/appointments" element={<AppointmentPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/doctors" element={<DoctorPage />} />
-            <Route path="/contact" element={<ContactUsPage />} />
-            <Route path="/treatments" element={<Treatments />} />
-            <Route path="/about" element={<AboutUs />} />
-            <Route path="/edit-profile" element={<EditProfilePage />} />
-            <Route path="/appointment-details" element={<AppointmentDetails />} />
-            <Route path="/doctor-profile/:doctorId" element={<DoctorProfile />} />
-            <Route path="/add-relative" element={<AddRelativePage />} />
-            <Route path="/relatives" element={<RelativesList />} />
-            <Route
-              path="/receptionist-appointments"
-              element={<ReceptionistAppointmentDashboard />}
-            />
-          </Routes>
-
-          <Footer />
-        </div>
-      )}
       <Routes>
-          {role === "ROLE_DOCTOR" && (
-           <Route
-              path="/"
-              element={<Navigate to="/doctor/dashboard" replace />}
-            />
-           )}
 
-          {role === "ROLE_ADMIN" && (
-            <Route
-              path="/"
-              element={<Navigate to="/admin/dashboard" replace />}
-            />
-          )}
+        {/* ===================== PUBLIC ROUTES ===================== */}
+        <Route path="/" element={<HomePage />} />
+        <Route path="/appointments" element={<AppointmentPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/doctors" element={<DoctorPage />} />
+        <Route path="/contact" element={<ContactUsPage />} />
+        <Route path="/treatments" element={<Treatments />} />
+        <Route path="/about" element={<AboutUs />} />
+        <Route path="/edit-profile" element={<EditProfilePage />} />
+        <Route path="/appointment-details" element={<AppointmentDetails />} />
+        <Route path="/doctor-profile/:doctorId" element={<DoctorProfile />} />
+        <Route path="/add-relative" element={<AddRelativePage />} />
+        <Route path="/relatives" element={<RelativesList />} />
+        <Route
+          path="/receptionist-appointments"
+          element={<ReceptionistAppointmentDashboard />}
+        />
+
+        {/* ===================== ADMIN ===================== */}
+        <Route
+          path="/admin/*"
+          element={
+            role === "ROLE_ADMIN"
+              ? <AdminLayout />
+              : <Navigate to="/login" replace />
+          }
+        />
+
+        {/* ===================== DOCTOR ===================== */}
+        <Route
+          path="/doctor/*"
+          element={
+            role === "ROLE_DOCTOR"
+              ? <DoctorLayout />
+              : <Navigate to="/login" replace />
+          }
+        />
+
+        {/* ===================== REDIRECT ROOT BASED ON ROLE ===================== */}
+        <Route
+          path="/redirect"
+          element={
+            role === "ROLE_ADMIN" ? (
+              <Navigate to="/admin/dashboard" replace />
+            ) : role === "ROLE_DOCTOR" ? (
+              <Navigate to="/doctor/dashboard" replace />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+
+        {/* ===================== FALLBACK ===================== */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+
       </Routes>
+
+      {/* Footer only for public */}
+      {!role && <Footer />}
 
     </Router>
   );

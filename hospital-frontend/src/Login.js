@@ -33,16 +33,7 @@ export default function LoginPage() {
       if (token) {
         localStorage.setItem("jwtToken", token);
         alert("Login successful!");
-        const role = getRoleFromToken(token);
-        if (role === "ROLE_ADMIN") {
-          navigate("/admin/dashboard");
-        } else if (role === "ROLE_DOCTOR") {
-          navigate("/doctor/dashboard"); // doctor → home page
-        } else if (role === "ROLE_PATIENT") {
-          navigate("/appointments"); // patient → appointments page
-        } else {
-          navigate("/");
-        }
+        window.location.href = "/redirect";
 
       } else {
         setError("Login successful, but token not received.");
@@ -209,3 +200,13 @@ export default function LoginPage() {
     </div>
   );
 }
+//const role = getRoleFromToken(token);
+//        if (role === "ROLE_ADMIN") {
+//          navigate("/admin/dashboard");
+//        } else if (role === "ROLE_DOCTOR") {
+//          navigate("/doctor/dashboard"); // doctor → home page
+//        } else if (role === "ROLE_PATIENT") {
+//          navigate("/appointments"); // patient → appointments page
+//        } else {
+//          navigate("/");
+//        }

@@ -42,7 +42,7 @@ public class SecurityConfig {
                                 "/api/patient/getAllBySpecialization/**",
                                 "/api/doctor/getDoctor/**"
                         ).permitAll()
-
+                        .requestMatchers("/api/doctor/getAll").hasRole("ADMIN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/doctor/**").hasAnyRole("DOCTOR", "ADMIN")
                         .requestMatchers("/api/patient/**").hasAnyRole("PATIENT", "ADMIN")

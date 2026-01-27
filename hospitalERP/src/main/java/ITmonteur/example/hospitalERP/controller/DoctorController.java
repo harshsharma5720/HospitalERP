@@ -33,7 +33,7 @@ public class DoctorController {
     @PostMapping("/addNewDoctor")
     public ResponseEntity<DoctorDTO> addDoctor(@RequestBody DoctorDTO doctorDTO) {
         logger.info("Adding new doctor: {}", doctorDTO.getName());
-        DoctorDTO savedDoctor = doctorService.registerDoctor(doctorDTO);
+        DoctorDTO savedDoctor = this.doctorService.registerDoctor(doctorDTO);
         logger.info("Doctor added successfully with ID: {}", savedDoctor.getId());
         return ResponseEntity.ok(savedDoctor);
     }
@@ -43,7 +43,7 @@ public class DoctorController {
 //    @PreAuthorize("hasAnyRole('DOCTOR', 'PATIENT', 'RECEPTIONIST')")
     public ResponseEntity<List<DoctorDTO>> getAllDoctors() {
         logger.info("Fetching all doctors");
-        List<DoctorDTO> doctors = doctorService.getAllDoctors();
+        List<DoctorDTO> doctors = this.doctorService.getAllDoctors();
         logger.info("Total doctors fetched: {}", doctors.size());
         return ResponseEntity.ok(doctors);
     }
@@ -53,7 +53,7 @@ public class DoctorController {
         try {
             logger.info("Fetching all doctors od specialization:" +specialisation);
             Specialist specEnum = Specialist.valueOf(specialisation.toUpperCase());
-            List<DoctorDTO> doctorDTOS = doctorService.findDoctorsBySpecialization(specEnum);
+            List<DoctorDTO> doctorDTOS = this.doctorService.findDoctorsBySpecialization(specEnum);
             logger.info("Total doctors fetched: {}", doctorDTOS.size());
             return ResponseEntity.ok(doctorDTOS);
         }catch (IllegalArgumentException e) {
@@ -65,7 +65,7 @@ public class DoctorController {
     @GetMapping("/get/{id}")
     public ResponseEntity<DoctorDTO> getDoctorByUserId(@PathVariable Long id) {
         logger.info("Fetching doctor with ID: {}", id);
-        DoctorDTO doctorDTO = doctorService.getDoctorByUserId(id);
+        DoctorDTO doctorDTO = this.doctorService.getDoctorByUserId(id);
         logger.info("Fetched doctor: {}", doctorDTO.getName());
         return ResponseEntity.ok(doctorDTO);
     }
@@ -74,7 +74,7 @@ public class DoctorController {
     @GetMapping("/getDoctor/{id}")
     public ResponseEntity<DoctorDTO> getDoctorByDoctorId(@PathVariable Long id) {
         logger.info("Fetching doctor with ID: {}", id);
-        DoctorDTO doctorDTO = doctorService.getDoctorByDoctorId(id);
+        DoctorDTO doctorDTO = this.doctorService.getDoctorByDoctorId(id);
         logger.info("Fetched doctor: {}", doctorDTO.getName());
         return ResponseEntity.ok(doctorDTO);
     }
@@ -82,7 +82,7 @@ public class DoctorController {
     public ResponseEntity<?> markAppointmentCompleted(@PathVariable long appointmentId) {
         logger.info("Received request to complete appointment with ID: {}", appointmentId);
         try {
-            String response = doctorService.markAsCompleted(appointmentId);
+            String response = this.doctorService.markAsCompleted(appointmentId);
             logger.info("Appointment {} marked as completed successfully.", appointmentId);
             return ResponseEntity.ok(response);
         } catch (RuntimeException ex) {
@@ -94,7 +94,7 @@ public class DoctorController {
     @GetMapping("/doctorPendingAppointments/{userId}")
     public ResponseEntity<List<AppointmentDTO>> getPendingAppointmentsForDoctor(@PathVariable Long userId) {
         logger.info("Fetching pending appointments for doctor ID: {}", userId);
-        List<AppointmentDTO> appointments = doctorService.getAllPendingAppointmentsByDoctorId(userId);
+        List<AppointmentDTO> appointments = this.doctorService.getAllPendingAppointmentsByDoctorId(userId);
         logger.info("Total pending appointments found for doctor ID {}: {}", userId, appointments.size());
         return ResponseEntity.ok(appointments);
     }
@@ -102,7 +102,7 @@ public class DoctorController {
     @GetMapping("/doctorCompletedAppointments/{userId}")
     public ResponseEntity<List<AppointmentDTO>> getCompletedAppointmentsForDoctor(@PathVariable Long userId) {
         logger.info("Fetching completed appointments for doctor ID: {}", userId);
-        List<AppointmentDTO> appointments = doctorService.getAllCompletedAppointmentsByDoctorId(userId);
+        List<AppointmentDTO> appointments = this.doctorService.getAllCompletedAppointmentsByDoctorId(userId);
         logger.info("Total completed appointments found for doctor ID {}: {}", userId, appointments.size());
         return ResponseEntity.ok(appointments);
     }
@@ -117,8 +117,8 @@ public class DoctorController {
             HttpServletRequest request) {
 
         String token = request.getHeader("Authorization").substring(7);
-        String username = jwtService.extractUsername(token);
-        Long tokenUserId = jwtService.extractUserId(token);
+        String username = this.jwtService.extractUsername(token);
+        Long tokenUserId = this.jwtService.extractUserId(token);
         logger.info("Update request by user: {} for doctor ID: {}", username, id);
         if (!id.equals(tokenUserId)) {
             logger.warn("User {} tried to update doctor ID {} without permission", username, id);
@@ -137,7 +137,7 @@ public class DoctorController {
                 return ResponseEntity.status(500).body("Image upload failed!");
             }
         }
-        DoctorDTO updatedDoctor = doctorService.updateDoctor(id, doctorDTO);
+        DoctorDTO updatedDoctor = this.doctorService.updateDoctor(id, doctorDTO);
         logger.info("Doctor updated successfully with ID: {}", id);
         return ResponseEntity.ok(updatedDoctor);
     }
@@ -146,7 +146,7 @@ public class DoctorController {
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteDoctorById(@PathVariable Long id) {
         logger.info("Deleting doctor with ID: {}", id);
-        boolean deleted = doctorService.deleteDoctor(id);
+        boolean deleted = this.doctorService.deleteDoctor(id);
         if (deleted) {
             logger.info("Doctor deleted successfully with ID: {}", id);
             return ResponseEntity.ok("Doctor deleted successfully");
@@ -160,7 +160,7 @@ public class DoctorController {
     @DeleteMapping
     public ResponseEntity<String> deleteAllDoctors() {
         logger.info("Deleting all doctors");
-        boolean deleted = doctorService.deleteAllDoctors();
+        boolean deleted = this.doctorService.deleteAllDoctors();
         if (deleted) {
             logger.info("All doctors deleted successfully");
             return ResponseEntity.ok("All doctors deleted successfully");

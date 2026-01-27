@@ -7,6 +7,7 @@ import AdminDashboard from "./AdminDashboard";
 import LeaveApproval from "./LeaveApproval";
 import ManageUsers from "./ManageUsers";
 import RegisterUser from "./RegisterUser";
+import ManageDoctor from "./ManageDoctor";
 
 export default function AdminLayout({ children }) {
   return (
@@ -23,6 +24,7 @@ export default function AdminLayout({ children }) {
                       <Route path="leave-approval" element={<LeaveApproval />} />
                       <Route path="manage-users" element={<ManageUsers />} />
                       <Route path="register-user" element={<RegisterUser />} />
+                      <Route path="manage-doctor" element={<ManageDoctor />} />
           </Routes>
         </div>
       </div>

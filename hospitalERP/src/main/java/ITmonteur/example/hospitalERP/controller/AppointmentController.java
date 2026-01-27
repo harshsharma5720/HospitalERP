@@ -33,7 +33,7 @@ public class AppointmentController {
     public ResponseEntity<List<AppointmentDTO>> getAppointmentsForLoggedInPatient(
             @RequestHeader("Authorization") String token) {
         logger.info("Fetching appointments for logged-in patient using token");
-        List<AppointmentDTO> appointments = appointmentService.getAppointmentsByToken(token);
+        List<AppointmentDTO> appointments = this.appointmentService.getAppointmentsByToken(token);
         logger.info("Fetching All Appointments with token :{}",token);
         return ResponseEntity.ok(appointments);
     }
@@ -76,7 +76,7 @@ public class AppointmentController {
     public ResponseEntity<List<AppointmentDTO>> getAppointmentsForLoggedInDoctor(
             @RequestHeader("Authorization") String token) {
         logger.info("Fetching appointments for logged-in doctor using token");
-        List<AppointmentDTO> appointments = appointmentService.getAppointmentsForDoctor(token);
+        List<AppointmentDTO> appointments = this.appointmentService.getAppointmentsForDoctor(token);
         logger.info("Appointments fetched for doctor using token");
         return ResponseEntity.ok(appointments);
     }
