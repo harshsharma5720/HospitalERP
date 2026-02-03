@@ -3,6 +3,7 @@ package ITmonteur.example.hospitalERP.services;
 import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.dto.DoctorDTO;
 import ITmonteur.example.hospitalERP.entities.Appointment;
+import ITmonteur.example.hospitalERP.entities.AppointmentStatus;
 import ITmonteur.example.hospitalERP.entities.Doctor;
 import ITmonteur.example.hospitalERP.entities.Specialist;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
@@ -199,13 +200,32 @@ public class DoctorService {
         logger.info("Total completed appointments retrieved for doctor ID {}: {}", doctorId, appointmentDTOList.size());
         return appointmentDTOList;
     }
+    public long getPendingCount(Long doctorId) {
+        return appointmentRepository.countByDoctor_IdAndIsCompletedFalse(doctorId);
+    }
+
+    public long getCompletedCount(Long doctorId) {
+        return appointmentRepository.countByDoctor_IdAndIsCompletedTrue(doctorId);
+    }
 
 
 
 
     // Convert entity to DTO
     private DoctorDTO convertToDTO(Doctor doctor) {
-        return modelMapper.map(doctor, DoctorDTO.class);
+        DoctorDTO dto = new DoctorDTO();
+
+        dto.setId(doctor.getId());
+        dto.setName(doctor.getName());
+        dto.setEmail(doctor.getEmail());
+        dto.setPhoneNumber(doctor.getPhoneNumber());
+        dto.setSpecialist(doctor.getSpecialist().toString());
+        dto.setUserName(doctor.getUserName());
+        dto.setProfileImage(doctor.getProfileImage());
+        if (doctor.getUser() != null) {
+            dto.setUserId(doctor.getUser().getId());
+        }
+        return dto;
     }
 
     // Convert DTO to entity

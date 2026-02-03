@@ -1,6 +1,7 @@
 package ITmonteur.example.hospitalERP.repositories;
 
 import ITmonteur.example.hospitalERP.entities.Appointment;
+import ITmonteur.example.hospitalERP.entities.AppointmentStatus;
 import ITmonteur.example.hospitalERP.entities.Doctor;
 import ITmonteur.example.hospitalERP.entities.Shift;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -33,4 +34,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     List<Appointment> findByDoctor_IdAndIsCompletedFalse(Long doctorId);
     List<Appointment> findByDoctor_IdAndIsCompletedTrue(Long doctorId);
+
+    long countByDoctorUserIdAndStatus(Long userId, AppointmentStatus status);
+    long countByDoctor_IdAndIsCompletedFalse(Long doctorId);
+    long countByDoctor_IdAndIsCompletedTrue(Long doctorId);
+
 }

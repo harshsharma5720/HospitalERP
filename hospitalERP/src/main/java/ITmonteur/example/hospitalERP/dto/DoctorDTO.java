@@ -3,6 +3,7 @@ package ITmonteur.example.hospitalERP.dto;
 public class DoctorDTO {
 
     private Long id;
+    private Long userId;
     private String name;
     private String specialist;
     private String email;
@@ -14,9 +15,10 @@ public class DoctorDTO {
     public DoctorDTO() {
     }
 
-    public DoctorDTO(Long id, String name, String specialist, String email, String phoneNumber
+    public DoctorDTO(Long id,Long userId ,String name, String specialist, String email, String phoneNumber
             , String userName, String profileImage) {
         this.id = id;
+        this.userId=userId;
         this.name = name;
         this.specialist = specialist;
         this.email = email;
@@ -31,6 +33,14 @@ public class DoctorDTO {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getName() {

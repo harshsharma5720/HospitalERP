@@ -4,6 +4,7 @@ import ITmonteur.example.hospitalERP.dto.*;
 import ITmonteur.example.hospitalERP.entities.LeaveRequest;
 import ITmonteur.example.hospitalERP.entities.LeaveStatus;
 import ITmonteur.example.hospitalERP.services.AdminService;
+import ITmonteur.example.hospitalERP.services.DoctorService;
 import ITmonteur.example.hospitalERP.services.LeaveRequestService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -22,6 +25,8 @@ public class AdminController {
 
     @Autowired
     private LeaveRequestService leaveRequestService;
+    @Autowired
+    private DoctorService doctorService;
 
     private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
 
@@ -90,6 +95,34 @@ public class AdminController {
         logger.info("Fetching all pending leaves");
         List<LeaveRequestDTO> leaves = this.leaveRequestService.getAllLeavesByStatus(LeaveStatus.PENDING);
         return ResponseEntity.ok(leaves);
+    }
+    @GetMapping("/doctorPendingAppointments/{userId}")
+    public ResponseEntity<List<AppointmentDTO>> getPendingAppointmentsForDoctor(@PathVariable Long userId) {
+        logger.info("Fetching pending appointments for doctor ID: {}", userId);
+        List<AppointmentDTO> appointments = this.doctorService.getAllPendingAppointmentsByDoctorId(userId);
+        logger.info("Total pending appointments found for doctor ID {}: {}", userId, appointments.size());
+        return ResponseEntity.ok(appointments);
+    }
+    @GetMapping("/doctorAppointmentCount/{userId}")
+    public ResponseEntity<Map<String, Long>> getAppointmentCount(
+            @PathVariable Long userId) {
+
+        long pendingCount = this.doctorService.getPendingCount(userId);
+        long completedCount = this.doctorService.getCompletedCount(userId);
+
+        Map<String, Long> response = new HashMap<>();
+        response.put("pending", pendingCount);
+        response.put("completed", completedCount);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/doctorCompletedAppointments/{userId}")
+    public ResponseEntity<List<AppointmentDTO>> getCompletedAppointmentsForDoctor(@PathVariable Long userId) {
+        logger.info("Fetching completed appointments for doctor ID: {}", userId);
+        List<AppointmentDTO> appointments = this.doctorService.getAllCompletedAppointmentsByDoctorId(userId);
+        logger.info("Total completed appointments found for doctor ID {}: {}", userId, appointments.size());
+        return ResponseEntity.ok(appointments);
     }
 
     @DeleteMapping("/{id}")

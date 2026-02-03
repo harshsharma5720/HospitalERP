@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 export default function ManageDoctor() {
   const [doctors, setDoctors] = useState([]);
@@ -8,6 +9,7 @@ export default function ManageDoctor() {
   const [loading, setLoading] = useState(true);
 
   const token = localStorage.getItem("jwtToken");
+  const navigate = useNavigate();
 
   // ================= FETCH DOCTORS =================
   const fetchDoctors = async () => {
@@ -18,21 +20,55 @@ export default function ManageDoctor() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+      const doctorsWithCounts = await Promise.all(
+        response.data.map(async (doc) => {
+          if (!doc.userId) return doc;
 
-      // sort by completed appointments DESC (ranking)
-      const rankedDoctors = response.data.sort(
+          try {
+            const countRes = await axios.get(
+              `http://localhost:8080/api/admin/doctorAppointmentCount/${doc.id}`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+            return {
+              ...doc,
+              pendingAppointmentsCount: countRes.data.pending,
+              completedAppointmentsCount: countRes.data.completed,
+            };
+          } catch {
+            return {
+              ...doc,
+              pendingAppointmentsCount: 0,
+              completedAppointmentsCount: 0,
+            };
+          }
+        })
+      );
+
+      doctorsWithCounts.sort(
         (a, b) =>
           (b.completedAppointmentsCount || 0) -
           (a.completedAppointmentsCount || 0)
       );
 
-      setDoctors(rankedDoctors);
-      setFilteredDoctors(rankedDoctors);
+      setDoctors(doctorsWithCounts);
+      setFilteredDoctors(doctorsWithCounts);
     } catch (error) {
       console.error("Error fetching doctors:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchAppointmentCount = async (userId) => {
+    const response = await axios.get(
+      `http://localhost:8080/api/admin/doctorAppointmentCount/${userId}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response.data;
   };
 
   // ================= DELETE DOCTOR =================
@@ -60,7 +96,7 @@ export default function ManageDoctor() {
   // ================= SEARCH =================
   useEffect(() => {
     const filtered = doctors.filter((doc) =>
-      `${doc.name} ${doc.specialization} ${doc.userId}`
+      `${doc.name} ${doc.specialist} ${doc.userId}`
         .toLowerCase()
         .includes(search.toLowerCase())
     );
@@ -73,8 +109,12 @@ export default function ManageDoctor() {
 
   if (loading) return <p className="text-center mt-5">Loading doctors...</p>;
 
-  const presentDoctors = filteredDoctors.filter((d) => d.isPresent);
-  const absentDoctors = filteredDoctors.filter((d) => !d.isPresent);
+  const presentDoctors = filteredDoctors.filter(
+    (d) => d.isPresent !== false
+  );
+  const absentDoctors = filteredDoctors.filter(
+    (d) => d.isPresent === false
+  );
 
   // ================= UI =================
   return (
@@ -101,7 +141,8 @@ export default function ManageDoctor() {
             <tr>
               <th className="p-3 text-left">Rank</th>
               <th className="p-3 text-left">Doctor</th>
-              <th className="p-3 text-left">Specialization</th>
+              <th className="p-3 text-left">DoctorID</th>
+              <th className="p-3 text-left">Specialist</th>
               <th className="p-3 text-left">Completed</th>
               <th className="p-3 text-left">Pending</th>
               <th className="p-3 text-left">Actions</th>
@@ -112,20 +153,36 @@ export default function ManageDoctor() {
               <tr key={doc.id} className="border-b">
                 <td className="p-3 font-bold">#{index + 1}</td>
                 <td className="p-3">{doc.name}</td>
-                <td className="p-3">{doc.specialization}</td>
-                <td className="p-3 text-green-600 font-semibold">
-                  {doc.completedAppointmentsCount || 0}
-                </td>
-                <td className="p-3 text-orange-600 font-semibold">
-                  {doc.pendingAppointmentsCount || 0}
+                <td className="p-3">{doc.id}</td>
+                <td className="p-3">{doc.specialist}</td>
+                <td className="p-3">
+                  <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-700 font-semibold">
+                    Completed: {doc.completedAppointmentsCount || 0}
+                  </span>
                 </td>
                 <td className="p-3">
-                  <button
-                    onClick={() => deleteDoctor(doc.id)}
-                    className="bg-red-600 text-white px-3 py-1 rounded"
-                  >
-                    Delete
-                  </button>
+                  <span className="px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700 font-semibold">
+                    Pending: {doc.pendingAppointmentsCount || 0}
+                  </span>
+                </td>
+                <td className="p-3">
+                  <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => deleteDoctor(doc.id)}
+                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs"
+                      >
+                        Delete
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          navigate(`/admin/doctor/${doc.userId}/appointments`)
+                        }
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs"
+                      >
+                        View Appointments
+                      </button>
+                    </div>
                 </td>
               </tr>
             ))}
@@ -134,43 +191,41 @@ export default function ManageDoctor() {
       </div>
 
       {/* ================= PRESENT / ABSENT PANELS ================= */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6 mt-8">
         {/* ABSENT */}
-        <div className="bg-red-50 shadow-md rounded-lg">
-          <h2 className="text-lg font-semibold p-4 border-b text-red-700">
+        <div className="bg-red-50 shadow-md rounded-lg p-6 text-center">
+          <h2 className="text-lg font-semibold text-red-700">
             Absent Doctors
           </h2>
-          {absentDoctors.length === 0 ? (
-            <p className="p-4 text-gray-500">No absent doctors</p>
-          ) : (
-            absentDoctors.map((doc) => (
-              <div key={doc.id} className="p-4 border-b">
-                <p className="font-semibold">{doc.name}</p>
-                <p className="text-sm text-gray-600">
-                  {doc.specialization}
-                </p>
-              </div>
-            ))
-          )}
+
+          <p className="text-3xl font-bold my-3">
+            {absentDoctors.length}
+          </p>
+
+          <button
+            onClick={() => navigate("/admin/doctors/absent")}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+          >
+            View Absent Doctors
+          </button>
         </div>
 
         {/* PRESENT */}
-        <div className="bg-green-50 shadow-md rounded-lg">
-          <h2 className="text-lg font-semibold p-4 border-b text-green-700">
+        <div className="bg-green-50 shadow-md rounded-lg p-6 text-center">
+          <h2 className="text-lg font-semibold text-green-700">
             Present Doctors
           </h2>
-          {presentDoctors.length === 0 ? (
-            <p className="p-4 text-gray-500">No doctors present</p>
-          ) : (
-            presentDoctors.map((doc) => (
-              <div key={doc.id} className="p-4 border-b">
-                <p className="font-semibold">{doc.name}</p>
-                <p className="text-sm text-gray-600">
-                  {doc.specialization}
-                </p>
-              </div>
-            ))
-          )}
+
+          <p className="text-3xl font-bold my-3">
+            {presentDoctors.length}
+          </p>
+
+          <button
+            onClick={() => navigate("/admin/doctors/present")}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+          >
+            View Present Doctors
+          </button>
         </div>
       </div>
     </div>
