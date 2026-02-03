@@ -6,12 +6,14 @@ import TopNavbar from "./TopNavbar";
 import { useLocation } from "react-router-dom";
 import { getUserIdFromToken } from "./utils/jwtUtils";
 import { calculateAgeFromDOB } from "./utils/calculateAgeFromDOB";
+import Loader from "./components/common/Loader";
 
 export default function AppointmentPage() {
   const location = useLocation();
   const doctorName = location.state?.doctorName || "";
   const doctorId = location.state?.doctorId || "";
   const rescheduleData = location.state?.rescheduleAppointment || null;
+  const [bookingStatus, setBookingStatus] = useState("idle");
 
   const [formData, setFormData] = useState({
     patientName: "",
@@ -286,12 +288,17 @@ export default function AppointmentPage() {
         ptInfoId: formData.ptInfoId ? Number(formData.ptInfoId) : null,
         slotId: selectedSlotId,
       };
-
+      setBookingStatus("loading");
       const response = await axios.post(
         "http://localhost:8080/appointment/NewAppointment",
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      setBookingStatus("success");
+
+      setTimeout(() => {
+        setBookingStatus("idle");
+      }, 2000);
 
       alert(
         rescheduleData
@@ -314,12 +321,28 @@ export default function AppointmentPage() {
       setAvailableSlots([]);
       setSelectedSlotId(null);
     } catch (error) {
+      setBookingStatus("idle");
       console.error("Error submitting appointment:", error);
       alert("Failed to book appointment. Please try again.");
     }
   };
 
   return (
+  <>
+      {/* Booking Loader Overlay */}
+      {bookingStatus === "loading" && (
+        <Loader
+          type="heartbeat"
+          text="Booking your appointment..."
+        />
+      )}
+
+      {bookingStatus === "success" && (
+        <Loader
+          type="success"
+          text="Your appointment is booked successfully!"
+        />
+      )}
     <div className="min-h-screen bg-white dark:bg-[#0a1124] text-gray-900 dark:text-[#50d4f2] transition-all">
       <TopNavbar />
       <Navbar />
@@ -503,5 +526,6 @@ export default function AppointmentPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

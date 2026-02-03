@@ -3,6 +3,18 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Users, CalendarCheck, Clock } from "lucide-react";
 import { getRoleFromToken, getUserIdFromToken } from "../../utils/jwtUtils";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
@@ -11,6 +23,12 @@ export default function DoctorDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [completed, setCompleted] = useState([]);
   const [pending, setPending] = useState([]);
+
+  const appointmentStatusData = [
+    { name: "Completed", value: completed.length },
+    { name: "Pending", value: pending.length },
+  ];
+  const COLORS = ["#1E63DB", "#f97316"]; // green, orange
 
   useEffect(() => {
     const token = localStorage.getItem("jwtToken");
@@ -69,11 +87,9 @@ export default function DoctorDashboard() {
       console.error("Appointments fetch failed", err);
     }
   };
-
   const fetchPendingAppointments = async (doctorId) => {
     try {
       const token = localStorage.getItem("jwtToken");
-
       const response = await fetch(
         `http://localhost:8080/api/doctor/doctorPendingAppointments/${doctorId}`,
         {
@@ -84,11 +100,9 @@ export default function DoctorDashboard() {
           },
         }
       );
-
       if (!response.ok) {
         throw new Error("Failed to fetch pending appointments");
       }
-
       const data = await response.json();
       return data; // list of pending appointments
     } catch (error) {
@@ -115,7 +129,6 @@ export default function DoctorDashboard() {
       if (!response.ok) {
         throw new Error("Failed to fetch completed appointments");
       }
-
       const data = await response.json();
       return data; // list of completed appointments
     } catch (error) {
@@ -123,8 +136,6 @@ export default function DoctorDashboard() {
       return [];
     }
   };
-
-
 
   if (!doctor)
     return (
@@ -134,7 +145,7 @@ export default function DoctorDashboard() {
     );
 
   return (
-    <div className="min-h-screen bg-[#f6f9ff] dark:bg-[#0a1124] p-8 transition-all">
+    <div className="min-h-screen  dark:bg-[#0a1124] p-8 transition-all">
 
       {/* HEADER */}
       <div className="mb-10">
@@ -150,22 +161,75 @@ export default function DoctorDashboard() {
       </div>
 
       {/* STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Stat
-          title="Total Appointments"
-          value={appointments.length}
-          icon={<Users />}
-        />
-        <Stat
-          title="Completed Appointments"
-          value={completed.length}
-          icon={<CalendarCheck />}
-        />
-        <Stat
-          title="Pending Appointments"
-          value={pending.length}
-          icon={<Clock />}
-        />
+      <div className="grid grid-cols-1  md:grid-cols-3 gap-6">
+        <Stat title="Total Appointments" value={appointments.length} icon={<Users />} />
+        <Stat title="Completed Appointments" value={completed.length} icon={<CalendarCheck />} />
+        <Stat title="Pending Appointments" value={pending.length} icon={<Clock />} />
+      </div>
+
+      {/* CHARTS */}
+      <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        {/* PIE CHART */}
+        <div className="bg-white dark:bg-[#111a3b] p-6 rounded-2xl shadow-xl">
+          <h3 className="text-lg font-semibold mb-4 dark:text-white">
+            Appointment Status Distribution
+          </h3>
+
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={appointmentStatusData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                label
+              >
+                {appointmentStatusData.map((entry, index) => (
+                  <Cell key={index} fill={COLORS[index]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* BAR CHART */}
+        <div className="bg-white dark:bg-[#111a3b] p-6 rounded-2xl shadow-xl">
+          <h3 className="text-lg font-semibold mb-4 dark:text-white">
+            Completed vs Pending Appointments
+          </h3>
+
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={appointmentStatusData}>
+              <defs>
+                <linearGradient id="completedGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#1E63DB" />
+                  <stop offset="100%" stopColor="#27496d" />
+                </linearGradient>
+              </defs>
+
+              <XAxis dataKey="name" />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+
+              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                {appointmentStatusData.map((entry, index) => (
+                  <Cell
+                    key={index}
+                    fill={index === 0 ? "url(#completedGradient)" : "#f97316"}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+
+        </div>
+
       </div>
 
       {/* ACTIONS */}
@@ -182,14 +246,15 @@ export default function DoctorDashboard() {
 
         <button
           onClick={() => navigate("/doctor/leave-management")}
-          className="px-6 py-2 rounded-lg
-                     bg-blue-600 text-white hover:bg-blue-700"
+          className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
         >
           Apply Leave
         </button>
       </div>
+
     </div>
   );
+
 }
 
 /* ---------- COMPONENT ---------- */

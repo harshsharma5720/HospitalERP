@@ -4,6 +4,7 @@ import axios from "axios";
 import TopNavbar from "../../components/TopNavbar";
 import DoctorRightSidebar from "../../components/DoctorRightSidebar";
 import { getUserIdFromToken } from "../../utils/jwtUtils";
+import Loader from "../../components/common/Loader";
 
 import DoctorDashboard from "./DoctorDashboard";
 import DoctorAppointments from "./DoctorAppointments";
@@ -38,9 +39,7 @@ export default function DoctorLayout() {
 
   if (!doctor) {
     return (
-      <div className="flex justify-center items-center h-screen text-lg">
-        Loading doctor dashboard...
-      </div>
+      <Loader type="page" text="Loading Doctor Dashboard..." />
     );
   }
 

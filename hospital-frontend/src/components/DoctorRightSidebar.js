@@ -66,13 +66,13 @@ export default function DoctorRightSidebar({ doctor }) {
           <SidebarButton
             icon={<Calendar size={18} />}
             label="Appointments"
-            onClick={() => navigate("/doctor/appointments")}
+            onClick={() => navigate("/doctor/doctor-appointments")}
           />
 
           <SidebarButton
             icon={<FileText size={18} />}
             label="Leave Management"
-            onClick={() => navigate("/doctor/leave")}
+            onClick={() => navigate("/doctor/leave-management")}
           />
         </div>
       </div>
