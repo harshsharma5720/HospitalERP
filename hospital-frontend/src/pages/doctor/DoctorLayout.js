@@ -5,7 +5,7 @@ import TopNavbar from "../../components/TopNavbar";
 import DoctorRightSidebar from "../../components/DoctorRightSidebar";
 import { getUserIdFromToken } from "../../utils/jwtUtils";
 import Loader from "../../components/common/Loader";
-
+import DoctorProfile from "./DoctorProfile";
 import DoctorDashboard from "./DoctorDashboard";
 import DoctorAppointments from "./DoctorAppointments";
 import LeaveManagementPage from "./LeaveManagementPage";
@@ -55,6 +55,7 @@ export default function DoctorLayout() {
             <Route path="dashboard" element={<DoctorDashboard />} />
             <Route path="doctor-appointments" element={<DoctorAppointments />} />
             <Route path="leave-management" element={<LeaveManagementPage />} />
+            <Route path="profile" element={<DoctorProfile />} />
           </Routes>
         </div>
       </div>
