@@ -81,13 +81,41 @@ export default function LeaveManagementPage() {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-[#0a1124]">
 
-      <div className="max-w-5xl mx-auto animate-scaleUp mt-10 p-6 bg-white dark:bg-[#111a3b] rounded-xl shadow-xl">
+      <div className="max-w-5xl mx-auto animate-scaleUp mt-10 p-6  dark:bg-[#111a3b] rounded-xl shadow-xl">
         <h2 className="text-5xl text-center font-extrabold mb-6">
           Leave{" "}
           <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
             Management
           </span>
         </h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="p-5 rounded-xl bg-blue-100 dark:bg-[#1b2640] shadow">
+            <p className="text-sm text-gray-600 dark:text-gray-300">Total Leaves</p>
+            <h3 className="text-3xl font-bold">
+              {pendingLeaves.length + approvedLeaves.length}
+            </h3>
+          </div>
+
+          <div className="p-5 rounded-xl bg-yellow-100 dark:bg-[#2c3558] shadow">
+            <p className="text-sm text-gray-600 dark:text-gray-300">Pending</p>
+            <h3 className="text-3xl font-bold text-yellow-600">
+              {pendingLeaves.length}
+            </h3>
+          </div>
+
+          <div className="p-5 rounded-xl bg-green-100 dark:bg-[#1f3b2d] shadow">
+            <p className="text-sm text-gray-600 dark:text-gray-300">Approved</p>
+            <h3 className="text-3xl font-bold text-green-600">
+              {approvedLeaves.length}
+            </h3>
+          </div>
+
+          <div className="p-5 rounded-xl bg-purple-100 dark:bg-[#2a1f3d] shadow">
+            <p className="text-sm text-gray-600 dark:text-gray-300">Remaining</p>
+            <h3 className="text-3xl font-bold">12</h3>
+          </div>
+        </div>
+
 
         <div className="flex justify-center gap-4 mb-6">
           <button
@@ -127,16 +155,35 @@ export default function LeaveManagementPage() {
             {(viewType === "pending" ? pendingLeaves : approvedLeaves).map((leave) => (
               <div
                 key={leave.id}
-                className="p-5 bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF]
-                  dark:from-[#111a3b] dark:to-[#0f172a] rounded-xl shadow-xl"
+                className={`p-5 rounded-xl shadow-xl bg-white dark:bg-[#0f172a] border-l-4 ${
+                  leave.status === "APPROVED"
+                    ? "border-green-500"
+                    : "border-yellow-500"
+                }`}
               >
-                <p><strong>From:</strong> {leave.startDate}</p>
-                <p><strong>To:</strong> {leave.endDate}</p>
-                <p><strong>Reason:</strong> {leave.reason}</p>
-                <p><strong>Status:</strong> {leave.status}</p>
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-bold text-lg">
+                    {leave.startDate} → {leave.endDate}
+                  </h4>
+
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                      leave.status === "APPROVED"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}
+                  >
+                    {leave.status}
+                  </span>
+                </div>
+
+                <p className="text-gray-600 dark:text-gray-300">
+                  <strong>Reason:</strong> {leave.reason}
+                </p>
               </div>
             ))}
           </div>
+
         )}
       </div>
 
@@ -183,7 +230,18 @@ export default function LeaveManagementPage() {
                 Apply
               </button>
             </div>
+            <div className="mt-12 p-6 rounded-xl bg-gray-50 dark:bg-[#0b122f]">
+              <h3 className="text-2xl font-bold mb-4">Leave Process</h3>
+              <ul className="space-y-3 text-gray-600 dark:text-gray-300">
+                <li> Apply leave with reason and dates</li>
+                <li> Leave remains pending until admin approval</li>
+                <li> Once approved, it appears in approved list</li>
+                <li> You’ll be notified on status change</li>
+              </ul>
+            </div>
+
           </form>
+
         </div>
       )}
     </div>
