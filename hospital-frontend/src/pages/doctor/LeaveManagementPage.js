@@ -38,6 +38,7 @@ export default function LeaveManagementPage() {
       });
 
       const data = await response.json();
+      console.log("Fetched Leaves:", data);
       if (viewType === "pending") setPendingLeaves(data);
       else setApprovedLeaves(data);
 

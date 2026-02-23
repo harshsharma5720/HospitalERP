@@ -1,5 +1,7 @@
 package ITmonteur.example.hospitalERP.dto;
 
+import ITmonteur.example.hospitalERP.entities.LeaveStatus;
+
 import java.time.LocalDate;
 
 public class LeaveRequestDTO {
@@ -10,18 +12,20 @@ public class LeaveRequestDTO {
     private LocalDate startDate;
     private LocalDate endDate;
     private String reason;
+    private LeaveStatus status;
 
     public LeaveRequestDTO() {
     }
 
     public LeaveRequestDTO(Long id ,Long userId, String role, LocalDate startDate, LocalDate endDate,
-                           String reason) {
+                           String reason, LeaveStatus status) {
         this.id=id;
         this.userId = userId;
         this.role = role;
         this.startDate = startDate;
         this.endDate = endDate;
         this.reason = reason;
+        this.status = status;
     }
 
     public Long getId() {
@@ -70,5 +74,13 @@ public class LeaveRequestDTO {
 
     public void setReason(String reason) {
         this.reason = reason;
+    }
+
+    public LeaveStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(LeaveStatus status) {
+        this.status = status;
     }
 }
