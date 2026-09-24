@@ -2,10 +2,11 @@ package ITmonteur.example.hospitalERP.services;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -20,30 +21,43 @@ public class JWTService {
 
     private static final Logger logger = LoggerFactory.getLogger(JWTService.class);
 
-    private static final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    private final SecretKey secretKey;
+    private final long expirationMs;
+
+    public JWTService(@Value("${jwt.secret:}") String secret,
+                      @Value("${jwt.expiration-ms:36000000}") long expirationMs) {
+        this.expirationMs = expirationMs;
+        if (secret == null || secret.isBlank()) {
+            logger.warn("JWT_SECRET is not set - using a random key. All tokens become invalid on every restart. "
+                    + "Set JWT_SECRET in .env (e.g. `openssl rand -base64 48`).");
+            this.secretKey = Jwts.SIG.HS256.key().build();
+        } else {
+            byte[] keyBytes = Decoders.BASE64.decode(secret);
+            if (keyBytes.length < 32) {
+                throw new IllegalStateException("JWT_SECRET must be a Base64 value of at least 32 bytes");
+            }
+            this.secretKey = Keys.hmacShaKeyFor(keyBytes);
+        }
+    }
 
     // Extract username
     public String extractUsername(String token) {
-        logger.info("Extracting username from token");
         return extractClaim(token, Claims::getSubject);
     }
 
     // Extract expiration date
     public Date extractExpiration(String token) {
-        logger.info("Extracting expiration date from token");
         return extractClaim(token, Claims::getExpiration);
     }
 
     // Extract any claim
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        logger.info("Extracting claim from token");
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
 
     // Generate token
     public String generateToken(UserDetails userDetails, Long userId) {
-        logger.info("Generating token for user: {}", userDetails.getUsername());
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         // Add role information to the token
@@ -52,16 +66,14 @@ public class JWTService {
             claims.put("role", role);
         }
         String token = createToken(claims, userDetails.getUsername());
-        logger.info("Token generated successfully for user: {}", userDetails.getUsername());
+        logger.debug("Token generated for user: {}", userDetails.getUsername());
         return token;
     }
 
-    // Validate token
+    // Validate token (signature and expiry are already verified while parsing)
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        boolean isValid = (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
-        logger.info("Token validation for user {}: {}", userDetails.getUsername(), isValid);
-        return isValid;
+        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
     }
 
     //extract role from token
@@ -70,43 +82,34 @@ public class JWTService {
         return claims.get("role", String.class);
     }
 
+    public Long extractUserId(String token) {
+        Object userId = extractAllClaims(token).get("userId");
+        return userId instanceof Number number ? number.longValue() : null;
+    }
+
     // Private helpers
 
     private String createToken(Map<String, Object> claims, String subject) {
-        logger.debug("Creating token for subject: {}", subject);
+        long now = System.currentTimeMillis();
         return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(subject)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10 hours
-                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
+                .claims(claims)
+                .subject(subject)
+                .issuedAt(new Date(now))
+                .expiration(new Date(now + expirationMs))
+                .signWith(secretKey)
                 .compact();
     }
 
+    // Throws io.jsonwebtoken.JwtException for expired, malformed or tampered tokens
     private Claims extractAllClaims(String token) {
-        try {
-            return Jwts.parser()
-                    .setSigningKey(SECRET_KEY)
-                    .parseClaimsJws(token)
-                    .getBody();
-        } catch (Exception e) {
-            logger.error("Failed to parse token: {}", e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    public Long extractUserId(String token) {
-        final Claims claims = extractAllClaims(token);
-        Long userId = claims.get("userId", Long.class);
-        logger.info("Extracted userId from token: {}", userId);
-        return userId;
+        return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     private boolean isTokenExpired(String token) {
-        boolean expired = extractExpiration(token).before(new Date());
-        if (expired) {
-            logger.warn("Token has expired");
-        }
-        return expired;
+        return extractExpiration(token).before(new Date());
     }
 }

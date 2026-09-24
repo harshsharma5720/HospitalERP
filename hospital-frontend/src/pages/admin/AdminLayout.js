@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import AdminSidebar from "../../components/AdminSidebar";
 import TopNavbar from "../../components/TopNavbar";
 import Navbar from "../../components/Navbar";
@@ -8,6 +8,7 @@ import LeaveApproval from "./LeaveApproval";
 import ManageUsers from "./ManageUsers";
 import RegisterUser from "./RegisterUser";
 import ManageDoctor from "./ManageDoctor";
+import AdminDoctorAppointments from "./AdminDoctorAppointments";
 
 export default function AdminLayout({ children }) {
   return (
@@ -25,6 +26,8 @@ export default function AdminLayout({ children }) {
                       <Route path="manage-users" element={<ManageUsers />} />
                       <Route path="register-user" element={<RegisterUser />} />
                       <Route path="manage-doctor" element={<ManageDoctor />} />
+                      <Route path="doctor/:userId/appointments" element={<AdminDoctorAppointments />} />
+                      <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Routes>
         </div>
       </div>

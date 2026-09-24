@@ -3,6 +3,7 @@ import axios from "axios";
 import { getRoleFromToken, getUserIdFromToken } from "./utils/jwtUtils.js";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
+import { API_BASE_URL } from "./config";
 
 export default function ProfilePage({ onClose }) {
   const [userData, setUserData] = useState(null);
@@ -31,11 +32,11 @@ export default function ProfilePage({ onClose }) {
 
         let url = "";
         if (userRole === "ROLE_DOCTOR") {
-          url = `http://localhost:8080/api/doctor/get/${userId}`;
+          url = `${API_BASE_URL}/api/doctor/get/${userId}`;
         } else if (userRole === "ROLE_PATIENT") {
-          url = `http://localhost:8080/api/patient/getAccount/${userId}`;
+          url = `${API_BASE_URL}/api/patient/getAccount/${userId}`;
         } else if (userRole === "ROLE_RECEPTIONIST") {
-          url = `http://localhost:8080/api/receptionist/getReceptionist/${userId}`;
+          url = `${API_BASE_URL}/api/receptionist/getReceptionist/${userId}`;
         } else {
           alert("Invalid user role detected!");
           return;
@@ -116,7 +117,7 @@ export default function ProfilePage({ onClose }) {
             <img
               src={
                 userData.profileImage
-                  ? `http://localhost:8080${userData.profileImage}`
+                  ? `${API_BASE_URL}${userData.profileImage}`
                   : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
               }
               alt="Profile"

@@ -2,24 +2,29 @@ package ITmonteur.example.hospitalERP.configuration;
 
 import ITmonteur.example.hospitalERP.services.CustomUserDetailsService;
 import ITmonteur.example.hospitalERP.services.JWTService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+/**
+ * Authenticates requests that carry a valid "Authorization: Bearer <jwt>" header.
+ * An invalid or expired token is simply ignored here: public endpoints keep working,
+ * and protected endpoints are rejected with 401 by the security entry point.
+ */
 @Component
 public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
@@ -35,53 +40,27 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-
-        String path = request.getRequestURI();
-
-        // Skip JWT check for public endpoints
-        if (path.startsWith("/api/auth/") ||
-                path.startsWith("/api/doctor/getAll") ||
-                path.startsWith("/api/doctor/getAllBySpecialization") ||
-                path.startsWith("/api/patient/getAllDoctors") ||      // if you have this
-                path.startsWith("/api/patient/getAllBySpecialization")) {
-
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        // Allow multipart requests to pass through safely
-        if (request.getContentType() != null && request.getContentType().startsWith("multipart/")) {
-            // Continue processing, but don’t try to read body content here
-            // Just verify token if available
-            logger.debug("Multipart request detected, ensuring JWT header is present");
-        }
-
         final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String username;
-
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        jwt = authHeader.substring(7);
-        username = jwtService.extractUsername(jwt);
-
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
-
-            if (jwtService.isTokenValid(jwt, userDetails)) {
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+        String jwt = authHeader.substring(7);
+        try {
+            String username = jwtService.extractUsername(jwt);
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                // Roles are loaded from the database, so a role change takes effect immediately
+                UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
+                if (jwtService.isTokenValid(jwt, userDetails)) {
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
+        } catch (JwtException | IllegalArgumentException | UsernameNotFoundException e) {
+            logger.debug("Ignoring invalid JWT on {}: {}", request.getRequestURI(), e.getMessage());
         }
 
         filterChain.doFilter(request, response);

@@ -91,9 +91,24 @@ MAIL_PASSWORD=your_app_password
 TWILIO_ACCOUNT_SID=your_twilio_account_sid
 TWILIO_AUTH_TOKEN=your_twilio_auth_token
 TWILIO_TRIAL_NUMBER=+1234567890
+
+# Security
+# Base64 secret, at least 32 bytes. Generate one with: openssl rand -base64 48
+JWT_SECRET=paste_generated_secret_here
+# Set to false for local development without Twilio (skips phone verification on sign-up)
+OTP_REQUIRED=true
+# Comma-separated frontend origins allowed to call the API
+CORS_ALLOWED_ORIGINS=http://localhost:3000
+
+# First admin account — created at startup if it doesn't exist yet
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=choose-a-strong-password
+ADMIN_EMAIL=admin@hospital.com
 ```
 
-> **Note:** Twilio and email settings are optional for basic local development. Login, appointments, and most features work without them. OTP on the register page requires valid Twilio credentials.
+> **Note:** Twilio and email settings are optional. Without Twilio, SMS is skipped (a warning is logged) and you should set `OTP_REQUIRED=false`, otherwise nobody can sign up. Without SMTP, emails are skipped.
+>
+> **Note:** `.env` is git-ignored. Never commit it.
 
 ---
 
@@ -170,21 +185,11 @@ The app will open at **http://localhost:3000**.
 
 ## Creating the First Admin User
 
-There is no default admin account. Create one via the Register page with role **ADMIN**, or insert directly via the API:
+Public registration (`/register`, `POST /api/auth/register`) **always creates a patient**; any `role` sent by the client is ignored.
 
-```bash
-curl -X POST http://localhost:8080/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "admin",
-    "email": "admin@hospital.com",
-    "password": "admin123",
-    "phoneNumber": "+919876543210",
-    "role": "ADMIN"
-  }'
-```
+To get the first admin, set `ADMIN_USERNAME`, `ADMIN_PASSWORD` (8+ characters) and optionally `ADMIN_EMAIL` in `hospitalERP/.env` and start the backend. The account is created once, if it doesn't exist yet. Then log in at http://localhost:3000/login.
 
-Then log in at http://localhost:3000/login with those credentials.
+Doctors, receptionists and other admins are created by an admin from **Admin → Register User** (`POST /api/admin/users`).
 
 ---
 
@@ -196,7 +201,7 @@ Profile images are stored on disk at:
 hospitalERP/uploads/profileImages/
 ```
 
-This folder is created automatically on first upload. Images are served at:
+This folder is created automatically on first upload (change it with `UPLOAD_DIR`). Only JPEG, PNG and WEBP images up to 2 MB are accepted, and each file gets a random server-generated name. Images are served at:
 
 ```
 http://localhost:8080/uploads/profileImages/<filename>
@@ -211,13 +216,13 @@ http://localhost:8080/uploads/profileImages/<filename>
 - Check `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` in `hospitalERP/.env`.
 - Ensure the `hospital_erp` database exists.
 
-### Backend fails — Twilio initialization error
-- If you do not need OTP, you can temporarily use placeholder Twilio values in `.env`.
-- For full OTP support, sign up at [twilio.com](https://www.twilio.com/) and add real credentials.
+### Sign-up says "Phone number not verified" / OTP never arrives
+- Twilio is not configured. Either add real Twilio credentials, or set `OTP_REQUIRED=false` in `.env` for local development.
 
 ### Frontend shows CORS errors
 - Ensure the backend is running on port **8080**.
-- CORS is configured for `http://localhost:3000` only — do not change the frontend port unless you update `SecurityConfig.java`.
+- Allowed origins come from `CORS_ALLOWED_ORIGINS` (default `http://localhost:3000`). Add your frontend URL there if it runs elsewhere.
+- If the API is not on `http://localhost:8080`, set `REACT_APP_API_URL` in `hospital-frontend/.env`.
 
 ### Login works but redirects to home instead of admin/doctor portal
 - Clear browser localStorage: open DevTools → Application → Local Storage → delete `jwtToken`.
@@ -231,8 +236,11 @@ http://localhost:8080/uploads/profileImages/<filename>
   npm install
   ```
 
-### JWT token invalid after server restart
-- The JWT secret is currently generated at runtime. Restarting the backend invalidates all existing tokens. Log in again after a backend restart.
+### Everyone is logged out after a backend restart
+- `JWT_SECRET` is not set, so a random key is generated on every start (a warning is logged). Set `JWT_SECRET` in `.env`.
+
+### "Too many failed login attempts"
+- After 5 wrong passwords a username is locked for 15 minutes. Wait, or restart the backend in development.
 
 ---
 
@@ -250,7 +258,7 @@ cd hospitalERP
 # Build JAR
 ./mvnw clean package
 
-# Run tests
+# Run tests (no MySQL needed — they use an in-memory H2 database)
 ./mvnw test
 ```
 

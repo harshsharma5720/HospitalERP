@@ -5,6 +5,7 @@ import Navbar from "./Navbar";
 import TopNavbar from "./TopNavbar";
 import Lottie from "lottie-react";
 import doctorAnimation from "./assets/Doctor.json";
+import { API_BASE_URL } from "./config";
 
 export default function DoctorProfile() {
   const { doctorId } = useParams();
@@ -18,7 +19,7 @@ export default function DoctorProfile() {
       try {
         setLoading(true);
         const response = await axios.get(
-          `http://localhost:8080/api/doctor/getDoctor/${doctorId}`
+          `${API_BASE_URL}/api/doctor/getDoctor/${doctorId}`
         );
         setDoctor(response.data);
         setError("");

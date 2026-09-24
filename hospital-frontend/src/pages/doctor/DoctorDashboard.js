@@ -15,6 +15,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { API_BASE_URL } from "../../config";
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function DoctorDashboard() {
     const userId = getUserIdFromToken(token);
 
     if (role !== "ROLE_DOCTOR") {
-      navigate("/unauthorized");
+      navigate("/login");
       return;
     }
 
@@ -65,7 +66,7 @@ export default function DoctorDashboard() {
   const fetchDoctor = async (id, token) => {
     try {
       const res = await axios.get(
-        `http://localhost:8080/api/doctor/get/${id}`,
+        `${API_BASE_URL}/api/doctor/get/${id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setDoctor(res.data);
@@ -77,7 +78,7 @@ export default function DoctorDashboard() {
   const fetchAppointments = async (token) => {
     try {
       const res = await axios.get(
-        `http://localhost:8080/appointment/getDoctorAppointments`,
+        `${API_BASE_URL}/appointment/getDoctorAppointments`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -91,7 +92,7 @@ export default function DoctorDashboard() {
     try {
       const token = localStorage.getItem("jwtToken");
       const response = await fetch(
-        `http://localhost:8080/api/doctor/doctorPendingAppointments/${doctorId}`,
+        `${API_BASE_URL}/api/doctor/doctorPendingAppointments/${doctorId}`,
         {
           method: "GET",
           headers: {
@@ -116,7 +117,7 @@ export default function DoctorDashboard() {
       const token = localStorage.getItem("jwtToken");
 
       const response = await fetch(
-        `http://localhost:8080/api/doctor/doctorCompletedAppointments/${doctorId}`,
+        `${API_BASE_URL}/api/doctor/doctorCompletedAppointments/${doctorId}`,
         {
           method: "GET",
           headers: {

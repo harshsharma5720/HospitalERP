@@ -4,169 +4,75 @@ import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.dto.DoctorDTO;
 import ITmonteur.example.hospitalERP.entities.Specialist;
 import ITmonteur.example.hospitalERP.services.DoctorService;
-import ITmonteur.example.hospitalERP.services.JWTService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
+// getAll / getAllBySpecialization / getDoctor/{id} are public; the rest needs DOCTOR or ADMIN
 @RestController
-@CrossOrigin(origins = "http://localhost:3000")
 @RequestMapping("/api/doctor")
 public class DoctorController {
 
-    private static final Logger logger = LoggerFactory.getLogger(DoctorController.class);
-
     @Autowired
     private DoctorService doctorService;
-    @Autowired
-    private JWTService jwtService;
-
-    // Add new doctor
-    @PostMapping("/addNewDoctor")
-    public ResponseEntity<DoctorDTO> addDoctor(@RequestBody DoctorDTO doctorDTO) {
-        logger.info("Adding new doctor: {}", doctorDTO.getName());
-        DoctorDTO savedDoctor = this.doctorService.registerDoctor(doctorDTO);
-        logger.info("Doctor added successfully with ID: {}", savedDoctor.getId());
-        return ResponseEntity.ok(savedDoctor);
-    }
 
     // Get all doctors
     @GetMapping("/getAll")
-//    @PreAuthorize("hasAnyRole('DOCTOR', 'PATIENT', 'RECEPTIONIST')")
     public ResponseEntity<List<DoctorDTO>> getAllDoctors() {
-        logger.info("Fetching all doctors");
-        List<DoctorDTO> doctors = this.doctorService.getAllDoctors();
-        logger.info("Total doctors fetched: {}", doctors.size());
-        return ResponseEntity.ok(doctors);
+        return ResponseEntity.ok(this.doctorService.getAllDoctors());
     }
 
     @GetMapping("/getAllBySpecialization")
-    public ResponseEntity<List<DoctorDTO>> getDoctorsBySpecialization(@RequestParam String specialisation){
-        try {
-            logger.info("Fetching all doctors od specialization:" +specialisation);
-            Specialist specEnum = Specialist.valueOf(specialisation.toUpperCase());
-            List<DoctorDTO> doctorDTOS = this.doctorService.findDoctorsBySpecialization(specEnum);
-            logger.info("Total doctors fetched: {}", doctorDTOS.size());
-            return ResponseEntity.ok(doctorDTOS);
-        }catch (IllegalArgumentException e) {
-            return ResponseEntity.ok(List.of());
-        }
+    public ResponseEntity<List<DoctorDTO>> getDoctorsBySpecialization(@RequestParam String specialisation) {
+        Specialist specialist = DoctorService.parseSpecialist(specialisation);
+        return ResponseEntity.ok(specialist == null ? List.of() : this.doctorService.findDoctorsBySpecialization(specialist));
     }
 
-    // Get doctor by user ID
+    // Get doctor by user ID (self or admin)
     @GetMapping("/get/{id}")
     public ResponseEntity<DoctorDTO> getDoctorByUserId(@PathVariable Long id) {
-        logger.info("Fetching doctor with ID: {}", id);
-        DoctorDTO doctorDTO = this.doctorService.getDoctorByUserId(id);
-        logger.info("Fetched doctor: {}", doctorDTO.getName());
-        return ResponseEntity.ok(doctorDTO);
+        return ResponseEntity.ok(this.doctorService.getDoctorByUserId(id));
     }
 
-    // Get doctor by doctor ID
+    // Get doctor by doctor ID (public profile)
     @GetMapping("/getDoctor/{id}")
     public ResponseEntity<DoctorDTO> getDoctorByDoctorId(@PathVariable Long id) {
-        logger.info("Fetching doctor with ID: {}", id);
-        DoctorDTO doctorDTO = this.doctorService.getDoctorByDoctorId(id);
-        logger.info("Fetched doctor: {}", doctorDTO.getName());
-        return ResponseEntity.ok(doctorDTO);
+        return ResponseEntity.ok(this.doctorService.getDoctorByDoctorId(id));
     }
+
     @PutMapping("/complete/{appointmentId}")
-    public ResponseEntity<?> markAppointmentCompleted(@PathVariable long appointmentId) {
-        logger.info("Received request to complete appointment with ID: {}", appointmentId);
-        try {
-            String response = this.doctorService.markAsCompleted(appointmentId);
-            logger.info("Appointment {} marked as completed successfully.", appointmentId);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException ex) {
-            logger.error("Error completing appointment with ID {}: {}", appointmentId, ex.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
-        }
+    public ResponseEntity<String> markAppointmentCompleted(@PathVariable long appointmentId) {
+        return ResponseEntity.ok(this.doctorService.markAsCompleted(appointmentId));
     }
 
     @GetMapping("/doctorPendingAppointments/{userId}")
     public ResponseEntity<List<AppointmentDTO>> getPendingAppointmentsForDoctor(@PathVariable Long userId) {
-        logger.info("Fetching pending appointments for doctor ID: {}", userId);
-        List<AppointmentDTO> appointments = this.doctorService.getAllPendingAppointmentsByDoctorId(userId);
-        logger.info("Total pending appointments found for doctor ID {}: {}", userId, appointments.size());
-        return ResponseEntity.ok(appointments);
+        return ResponseEntity.ok(this.doctorService.getAllPendingAppointmentsByDoctorId(userId));
     }
 
     @GetMapping("/doctorCompletedAppointments/{userId}")
     public ResponseEntity<List<AppointmentDTO>> getCompletedAppointmentsForDoctor(@PathVariable Long userId) {
-        logger.info("Fetching completed appointments for doctor ID: {}", userId);
-        List<AppointmentDTO> appointments = this.doctorService.getAllCompletedAppointmentsByDoctorId(userId);
-        logger.info("Total completed appointments found for doctor ID {}: {}", userId, appointments.size());
-        return ResponseEntity.ok(appointments);
+        return ResponseEntity.ok(this.doctorService.getAllCompletedAppointmentsByDoctorId(userId));
     }
 
-
-    // Update doctor by ID (only self-update allowed)
+    // Update doctor by user ID (self or admin)
     @PutMapping(value = "/update/{id}", consumes = {"multipart/form-data"})
-    public ResponseEntity<?> updateDoctor(
+    public ResponseEntity<DoctorDTO> updateDoctor(
             @PathVariable Long id,
             @RequestPart("doctorDTO") DoctorDTO doctorDTO,
-            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
-            HttpServletRequest request) {
-
-        String token = request.getHeader("Authorization").substring(7);
-        String username = this.jwtService.extractUsername(token);
-        Long tokenUserId = this.jwtService.extractUserId(token);
-        logger.info("Update request by user: {} for doctor ID: {}", username, id);
-        if (!id.equals(tokenUserId)) {
-            logger.warn("User {} tried to update doctor ID {} without permission", username, id);
-            return ResponseEntity.status(403).body("You can only update your own profile!");
-        }
-        // Save image if provided
-        if (profileImage != null && !profileImage.isEmpty()) {
-            try {
-                String uploadDir = System.getProperty("user.dir") + "/uploads/profileImages/";
-                java.nio.file.Path filePath = java.nio.file.Paths.get(uploadDir + profileImage.getOriginalFilename());
-                java.nio.file.Files.createDirectories(filePath.getParent());
-                profileImage.transferTo(filePath.toFile());
-                doctorDTO.setProfileImage("/uploads/profileImages/" + profileImage.getOriginalFilename());
-            } catch (Exception e) {
-                logger.error("Failed to upload profile image: {}", e.getMessage());
-                return ResponseEntity.status(500).body("Image upload failed!");
-            }
-        }
-        DoctorDTO updatedDoctor = this.doctorService.updateDoctor(id, doctorDTO);
-        logger.info("Doctor updated successfully with ID: {}", id);
-        return ResponseEntity.ok(updatedDoctor);
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
+        return ResponseEntity.ok(this.doctorService.updateDoctor(id, doctorDTO, profileImage));
     }
 
-    // Delete doctor by ID
+    // Delete doctor by doctor ID
     @DeleteMapping("/delete/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteDoctorById(@PathVariable Long id) {
-        logger.info("Deleting doctor with ID: {}", id);
-        boolean deleted = this.doctorService.deleteDoctor(id);
-        if (deleted) {
-            logger.info("Doctor deleted successfully with ID: {}", id);
-            return ResponseEntity.ok("Doctor deleted successfully");
-        } else {
-            logger.warn("Doctor not found with ID: {}", id);
-            return ResponseEntity.status(404).body("Doctor not found");
-        }
-    }
-
-    // Delete all doctors
-    @DeleteMapping
-    public ResponseEntity<String> deleteAllDoctors() {
-        logger.info("Deleting all doctors");
-        boolean deleted = this.doctorService.deleteAllDoctors();
-        if (deleted) {
-            logger.info("All doctors deleted successfully");
-            return ResponseEntity.ok("All doctors deleted successfully");
-        } else {
-            logger.warn("No doctors found to delete");
-            return ResponseEntity.status(404).body("No doctors found to delete");
-        }
+        this.doctorService.deleteDoctor(id);
+        return ResponseEntity.ok("Doctor deleted successfully");
     }
 }

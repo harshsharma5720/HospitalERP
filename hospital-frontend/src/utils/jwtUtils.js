@@ -1,19 +1,22 @@
-export const getRoleFromToken = (token) => {
+// Decodes the (unverified) payload of a JWT. Only used for UI decisions;
+// the backend verifies the signature on every request.
+const decodePayload = (token) => {
+  const base64Url = token.split(".")[1];
+  const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+  const jsonPayload = decodeURIComponent(
+    atob(base64)
+      .split("")
+      .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+      .join("")
+  );
+  return JSON.parse(jsonPayload);
+};
 
-// ✅ Decode JWT token to extract role
+// ✅ Decode JWT token to extract role, e.g. "ROLE_PATIENT"
+export const getRoleFromToken = (token) => {
   try {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    const payload = JSON.parse(jsonPayload);
-    return payload.role || "";
+    return decodePayload(token).role || "";
   } catch (err) {
-    console.error("Error decoding token:", err);
     return "";
   }
 };
@@ -21,28 +24,15 @@ export const getRoleFromToken = (token) => {
 // Extract userId from JWT token
 export const getUserIdFromToken = (token) => {
   try {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    const payload = JSON.parse(jsonPayload);
-    // Try multiple possible fields for userId
-    return payload.userId || payload.id || payload.sub || null;
+    return decodePayload(token).userId ?? null;
   } catch (err) {
-    console.error("Error decoding token for userId:", err);
     return null;
   }
 };
 
 export const isTokenExpired = (token) => {
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    const expiry = payload.exp * 1000;
-    return Date.now() > expiry;
+    return Date.now() > decodePayload(token).exp * 1000;
   } catch (e) {
     return true;
   }

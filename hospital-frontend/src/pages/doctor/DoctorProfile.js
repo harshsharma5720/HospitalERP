@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { getUserIdFromToken } from "../../utils/jwtUtils";
+import { API_BASE_URL } from "../../config";
 
 const SPECIALIST_OPTIONS = [
   "NOT_ASSIGNED",
@@ -27,7 +28,7 @@ export default function DoctorProfile() {
 
     try {
       const res = await axios.get(
-        `http://localhost:8080/api/doctor/get/${doctorId}`,
+        `${API_BASE_URL}/api/doctor/get/${doctorId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -82,7 +83,7 @@ export default function DoctorProfile() {
       }
 
       await axios.put(
-        `http://localhost:8080/api/doctor/update/${userIdFromToken}`,
+        `${API_BASE_URL}/api/doctor/update/${userIdFromToken}`,
         formDataToSend,
         {
           headers: {
@@ -153,7 +154,7 @@ export default function DoctorProfile() {
                 formData.profileImage instanceof File
                   ? URL.createObjectURL(formData.profileImage)
                   : formData.profileImage
-                  ? `http://localhost:8080${formData.profileImage}`
+                  ? `${API_BASE_URL}${formData.profileImage}`
                   : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
               }
               alt="Doctor"

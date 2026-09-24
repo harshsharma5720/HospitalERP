@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../config";
+import { getErrorMessage } from "../../utils/apiError";
 
 export default function RegisterUser() {
   const [formData, setFormData] = useState({
@@ -14,9 +16,14 @@ export default function RegisterUser() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Staff accounts are created through the admin API; public /api/auth/register only creates patients
   const handleSubmit = async () => {
+    if (!formData.role) {
+      alert("Please select a role");
+      return;
+    }
     try {
-      await axios.post("http://localhost:8080/api/auth/register", {
+      await axios.post(`${API_BASE_URL}/api/admin/users`, {
         email: formData.email,
         username: formData.username,
         phoneNumber: formData.phone,
@@ -26,8 +33,7 @@ export default function RegisterUser() {
 
       alert("User registered successfully!");
     } catch (error) {
-      alert("Registration failed!");
-      console.error(error.response || error);
+      alert(getErrorMessage(error, "Registration failed!"));
     }
   };
 

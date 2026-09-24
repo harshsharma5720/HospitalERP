@@ -117,7 +117,7 @@ HospitalERP/
 - [x] Doctor CRUD with specialization and profile image upload
 - [x] Patient account management and profile updates
 - [x] Appointment booking with doctor, date, shift, and slot selection
-- [x] Slot generation (morning: 9 AM–1 PM, evening: 2 PM–6 PM)
+- [x] Slot generation, 10-minute slots (morning: 9 AM–12 PM, evening: 3 PM–7 PM), created by the server on first request and blocked during approved leave
 - [x] Appointment status: SCHEDULED, COMPLETED, CANCELLED
 - [x] Patient relatives (add, list, update, delete)
 - [x] Leave request workflow (apply, approve/reject, list by status)
@@ -183,13 +183,10 @@ HospitalERP/
 
 | Task | Details |
 |------|---------|
-| **Phone verification on register** | OTP verification exists in UI but is commented out in backend `AuthService` |
 | **Departments module** | Referenced in admin sidebar but not implemented |
 | **Manage receptionists page** | Backend APIs exist; frontend page missing |
 | **Manage patients page (admin)** | Backend APIs exist; frontend page missing |
 | **Doctor chat feature** | Placeholder alert: "Chat feature coming soon" |
-| **JWT secret persistence** | JWT secret is generated at runtime — tokens invalidate on server restart |
-| **API URL centralization** | Frontend hardcodes `http://localhost:8080` in many files |
 
 ### 5.3 Low Priority — Full ERP Modules (Not Started)
 
@@ -244,11 +241,11 @@ Hospital ERP Vision
 5. Fix role-based login redirects for Patient and Receptionist
 
 ### Phase 2 — Polish & stability
-1. Centralize API base URL in frontend config
-2. Re-enable phone OTP verification on registration
-3. Persist JWT secret in environment config
+1. ~~Centralize API base URL in frontend config~~ (done — `REACT_APP_API_URL`)
+2. ~~Re-enable phone OTP verification on registration~~ (done — `OTP_REQUIRED`)
+3. ~~Persist JWT secret in environment config~~ (done — `JWT_SECRET`)
 4. Add Swagger API documentation
-5. Write backend and frontend tests
+5. Extend the backend and frontend tests (a first set now exists — see `docs/CODE_REVIEW_AND_IDEAS.md` §9)
 
 ### Phase 3 — ERP expansion
 1. Billing and payment module

@@ -5,6 +5,7 @@ import PopupForm from "./PopupForm";
 import { useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import ScrollAnimate from "./utils/ScrollAnimate";
+import useAuthStore from "./Store/useAuthStore";
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -52,7 +53,7 @@ export default function HomePage() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("jwtToken");
+    useAuthStore.getState().logout(); // clears token + role everywhere
     setIsLoggedIn(false);
     navigate("/login");
     window.dispatchEvent(new Event("storage"));

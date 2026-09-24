@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { User, UserPlus, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import useAuthStore from "./Store/useAuthStore";
 
 export default function TopNavbar() {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ export default function TopNavbar() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("jwtToken");
+    useAuthStore.getState().logout(); // clears token + role everywhere
     setIsLoggedIn(false);
     navigate("/");
     window.dispatchEvent(new Event("storage"));

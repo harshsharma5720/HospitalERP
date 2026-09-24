@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 /* PUBLIC / PATIENT */
 import HomePage from "./HomePage";
@@ -22,31 +22,15 @@ import ReceptionistAppointmentDashboard from "./ReceptionistAppointmentDashboard
 import AdminLayout from "./pages/admin/AdminLayout";
 import DoctorLayout from "./pages/doctor/DoctorLayout";
 
-/* UTILS */
-import { getRoleFromToken, isTokenExpired } from "./utils/jwtUtils";
+/* AUTH */
+import ProtectedRoute from "./components/ProtectedRoute";
+import useAuthStore, { homePathForRole } from "./Store/useAuthStore";
+
+const PATIENT = ["ROLE_PATIENT"];
 
 function App() {
-  const [role, setRole] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  // 🔐 Auth bootstrap (runs once)
-  useEffect(() => {
-    const token = localStorage.getItem("jwtToken");
-
-    if (!token || isTokenExpired(token)) {
-      localStorage.removeItem("jwtToken");
-      setRole(null);
-    } else {
-      setRole(getRoleFromToken(token));
-    }
-
-    setLoading(false);
-  }, []);
-
-  // ⏳ Prevent early routing
-  if (loading) {
-    return <div className="text-center mt-20 text-lg">Loading...</div>;
-  }
+  // Re-renders automatically on login/logout (no page reload needed)
+  const role = useAuthStore((s) => s.role);
 
   return (
     <Router>
@@ -54,56 +38,53 @@ function App() {
 
         {/* ===================== PUBLIC ROUTES ===================== */}
         <Route path="/" element={<HomePage />} />
-        <Route path="/appointments" element={<AppointmentPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/doctors" element={<DoctorPage />} />
         <Route path="/contact" element={<ContactUsPage />} />
         <Route path="/treatments" element={<Treatments />} />
         <Route path="/about" element={<AboutUs />} />
-        <Route path="/edit-profile" element={<EditProfilePage />} />
-        <Route path="/appointment-details" element={<AppointmentDetails />} />
         <Route path="/doctor-profile/:doctorId" element={<DoctorProfile />} />
-        <Route path="/add-relative" element={<AddRelativePage />} />
-        <Route path="/relatives" element={<RelativesList />} />
+
+        {/* ===================== PATIENT ===================== */}
+        <Route path="/appointments" element={<ProtectedRoute roles={PATIENT}><AppointmentPage /></ProtectedRoute>} />
+        <Route path="/appointment-details" element={<ProtectedRoute roles={PATIENT}><AppointmentDetails /></ProtectedRoute>} />
+        <Route path="/add-relative" element={<ProtectedRoute roles={PATIENT}><AddRelativePage /></ProtectedRoute>} />
+        <Route path="/edit-relative" element={<ProtectedRoute roles={PATIENT}><AddRelativePage /></ProtectedRoute>} />
+        <Route path="/relatives" element={<ProtectedRoute roles={PATIENT}><RelativesList /></ProtectedRoute>} />
+        <Route
+          path="/edit-profile"
+          element={
+            <ProtectedRoute roles={["ROLE_PATIENT", "ROLE_DOCTOR", "ROLE_RECEPTIONIST"]}>
+              <EditProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ===================== RECEPTIONIST ===================== */}
         <Route
           path="/receptionist-appointments"
-          element={<ReceptionistAppointmentDashboard />}
+          element={
+            <ProtectedRoute roles={["ROLE_RECEPTIONIST", "ROLE_ADMIN"]}>
+              <ReceptionistAppointmentDashboard />
+            </ProtectedRoute>
+          }
         />
 
         {/* ===================== ADMIN ===================== */}
         <Route
           path="/admin/*"
-          element={
-            role === "ROLE_ADMIN"
-              ? <AdminLayout />
-              : <Navigate to="/login" replace />
-          }
+          element={<ProtectedRoute roles={["ROLE_ADMIN"]}><AdminLayout /></ProtectedRoute>}
         />
 
         {/* ===================== DOCTOR ===================== */}
         <Route
           path="/doctor/*"
-          element={
-            role === "ROLE_DOCTOR"
-              ? <DoctorLayout />
-              : <Navigate to="/login" replace />
-          }
+          element={<ProtectedRoute roles={["ROLE_DOCTOR"]}><DoctorLayout /></ProtectedRoute>}
         />
 
         {/* ===================== REDIRECT ROOT BASED ON ROLE ===================== */}
-        <Route
-          path="/redirect"
-          element={
-            role === "ROLE_ADMIN" ? (
-              <Navigate to="/admin/dashboard" replace />
-            ) : role === "ROLE_DOCTOR" ? (
-              <Navigate to="/doctor/dashboard" replace />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
+        <Route path="/redirect" element={<Navigate to={homePathForRole(role)} replace />} />
 
         {/* ===================== FALLBACK ===================== */}
         <Route path="*" element={<Navigate to="/" replace />} />

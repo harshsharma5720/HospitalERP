@@ -3,19 +3,24 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Navbar from "./Navbar";
 import TopNavbar from "./TopNavbar";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { getUserIdFromToken } from "./utils/jwtUtils";
 import { calculateAgeFromDOB } from "./utils/calculateAgeFromDOB";
 import Loader from "./components/common/Loader";
+import { toLocalISODate, addDays } from "./utils/dateUtils";
+import { getErrorMessage } from "./utils/apiError";
+import { API_BASE_URL } from "./config";
 
 export default function AppointmentPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const doctorName = location.state?.doctorName || "";
   const doctorId = location.state?.doctorId || "";
   const rescheduleData = location.state?.rescheduleAppointment || null;
   const [bookingStatus, setBookingStatus] = useState("idle");
 
-  const [formData, setFormData] = useState({
+  const emptyForm = {
+    patientKey: "", // "USER-<patientId>" or "RELATIVE-<relativeId>"
     patientName: "",
     gender: "MALE",
     age: "",
@@ -25,39 +30,27 @@ export default function AppointmentPage() {
     date: "",
     message: "",
     ptInfoId: "",
-    slotId: "",
-  });
+    relativeId: "",
+  };
+  const [formData, setFormData] = useState(emptyForm);
 
   const [doctors, setDoctors] = useState([]);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slotError, setSlotError] = useState("");
   const [selectedSlotId, setSelectedSlotId] = useState(null);
   const [patientOptions, setPatientOptions] = useState([]);
-  const [userDetails, setUserDetails] = useState(null);
 
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split("T")[0];
-  });
-
-  const today = new Date();
-  const maxDate = new Date();
-  maxDate.setDate(today.getDate() + 6);
+  // Dates are handled as local "yyyy-MM-dd" strings (toISOString would use UTC)
+  const todayStr = toLocalISODate();
+  const maxDateStr = toLocalISODate(addDays(new Date(), 6));
+  const [selectedDate, setSelectedDate] = useState(todayStr);
 
   // Fetch doctors and prefill doctor if passed from DoctorPage
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const token = localStorage.getItem("jwtToken");
-        if (!token) {
-          alert("Please login first!");
-          return;
-        }
-
-        const response = await axios.get(
-          "http://localhost:8080/api/patient/getAllDoctors",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const response = await axios.get(`${API_BASE_URL}/api/patient/getAllDoctors`);
         setDoctors(response.data);
 
         // Prefill doctor if passed from DoctorPage
@@ -74,8 +67,7 @@ export default function AppointmentPage() {
           }
         }
       } catch (error) {
-        console.error("Error fetching doctors:", error);
-        alert("Failed to load doctors. Please try again.");
+        alert(getErrorMessage(error, "Failed to load doctors. Please try again."));
       }
     };
 
@@ -87,6 +79,7 @@ export default function AppointmentPage() {
     if (doctorId && date && shift) {
       handleSlotFetch(); // auto trigger
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.doctorId, formData.date, formData.shift]);
 
   useEffect(() => {
@@ -102,29 +95,21 @@ export default function AppointmentPage() {
     if (rescheduleData) {
       setFormData((prev) => ({
         ...prev,
+        patientKey: rescheduleData.relativeId
+          ? `RELATIVE-${rescheduleData.relativeId}`
+          : `USER-${rescheduleData.ptInfoId}`,
         patientName: rescheduleData.patientName || "",
+        gender: rescheduleData.gender || prev.gender,
+        age: rescheduleData.age || "",
+        doctorId: rescheduleData.doctorId || prev.doctorId,
         doctorName: rescheduleData.doctorName || "",
         message: rescheduleData.message || "",
         ptInfoId: rescheduleData.ptInfoId || "",
+        relativeId: rescheduleData.relativeId || "",
         shift: rescheduleData.shift || "MORNING",
-        date: "",
       }));
-
-      if (rescheduleData.doctorName && doctors.length > 0) {
-        const selectedDoctor = doctors.find(
-          (doc) =>
-            doc.name.toLowerCase() === rescheduleData.doctorName.toLowerCase()
-        );
-        if (selectedDoctor) {
-          setFormData((prev) => ({
-            ...prev,
-            doctorId: selectedDoctor.id,
-            doctorName: selectedDoctor.name,
-          }));
-        }
-      }
     }
-  }, [rescheduleData, doctors]);
+  }, [rescheduleData]);
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -133,34 +118,28 @@ export default function AppointmentPage() {
         if (!token) return;
         // 1. Fetch logged-in user
         const userId = getUserIdFromToken(token);
-        const userRes = await axios.get(
-          `http://localhost:8080/api/patient/getAccount/${userId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const userRes = await axios.get(`${API_BASE_URL}/api/patient/getAccount/${userId}`);
         const user = userRes.data;
-        setUserDetails(user);
         // 2. Fetch all relatives of user
-        const relRes = await axios.get(
-          `http://localhost:8080/api/patient/relative/patient/${user.patientId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const relRes = await axios.get(`${API_BASE_URL}/api/patient/relative/patient/${user.patientId}`);
         const relatives = relRes.data;
-        const age = calculateAgeFromDOB(user.dob);
         // 3. Dropdown options = user + relatives
         const options = [
           {
-            id: user.patientId,
+            key: `USER-${user.patientId}`,
+            patientId: user.patientId,
+            relativeId: null,
             name: user.patientName,
             gender: user.gender,
-            age: age,
-            type: "USER",
+            age: calculateAgeFromDOB(user.dob),
           },
           ...relatives.map((rel) => ({
-            id: rel.patientId,
-            name: rel.name,
+            key: `RELATIVE-${rel.id}`,
+            patientId: user.patientId,
+            relativeId: rel.id,
+            name: `${rel.name} (${rel.relationship?.toLowerCase() || "relative"})`,
             gender: rel.gender,
             age: calculateAgeFromDOB(rel.dob),
-            type: "RELATIVE",
           })),
         ];
 
@@ -191,45 +170,31 @@ export default function AppointmentPage() {
     }
   };
 
-  const handlePatientSelect = (selectedName) => {
-    const selected = patientOptions.find((p) => p.name === selectedName);
+  const handlePatientSelect = (key) => {
+    const selected = patientOptions.find((p) => p.key === key);
     if (!selected) return;
 
     setFormData((prev) => ({
       ...prev,
+      patientKey: selected.key,
       patientName: selected.name,
-      gender: selected.gender,
-      age: selected.age,
-      ptInfoId: selected.type === "USER" ? selected.id : "",
-      relativeId: selected.type === "RELATIVE" ? selected.id : "",
+      gender: selected.gender || prev.gender,
+      age: selected.age === "" ? prev.age : selected.age,
+      ptInfoId: selected.patientId,
+      relativeId: selected.relativeId || "",
     }));
   };
 
   const changeDate = (direction) => {
-    const current = new Date(selectedDate);
-
-    if (direction === "prev") {
-      const prev = new Date(current);
-      prev.setDate(current.getDate() - 1);
-
-      if (prev >= today) {
-        setSelectedDate(prev.toISOString().split("T")[0]);
-      }
-    }
-
-    if (direction === "next") {
-      const next = new Date(current);
-      next.setDate(current.getDate() + 1);
-
-      if (next <= maxDate) {
-        setSelectedDate(next.toISOString().split("T")[0]);
-      }
+    const next = toLocalISODate(addDays(new Date(`${selectedDate}T00:00:00`), direction === "prev" ? -1 : 1));
+    if (next >= todayStr && next <= maxDateStr) {
+      setSelectedDate(next);
     }
   };
 
 
 
-  // Fetch available slots
+  // Fetch available slots (the server creates them on first request)
   const handleSlotFetch = async () => {
     const { doctorId, date, shift } = formData;
     if (!doctorId || !date || !shift) {
@@ -238,30 +203,17 @@ export default function AppointmentPage() {
     }
 
     setLoadingSlots(true);
-    const token = localStorage.getItem("jwtToken");
+    setSlotError("");
+    setSelectedSlotId(null);
 
     try {
-      await axios.post(
-        `http://localhost:8080/api/slots/generate/${doctorId}`,
-        null,
-        {
-          params: { date, shift },
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      const response = await axios.get(
-        `http://localhost:8080/api/slots/available/${doctorId}`,
-        {
-          params: { date, shift },
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
+      const response = await axios.get(`${API_BASE_URL}/api/slots/available/${doctorId}`, {
+        params: { date, shift },
+      });
       setAvailableSlots(response.data);
     } catch (error) {
-      console.error("Error fetching slots:", error);
-      alert("Unable to load slots. Please try again.");
+      setAvailableSlots([]);
+      setSlotError(getErrorMessage(error, "Unable to load slots. Please try again."));
     } finally {
       setLoadingSlots(false);
     }
@@ -270,11 +222,6 @@ export default function AppointmentPage() {
   // Handle appointment booking / rescheduling
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("jwtToken");
-    if (!token) {
-      alert("Please login first!");
-      return;
-    }
 
     if (!selectedSlotId) {
       alert("Please select a slot before submitting.");
@@ -282,48 +229,40 @@ export default function AppointmentPage() {
     }
 
     try {
-      const payload = {
-        ...formData,
-        age: Number(formData.age),
-        ptInfoId: formData.ptInfoId ? Number(formData.ptInfoId) : null,
-        slotId: selectedSlotId,
-      };
       setBookingStatus("loading");
-      const response = await axios.post(
-        "http://localhost:8080/appointment/NewAppointment",
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      if (rescheduleData) {
+        // Moves the existing appointment to the new slot (the old slot is released by the server)
+        await axios.put(`${API_BASE_URL}/appointment/update/${rescheduleData.appointmentID}`, {
+          slotId: selectedSlotId,
+          message: formData.message,
+        });
+      } else {
+        await axios.post(`${API_BASE_URL}/appointment/NewAppointment`, {
+          patientName: formData.patientName,
+          gender: formData.gender,
+          age: Number(formData.age) || 0,
+          message: formData.message,
+          relativeId: formData.relativeId ? Number(formData.relativeId) : null,
+          slotId: selectedSlotId,
+        });
+      }
       setBookingStatus("success");
 
       setTimeout(() => {
         setBookingStatus("idle");
+        if (rescheduleData) {
+          navigate("/appointment-details");
+        }
       }, 2000);
 
-      alert(
-        rescheduleData
-          ? "Appointment rescheduled successfully!"
-          : "Appointment booked successfully!"
-      );
-
-      setFormData({
-        patientName: "",
-        gender: "MALE",
-        age: "",
-        doctorId: "",
-        doctorName: "",
-        shift: "MORNING",
-        date: "",
-        message: "",
-        ptInfoId: "",
-        slotId: "",
-      });
+      setFormData({ ...emptyForm, doctorId: "", doctorName: "", date: selectedDate });
       setAvailableSlots([]);
       setSelectedSlotId(null);
     } catch (error) {
       setBookingStatus("idle");
-      console.error("Error submitting appointment:", error);
-      alert("Failed to book appointment. Please try again.");
+      alert(getErrorMessage(error, "Failed to book appointment. Please try again."));
+      // The slot may have been taken meanwhile - refresh the list
+      handleSlotFetch();
     }
   };
 
@@ -333,14 +272,14 @@ export default function AppointmentPage() {
       {bookingStatus === "loading" && (
         <Loader
           type="heartbeat"
-          text="Booking your appointment..."
+          text={rescheduleData ? "Rescheduling your appointment..." : "Booking your appointment..."}
         />
       )}
 
       {bookingStatus === "success" && (
         <Loader
           type="success"
-          text="Your appointment is booked successfully!"
+          text={rescheduleData ? "Your appointment has been rescheduled!" : "Your appointment is booked successfully!"}
         />
       )}
     <div className="min-h-screen bg-white dark:bg-[#0a1124] text-gray-900 dark:text-[#50d4f2] transition-all">
@@ -366,15 +305,16 @@ export default function AppointmentPage() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
              <select
-               name="patientName"
-               value={formData.patientName}
+               name="patientKey"
+               value={formData.patientKey}
                onChange={(e) => handlePatientSelect(e.target.value)}
+               disabled={!!rescheduleData}
                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2]"
                required
              >
                <option value="">Select Patient</option>
-               {patientOptions.map((p, index) => (
-                 <option key={`${p.type}-${p.id}-${index}`} value={p.name}>
+               {patientOptions.map((p) => (
+                 <option key={p.key} value={p.key}>
                    {p.name}
                  </option>
                ))}
@@ -384,6 +324,7 @@ export default function AppointmentPage() {
                 name="gender"
                 value={formData.gender}
                 onChange={handleChange}
+                disabled={!!rescheduleData}
                 className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
                 required
               >
@@ -395,8 +336,11 @@ export default function AppointmentPage() {
               <input
                 type="number"
                 name="age"
+                min="0"
+                max="120"
                 value={formData.age}
                 onChange={handleChange}
+                disabled={!!rescheduleData}
                 placeholder="Age"
                 className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
                 required
@@ -446,8 +390,8 @@ export default function AppointmentPage() {
                     name="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    min={today.toISOString().split("T")[0]}
-                    max={maxDate.toISOString().split("T")[0]}
+                    min={todayStr}
+                    max={maxDateStr}
                     className="w-full bg-white p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4CAF50] dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a]"
                   />
 
@@ -473,15 +417,6 @@ export default function AppointmentPage() {
               ></textarea>
 
 
-              <input
-                type="number"
-                name="ptInfoId"
-                value={formData.ptInfoId}
-                onChange={handleChange}
-                placeholder="Patient Info ID (optional)"
-                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
-              />
-
               <button
                 type="submit"
                 className="w-full bg-green-600 text-white dark:bg-green-600 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
@@ -505,6 +440,7 @@ export default function AppointmentPage() {
               <div className="grid grid-cols-3 gap-3">
                 {availableSlots.map((slot) => (
                   <button
+                    type="button"
                     key={slot.id}
                     onClick={() => setSelectedSlotId(slot.id)}
                     className={`p-3 rounded-lg border text-sm font-medium transition ${
@@ -519,7 +455,7 @@ export default function AppointmentPage() {
               </div>
             ) : (
               <p className="text-center text-gray-500 dark:text-[#8ddff8]">
-                No slots available. Please select doctor, date & shift.
+                {slotError || "No slots available. Please select doctor, date & shift."}
               </p>
             )}
           </div>

@@ -1,11 +1,8 @@
 package ITmonteur.example.hospitalERP.dto;
 
-import ITmonteur.example.hospitalERP.entities.Appointment;
 import ITmonteur.example.hospitalERP.entities.Gender;
-import jakarta.persistence.OneToMany;
 
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.List;
 
 public class PtInfoDTO {
@@ -13,7 +10,7 @@ public class PtInfoDTO {
     private String patientName;
     private String email;
     private String patientAddress;
-    private long patientAadharNo;
+    private Long patientAadharNo;  // boxed so a missing Aadhaar stays null instead of 0
     private String contactNo;
     private LocalDate dob;
     private Gender gender;
@@ -25,7 +22,7 @@ public class PtInfoDTO {
     }
 
     public PtInfoDTO(long patientId, String patientName,String email, String patientAddress,
-                     long patientAadharNo,String contactNo, LocalDate dob,Gender gender,
+                     Long patientAadharNo,String contactNo, LocalDate dob,Gender gender,
                      List<AppointmentDTO> appointment, String userName, String profileImage) {
         this.patientId = patientId;
         this.patientName = patientName;
@@ -72,11 +69,11 @@ public class PtInfoDTO {
         this.patientAddress = patientAddress;
     }
 
-    public long getPatientAadharNo() {
+    public Long getPatientAadharNo() {
         return patientAadharNo;
     }
 
-    public void setPatientAadharNo(long patientAadharNo) {
+    public void setPatientAadharNo(Long patientAadharNo) {
         this.patientAadharNo = patientAadharNo;
     }
 

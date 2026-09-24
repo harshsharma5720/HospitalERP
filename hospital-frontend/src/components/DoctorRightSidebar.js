@@ -7,12 +7,14 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config";
+import useAuthStore from "../Store/useAuthStore";
 
 export default function DoctorRightSidebar({ doctor }) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem("jwtToken");
+    useAuthStore.getState().logout(); // clears token + role everywhere
     navigate("/login");
   };
 
@@ -29,7 +31,7 @@ export default function DoctorRightSidebar({ doctor }) {
           <img
             src={
               doctor.profileImage
-                ? `http://localhost:8080${doctor.profileImage}`
+                ? `${API_BASE_URL}${doctor.profileImage}`
                 : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
             }
             alt="Doctor"

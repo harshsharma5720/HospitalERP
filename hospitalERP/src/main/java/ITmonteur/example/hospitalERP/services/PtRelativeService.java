@@ -3,108 +3,108 @@ package ITmonteur.example.hospitalERP.services;
 import ITmonteur.example.hospitalERP.dto.PtRelativeDTO;
 import ITmonteur.example.hospitalERP.entities.PtInfo;
 import ITmonteur.example.hospitalERP.entities.PtRelative;
+import ITmonteur.example.hospitalERP.entities.Role;
+import ITmonteur.example.hospitalERP.exception.BadRequestException;
+import ITmonteur.example.hospitalERP.exception.ForbiddenException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
+import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
 import ITmonteur.example.hospitalERP.repositories.PtRelativeRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
+// Relatives belong to a patient; only that patient (or an admin) can see or change them.
 @Service
 public class PtRelativeService {
 
     private static final Logger logger = LoggerFactory.getLogger(PtRelativeService.class);
 
-    @Autowired
-    private PtRelativeRepository ptRelativeRepository;
+    private final PtRelativeRepository ptRelativeRepository;
+    private final PtInfoRepository ptInfoRepository;
+    private final AppointmentRepository appointmentRepository;
+    private final CurrentUserService currentUserService;
 
-    @Autowired
-    private PtInfoRepository ptInfoRepository;
+    public PtRelativeService(PtRelativeRepository ptRelativeRepository, PtInfoRepository ptInfoRepository,
+                             AppointmentRepository appointmentRepository, CurrentUserService currentUserService) {
+        this.ptRelativeRepository = ptRelativeRepository;
+        this.ptInfoRepository = ptInfoRepository;
+        this.appointmentRepository = appointmentRepository;
+        this.currentUserService = currentUserService;
+    }
 
+    /** Patients always add to their own account; admins must pass patientId. */
     public PtRelativeDTO addRelative(PtRelativeDTO dto) {
-        logger.info("Adding new relative for patientId: {}", dto.getPatientId());
-        try {
-            PtInfo patient = ptInfoRepository.findById(dto.getPatientId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Patient", "patientId", dto.getPatientId()));
-            PtRelative relative = convertToEntity(dto, patient);
-            PtRelative saved = ptRelativeRepository.save(relative);
-            logger.info("Relative added successfully for patientId: {}", dto.getPatientId());
-            return convertToDTO(saved);
-        } catch (Exception e) {
-            logger.error("Error while adding relative for patientId {}: {}", dto.getPatientId(), e.getMessage(), e);
-            throw e;
+        PtInfo patient;
+        if (currentUserService.hasRole(Role.ADMIN)) {
+            if (dto.getPatientId() == null) {
+                throw new BadRequestException("patientId is required");
+            }
+            patient = ptInfoRepository.findById(dto.getPatientId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Patient", "patientId", dto.getPatientId()));
+        } else {
+            Long userId = currentUserService.getCurrentUserId();
+            patient = ptInfoRepository.findByUser_Id(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Patient", "userId", userId));
         }
+        PtRelative relative = new PtRelative();
+        copyFields(dto, relative);
+        relative.setPtInfo(patient);
+        PtRelative saved = ptRelativeRepository.save(relative);
+        logger.info("Relative {} added for patient {}", saved.getId(), patient.getPatientId());
+        return convertToDTO(saved);
     }
 
     public List<PtRelativeDTO> getRelativesByPatient(Long patientId) {
-        logger.info("Fetching all relatives for patientId: {}", patientId);
-        try {
-            List<PtRelative> relatives = ptRelativeRepository.findByPtInfoPatientId(patientId);
-            List<PtRelativeDTO> relativesDTOs = relatives.stream()
-                    .map(this::convertToDTO)
-                    .collect(Collectors.toList());
-            logger.info("Total relatives retrieved: {}", relatives.size());
-            return relativesDTOs;
-        } catch (Exception e) {
-            logger.error("Error fetching relatives for patientId {}: {}", patientId, e.getMessage(), e);
-            throw e;
-        }
+        PtInfo patient = ptInfoRepository.findById(patientId)
+                .orElseThrow(() -> new ResourceNotFoundException("Patient", "patientId", patientId));
+        requireOwner(patient);
+        return ptRelativeRepository.findByPtInfoPatientId(patientId).stream()
+                .map(this::convertToDTO)
+                .toList();
     }
 
     public PtRelativeDTO getRelativeById(Long id) {
-        logger.info("Fetching relative with ID: {}", id);
-        try {
-            PtRelative relative = ptRelativeRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Relative", "relativeId", id));
-            logger.info("Relative found: {}", relative.getName());
-            return convertToDTO(relative);
-        } catch (Exception e) {
-            logger.error("Error fetching relative with ID {}: {}", id, e.getMessage(), e);
-            throw e;
-        }
+        PtRelative relative = findRelative(id);
+        requireOwner(relative.getPtInfo());
+        return convertToDTO(relative);
     }
 
     public PtRelativeDTO updateRelative(Long id, PtRelativeDTO dto) {
-        logger.info("Updating relative with ID: {}", id);
-        try {
-            PtRelative relative = ptRelativeRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException("Relative", "relativeId", id));
-            relative.setName(dto.getName());
-            relative.setGender(dto.getGender());
-            relative.setDob(dto.getDob());
-            relative.setRelationship(dto.getRelationship());
-            relative.setPatientAadharNo(dto.getPatientAadharNo());
-            PtRelative updated = ptRelativeRepository.save(relative);
-            logger.info("Relative updated successfully with ID: {}", id);
-            return convertToDTO(updated);
-        } catch (Exception e) {
-            logger.error("Error updating relative with ID {}: {}", id, e.getMessage(), e);
-            throw e;
+        PtRelative relative = findRelative(id);
+        requireOwner(relative.getPtInfo());
+        copyFields(dto, relative);
+        return convertToDTO(ptRelativeRepository.save(relative));
+    }
+
+    // Past appointments booked for the relative are kept; only the link to the relative is removed
+    @Transactional
+    public String deleteRelative(Long id) {
+        PtRelative relative = findRelative(id);
+        requireOwner(relative.getPtInfo());
+        appointmentRepository.clearRelative(id);
+        ptRelativeRepository.delete(relative);
+        logger.info("Relative deleted with ID: {}", id);
+        return "Relative removed successfully!";
+    }
+
+    private void requireOwner(PtInfo patient) {
+        if (currentUserService.hasRole(Role.ADMIN)) {
+            return;
+        }
+        Long userId = currentUserService.getCurrentUserId();
+        if (patient == null || patient.getUser() == null || !Objects.equals(patient.getUser().getId(), userId)) {
+            throw new ForbiddenException("You can only manage your own relatives");
         }
     }
 
-    public String deleteRelative(Long id) {
-        logger.info("Deleting relative with ID: {}", id);
-        try {
-            PtRelative relative = ptRelativeRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Relative", "relativeId", id));
-
-            ptRelativeRepository.delete(relative);
-
-            logger.info("Relative deleted successfully with ID: {}", id);
-            return "Relative removed successfully!";
-
-        } catch (Exception e) {
-            logger.error("Error deleting relative with ID {}: {}", id, e.getMessage(), e);
-            throw e;
-        }
+    private PtRelative findRelative(Long id) {
+        return ptRelativeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Relative", "relativeId", id));
     }
 
     private PtRelativeDTO convertToDTO(PtRelative relative) {
@@ -119,15 +119,14 @@ public class PtRelativeService {
         );
     }
 
-    private PtRelative convertToEntity(PtRelativeDTO dto, PtInfo patient) {
-        PtRelative relative = new PtRelative();
-        relative.setId(dto.getId());
+    private static void copyFields(PtRelativeDTO dto, PtRelative relative) {
+        if (dto.getPatientAadharNo() != null && String.valueOf(dto.getPatientAadharNo()).length() != 12) {
+            throw new BadRequestException("Aadhaar number must have 12 digits");
+        }
         relative.setName(dto.getName());
         relative.setGender(dto.getGender());
         relative.setDob(dto.getDob());
         relative.setRelationship(dto.getRelationship());
         relative.setPatientAadharNo(dto.getPatientAadharNo());
-        relative.setPtInfo(patient);
-        return relative;
     }
 }

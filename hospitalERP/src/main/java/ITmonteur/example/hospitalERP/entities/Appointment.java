@@ -39,6 +39,11 @@ public class Appointment {
     @ManyToOne
     @JoinColumn(name = "patient_id", referencedColumnName = "patientId")
     private PtInfo ptInfo;
+    // Set when the appointment is booked for one of the patient's relatives
+    @ManyToOne
+    @JoinColumn(name = "relative_id")
+    private PtRelative relative;
+    // Legacy column kept in sync with status so existing rows stay readable
     @Column(nullable = false)
     private boolean isCompleted = false;
 
@@ -93,7 +98,17 @@ public class Appointment {
 
     public void setStatus(AppointmentStatus status) {
         this.status = status;
+        this.isCompleted = status == AppointmentStatus.COMPLETED;
     }
+
+    // SCHEDULED or CONFIRMED and not completed — can still be cancelled or rescheduled
+    public boolean isActive() {
+        return !isCompleted
+                && (status == AppointmentStatus.SCHEDULED || status == AppointmentStatus.CONFIRMED);
+    }
+
+    public PtRelative getRelative() { return relative; }
+    public void setRelative(PtRelative relative) { this.relative = relative; }
 
     public PtInfo getPtInfo() { return ptInfo; }
     public void setPtInfo(PtInfo ptInfo) { this.ptInfo = ptInfo; }
@@ -112,5 +127,8 @@ public class Appointment {
 
     public void setCompleted(boolean completed) {
         isCompleted = completed;
+        if (completed) {
+            this.status = AppointmentStatus.COMPLETED;
+        }
     }
 }

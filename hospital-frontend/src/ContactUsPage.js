@@ -83,27 +83,27 @@ function ContactUsPage() {
           {/* Social Media Icons */}
           <div className="mt-8 flex items-center gap-6 text-3xl">
 
-                    <a href="https://instagram.com" target="_blank"
+                    <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"
                        className="text-pink-600 dark:text-pink-400 hover:scale-110 transition">
                       <FaInstagram />
                     </a>
 
-                    <a href="https://facebook.com" target="_blank"
+                    <a href="https://facebook.com" target="_blank" rel="noopener noreferrer"
                        className="text-blue-700 dark:text-blue-400 hover:scale-110 transition">
                       <FaFacebook />
                     </a>
 
-                    <a href="https://twitter.com" target="_blank"
+                    <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"
                        className="text-black dark:text-white hover:scale-110 transition">
                       <FaXTwitter />
                     </a>
 
-                    <a href="https://linkedin.com" target="_blank"
+                    <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer"
                        className="text-blue-800 dark:text-blue-500 hover:scale-110 transition">
                       <FaLinkedin />
                     </a>
 
-                    <a href="https://youtube.com" target="_blank"
+                    <a href="https://youtube.com" target="_blank" rel="noopener noreferrer"
                        className="text-red-600 dark:text-red-500 hover:scale-110 transition">
                       <FaYoutube />
                     </a>

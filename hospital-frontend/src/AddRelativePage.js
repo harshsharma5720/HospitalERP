@@ -3,21 +3,24 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import TopNavbar from "./TopNavbar";
 import Navbar from "./Navbar";
-import { getUserIdFromToken, getRoleFromToken } from "./utils/jwtUtils";
+import { getErrorMessage } from "./utils/apiError";
+import { toLocalISODate } from "./utils/dateUtils";
 import { useLocation } from "react-router-dom";
+import { API_BASE_URL } from "./config";
 
+// Used for both "/add-relative" and "/edit-relative" (state.relative = relative to edit)
 export default function AddRelativePage() {
   const navigate = useNavigate();
 
   const location = useLocation();
-  const patientId = location.state?.patientId;
+  const editing = location.state?.relative || null;
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    name: "",
-    gender: "",
-    dob: "",
-    relationship: "",
-    patientAadharNo: "",
-    patientId: patientId,
+    name: editing?.name || "",
+    gender: editing?.gender || "",
+    dob: editing?.dob || "",
+    relationship: editing?.relationship || "",
+    patientAadharNo: editing?.patientAadharNo ? String(editing.patientAadharNo) : "",
   });
 
 
@@ -26,26 +29,26 @@ export default function AddRelativePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const token = localStorage.getItem("jwtToken");
-    const patientId = getUserIdFromToken(token);
+    // The backend links the relative to the logged-in patient, so no patientId is sent
+    const payload = {
+      ...form,
+      patientAadharNo: form.patientAadharNo ? Number(form.patientAadharNo) : null,
+    };
 
     try {
-      await axios.post(
-        `http://localhost:8080/api/patient/relative/add`,
-        form,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      alert("Relative added successfully!");
+      setSaving(true);
+      if (editing) {
+        await axios.put(`${API_BASE_URL}/api/patient/relative/update/${editing.id}`, payload);
+        alert("Relative updated successfully!");
+      } else {
+        await axios.post(`${API_BASE_URL}/api/patient/relative/add`, payload);
+        alert("Relative added successfully!");
+      }
       navigate("/edit-profile"); // redirect back
     } catch (err) {
-      console.error("Error adding relative:", err);
-      alert("Failed to add relative.");
+      alert(getErrorMessage(err, editing ? "Failed to update relative." : "Failed to add relative."));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -56,7 +59,7 @@ export default function AddRelativePage() {
 
       <div className="max-w-3xl mx-auto bg-white dark:bg-[#111a3b] mt-10 p-8 rounded-xl shadow-lg">
         <h2 className="text-2xl font-bold mb-6 text-center dark:text-[#50d4f2]">
-          Add New Relative
+          {editing ? "Edit Relative" : "Add New Relative"}
         </h2>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-5">
@@ -95,6 +98,7 @@ export default function AddRelativePage() {
               type="date"
               name="dob"
               value={form.dob}
+              max={toLocalISODate()}
               onChange={handleChange}
               required
               className="p-2 w-full border rounded bg-gray-100 dark:bg-[#1e293b] dark:text-white"
@@ -119,6 +123,9 @@ export default function AddRelativePage() {
               <option value="DAUGHTER">Daughter</option>
               <option value="BROTHER">Brother</option>
               <option value="SISTER">Sister</option>
+              <option value="GRANDFATHER">Grandfather</option>
+              <option value="GRANDMOTHER">Grandmother</option>
+              <option value="OTHER">Other</option>
             </select>
           </div>
 
@@ -127,9 +134,12 @@ export default function AddRelativePage() {
             <input
               type="text"
               name="patientAadharNo"
+              inputMode="numeric"
+              pattern="[0-9]{12}"
+              title="Aadhaar number must be 12 digits"
+              placeholder="12-digit Aadhaar number (optional)"
               value={form.patientAadharNo}
               onChange={handleChange}
-              required
               className="p-2 w-full border rounded bg-gray-100 dark:bg-[#1e293b] dark:text-white"
             />
           </div>
@@ -145,10 +155,10 @@ export default function AddRelativePage() {
 
             <button
               type="submit"
-              onClick={() => navigate("/edit-profile")}
-              className="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+              disabled={saving}
+              className="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
             >
-              Add Relative
+              {saving ? "Saving..." : editing ? "Save Changes" : "Add Relative"}
             </button>
           </div>
 

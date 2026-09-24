@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../../config";
 
 export default function ManageUsers() {
   const [users, setUsers] = useState([]);
@@ -11,7 +12,7 @@ export default function ManageUsers() {
   const fetchUsers = async () => {
     try {
       console.log("Using token:", token);
-      const response = await axios.get("http://localhost:8080/api/admin/allUsers", {
+      const response = await axios.get(`${API_BASE_URL}/api/admin/allUsers`, {
         headers: { Authorization: `Bearer ${token}`},
       });
       console.log("Fetched users:", response.data);
@@ -28,7 +29,7 @@ export default function ManageUsers() {
     if (!confirmDelete) return;
 
     try {
-      const response = await axios.delete(`http://localhost:8080/api/admin/${id}`, {
+      const response = await axios.delete(`${API_BASE_URL}/api/admin/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
       });
       alert("User deleted successfully!");

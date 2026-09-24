@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import TopNavbar from "../../components/TopNavbar";
 import { getRoleFromToken, getUserIdFromToken } from "../../utils/jwtUtils";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../../config";
 
 export default function LeaveManagementPage() {
   const [pendingLeaves, setPendingLeaves] = useState([]);
@@ -30,8 +31,8 @@ export default function LeaveManagementPage() {
     try {
       const endpoint =
         viewType === "pending"
-          ? `http://localhost:8080/api/leaves/pending/${userId}`
-          : `http://localhost:8080/api/leaves/approved/${userId}`;
+          ? `${API_BASE_URL}/api/leaves/pending/${userId}`
+          : `${API_BASE_URL}/api/leaves/approved/${userId}`;
 
       const response = await fetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
@@ -60,7 +61,7 @@ export default function LeaveManagementPage() {
         reason: formData.reason,
       };
 
-      const response = await fetch(`http://localhost:8080/api/leaves/apply`, {
+      const response = await fetch(`${API_BASE_URL}/api/leaves/apply`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

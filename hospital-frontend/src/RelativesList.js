@@ -3,6 +3,7 @@ import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import TopNavbar from "./TopNavbar";
+import { API_BASE_URL } from "./config";
 
 export default function RelativesList() {
   const location = useLocation();
@@ -19,7 +20,7 @@ export default function RelativesList() {
       try {
         const token = localStorage.getItem("jwtToken");
         const res = await axios.get(
-          `http://localhost:8080/api/patient/relative/patient/${patientId}`,
+          `${API_BASE_URL}/api/patient/relative/patient/${patientId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -43,7 +44,7 @@ export default function RelativesList() {
       const token = localStorage.getItem("jwtToken");
 
       await axios.delete(
-        `http://localhost:8080/api/patient/relative/delete/${id}`,
+        `${API_BASE_URL}/api/patient/relative/delete/${id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
