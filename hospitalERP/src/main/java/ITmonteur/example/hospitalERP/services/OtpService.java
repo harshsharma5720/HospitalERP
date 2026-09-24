@@ -43,44 +43,67 @@ public class OtpService {
         this.smsService = smsService;
     }
 
+    /** Registration: sends an OTP to the phone number being verified. */
     public void sendOtp(String rawPhone) {
         String phone = normalize(rawPhone);
         if (!smsService.isEnabled()) {
             throw new IllegalStateException("SMS service is not configured");
         }
-        Instant now = Instant.now();
-        OtpEntry existing = pendingOtps.get(phone);
-        if (existing != null && existing.sentAt().plus(RESEND_COOLDOWN).isAfter(now)) {
-            throw new ConflictException("Please wait a minute before requesting another OTP");
-        }
-        String otp = String.format("%06d", random.nextInt(1_000_000));
-        pendingOtps.put(phone, new OtpEntry(hash(otp), now.plus(OTP_VALIDITY), now, 0));
-        smsService.sendOtp(phone, otp, (int) OTP_VALIDITY.toMinutes());
+        String otp = issue(phone);
+        smsService.sendOtp(phone, otp, validityMinutes());
         logger.info("OTP sent to {}", SmsService.mask(phone));
     }
 
+    /** Registration: checks the OTP and marks the phone as verified. */
     public boolean verifyOtp(String rawPhone, String enteredOtp) {
         String phone = normalize(rawPhone);
-        OtpEntry entry = pendingOtps.get(phone);
+        if (!checkCode(phone, enteredOtp)) {
+            return false;
+        }
+        verifiedPhones.put(phone, Instant.now().plus(VERIFIED_VALIDITY));
+        return true;
+    }
+
+    /**
+     * Creates a new code for an arbitrary purpose key (e.g. "reset:42") and returns it so the
+     * caller can deliver it. Throws ConflictException if one was issued less than a minute ago.
+     */
+    public String issue(String key) {
+        Instant now = Instant.now();
+        OtpEntry existing = pendingOtps.get(key);
+        if (existing != null && existing.sentAt().plus(RESEND_COOLDOWN).isAfter(now)) {
+            throw new ConflictException("Please wait a minute before requesting another code");
+        }
+        String otp = String.format("%06d", random.nextInt(1_000_000));
+        pendingOtps.put(key, new OtpEntry(hash(otp), now.plus(OTP_VALIDITY), now, 0));
+        return otp;
+    }
+
+    /** Checks (and on success consumes) a code issued with {@link #issue(String)}. */
+    public boolean checkCode(String key, String enteredOtp) {
+        OtpEntry entry = pendingOtps.get(key);
         if (entry == null || entry.expiresAt().isBefore(Instant.now())) {
-            pendingOtps.remove(phone);
+            pendingOtps.remove(key);
             return false;
         }
         if (enteredOtp != null && MessageDigest.isEqual(
                 entry.hash().getBytes(StandardCharsets.UTF_8),
                 hash(enteredOtp.trim()).getBytes(StandardCharsets.UTF_8))) {
-            pendingOtps.remove(phone);
-            verifiedPhones.put(phone, Instant.now().plus(VERIFIED_VALIDITY));
+            pendingOtps.remove(key);
             return true;
         }
         int attempts = entry.attempts() + 1;
         if (attempts >= MAX_ATTEMPTS) {
-            pendingOtps.remove(phone);
-            logger.warn("Too many wrong OTP attempts for {}", SmsService.mask(phone));
+            pendingOtps.remove(key);
+            logger.warn("Too many wrong OTP attempts - code invalidated");
         } else {
-            pendingOtps.put(phone, new OtpEntry(entry.hash(), entry.expiresAt(), entry.sentAt(), attempts));
+            pendingOtps.put(key, new OtpEntry(entry.hash(), entry.expiresAt(), entry.sentAt(), attempts));
         }
         return false;
+    }
+
+    public int validityMinutes() {
+        return (int) OTP_VALIDITY.toMinutes();
     }
 
     public boolean isPhoneVerified(String rawPhone) {

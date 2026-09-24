@@ -31,4 +31,10 @@ public interface SlotRepository extends JpaRepository<Slot,Long> {
     @Modifying
     @Query("DELETE FROM Slot s WHERE s.doctor.id = :doctorId")
     void deleteByDoctorId(@Param("doctorId") Long doctorId);
+
+    // Slots from the given date on that no appointment (active or past) refers to
+    @Modifying
+    @Query("DELETE FROM Slot s WHERE s.doctor.id = :doctorId AND s.date >= :fromDate "
+            + "AND NOT EXISTS (SELECT a FROM Appointment a WHERE a.slot = s)")
+    void deleteUnusedFromDate(@Param("doctorId") Long doctorId, @Param("fromDate") LocalDate fromDate);
 }

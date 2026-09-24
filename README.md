@@ -104,6 +104,16 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=choose-a-strong-password
 ADMIN_EMAIL=admin@hospital.com
+
+# Appointment reminders (day before, by SMS + email) — optional
+REMINDERS_ENABLED=true
+# Spring cron: second minute hour day month weekday (default: every hour)
+REMINDERS_CRON=0 0 * * * *
+
+# Shown on the prescription PDF letterhead — optional
+HOSPITAL_NAME=Shreya Hospital
+HOSPITAL_ADDRESS=12 MG Road, Pune
+HOSPITAL_PHONE=+91 20 5555 1234
 ```
 
 > **Note:** Twilio and email settings are optional. Without Twilio, SMS is skipped (a warning is logged) and you should set `OTP_REQUIRED=false`, otherwise nobody can sign up. Without SMTP, emails are skipped.
@@ -190,6 +200,22 @@ Public registration (`/register`, `POST /api/auth/register`) **always creates a 
 To get the first admin, set `ADMIN_USERNAME`, `ADMIN_PASSWORD` (8+ characters) and optionally `ADMIN_EMAIL` in `hospitalERP/.env` and start the backend. The account is created once, if it doesn't exist yet. Then log in at http://localhost:3000/login.
 
 Doctors, receptionists and other admins are created by an admin from **Admin → Register User** (`POST /api/admin/users`).
+
+---
+
+## Features at a Glance
+
+| Feature | Who | Where |
+|---------|-----|-------|
+| Book / reschedule / cancel appointments (also for relatives) | Patient | `/appointments`, `/appointment-details` |
+| Appointment reminders the day before (SMS + email) | Automatic | runs hourly (`REMINDERS_CRON`) |
+| Consultation notes, vitals and e-prescription | Doctor | Appointments → **Start Consultation** |
+| Medical history and prescription PDF download | Patient | `/appointment-details` (completed visits) |
+| Weekly working hours and slot length | Doctor (or admin via API) | `/doctor/schedule` |
+| Leave requests and approval / rejection | Doctor, Admin | `/doctor/leave-management`, `/admin/leave-approval` |
+| Forgot password (6-digit code by SMS / email) | Everyone | `/forgot-password` (link on the login page) |
+
+Medical records (consultations, prescriptions) are visible only to the patient, their doctor(s) and admins — receptionists cannot read them.
 
 ---
 

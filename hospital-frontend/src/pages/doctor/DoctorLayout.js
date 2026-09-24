@@ -9,6 +9,7 @@ import DoctorProfile from "./DoctorProfile";
 import DoctorDashboard from "./DoctorDashboard";
 import DoctorAppointments from "./DoctorAppointments";
 import LeaveManagementPage from "./LeaveManagementPage";
+import DoctorSchedulePage from "./DoctorSchedulePage";
 import { API_BASE_URL } from "../../config";
 
 export default function DoctorLayout() {
@@ -57,6 +58,8 @@ export default function DoctorLayout() {
             <Route path="doctor-appointments" element={<DoctorAppointments />} />
             <Route path="leave-management" element={<LeaveManagementPage />} />
             <Route path="profile" element={<DoctorProfile />} />
+            <Route path="schedule" element={<DoctorSchedulePage />} />
+            <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Routes>
         </div>
       </div>

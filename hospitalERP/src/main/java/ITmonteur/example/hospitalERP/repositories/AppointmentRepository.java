@@ -63,6 +63,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     long countByDoctorUserIdAndStatus(Long userId, AppointmentStatus status);
 
+    // Whether the doctor has ever seen (or is booked with) this patient
+    boolean existsByDoctor_IdAndPtInfo_PatientId(Long doctorId, Long patientId);
+
+    // Upcoming appointments on the given date that have not been reminded yet
+    @Query("SELECT a FROM Appointment a WHERE a.date = :date AND" + PENDING
+            + "AND (a.reminderSent IS NULL OR a.reminderSent = false)")
+    List<Appointment> findDueForReminder(@Param("date") LocalDate date);
+
     // Used when deleting a relative: keep the appointment history, drop the link
     @Modifying
     @Query("UPDATE Appointment a SET a.relative = null WHERE a.relative.id = :relativeId")

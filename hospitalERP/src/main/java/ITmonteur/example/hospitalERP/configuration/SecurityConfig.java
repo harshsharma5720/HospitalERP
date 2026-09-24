@@ -65,6 +65,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/patient/**").hasAnyRole("PATIENT", "ADMIN")
                         .requestMatchers("/api/receptionist/**").hasAnyRole("RECEPTIONIST", "ADMIN")
                         .requestMatchers("/api/leaves/**").hasAnyRole("ADMIN", "DOCTOR", "RECEPTIONIST")
+                        // Medical records: receptionists are deliberately excluded
+                        .requestMatchers("/api/consultations/**").hasAnyRole("PATIENT", "DOCTOR", "ADMIN")
                         .requestMatchers(
                                 "/appointment/getAll",
                                 "/appointment/allPendingAppointments",

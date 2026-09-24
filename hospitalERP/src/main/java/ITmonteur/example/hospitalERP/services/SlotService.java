@@ -7,16 +7,22 @@ import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ConflictException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
+import ITmonteur.example.hospitalERP.repositories.DoctorScheduleRepository;
 import ITmonteur.example.hospitalERP.repositories.LeaveRequestRepository;
 import ITmonteur.example.hospitalERP.repositories.SlotRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 public class SlotService {
@@ -25,55 +31,87 @@ public class SlotService {
 
     /** Patients can book this many days ahead (today included). */
     public static final int BOOKING_WINDOW_DAYS = 30;
-    public static final int SLOT_MINUTES = 10;
 
     private final SlotRepository slotRepository;
     private final DoctorRepository doctorRepository;
     private final LeaveRequestRepository leaveRequestRepository;
+    private final DoctorScheduleRepository doctorScheduleRepository;
 
     public SlotService(SlotRepository slotRepository, DoctorRepository doctorRepository,
-                       LeaveRequestRepository leaveRequestRepository) {
+                       LeaveRequestRepository leaveRequestRepository,
+                       DoctorScheduleRepository doctorScheduleRepository) {
         this.slotRepository = slotRepository;
         this.doctorRepository = doctorRepository;
         this.leaveRequestRepository = leaveRequestRepository;
+        this.doctorScheduleRepository = doctorScheduleRepository;
     }
 
     /**
-     * Creates 10-minute slots for a doctor/date/shift if they don't exist yet.
-     * Synchronized (and not wrapped in an outer transaction) so two concurrent first
-     * requests cannot generate the same slots twice on a single instance.
+     * Makes the stored slots for a doctor/date/shift match the doctor's schedule:
+     * missing slots are created, and unbooked slots that are no longer part of the schedule
+     * are blocked. Booked slots are never touched, so changing a schedule never drops bookings.
+     * Synchronized (and not wrapped in an outer transaction) so two concurrent first requests
+     * cannot create the same slots twice on a single instance.
      */
     public synchronized List<Slot> generateSlots(Long doctorId, LocalDate date, Shift shift) {
         Doctor doctor = findDoctor(doctorId);
-        List<Slot> existingSlots = slotRepository.findByDoctorAndDateAndShift(doctor, date, shift);
-        if (!existingSlots.isEmpty()) {
-            return existingSlots;
-        }
-        LocalTime start;
-        LocalTime end;
-        switch (shift) {
-            case MORNING -> {
-                start = LocalTime.of(9, 0);
-                end = LocalTime.of(12, 0);
-            }
-            case EVENING -> {
-                start = LocalTime.of(15, 0);
-                end = LocalTime.of(19, 0);
-            }
-            default -> throw new BadRequestException("Invalid shift provided");
+        ScheduleDefaults.Hours hours = hoursFor(doctor, date, shift);
+        boolean onLeave = isDoctorOnLeave(doctor, date);
+
+        Map<String, Slot> existing = new HashMap<>();
+        for (Slot slot : slotRepository.findByDoctorAndDateAndShift(doctor, date, shift)) {
+            existing.put(key(slot.getStartTime(), slot.getEndTime()), slot);
         }
 
-        boolean onLeave = isDoctorOnLeave(doctor, date);
-        List<Slot> slots = new ArrayList<>();
-        while (start.isBefore(end)) {
-            LocalTime slotEnd = start.plusMinutes(SLOT_MINUTES);
-            Slot slot = new Slot(date, start, slotEnd, doctor, shift);
-            slot.setAvailable(!onLeave);
-            slots.add(slot);
-            start = slotEnd;
+        Set<String> wanted = new HashSet<>();
+        List<Slot> changed = new ArrayList<>();
+        if (hours.working()) {
+            int from = hours.start().toSecondOfDay() / 60;
+            int to = hours.end().toSecondOfDay() / 60;
+            for (int m = from; m + hours.slotMinutes() <= to; m += hours.slotMinutes()) {
+                LocalTime slotStart = LocalTime.ofSecondOfDay(m * 60L);
+                LocalTime slotEnd = LocalTime.ofSecondOfDay((m + hours.slotMinutes()) * 60L);
+                String key = key(slotStart, slotEnd);
+                wanted.add(key);
+                if (!existing.containsKey(key)) {
+                    Slot slot = new Slot(date, slotStart, slotEnd, doctor, shift);
+                    slot.setAvailable(!onLeave);
+                    changed.add(slot);
+                }
+            }
         }
-        logger.info("Generated {} slots for doctor {} on {} ({})", slots.size(), doctorId, date, shift);
-        return slotRepository.saveAll(slots);
+        for (Map.Entry<String, Slot> entry : existing.entrySet()) {
+            Slot slot = entry.getValue();
+            if (!wanted.contains(entry.getKey()) && slot.isAvailable()) {
+                slot.setAvailable(false); // outside the current schedule
+                changed.add(slot);
+            }
+        }
+        if (!changed.isEmpty()) {
+            slotRepository.saveAll(changed);
+            logger.debug("Reconciled {} slots for doctor {} on {} ({})", changed.size(), doctorId, date, shift);
+        }
+        return slotRepository.findByDoctorAndDateAndShift(doctor, date, shift);
+    }
+
+    /** The working hours that apply to a doctor on a given date and shift. */
+    public ScheduleDefaults.Hours hoursFor(Doctor doctor, LocalDate date, Shift shift) {
+        return doctorScheduleRepository.findByDoctor_IdAndDayOfWeekAndShift(doctor.getId(), date.getDayOfWeek(), shift)
+                .map(s -> new ScheduleDefaults.Hours(s.isWorking(), s.getStartTime(), s.getEndTime(), s.getSlotMinutes()))
+                .orElseGet(() -> ScheduleDefaults.forShift(shift));
+    }
+
+    /**
+     * Removes today's and future slots that no appointment refers to, so they are regenerated
+     * from the new schedule on the next request. Called after a schedule change.
+     */
+    @Transactional
+    public void resetUnusedFutureSlots(Long doctorId) {
+        slotRepository.deleteUnusedFromDate(doctorId, LocalDate.now());
+    }
+
+    private static String key(LocalTime start, LocalTime end) {
+        return start + "-" + end;
     }
 
     /** Free slots for booking. Slots are generated on first request, so clients never need to create them. */

@@ -25,6 +25,7 @@ class RepositoryQueriesTest {
     @Autowired private AppointmentRepository appointmentRepository;
     @Autowired private LeaveRequestRepository leaveRequestRepository;
     @Autowired private SlotRepository slotRepository;
+    @Autowired private ConsultationRepository consultationRepository;
 
     private Doctor doctor;
     private PtInfo patient;
@@ -130,6 +131,58 @@ class RepositoryQueriesTest {
         slotRepository.deleteByDoctorId(doctor.getId());
         em.clear();
         assertThat(slotRepository.findById(slot.getId())).isEmpty();
+    }
+
+    @Test
+    void reminderQueryFindsOnlyUnremindedActiveAppointments() {
+        Appointment due = appointment(AppointmentStatus.SCHEDULED, LocalTime.of(9, 0));
+        Appointment reminded = appointment(AppointmentStatus.SCHEDULED, LocalTime.of(9, 10));
+        reminded.setReminderSent(true);
+        appointment(AppointmentStatus.CANCELLED_BY_PATIENT, LocalTime.of(9, 20));
+        em.flush();
+
+        assertThat(appointmentRepository.findDueForReminder(tomorrow))
+                .extracting(Appointment::getAppointmentID).containsExactly(due.getAppointmentID());
+        assertThat(appointmentRepository.findDueForReminder(tomorrow.plusDays(1))).isEmpty();
+    }
+
+    @Test
+    void unusedFutureSlotsAreDeletedButBookedOnesStay() {
+        Appointment booked = appointment(AppointmentStatus.SCHEDULED, LocalTime.of(9, 0));
+        Slot unused = new Slot(tomorrow, LocalTime.of(9, 30), LocalTime.of(9, 40), doctor, Shift.MORNING);
+        em.persist(unused);
+        em.flush();
+
+        slotRepository.deleteUnusedFromDate(doctor.getId(), LocalDate.now());
+        em.clear();
+
+        assertThat(slotRepository.findById(unused.getId())).isEmpty();
+        assertThat(slotRepository.findById(booked.getSlot().getId())).isPresent();
+    }
+
+    @Test
+    void consultationHistoryAndCleanupQueriesWork() {
+        Appointment visit = appointment(AppointmentStatus.COMPLETED, LocalTime.of(9, 0));
+        Consultation consultation = new Consultation();
+        consultation.setAppointment(visit);
+        consultation.setDiagnosis("Flu");
+        PrescriptionItem item = new PrescriptionItem();
+        item.setMedicineName("Paracetamol");
+        consultation.replaceMedicines(java.util.List.of(item));
+        em.persist(consultation);
+        em.flush();
+        em.clear();
+
+        assertThat(consultationRepository.findHistoryByPatientId(patient.getPatientId())).hasSize(1);
+        assertThat(consultationRepository.findByAppointment_AppointmentID(visit.getAppointmentID()))
+                .get().extracting(c -> c.getMedicines().size()).isEqualTo(1);
+
+        consultationRepository.deleteItemsByPatientId(patient.getPatientId());
+        consultationRepository.deleteByPatientId(patient.getPatientId());
+        appointmentRepository.deleteByPatientId(patient.getPatientId());
+        em.clear();
+        assertThat(consultationRepository.count()).isZero();
+        assertThat(appointmentRepository.count()).isZero();
     }
 
     private Appointment appointment(AppointmentStatus status, LocalTime start) {

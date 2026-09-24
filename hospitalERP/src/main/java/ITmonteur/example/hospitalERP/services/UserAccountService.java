@@ -17,7 +17,7 @@ import java.util.Objects;
 
 /**
  * Deletes a user together with everything that references it, in an order the
- * foreign keys allow (leaves → appointments → slots → profile → user).
+ * foreign keys allow (leaves → consultations → appointments → slots/schedule → profile → user).
  * Future appointments are cancelled with a notification before being removed.
  *
  * TODO: hospitals usually must keep records, so switch to soft delete (an "active" flag)
@@ -35,6 +35,8 @@ public class UserAccountService {
     private final AppointmentRepository appointmentRepository;
     private final SlotRepository slotRepository;
     private final LeaveRequestRepository leaveRequestRepository;
+    private final ConsultationRepository consultationRepository;
+    private final DoctorScheduleRepository doctorScheduleRepository;
     private final SlotService slotService;
     private final NotificationService notificationService;
     private final CurrentUserService currentUserService;
@@ -42,7 +44,9 @@ public class UserAccountService {
     public UserAccountService(UserRepository userRepository, PtInfoRepository ptInfoRepository,
                               DoctorRepository doctorRepository, ReceptionistRepository receptionistRepository,
                               AppointmentRepository appointmentRepository, SlotRepository slotRepository,
-                              LeaveRequestRepository leaveRequestRepository, SlotService slotService,
+                              LeaveRequestRepository leaveRequestRepository,
+                              ConsultationRepository consultationRepository,
+                              DoctorScheduleRepository doctorScheduleRepository, SlotService slotService,
                               NotificationService notificationService, CurrentUserService currentUserService) {
         this.userRepository = userRepository;
         this.ptInfoRepository = ptInfoRepository;
@@ -51,6 +55,8 @@ public class UserAccountService {
         this.appointmentRepository = appointmentRepository;
         this.slotRepository = slotRepository;
         this.leaveRequestRepository = leaveRequestRepository;
+        this.consultationRepository = consultationRepository;
+        this.doctorScheduleRepository = doctorScheduleRepository;
         this.slotService = slotService;
         this.notificationService = notificationService;
         this.currentUserService = currentUserService;
@@ -89,6 +95,8 @@ public class UserAccountService {
     private void deletePatientProfile(PtInfo patient) {
         List<Appointment> upcoming = appointmentRepository.findPendingByPatientId(patient.getPatientId());
         upcoming.forEach(a -> slotService.releaseSlot(a.getSlot()));
+        consultationRepository.deleteItemsByPatientId(patient.getPatientId());
+        consultationRepository.deleteByPatientId(patient.getPatientId());
         appointmentRepository.deleteByPatientId(patient.getPatientId());
         ptInfoRepository.delete(patient); // relatives are removed by cascade
     }
@@ -98,8 +106,11 @@ public class UserAccountService {
     public void deleteDoctorProfile(Doctor doctor) {
         List<Appointment> upcoming = appointmentRepository.findPendingByDoctorId(doctor.getId());
         upcoming.forEach(a -> notificationService.appointmentCancelled(AppointmentService.notificationInfo(a)));
+        consultationRepository.deleteItemsByDoctorId(doctor.getId());
+        consultationRepository.deleteByDoctorId(doctor.getId());
         appointmentRepository.deleteByDoctorId(doctor.getId());
         slotRepository.deleteByDoctorId(doctor.getId());
+        doctorScheduleRepository.deleteByDoctorId(doctor.getId());
         doctorRepository.delete(doctor);
     }
 }

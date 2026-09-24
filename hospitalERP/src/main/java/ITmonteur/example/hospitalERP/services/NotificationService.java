@@ -58,6 +58,14 @@ public class NotificationService {
                 info.patientEmail(), info.patientName(), info.doctorName(), info.date()));
     }
 
+    @Async
+    public void appointmentReminder(AppointmentInfo info) {
+        attempt("reminder email", () -> emailService.sendReminderEmail(
+                info.patientEmail(), info.patientName(), info.doctorName(), info.date(), info.time()));
+        attempt("reminder SMS", () -> smsService.sendReminderSms(
+                info.patientPhone(), info.patientName(), info.doctorName(), info.date(), info.time()));
+    }
+
     @FunctionalInterface
     private interface Action {
         void run() throws Exception;

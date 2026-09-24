@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import TopNavbar from "../../components/TopNavbar";
 import { getRoleFromToken, getUserIdFromToken } from "../../utils/jwtUtils";
 import { API_BASE_URL } from "../../config";
+import ConsultationModal from "../../components/ConsultationModal";
+import { downloadPrescription } from "../../utils/downloadPrescription";
 
 export default function DoctorAppointments() {
   const [appointments, setAppointments] = useState([]);
@@ -11,6 +13,7 @@ export default function DoctorAppointments() {
   const [userId, setUserId] = useState(null);
   const [role, setRole] = useState(null);
   const [viewType, setViewType] = useState("pending"); // pending or completed
+  const [consulting, setConsulting] = useState(null); // appointment open in the consultation form
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -83,6 +86,17 @@ export default function DoctorAppointments() {
     }
   };
 
+  // After a consultation is saved the appointment is completed, so it leaves the pending list
+  const handleConsultationSaved = (appointmentID) => {
+    if (viewType === "pending") {
+      setAppointments((prev) => prev.filter((a) => a.appointmentID !== appointmentID));
+      setConsulting(null);
+      alert("Consultation saved and appointment completed.");
+    } else {
+      alert("Consultation updated.");
+    }
+  };
+
   if (loading) {
     return <div className="text-center mt-20">Loading appointments...</div>;
   }
@@ -139,22 +153,54 @@ export default function DoctorAppointments() {
                 <p><strong>Patient Name:</strong> {appt.patientName}</p>
                 <p><strong>Date:</strong> {appt.date}</p>
                 <p><strong>Shift:</strong> {appt.shift}</p>
-                <p><strong>Slot:</strong> {appt.slotId}</p>
+                <p><strong>Time:</strong> {appt.startTime ? `${String(appt.startTime).slice(0, 5)} - ${String(appt.endTime).slice(0, 5)}` : "N/A"}</p>
                 <p><strong>Message:</strong> {appt.message}</p>
 
                 {viewType === "pending" && (
-                  <button
-                    onClick={() => handleMarkCompleted(appt.appointmentID)}
-                    className="mt-4 w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg"
-                  >
-                    Mark as Completed
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setConsulting(appt)}
+                      className="mt-4 w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg"
+                    >
+                      Start Consultation
+                    </button>
+                    <button
+                      onClick={() => handleMarkCompleted(appt.appointmentID)}
+                      className="mt-2 w-full text-sm text-gray-600 dark:text-gray-300 hover:underline"
+                    >
+                      Mark completed without notes
+                    </button>
+                  </>
+                )}
+
+                {viewType === "completed" && (
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() => setConsulting(appt)}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg"
+                    >
+                      View / Edit Notes
+                    </button>
+                    <button
+                      onClick={() => downloadPrescription(appt.appointmentID)}
+                      className="flex-1 border border-blue-600 text-blue-700 dark:text-[#50d4f2] py-2 rounded-lg"
+                    >
+                      Prescription PDF
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
           </div>
         )}
       </div>
+      {consulting && (
+        <ConsultationModal
+          appointment={consulting}
+          onClose={() => setConsulting(null)}
+          onSaved={handleConsultationSaved}
+        />
+      )}
     </div>
   );
 }
