@@ -1,6 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { getErrorMessage } from "./utils/apiError";
+import useAuthStore from "./Store/useAuthStore";
+import { API_BASE_URL } from "./config";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -12,13 +15,22 @@ export default function RegisterPage() {
     otp: "",
     password: "",
     confirmPassword: "",
-    role: "PATIENT",
   });
+  const login = useAuthStore((s) => s.login);
 
   const [error, setError] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [loading, setLoading] = useState(false);
+  // The server decides whether phone verification is mandatory (OTP_REQUIRED)
+  const [otpRequired, setOtpRequired] = useState(true);
+
+  useEffect(() => {
+    axios
+      .get(`${API_BASE_URL}/api/auth/otp-required`)
+      .then((res) => setOtpRequired(res.data.otpRequired !== false))
+      .catch(() => setOtpRequired(true));
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -35,14 +47,13 @@ export default function RegisterPage() {
     }
     try {
       setLoading(true);
-      const res = await axios.post("http://localhost:8080/api/auth/send-otp", {
+      const res = await axios.post(`${API_BASE_URL}/api/auth/send-otp`, {
         phone: formData.phone,
       });
       alert(res.data.message || "OTP sent successfully!");
       setOtpSent(true);
     } catch (err) {
-      console.error(err);
-      alert("Failed to send OTP. Try again.");
+      alert(getErrorMessage(err, "Failed to send OTP. Try again."));
     } finally {
       setLoading(false);
     }
@@ -51,7 +62,7 @@ export default function RegisterPage() {
   // Verify OTP
   const handleVerifyOtp = async () => {
     try {
-      const res = await axios.post("http://localhost:8080/api/auth/verify-otp", {
+      const res = await axios.post(`${API_BASE_URL}/api/auth/verify-otp`, {
         phone: formData.phone,
         otp: formData.otp,
       });
@@ -62,7 +73,7 @@ export default function RegisterPage() {
         alert("Invalid OTP!");
       }
     } catch (err) {
-      alert("OTP verification failed!");
+      alert(getErrorMessage(err, "OTP verification failed!"));
     }
   };
 
@@ -76,31 +87,31 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!otpVerified) {
+    if (otpRequired && !otpVerified) {
       setError("Please verify your phone number before registering!");
       return;
     }
 
     try {
-      const response = await axios.post("http://localhost:8080/api/auth/register", {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/register`, {
         email: formData.email,
         username: formData.username,
         phoneNumber: formData.phone,
         password: formData.password,
-        role: formData.role,
       });
 
       const token = response.data.token;
       if (token) {
-        localStorage.setItem("token", token);
+        // The register endpoint returns a token, so the new patient is logged in right away
+        login(token);
         alert(`Welcome ${formData.username}! Registration successful.`);
-        navigate("/login");
+        navigate("/");
       } else {
-        setError("Registration successful, but token not received.");
+        alert("Registration successful! Please log in.");
+        navigate("/login");
       }
     } catch (err) {
-      console.error("Registration error:", err);
-      setError("Registration failed. Please try again.");
+      setError(getErrorMessage(err, "Registration failed. Please try again."));
     }
   };
 
@@ -206,6 +217,7 @@ export default function RegisterPage() {
                 "
                 required
               />
+              {otpRequired && (
               <button
                 type="button"
                 onClick={handleSendOtp}
@@ -219,9 +231,10 @@ export default function RegisterPage() {
               >
                 {loading ? "Sending..." : "Send OTP"}
               </button>
+              )}
             </div>
 
-            {otpSent && (
+            {otpRequired && otpSent && (
               <div className="flex flex-col gap-2">
                 <div className="flex gap-2">
                   <input

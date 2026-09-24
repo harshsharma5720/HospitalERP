@@ -2,234 +2,189 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.dto.DoctorDTO;
+import ITmonteur.example.hospitalERP.dto.EntityMapper;
 import ITmonteur.example.hospitalERP.entities.Appointment;
 import ITmonteur.example.hospitalERP.entities.AppointmentStatus;
 import ITmonteur.example.hospitalERP.entities.Doctor;
+import ITmonteur.example.hospitalERP.entities.Role;
 import ITmonteur.example.hospitalERP.entities.Specialist;
+import ITmonteur.example.hospitalERP.entities.User;
+import ITmonteur.example.hospitalERP.exception.BadRequestException;
+import ITmonteur.example.hospitalERP.exception.ForbiddenException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
-import org.modelmapper.ModelMapper;
+import ITmonteur.example.hospitalERP.repositories.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Locale;
+import java.util.Objects;
 
 @Service
 public class DoctorService {
 
     private static final Logger logger = LoggerFactory.getLogger(DoctorService.class);
 
-    @Autowired
-    private DoctorRepository doctorRepository;
-    @Autowired
-    private AppointmentRepository appointmentRepository;
+    private final DoctorRepository doctorRepository;
+    private final AppointmentRepository appointmentRepository;
+    private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
+    private final FileStorageService fileStorageService;
+    private final UserAccountService userAccountService;
 
-    @Autowired
-    private ModelMapper modelMapper;
-
-    // Register a new doctor
-    public DoctorDTO registerDoctor(DoctorDTO request) {
-        logger.info("Registering new doctor: {}", request.getName());
-        Doctor doctor = this.convertToEntity(request);
-        doctorRepository.save(doctor);
-        DoctorDTO doctorDTO = this.convertToDTO(doctor);
-        logger.info("Doctor registered successfully with ID: {}", doctorDTO.getId());
-        return doctorDTO;
+    public DoctorService(DoctorRepository doctorRepository, AppointmentRepository appointmentRepository,
+                         UserRepository userRepository, CurrentUserService currentUserService,
+                         FileStorageService fileStorageService, UserAccountService userAccountService) {
+        this.doctorRepository = doctorRepository;
+        this.appointmentRepository = appointmentRepository;
+        this.userRepository = userRepository;
+        this.currentUserService = currentUserService;
+        this.fileStorageService = fileStorageService;
+        this.userAccountService = userAccountService;
     }
 
-    // Get all doctors
+    // Get all doctors (public directory)
     public List<DoctorDTO> getAllDoctors() {
-        logger.info("Fetching all doctors");
-        List<Doctor> doctors = doctorRepository.findAll();
-        List<DoctorDTO> doctorDTOList = doctors.stream()
-                .map(doctor -> modelMapper.map(doctor, DoctorDTO.class))
-                .collect(Collectors.toList());
-        logger.info("Total doctors retrieved: {}", doctorDTOList.size());
-        return doctorDTOList;
+        return doctorRepository.findAll().stream().map(EntityMapper::toDoctorDTO).toList();
     }
+
     public DoctorDTO getDoctorByDoctorId(Long doctorId) {
-        logger.info("Fetching doctor with ID: {}", doctorId);
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
+        return EntityMapper.toDoctorDTO(doctor);
+    }
+
+    // Get doctor by user ID (the doctor themself or an admin)
+    public DoctorDTO getDoctorByUserId(Long userId) {
+        currentUserService.requireSelfOrRole(userId, Role.ADMIN);
+        return EntityMapper.toDoctorDTO(doctorByUserId(userId));
+    }
+
+    public List<DoctorDTO> findDoctorsBySpecialization(Specialist specialization) {
+        return doctorRepository.findBySpecialist(specialization)
+                .orElse(List.of())
+                .stream()
+                .map(EntityMapper::toDoctorDTO)
+                .toList();
+    }
+
+    /** Parses a specialization name; unknown values return null so callers can answer with an empty list. */
+    public static Specialist parseSpecialist(String value) {
+        if (value == null) {
+            return null;
+        }
         try {
-            Doctor doctor = doctorRepository.findById(doctorId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
-            DoctorDTO doctorDTO = convertToDTO(doctor);
-            logger.info("Doctor retrieved: {}", doctorDTO.getName());
-            return doctorDTO;
-        } catch (ResourceNotFoundException e) {
-            logger.warn("Doctor not found with ID: {}", doctorId);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Error fetching doctor with ID {}: {}", doctorId, e.getMessage(), e);
-            throw e;
+            return Specialist.valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return null;
         }
     }
 
-    // Get doctor by ID
-    public DoctorDTO getDoctorByUserId(Long doctorId) {
-        logger.info("Fetching doctor with ID: {}", doctorId);
-        try {
-            Doctor doctor = doctorRepository.findByUserId(doctorId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
-            DoctorDTO doctorDTO = convertToDTO(doctor);
-            logger.info("Doctor retrieved: {}", doctorDTO.getName());
-            return doctorDTO;
-        } catch (ResourceNotFoundException e) {
-            logger.warn("Doctor not found with ID: {}", doctorId);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Error fetching doctor with ID {}: {}", doctorId, e.getMessage(), e);
-            throw e;
-        }
-    }
-    public List<DoctorDTO> findDoctorsBySpecialization(Specialist specialization){
-        logger.info("Fetching all doctors ");
-        List<Doctor> doctors = this.doctorRepository.findBySpecialist(specialization)
-                .orElseThrow(()-> new RuntimeException("Doctors not found with specialization :"+specialization));
-        List<DoctorDTO> doctorDTOS = doctors.stream()
-                .map(doctor ->{
-                    DoctorDTO doctorDTO = convertToDTO(doctor);
-                    return doctorDTO;
-                })
-                .collect(Collectors.toList());
-        logger.info("Total doctors retrieved: {}", doctorDTOS.size());
-        return doctorDTOS;
-    }
+    // Update doctor details (the doctor themself or an admin). Username cannot be changed here.
+    @Transactional
+    public DoctorDTO updateDoctor(Long userId, DoctorDTO doctorDTO, MultipartFile profileImage) {
+        currentUserService.requireSelfOrRole(userId, Role.ADMIN);
+        Doctor doctor = doctorByUserId(userId);
 
-    // Update doctor details
-    public DoctorDTO updateDoctor(Long doctorId, DoctorDTO doctorDTO) {
-        logger.info("Updating doctor with ID: {}", doctorId);
-        try {
-            Doctor doctor = doctorRepository.findByUserId(doctorId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
-            doctor.setName(doctorDTO.getName());
-            doctor.setUserName(doctorDTO.getUserName());
-            doctor.setEmail(doctorDTO.getEmail());
-            doctor.setPhoneNumber(doctorDTO.getPhoneNumber());
-            doctor.setSpecialist(Specialist.valueOf(doctorDTO.getSpecialist().toUpperCase()));
-            if (doctorDTO.getProfileImage() != null && !doctorDTO.getProfileImage().isEmpty()) {
-                doctor.setProfileImage(doctorDTO.getProfileImage());
+        if (doctorDTO.getName() != null && !doctorDTO.getName().isBlank()) {
+            doctor.setName(doctorDTO.getName().trim());
+        }
+        if (doctorDTO.getEmail() != null && !doctorDTO.getEmail().isBlank()) {
+            doctor.setEmail(doctorDTO.getEmail().trim());
+        }
+        if (doctorDTO.getPhoneNumber() != null && !doctorDTO.getPhoneNumber().isBlank()) {
+            doctor.setPhoneNumber(doctorDTO.getPhoneNumber().trim());
+        }
+        if (doctorDTO.getSpecialist() != null && !doctorDTO.getSpecialist().isBlank()) {
+            Specialist specialist = parseSpecialist(doctorDTO.getSpecialist());
+            if (specialist == null) {
+                throw new BadRequestException("Unknown specialization: " + doctorDTO.getSpecialist());
             }
-
-            Doctor updatedDoctor = doctorRepository.save(doctor);
-            DoctorDTO updatedDTO = convertToDTO(updatedDoctor);
-            logger.info("Doctor updated successfully with ID: {}", doctorId);
-            return updatedDTO;
-        } catch (ResourceNotFoundException e) {
-            logger.warn("Doctor not found for update with ID: {}", doctorId);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Error updating doctor with ID {}: {}", doctorId, e.getMessage(), e);
-            throw e;
+            doctor.setSpecialist(specialist);
         }
+        if (profileImage != null && !profileImage.isEmpty()) {
+            doctor.setProfileImage(fileStorageService.storeProfileImage(profileImage));
+        }
+        // Keep the login account's contact details in sync with the profile
+        User user = doctor.getUser();
+        if (user != null) {
+            user.setEmail(doctor.getEmail());
+            user.setPhoneNumber(doctor.getPhoneNumber());
+            userRepository.save(user);
+        }
+        Doctor updatedDoctor = doctorRepository.save(doctor);
+        logger.info("Doctor profile updated for user {}", userId);
+        return EntityMapper.toDoctorDTO(updatedDoctor);
     }
 
-    // Delete doctor by ID
+    // Delete doctor by doctor ID (admin only), including their appointments, slots and login
+    @Transactional
     public boolean deleteDoctor(Long doctorId) {
-        logger.info("Deleting doctor with ID: {}", doctorId);
-        try {
-            Doctor doctor = doctorRepository.findById(doctorId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
-            doctorRepository.delete(doctor);
-            logger.info("Doctor deleted successfully with ID: {}", doctorId);
-            return true;
-        } catch (ResourceNotFoundException e) {
-            logger.warn("Doctor not found for deletion with ID: {}", doctorId);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Error deleting doctor with ID {}: {}", doctorId, e.getMessage(), e);
-            return false;
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
+        if (doctor.getUser() != null) {
+            userAccountService.deleteUser(doctor.getUser().getId());
+        } else {
+            userAccountService.deleteDoctorProfile(doctor);
         }
-    }
-
-    // Delete all doctors
-    public boolean deleteAllDoctors() {
-        logger.info("Deleting all doctors");
-        long count = doctorRepository.count();
-        if (count == 0) {
-            logger.warn("No doctors found to delete");
-            return false;
-        }
-        doctorRepository.deleteAll();
-        logger.info("All doctors deleted successfully");
+        logger.info("Doctor deleted with ID: {}", doctorId);
         return true;
     }
-    public String markAsCompleted(long appointmentId) {
 
-        logger.info("Attempting to mark appointment {} as completed...", appointmentId);
+    // Only the doctor who owns the appointment (or an admin) can complete it
+    @Transactional
+    public String markAsCompleted(long appointmentId) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> {
-                    logger.warn("Appointment with ID {} not found.", appointmentId);
-                    return new RuntimeException("Appointment not found with ID: " + appointmentId);
-                });
-        if (appointment.isCompleted()) {
-            logger.info("Appointment {} is already completed.", appointmentId);
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", appointmentId));
+        if (!currentUserService.hasRole(Role.ADMIN)) {
+            Long userId = currentUserService.getCurrentUserId();
+            boolean ownsAppointment = appointment.getDoctor() != null && appointment.getDoctor().getUser() != null
+                    && Objects.equals(appointment.getDoctor().getUser().getId(), userId);
+            if (!ownsAppointment) {
+                throw new ForbiddenException("You can only complete your own appointments");
+            }
+        }
+        if (appointment.getStatus() == AppointmentStatus.COMPLETED || appointment.isCompleted()) {
             return "Appointment is already marked as completed.";
         }
-        appointment.setCompleted(true);
+        if (!appointment.isActive()) {
+            throw new BadRequestException("A cancelled appointment cannot be completed");
+        }
+        appointment.setStatus(AppointmentStatus.COMPLETED);
         appointmentRepository.save(appointment);
-        logger.debug("Database updated: appointment {} is now completed.", appointmentId);
         return "Appointment marked as completed successfully.";
     }
 
+    // userId = the doctor's user id; allowed for the doctor, admins and receptionists
     public List<AppointmentDTO> getAllPendingAppointmentsByDoctorId(Long userId) {
-        logger.info("Fetching pending appointments for doctor ID: {}", userId);
-        Doctor doctor = doctorRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "userId", userId));
-        Long doctorId = doctor.getId();
-        List<Appointment> appointments = appointmentRepository.findByDoctor_IdAndIsCompletedFalse(doctorId);
-        List<AppointmentDTO> appointmentDTOList = appointments.stream()
-                .map(appointment -> modelMapper.map(appointment, AppointmentDTO.class))
-                .collect(Collectors.toList());
-        logger.info("Total pending appointments retrieved for doctor ID {}: {}", doctorId, appointmentDTOList.size());
-        return appointmentDTOList;
+        currentUserService.requireSelfOrRole(userId, Role.ADMIN, Role.RECEPTIONIST);
+        Doctor doctor = doctorByUserId(userId);
+        return appointmentRepository.findPendingByDoctorId(doctor.getId()).stream()
+                .map(EntityMapper::toAppointmentDTO).toList();
     }
 
     public List<AppointmentDTO> getAllCompletedAppointmentsByDoctorId(Long userId) {
-        logger.info("Fetching completed appointments for doctor ID: {}", userId);
-        Doctor doctor = doctorRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "userId", userId));
-        Long doctorId = doctor.getId();
-        List<Appointment> appointments = appointmentRepository.findByDoctor_IdAndIsCompletedTrue(doctorId);
-        List<AppointmentDTO> appointmentDTOList = appointments.stream()
-                .map(appointment -> modelMapper.map(appointment, AppointmentDTO.class))
-                .collect(Collectors.toList());
-        logger.info("Total completed appointments retrieved for doctor ID {}: {}", doctorId, appointmentDTOList.size());
-        return appointmentDTOList;
+        currentUserService.requireSelfOrRole(userId, Role.ADMIN, Role.RECEPTIONIST);
+        Doctor doctor = doctorByUserId(userId);
+        return appointmentRepository.findCompletedByDoctorId(doctor.getId()).stream()
+                .map(EntityMapper::toAppointmentDTO).toList();
     }
+
     public long getPendingCount(Long doctorId) {
-        return appointmentRepository.countByDoctor_IdAndIsCompletedFalse(doctorId);
+        return appointmentRepository.countPendingByDoctorId(doctorId);
     }
 
     public long getCompletedCount(Long doctorId) {
-        return appointmentRepository.countByDoctor_IdAndIsCompletedTrue(doctorId);
+        return appointmentRepository.countCompletedByDoctorId(doctorId);
     }
 
-
-
-
-    // Convert entity to DTO
-    private DoctorDTO convertToDTO(Doctor doctor) {
-        DoctorDTO dto = new DoctorDTO();
-
-        dto.setId(doctor.getId());
-        dto.setName(doctor.getName());
-        dto.setEmail(doctor.getEmail());
-        dto.setPhoneNumber(doctor.getPhoneNumber());
-        dto.setSpecialist(doctor.getSpecialist().toString());
-        dto.setUserName(doctor.getUserName());
-        dto.setProfileImage(doctor.getProfileImage());
-        if (doctor.getUser() != null) {
-            dto.setUserId(doctor.getUser().getId());
-        }
-        return dto;
-    }
-
-    // Convert DTO to entity
-    private Doctor convertToEntity(DoctorDTO doctorDTO) {
-        return modelMapper.map(doctorDTO, Doctor.class);
+    private Doctor doctorByUserId(Long userId) {
+        return doctorRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "userId", userId));
     }
 }

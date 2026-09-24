@@ -8,6 +8,7 @@ import PopupForm from "./PopupForm";
 import Lottie from "lottie-react";
 import doctorAnimation from "./assets/Doctor.json";
 import ScrollAnimate from "./utils/ScrollAnimate";
+import { API_BASE_URL } from "./config";
 
 export default function DoctorPage() {
   const [doctors, setDoctors] = useState([]);
@@ -34,7 +35,7 @@ export default function DoctorPage() {
       setLoading(true);
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await axios.get(
-        "http://localhost:8080/api/patient/getAllDoctors",
+        `${API_BASE_URL}/api/patient/getAllDoctors`,
         { headers }
       );
       setDoctors(response.data);
@@ -60,7 +61,7 @@ export default function DoctorPage() {
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://localhost:8080/api/patient/getAllBySpecialization?specialization=${searchTerm}`,
+        `${API_BASE_URL}/api/patient/getAllBySpecialization?specialization=${searchTerm}`,
         { headers }
       );
       setDoctors(response.data);

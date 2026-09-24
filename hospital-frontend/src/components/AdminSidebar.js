@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import useAuthStore from "../Store/useAuthStore";
 
 function AdminSidebar() {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ function AdminSidebar() {
         Departments
       </button>
 
-      <button onClick={() => navigate("/logout")} className="mt-auto py-2 px-3 bg-red-600 rounded-lg hover:bg-opacity-80 transition">
+      <button onClick={() => { useAuthStore.getState().logout(); navigate("/login"); }} className="mt-auto py-2 px-3 bg-red-600 rounded-lg hover:bg-opacity-80 transition">
         Logout
       </button>
     </div>

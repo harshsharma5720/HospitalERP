@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import Navbar from "./Navbar";
 import TopNavbar from "./TopNavbar";
+import { API_BASE_URL } from "./config";
 
 export default function ReceptionistDashboard() {
   const [doctorName, setDoctorName] = useState("");
@@ -14,7 +15,7 @@ export default function ReceptionistDashboard() {
   // Fetch all appointments
   const fetchAllAppointments = async () => {
     try {
-      const res = await axios.get("http://localhost:8080/api/receptionist/getAppointments", {
+      const res = await axios.get(`${API_BASE_URL}/api/receptionist/getAppointments`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAppointments(res.data);
@@ -32,7 +33,7 @@ export default function ReceptionistDashboard() {
 
     try {
       const res = await axios.get(
-        `http://localhost:8080/api/receptionist/getAppointmentByDoctor/${doctorName}`,
+        `${API_BASE_URL}/api/receptionist/getAppointmentByDoctor/${doctorName}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setAppointments(res.data);
@@ -50,12 +51,12 @@ export default function ReceptionistDashboard() {
 
     try {
       const pendingRes = await axios.get(
-        `http://localhost:8080/api/receptionist/doctorPendingAppointments/${doctorId}`,
+        `${API_BASE_URL}/api/receptionist/doctorPendingAppointments/${doctorId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       const completedRes = await axios.get(
-        `http://localhost:8080/api/receptionist/doctorCompletedAppointments/${doctorId}`,
+        `${API_BASE_URL}/api/receptionist/doctorCompletedAppointments/${doctorId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

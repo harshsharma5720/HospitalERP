@@ -9,6 +9,7 @@ import DoctorProfile from "./DoctorProfile";
 import DoctorDashboard from "./DoctorDashboard";
 import DoctorAppointments from "./DoctorAppointments";
 import LeaveManagementPage from "./LeaveManagementPage";
+import { API_BASE_URL } from "../../config";
 
 export default function DoctorLayout() {
   const [doctor, setDoctor] = useState(null);
@@ -20,7 +21,7 @@ export default function DoctorLayout() {
         const doctorId = getUserIdFromToken(token);
 
         const res = await axios.get(
-          `http://localhost:8080/api/doctor/get/${doctorId}`,
+          `${API_BASE_URL}/api/doctor/get/${doctorId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

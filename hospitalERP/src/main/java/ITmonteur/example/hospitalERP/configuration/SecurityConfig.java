@@ -1,27 +1,34 @@
 package ITmonteur.example.hospitalERP.configuration;
 
 import ITmonteur.example.hospitalERP.services.CustomUserDetailsService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.OncePerRequestFilter;
 
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Autowired
@@ -29,26 +36,51 @@ public class SecurityConfig {
     @Autowired
     private CustomUserDetailsService customUserDetailsService;
 
+    @Value("${app.cors.allowed-origins:http://localhost:3000}")
+    private String allowedOrigins;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) //CSRF = Cross-Site Request Forgery (a type of attack).  It’s useful for web forms that use sessions
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))//
+                .csrf(csrf -> csrf.disable()) // stateless JWT API, no session cookies to protect
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(
+                        // ---------- public ----------
+                        .requestMatchers("/api/auth/**", "/error", "/actuator/health").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/doctor/getAll",
+                                "/api/doctor/getAllBySpecialization",
+                                "/api/doctor/getDoctor/**",
                                 "/api/patient/getAllDoctors",
-                                "/api/patient/getAllBySpecialization",
-                                "/api/patient/getAllBySpecialization/**",
-                                "/api/doctor/getDoctor/**"
+                                "/api/patient/getAllBySpecialization"
                         ).permitAll()
-                        .requestMatchers("/api/doctor/getAll").hasRole("ADMIN")
+
+                        // ---------- role based ----------
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/slots/generate/**").hasRole("ADMIN")
+                        .requestMatchers("/api/slots/**").authenticated()
                         .requestMatchers("/api/doctor/**").hasAnyRole("DOCTOR", "ADMIN")
+                        .requestMatchers("/api/patient/getAll").hasAnyRole("ADMIN", "RECEPTIONIST")
                         .requestMatchers("/api/patient/**").hasAnyRole("PATIENT", "ADMIN")
                         .requestMatchers("/api/receptionist/**").hasAnyRole("RECEPTIONIST", "ADMIN")
                         .requestMatchers("/api/leaves/**").hasAnyRole("ADMIN", "DOCTOR", "RECEPTIONIST")
+                        .requestMatchers(
+                                "/appointment/getAll",
+                                "/appointment/allPendingAppointments",
+                                "/appointment/allCompletedAppointments",
+                                "/appointment/appointmentsByDoctor/**"
+                        ).hasAnyRole("ADMIN", "RECEPTIONIST")
+                        .requestMatchers("/appointment/getDoctorAppointments").hasRole("DOCTOR")
+                        // Remaining appointment endpoints check ownership inside AppointmentService
+                        .requestMatchers("/appointment/**").hasAnyRole("PATIENT", "DOCTOR", "ADMIN", "RECEPTIONIST")
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, e) ->
+                                writeJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, "Please log in to continue"))
+                        .accessDeniedHandler((request, response, e) ->
+                                writeJsonError(response, HttpServletResponse.SC_FORBIDDEN, "You are not allowed to perform this action"))
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
@@ -56,6 +88,13 @@ public class SecurityConfig {
 
         return http.build();
     }
+
+    private static void writeJsonError(HttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.getWriter().write("{\"message\":\"" + message + "\",\"success\":false}");
+    }
+
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -77,8 +116,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000")); // frontend origin
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList());
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of(
                 "Authorization",
                 "Content-Type",
@@ -95,6 +137,4 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", config);
         return source;
     }
-
-
 }

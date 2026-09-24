@@ -2,193 +2,91 @@ package ITmonteur.example.hospitalERP.controller;
 
 import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.dto.ReceptionistDTO;
-import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
+import ITmonteur.example.hospitalERP.services.AppointmentService;
 import ITmonteur.example.hospitalERP.services.DoctorService;
 import ITmonteur.example.hospitalERP.services.ReceptionistService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
+// Everything under /api/receptionist requires RECEPTIONIST or ADMIN (see SecurityConfig)
 @RestController
-@CrossOrigin(origins = "http://localhost:3000")
 @RequestMapping("/api/receptionist")
 public class ReceptionistController {
 
-    private static final Logger logger = LoggerFactory.getLogger(ReceptionistController.class);
-
     @Autowired
     private ReceptionistService receptionistService;
+    @Autowired
+    private AppointmentService appointmentService;
     @Autowired
     private DoctorService doctorService;
 
     // Get all receptionists
     @GetMapping("/getAll")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<ReceptionistDTO>> getAllReceptionist() {
-        logger.info("GET request received to fetch all receptionists");
-        List<ReceptionistDTO> receptionistDTOList = this.receptionistService.getAllReceptionist();
-        logger.info("Total receptionists retrieved: {}", receptionistDTOList.size());
-        return ResponseEntity.ok(receptionistDTOList);
+        return ResponseEntity.ok(this.receptionistService.getAllReceptionist());
     }
 
-    // Get receptionist by ID
+    // Get receptionist by user ID (self or admin)
     @GetMapping("/getReceptionist/{receptionistId}")
     public ResponseEntity<ReceptionistDTO> getReceptionistByID(@PathVariable long receptionistId) {
-        logger.info("GET request received for receptionist ID: {}", receptionistId);
-        try {
-            ReceptionistDTO receptionistDTO = this.receptionistService.getReceptionistByID(receptionistId);
-            logger.info("Receptionist retrieved: {}", receptionistDTO.getName());
-            return ResponseEntity.ok(receptionistDTO);
-        } catch (ResourceNotFoundException e) {
-            logger.warn("Receptionist not found with ID: {}", receptionistId);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        } catch (Exception e) {
-            logger.error("Error fetching receptionist ID {}: {}", receptionistId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-        }
+        return ResponseEntity.ok(this.receptionistService.getReceptionistByID(receptionistId));
     }
 
     // Get all appointments
     @GetMapping("/getAppointments")
     public ResponseEntity<List<AppointmentDTO>> getAllAppointments() {
-        logger.info("GET request received to fetch all appointments");
-        List<AppointmentDTO> appointmentDTOList = this.receptionistService.getAllAppointments();
-        logger.info("Total appointments retrieved: {}", appointmentDTOList.size());
-        return ResponseEntity.ok(appointmentDTOList);
+        return ResponseEntity.ok(this.appointmentService.getAllAppointments());
     }
 
-    // Get appointments by doctor
+    // Get appointments by doctor name
     @GetMapping("/getAppointmentByDoctor/{doctorName}")
     public ResponseEntity<List<AppointmentDTO>> getAllAppointmentsOfDoctor(@PathVariable String doctorName) {
-        logger.info("GET request received for appointments of doctor: {}", doctorName);
-        try {
-            List<AppointmentDTO> appointmentDTOList = this.receptionistService.getAllAppointmentsByDoctorName(doctorName);
-            logger.info("Appointments retrieved for doctor {}: {}", doctorName, appointmentDTOList.size());
-            return ResponseEntity.ok(appointmentDTOList);
-        } catch (Exception e) {
-            logger.error("Error fetching appointments for doctor {}: {}", doctorName, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-        }
+        return ResponseEntity.ok(this.appointmentService.getAppointmentsByDrName(doctorName));
     }
 
-    // Create new appointment
+    // Book on behalf of a patient (ptInfoId and slotId are required)
     @PostMapping("/NewAppointment")
-    public ResponseEntity<String> createNewAppointment(@RequestBody AppointmentDTO appointmentDTO) {
-        logger.info("POST request received to create appointment for patient: {}", appointmentDTO.getPatientName());
-        boolean success = this.receptionistService.createAppointment(appointmentDTO);
-        if (success) {
-            logger.info("Appointment created successfully for patient: {}", appointmentDTO.getPatientName());
-            return ResponseEntity.ok("Your slot has been booked");
-        } else {
-            logger.error("Failed to create appointment for patient: {}", appointmentDTO.getPatientName());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error occurred while booking slot");
-        }
+    public ResponseEntity<AppointmentDTO> createNewAppointment(@RequestBody AppointmentDTO appointmentDTO) {
+        return ResponseEntity.ok(this.appointmentService.createAppointment(appointmentDTO));
     }
 
     @GetMapping("/doctorPendingAppointments/{userId}")
     public ResponseEntity<List<AppointmentDTO>> getPendingAppointmentsForDoctor(@PathVariable Long userId) {
-        logger.info("Fetching pending appointments for doctor ID: {}", userId);
-        List<AppointmentDTO> appointments = this.doctorService.getAllPendingAppointmentsByDoctorId(userId);
-        logger.info("Total pending appointments found for doctor ID {}: {}", userId, appointments.size());
-        return ResponseEntity.ok(appointments);
+        return ResponseEntity.ok(this.doctorService.getAllPendingAppointmentsByDoctorId(userId));
     }
 
     @GetMapping("/doctorCompletedAppointments/{userId}")
     public ResponseEntity<List<AppointmentDTO>> getCompletedAppointmentsForDoctor(@PathVariable Long userId) {
-        logger.info("Fetching completed appointments for doctor ID: {}", userId);
-        List<AppointmentDTO> appointments = this.doctorService.getAllCompletedAppointmentsByDoctorId(userId);
-        logger.info("Total completed appointments found for doctor ID {}: {}", userId, appointments.size());
-        return ResponseEntity.ok(appointments);
+        return ResponseEntity.ok(this.doctorService.getAllCompletedAppointmentsByDoctorId(userId));
     }
 
-    // Delete receptionist
+    // Delete receptionist by receptionist ID
     @DeleteMapping("/delete/{receptionistId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteReceptionist(@PathVariable Long receptionistId) {
-        logger.info("DELETE request received for receptionist ID: {}", receptionistId);
-        boolean deleted = this.receptionistService.deleteReceptionist(receptionistId);
-        if (deleted) {
-            logger.info("Receptionist deleted successfully with ID: {}", receptionistId);
-            return ResponseEntity.ok("Receptionist deleted successfully!");
-        } else {
-            logger.warn("Receptionist not found or deletion failed for ID: {}", receptionistId);
-            return ResponseEntity.status(404).body("Receptionist not found or could not be deleted.");
-        }
+        this.receptionistService.deleteReceptionist(receptionistId);
+        return ResponseEntity.ok("Receptionist deleted successfully!");
     }
 
-    // Delete appointment
+    // Cancel an appointment (kept in history with a CANCELLED status)
     @DeleteMapping("/deleteAppointment/{appointmentId}")
     public ResponseEntity<String> deleteAppointment(@PathVariable Long appointmentId) {
-        logger.info("DELETE request received for appointment ID: {}", appointmentId);
-        boolean deleted = this.receptionistService.deleteAppointment(appointmentId);
-        if (deleted) {
-            logger.info("Appointment deleted successfully with ID: {}", appointmentId);
-            return ResponseEntity.ok("Appointment deleted successfully!");
-        } else {
-            logger.warn("Appointment not found or deletion failed for ID: {}", appointmentId);
-            return ResponseEntity.status(404).body("Appointment not found or could not be deleted.");
-        }
+        this.appointmentService.cancelAppointment(appointmentId);
+        return ResponseEntity.ok("Appointment cancelled successfully!");
     }
 
-    // Delete all appointments
-    @DeleteMapping("/deleteAllAppointments")
-    public ResponseEntity<String> deleteAllAppointments() {
-        logger.info("DELETE request received to delete all appointments");
-        boolean deleted = this.receptionistService.deleteAllAppointments();
-        if (deleted) {
-            logger.info("All appointments deleted successfully");
-            return ResponseEntity.ok("Appointments deleted successfully!");
-        } else {
-            logger.warn("No appointments found to delete");
-            return ResponseEntity.status(404).body("Appointments not found or could not be deleted.");
-        }
-    }
-
-    // Delete all receptionists
-    @DeleteMapping("/receptionists")
-    public ResponseEntity<String> deleteAllReceptionists() {
-        logger.info("DELETE request received to delete all receptionists");
-        boolean isDeleted = this.receptionistService.deleteAllReceptionist();
-        if (isDeleted) {
-            logger.info("All receptionists deleted successfully");
-            return ResponseEntity.ok("All receptionists deleted successfully.");
-        } else {
-            logger.warn("No receptionists found to delete");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Failed to delete receptionists or no receptionists found.");
-        }
-    }
-
+    // Update receptionist by user ID (self or admin)
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<ReceptionistDTO> updateReceptionist(
             @PathVariable("id") Long id,
             @RequestPart("receptionistDTO") ReceptionistDTO receptionistDTO,
             @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
-
-        logger.info("PUT request received to update receptionist with ID: {}", id);
-        if (profileImage != null && !profileImage.isEmpty()) {
-            try {
-                String uploadDir = System.getProperty("user.dir") + "/uploads/profileImages/";
-                java.nio.file.Path filePath = java.nio.file.Paths.get(uploadDir + profileImage.getOriginalFilename());
-                java.nio.file.Files.createDirectories(filePath.getParent());
-                profileImage.transferTo(filePath.toFile());
-                receptionistDTO.setProfileImage("/uploads/profileImages/" + profileImage.getOriginalFilename());
-            } catch (Exception e) {
-                logger.error("Failed to upload profile image: {}", e.getMessage());
-            }
-        }
-        try {
-            ReceptionistDTO updatedReceptionist = this.receptionistService.updateReceptionist(id, receptionistDTO);
-            logger.info("Receptionist updated successfully: {}", updatedReceptionist.getName());
-            return ResponseEntity.ok(updatedReceptionist);
-        } catch (Exception e) {
-            logger.error("Error updating receptionist with ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(500).body(null);
-        }
+        return ResponseEntity.ok(this.receptionistService.updateReceptionist(id, receptionistDTO, profileImage));
     }
-
 }

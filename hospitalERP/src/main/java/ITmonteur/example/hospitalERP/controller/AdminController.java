@@ -1,21 +1,21 @@
 package ITmonteur.example.hospitalERP.controller;
 
 import ITmonteur.example.hospitalERP.dto.*;
-import ITmonteur.example.hospitalERP.entities.LeaveRequest;
 import ITmonteur.example.hospitalERP.entities.LeaveStatus;
 import ITmonteur.example.hospitalERP.services.AdminService;
 import ITmonteur.example.hospitalERP.services.DoctorService;
 import ITmonteur.example.hospitalERP.services.LeaveRequestService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+// Everything under /api/admin requires ROLE_ADMIN (see SecurityConfig)
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
@@ -30,122 +30,92 @@ public class AdminController {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
 
+    // -------------------- Users of any role --------------------
+    @PostMapping("/users")
+    public ResponseEntity<UserDTO> createUser(@Valid @RequestBody RegisterRequestDTO registerRequestDTO) {
+        logger.info("Admin creating {} account: {}", registerRequestDTO.getRole(), registerRequestDTO.getUsername());
+        return ResponseEntity.ok(this.adminService.createUser(registerRequestDTO));
+    }
+
     // -------------------- Patient --------------------
     @PostMapping("/patient")
-    public ResponseEntity<PtInfoDTO> createPatient(@RequestBody RegisterRequestDTO registerRequestDTO) {
-        logger.info("Request received to create patient: {}", registerRequestDTO.getUsername());
-        PtInfoDTO createdPatient = this.adminService.createPatient(registerRequestDTO);
-        logger.info("Patient created successfully with username: {}", createdPatient.getUserName());
-        return ResponseEntity.ok(createdPatient);
+    public ResponseEntity<PtInfoDTO> createPatient(@Valid @RequestBody RegisterRequestDTO registerRequestDTO) {
+        return ResponseEntity.ok(this.adminService.createPatient(registerRequestDTO));
     }
 
     // -------------------- Doctor --------------------
     @PostMapping("/doctor")
-    public ResponseEntity<DoctorDTO> createDoctor(@RequestBody RegisterRequestDTO registerRequestDTO) {
-        logger.info("Request received to create doctor: {}", registerRequestDTO.getUsername());
-        DoctorDTO createdDoctor = this.adminService.createDoctor(registerRequestDTO);
-        logger.info("Doctor created successfully with username: {}", createdDoctor.getUserName());
-        return ResponseEntity.ok(createdDoctor);
+    public ResponseEntity<DoctorDTO> createDoctor(@Valid @RequestBody RegisterRequestDTO registerRequestDTO) {
+        return ResponseEntity.ok(this.adminService.createDoctor(registerRequestDTO));
     }
 
     // -------------------- Receptionist --------------------
     @PostMapping("/receptionist")
-    public ResponseEntity<ReceptionistDTO> createReceptionist(@RequestBody RegisterRequestDTO registerRequestDTO) {
-        logger.info("Request received to create receptionist: {}", registerRequestDTO.getUsername());
-        ReceptionistDTO createdReceptionist = this.adminService.createReceptionist(registerRequestDTO);
-        logger.info("Receptionist created successfully with username: {}", createdReceptionist.getUserName());
-        return ResponseEntity.ok(createdReceptionist);
+    public ResponseEntity<ReceptionistDTO> createReceptionist(@Valid @RequestBody RegisterRequestDTO registerRequestDTO) {
+        return ResponseEntity.ok(this.adminService.createReceptionist(registerRequestDTO));
     }
 
+    // -------------------- Leaves --------------------
     @PutMapping("/approve/{leaveId}")
-    public ResponseEntity<?> approveLeave(@PathVariable Long leaveId) {
-        LeaveRequest updatedLeave = this.adminService.approveLeave(leaveId);
-        logger.info("Approving leave for leaveId: {}", leaveId);
-        return ResponseEntity.ok(updatedLeave);
+    public ResponseEntity<LeaveRequestDTO> approveLeave(@PathVariable Long leaveId) {
+        logger.info("Approving leave {}", leaveId);
+        return ResponseEntity.ok(this.adminService.approveLeave(leaveId));
     }
 
-    @GetMapping("/allUsers")
-    public ResponseEntity<List<UserDTO>> getAllUsers() {
-        logger.info("Received request: fetch all users");
-        List<UserDTO> users =this.adminService.getAllUsers();
-
-        logger.info("Response: Fetched {} users successfully", users.size());
-        return ResponseEntity.ok(users);
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
-        logger.info("Received request: fetch user by ID={}", id);
-
-        UserDTO user =this.adminService.getUserById(id);
-        logger.info("Response: User fetched successfully for ID={}, username={}",
-                id, user.getUsername());
-        return ResponseEntity.ok(user);
+    @PutMapping("/reject/{leaveId}")
+    public ResponseEntity<LeaveRequestDTO> rejectLeave(@PathVariable Long leaveId) {
+        logger.info("Rejecting leave {}", leaveId);
+        return ResponseEntity.ok(this.adminService.rejectLeave(leaveId));
     }
 
     @GetMapping("/allApproved")
     public ResponseEntity<List<LeaveRequestDTO>> getAllApprovedLeaves() {
-        logger.info("Fetching all approved leaves");
-        List<LeaveRequestDTO> leaves = this.leaveRequestService.getAllLeavesByStatus(LeaveStatus.APPROVED);
-        return ResponseEntity.ok(leaves);
+        return ResponseEntity.ok(this.leaveRequestService.getAllLeavesByStatus(LeaveStatus.APPROVED));
     }
 
     @GetMapping("/allPending")
     public ResponseEntity<List<LeaveRequestDTO>> getAllPendingLeaves() {
-        logger.info("Fetching all pending leaves");
-        List<LeaveRequestDTO> leaves = this.leaveRequestService.getAllLeavesByStatus(LeaveStatus.PENDING);
-        return ResponseEntity.ok(leaves);
+        return ResponseEntity.ok(this.leaveRequestService.getAllLeavesByStatus(LeaveStatus.PENDING));
     }
+
+    @GetMapping("/allRejected")
+    public ResponseEntity<List<LeaveRequestDTO>> getAllRejectedLeaves() {
+        return ResponseEntity.ok(this.leaveRequestService.getAllLeavesByStatus(LeaveStatus.REJECTED));
+    }
+
+    // -------------------- Doctor appointments --------------------
     @GetMapping("/doctorPendingAppointments/{userId}")
     public ResponseEntity<List<AppointmentDTO>> getPendingAppointmentsForDoctor(@PathVariable Long userId) {
-        logger.info("Fetching pending appointments for doctor ID: {}", userId);
-        List<AppointmentDTO> appointments = this.doctorService.getAllPendingAppointmentsByDoctorId(userId);
-        logger.info("Total pending appointments found for doctor ID {}: {}", userId, appointments.size());
-        return ResponseEntity.ok(appointments);
-    }
-    @GetMapping("/doctorAppointmentCount/{userId}")
-    public ResponseEntity<Map<String, Long>> getAppointmentCount(
-            @PathVariable Long userId) {
-
-        long pendingCount = this.doctorService.getPendingCount(userId);
-        long completedCount = this.doctorService.getCompletedCount(userId);
-
-        Map<String, Long> response = new HashMap<>();
-        response.put("pending", pendingCount);
-        response.put("completed", completedCount);
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(this.doctorService.getAllPendingAppointmentsByDoctorId(userId));
     }
 
     @GetMapping("/doctorCompletedAppointments/{userId}")
     public ResponseEntity<List<AppointmentDTO>> getCompletedAppointmentsForDoctor(@PathVariable Long userId) {
-        logger.info("Fetching completed appointments for doctor ID: {}", userId);
-        List<AppointmentDTO> appointments = this.doctorService.getAllCompletedAppointmentsByDoctorId(userId);
-        logger.info("Total completed appointments found for doctor ID {}: {}", userId, appointments.size());
-        return ResponseEntity.ok(appointments);
+        return ResponseEntity.ok(this.doctorService.getAllCompletedAppointmentsByDoctorId(userId));
+    }
+
+    // Note: takes the doctor's own id (doctor.id), not the user id
+    @GetMapping("/doctorAppointmentCount/{doctorId}")
+    public ResponseEntity<Map<String, Long>> getAppointmentCount(@PathVariable Long doctorId) {
+        return ResponseEntity.ok(Map.of(
+                "pending", this.doctorService.getPendingCount(doctorId),
+                "completed", this.doctorService.getCompletedCount(doctorId)));
+    }
+
+    // -------------------- Users --------------------
+    @GetMapping("/allUsers")
+    public ResponseEntity<List<UserDTO>> getAllUsers() {
+        return ResponseEntity.ok(this.adminService.getAllUsers());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
+        return ResponseEntity.ok(this.adminService.getUserById(id));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Boolean> deleteUserById(@PathVariable Long id) {
-        logger.info("Received request: delete user ID={}", id);
-        Boolean result = this.adminService.deleteUserById(id);
-        logger.info("Response: User deleted successfully for ID={}", id);
-        return ResponseEntity.ok(result);
+        logger.info("Admin deleting user {}", id);
+        return ResponseEntity.ok(this.adminService.deleteUserById(id));
     }
-    @DeleteMapping("/deleteAll")
-    public ResponseEntity<Boolean> deleteAllUsers() {
-        logger.info("Received request: delete all users");
-        Boolean result = this.adminService.deleteAllUsers();
-        logger.info("Response: All users deleted successfully");
-        return ResponseEntity.ok(result);
-    }
-
-    // -------------------- Appointment --------------------
-//    @PostMapping("/appointment")
-//    public ResponseEntity<AppointmentDTO> createAppointment(@RequestBody AppointmentDTO appointmentDTO) {
-//        logger.info("Request received to create appointment for patient ID: {}", appointmentDTO.getPtInfoId());
-//        AppointmentDTO createdAppointment = adminService.createAppointment(appointmentDTO);
-//        logger.info("Appointment created successfully with ID: {}", createdAppointment.getAppointmentID());
-//        return ResponseEntity.ok(createdAppointment);
-//    }
 }

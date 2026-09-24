@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TopNavbar from "../../components/TopNavbar";
 import { getRoleFromToken, getUserIdFromToken } from "../../utils/jwtUtils";
+import { API_BASE_URL } from "../../config";
 
 export default function DoctorAppointments() {
   const [appointments, setAppointments] = useState([]);
@@ -30,8 +31,8 @@ export default function DoctorAppointments() {
       try {
         const endpoint =
           viewType === "pending"
-            ? `http://localhost:8080/api/doctor/doctorPendingAppointments/${decodedUserId}`
-            : `http://localhost:8080/api/doctor/doctorCompletedAppointments/${decodedUserId}`;
+            ? `${API_BASE_URL}/api/doctor/doctorPendingAppointments/${decodedUserId}`
+            : `${API_BASE_URL}/api/doctor/doctorCompletedAppointments/${decodedUserId}`;
 
         const response = await fetch(endpoint, {
           method: "GET",
@@ -61,7 +62,7 @@ export default function DoctorAppointments() {
       const token = localStorage.getItem("jwtToken");
 
       const response = await fetch(
-        `http://localhost:8080/api/doctor/complete/${appointmentID}`,
+        `${API_BASE_URL}/api/doctor/complete/${appointmentID}`,
         {
           method: "PUT",
           headers: { Authorization: `Bearer ${token}` },

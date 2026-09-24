@@ -5,6 +5,8 @@ import TopNavbar from "./TopNavbar";
 import { getRoleFromToken, getUserIdFromToken } from "./utils/jwtUtils";
 import { useNavigate } from "react-router-dom";
 import { Pencil } from "lucide-react";
+import { API_BASE_URL } from "./config";
+import { getErrorMessage } from "./utils/apiError";
 
 export default function ProfilePage({ onClose }) {
   const [userData, setUserData] = useState(null);
@@ -41,51 +43,54 @@ export default function ProfilePage({ onClose }) {
     switch (role) {
       case "ROLE_PATIENT":
         return {
-          getUrl: (id) => `http://localhost:8080/api/patient/getAccount/${id}`,
-          updateUrl: (id) => `http://localhost:8080/api/patient/updateAccount/${id}`,
-          appointmentUrl: `http://localhost:8080/appointment/getPatientAppointments`,
-          completedAppointmentUrl: (id) => `http://localhost:8080/appointment/patientCompletedAppointments/${id}`,
-          pendingAppointmentUrl: (id) => `http://localhost:8080/appointment/patientPendingAppointments/${id}`,
+          getUrl: (id) => `${API_BASE_URL}/api/patient/getAccount/${id}`,
+          updateUrl: (id) => `${API_BASE_URL}/api/patient/updateAccount/${id}`,
+          appointmentUrl: `${API_BASE_URL}/appointment/getPatientAppointments`,
+          completedAppointmentUrl: (id) => `${API_BASE_URL}/appointment/patientCompletedAppointments/${id}`,
+          pendingAppointmentUrl: (id) => `${API_BASE_URL}/appointment/patientPendingAppointments/${id}`,
         };
       case "ROLE_DOCTOR":
         return {
-          getUrl: (id) => `http://localhost:8080/api/doctor/get/${id}`,
-          updateUrl: (id) => `http://localhost:8080/api/doctor/update/${id}`,
-          appointmentUrl: `http://localhost:8080/appointment/getDoctorAppointments`,
+          getUrl: (id) => `${API_BASE_URL}/api/doctor/get/${id}`,
+          updateUrl: (id) => `${API_BASE_URL}/api/doctor/update/${id}`,
+          appointmentUrl: `${API_BASE_URL}/appointment/getDoctorAppointments`,
         };
       case "ROLE_RECEPTIONIST":
         return {
-          getUrl: (id) => `http://localhost:8080/api/receptionist/getReceptionist/${id}`,
+          getUrl: (id) => `${API_BASE_URL}/api/receptionist/getReceptionist/${id}`,
           updateUrl: (id) =>
-            `http://localhost:8080/api/receptionist/${id}`,
-          appointmentUrl: (id) =>
-            `http://localhost:8080/api/receptionist/appointments/${id}`,
+            `${API_BASE_URL}/api/receptionist/${id}`,
+          appointmentUrl: `${API_BASE_URL}/api/receptionist/getAppointments`,
         };
       default:
         return null;
     }
   };
 
+  const GENDER_OPTIONS = ["MALE", "FEMALE", "OTHER"];
+  const SPECIALIST_OPTIONS = ["NOT_ASSIGNED", "CARDIOLOGY", "DENTISTRY", "ORTHOPEDICS", "NEUROLOGY", "PEDIATRICS", "DERMATOLOGY"];
+
+  // Username is the login name and can't be changed from the profile
   const getFieldsForRole = (role) => {
     switch (role) {
       case "ROLE_DOCTOR":
         return [
           { label: "Name", key: "name", readOnly: true },
-          { label: "Username", key: "userName" },
-          { label: "Email", key: "email" },
+          { label: "Username", key: "userName", readOnly: true },
+          { label: "Email", key: "email", type: "email" },
           { label: "Phone Number", key: "phoneNumber" },
-          { label: "Specialization", key: "specialist" },
+          { label: "Specialization", key: "specialist", options: SPECIALIST_OPTIONS },
         ];
 
       case "ROLE_PATIENT":
         return [
           { label: "Patient ID", key: "patientId", readOnly: true },
           { label: "Patient Name", key: "patientName" },
-          { label: "Username", key: "userName" },
-          { label: "Email", key: "email" },
+          { label: "Username", key: "userName", readOnly: true },
+          { label: "Email", key: "email", type: "email" },
           { label: "Contact No", key: "contactNo" },
-          { label: "Gender", key: "gender" },
-          { label: "DOB", key: "dob" },
+          { label: "Gender", key: "gender", options: GENDER_OPTIONS },
+          { label: "DOB", key: "dob", type: "date" },
           { label: "Aadhar No", key: "patientAadharNo" },
           { label: "Address", key: "patientAddress" },
         ];
@@ -93,11 +98,11 @@ export default function ProfilePage({ onClose }) {
       case "ROLE_RECEPTIONIST":
         return [
           { label: "Name", key: "name" },
-          { label: "Username", key: "userName" },
-          { label: "Email", key: "email" },
+          { label: "Username", key: "userName", readOnly: true },
+          { label: "Email", key: "email", type: "email" },
           { label: "Phone", key: "phone" },
-          { label: "Gender", key: "gender" },
-          { label: "Age", key: "age" },
+          { label: "Gender", key: "gender", options: GENDER_OPTIONS },
+          { label: "Age", key: "age", type: "number" },
         ];
 
       default:
@@ -130,7 +135,7 @@ export default function ProfilePage({ onClose }) {
   const fetchRelatives = async (patientId, token) => {
     try {
       const response = await axios.get(
-        `http://localhost:8080/api/patient/relative/patient/${patientId}`,
+        `${API_BASE_URL}/api/patient/relative/patient/${patientId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -208,25 +213,29 @@ export default function ProfilePage({ onClose }) {
       else if (role === "ROLE_DOCTOR") dtoKey = "doctorDTO";
       else if (role === "ROLE_RECEPTIONIST") dtoKey = "receptionistDTO";
 
-      formDataToSend.append(dtoKey, new Blob([JSON.stringify(formData)], { type: "application/json" }));
+      // The image goes in its own multipart part; the JSON part must not contain the File object
+      const { profileImage, ...dto } = formData;
+      if (dto.patientAadharNo === "") dto.patientAadharNo = null;
+      formDataToSend.append(dtoKey, new Blob([JSON.stringify(dto)], { type: "application/json" }));
 
-      if (formData.profileImage instanceof File) {
-        formDataToSend.append("profileImage", formData.profileImage);
+      if (profileImage instanceof File) {
+        formDataToSend.append("profileImage", profileImage);
       }
 
-      await axios.put(urls.updateUrl(userId), formDataToSend, {
+      const response = await axios.put(urls.updateUrl(userId), formDataToSend, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
         },
       });
 
-      setUserData(formData);
+      const saved = { ...response.data, name: response.data.name || response.data.patientName };
+      setUserData(saved);
+      setFormData(saved);
       setIsEditing(false);
       alert("Profile updated successfully!");
     } catch (err) {
-      console.error("Error updating profile:", err);
-      alert("Failed to update profile.");
+      alert(getErrorMessage(err, "Failed to update profile."));
     }
   };
 
@@ -251,7 +260,7 @@ export default function ProfilePage({ onClose }) {
                 formData.profileImage instanceof File
                   ? URL.createObjectURL(formData.profileImage)
                   : formData.profileImage
-                  ? `http://localhost:8080${formData.profileImage}`
+                  ? `${API_BASE_URL}${formData.profileImage}`
                   : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
               }
               alt="Profile"
@@ -304,10 +313,23 @@ export default function ProfilePage({ onClose }) {
                     {field.label}
                   </label>
 
+                  {field.options && isEditing && !field.readOnly ? (
+                    <select
+                      name={field.key}
+                      value={formData[field.key] || ""}
+                      onChange={handleChange}
+                      className="p-2 border rounded-lg w-full bg-white dark:bg-[#0a1124] border-blue-400 dark:border-[#50d4f2] text-black dark:text-[#63e6ff]"
+                    >
+                      <option value="">Select</option>
+                      {field.options.map((opt) => (
+                        <option key={opt} value={opt}>{opt.replace(/_/g, " ")}</option>
+                      ))}
+                    </select>
+                  ) : (
                   <input
-                    type="text"
+                    type={isEditing && !field.readOnly && field.type ? field.type : "text"}
                     name={field.key}
-                    value={formData[field.key] || ""}
+                    value={formData[field.key] ?? ""}
                     readOnly={!isEditing || field.readOnly}
                     onChange={handleChange}
                     className={`
@@ -318,6 +340,7 @@ export default function ProfilePage({ onClose }) {
                       }
                     `}
                   />
+                  )}
                 </div>
               ))}
             </div>
@@ -340,10 +363,10 @@ export default function ProfilePage({ onClose }) {
               )}
             </div>
           </section>
-          {(role === "ROLE_DOCTOR" || role === "ROLE_RECEPTIONIST") && (
+          {role === "ROLE_DOCTOR" && (
             <div className="flex justify-end gap-3 mt-4">
               <button
-                onClick={() => navigate("/leave-management")}
+                onClick={() => navigate("/doctor/leave-management")}
                 className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded-lg font-semibold shadow-md"
               >
                 Manage Leaves

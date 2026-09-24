@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
 
 @Service
 public class EmailService {
@@ -24,12 +25,12 @@ public class EmailService {
         String htmlContent = "</br>"
                 + "<div style='font-family: Arial, sans-serif; padding: 20px; border-radius: 10px; border:1px solid #ddd;'>"
                 + "<h2 style='color:#2E86C1;'>Appointment Confirmed ✔</h2>"
-                + "<p>Dear <strong>" + patientName + "</strong>,</p>"
+                + "<p>Dear <strong>" + esc(patientName) + "</strong>,</p>"
                 + "<p>Your appointment has been successfully booked with the following details:</p>"
                 + "<table style='width:100%; font-size:14px;'>"
-                + "<tr><td><strong>Doctor:</strong></td><td>" + doctorName + "</td></tr>"
-                + "<tr><td><strong>Date:</strong></td><td>" + date + "</td></tr>"
-                + "<tr><td><strong>Time:</strong></td><td>" + time + "</td></tr>"
+                + "<tr><td><strong>Doctor:</strong></td><td>" + esc(doctorName) + "</td></tr>"
+                + "<tr><td><strong>Date:</strong></td><td>" + esc(date) + "</td></tr>"
+                + "<tr><td><strong>Time:</strong></td><td>" + esc(time) + "</td></tr>"
                 + "</table>"
                 + "<br/>"
                 + "<p style='margin-top:10px;'>Please reach the hospital <strong>10 minutes before</strong> the scheduled time.</p>"
@@ -55,12 +56,12 @@ public class EmailService {
         String htmlContent =
                 "<div style='font-family: Arial, sans-serif; padding: 20px; border-radius:10px; border:1px solid #ddd;'>"
                         + "<h2 style='color:#C0392B;'>Appointment Cancelled ❌</h2>"
-                        + "<p>Dear <strong>" + patientName + "</strong>,</p>"
+                        + "<p>Dear <strong>" + esc(patientName) + "</strong>,</p>"
                         + "<p>Your appointment has been cancelled.</p>"
                         + "<table style='width:100%; font-size:14px;'>"
-                        + "<tr><td><strong>Doctor:</strong></td><td>" + doctorName + "</td></tr>"
-                        + "<tr><td><strong>Date:</strong></td><td>" + date + "</td></tr>"
-                        + "<tr><td><strong>Time:</strong></td><td>" + time + "</td></tr>"
+                        + "<tr><td><strong>Doctor:</strong></td><td>" + esc(doctorName) + "</td></tr>"
+                        + "<tr><td><strong>Date:</strong></td><td>" + esc(date) + "</td></tr>"
+                        + "<tr><td><strong>Time:</strong></td><td>" + esc(time) + "</td></tr>"
                         + "</table>"
                         + "<br/>"
                         + "<p>If this was a mistake, please book again from the portal.</p>"
@@ -86,12 +87,12 @@ public class EmailService {
         String htmlContent =
                 "<div style='font-family: Arial, sans-serif; padding: 20px; border-radius: 10px; border:1px solid #ddd;'>"
                         + "<h2 style='color:#2E86C1;'>New Appointment Scheduled 📢</h2>"
-                        + "<p>Dear <strong>Dr. " + doctorName + "</strong>,</p>"
+                        + "<p>Dear <strong>Dr. " + esc(doctorName) + "</strong>,</p>"
                         + "<p>A new appointment has been scheduled with the following patient:</p>"
                         + "<table style='width:100%; font-size:14px;'>"
-                        + "<tr><td><strong>Patient Name:</strong></td><td>" + patientName + "</td></tr>"
-                        + "<tr><td><strong>Date:</strong></td><td>" + date + "</td></tr>"
-                        + "<tr><td><strong>Time:</strong></td><td>" + time + "</td></tr>"
+                        + "<tr><td><strong>Patient Name:</strong></td><td>" + esc(patientName) + "</td></tr>"
+                        + "<tr><td><strong>Date:</strong></td><td>" + esc(date) + "</td></tr>"
+                        + "<tr><td><strong>Time:</strong></td><td>" + esc(time) + "</td></tr>"
                         + "</table>"
                         + "<br/>"
                         + "<p>Please review the appointment details and be prepared accordingly.</p>"
@@ -117,10 +118,10 @@ public class EmailService {
         String htmlContent =
                 "<div style='font-family: Arial, sans-serif; padding: 20px; border-radius:10px; border:1px solid #ddd;'>"
                         + "<h2 style='color:#C0392B;'>Appointment Cancelled ❌</h2>"
-                        + "<p>Dear <strong>" + patientName + "</strong>,</p>"
-                        + "<p>Your appointment with <strong>Dr. " + doctorName + "</strong> has been cancelled due to doctor's leave.</p>"
+                        + "<p>Dear <strong>" + esc(patientName) + "</strong>,</p>"
+                        + "<p>Your appointment with <strong>Dr. " + esc(doctorName) + "</strong> has been cancelled due to doctor's leave.</p>"
                         + "<table style='width:100%; font-size:14px;'>"
-                        + "<tr><td><strong>Date:</strong></td><td>" + date + "</td></tr>"
+                        + "<tr><td><strong>Date:</strong></td><td>" + esc(date) + "</td></tr>"
                         + "</table>"
                         + "<br/>"
                         + "<p>Please <strong>rebook</strong> your appointment from the portal.</p>"
@@ -135,5 +136,8 @@ public class EmailService {
         mailSender.send(message);
     }
 
-
+    // User-supplied values (names, messages) must never be inserted into HTML unescaped
+    private static String esc(String value) {
+        return value == null ? "" : HtmlUtils.htmlEscape(value);
+    }
 }

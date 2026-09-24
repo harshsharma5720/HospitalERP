@@ -1,5 +1,6 @@
 package ITmonteur.example.hospitalERP.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -12,6 +13,7 @@ public class User {
     private String username;
     @Column(unique = true, nullable = false)
     private String email;
+    @JsonIgnore
     @Column(nullable = false)
     private String password;
     @Enumerated(EnumType.STRING)// Store enum as string in DB

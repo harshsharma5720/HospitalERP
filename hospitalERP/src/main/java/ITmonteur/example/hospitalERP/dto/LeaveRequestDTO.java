@@ -1,16 +1,23 @@
 package ITmonteur.example.hospitalERP.dto;
 
 import ITmonteur.example.hospitalERP.entities.LeaveStatus;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 
 public class LeaveRequestDTO {
 
     private Long id;
-    private Long userId;
-    private String role;
+    private Long userId;   // read-only: always the logged-in user when applying
+    private String role;   // read-only: derived from the user, e.g. "ROLE_DOCTOR"
+    @NotNull(message = "Start date is required")
     private LocalDate startDate;
+    @NotNull(message = "End date is required")
     private LocalDate endDate;
+    @NotBlank(message = "Reason is required")
+    @Size(max = 500, message = "Reason must be at most 500 characters")
     private String reason;
     private LeaveStatus status;
 

@@ -1,6 +1,8 @@
 package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.entities.*;
+import ITmonteur.example.hospitalERP.exception.BadRequestException;
+import ITmonteur.example.hospitalERP.exception.ConflictException;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
 import ITmonteur.example.hospitalERP.repositories.ReceptionistRepository;
@@ -9,6 +11,7 @@ import ITmonteur.example.hospitalERP.dto.AuthResponseDTO;
 import ITmonteur.example.hospitalERP.dto.LoginRequestDTO;
 import ITmonteur.example.hospitalERP.dto.RegisterRequestDTO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,11 +19,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 
 @Service
 public class AuthService {
@@ -40,28 +42,53 @@ public class AuthService {
     @Autowired
     private PtInfoRepository ptInfoRepository;
     @Autowired
-    private OTPService otpService;
+    private OtpService otpService;
     @Autowired
     private ReceptionistRepository receptionistRepository;
+    @Autowired
+    private LoginAttemptService loginAttemptService;
 
+    @Value("${app.otp.required:true}")
+    private boolean otpRequired;
+
+    public boolean isOtpRequired() {
+        return otpRequired;
+    }
+
+    /**
+     * Public self-registration. Always creates a PATIENT, whatever role the client sends;
+     * doctors, receptionists and admins are created by an admin via /api/admin/**.
+     */
+    @Transactional
     public AuthResponseDTO register(RegisterRequestDTO request) {
-        logger.info("Attempting to register user: {}", request.getUsername());
-        // check if username already exists
-        if (userRepository.existsByUsername(request.getUsername())) {
-            logger.warn("Registration failed: Username {} already exists", request.getUsername());
-            throw new RuntimeException("Username already exists");
+        if (otpRequired && !otpService.isPhoneVerified(request.getPhoneNumber())) {
+            throw new BadRequestException("Phone number not verified. Please verify it with the OTP first.");
         }
-//        if (!otpService.isPhoneVerified(request.getPhoneNumber())) {
-//            throw new RuntimeException("Phone number not verified!");
-//        }
+        User savedUser = createUser(request, Role.PATIENT);
+        if (otpRequired) {
+            otpService.consumeVerification(request.getPhoneNumber());
+        }
+        // Issue a token right away so the user does not have to log in after registering
+        return new AuthResponseDTO(jwtService.generateToken(toUserDetails(savedUser), savedUser.getId()));
+    }
+
+    /** Creates the user plus its role profile (doctor / patient / receptionist). Admin use only. */
+    @Transactional
+    public User createUser(RegisterRequestDTO request, Role role) {
+        logger.info("Creating {} account: {}", role, request.getUsername());
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new ConflictException("Username already exists");
+        }
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new ConflictException("Email is already registered");
+        }
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(Role.valueOf(request.getRole().toUpperCase())); // convert string to enum
+        user.setRole(role);
         user.setPhoneNumber(request.getPhoneNumber());
         User savedUser = userRepository.save(user);
-        logger.info("User {} registered successfully with role {}", savedUser.getUsername(), savedUser.getRole());
         // Role-based entity creation
         switch (savedUser.getRole()) {
             case DOCTOR:
@@ -73,7 +100,6 @@ public class AuthService {
                 doctor.setPhoneNumber(savedUser.getPhoneNumber());
                 doctor.setUser(savedUser);
                 doctorRepository.save(doctor);
-                logger.info("Doctor entity created for user {}", savedUser.getUsername());
                 break;
             case PATIENT:
                 PtInfo patient = new PtInfo();
@@ -85,11 +111,8 @@ public class AuthService {
                 patient.setContactNo(savedUser.getPhoneNumber());
                 patient.setPatientAadharNo(null);
                 patient.setGender(Gender.OTHER);
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-                LocalDate defaultDob = LocalDate.parse("0001-01-01", formatter); // earliest valid SQL date
-                patient.setDob(defaultDob);
+                patient.setDob(null); // asked for on the profile page instead of a fake date
                 ptInfoRepository.save(patient);
-                logger.info("Patient entity created for user {}", savedUser.getUsername());
                 break;
             case RECEPTIONIST:
                 Receptionist receptionist = new Receptionist();
@@ -100,50 +123,52 @@ public class AuthService {
                 receptionist.setUser(savedUser);
                 receptionist.setGender(Gender.OTHER);
                 receptionistRepository.save(receptionist);
-                logger.info("Receptionist entity created for user {}", savedUser.getUsername());
                 break;
             default:
-                logger.warn("No entity creation logic defined for role {}", savedUser.getRole());
+                // ADMIN has no profile entity
                 break;
         }
-        // ye mne is liye kiya h taki register krne ke bad turant ek token generate ho jae bina login kre
-        UserDetails userDetails = org.springframework.security.core.userdetails.User
-                .withUsername(savedUser.getUsername())   // username from DB
-                .password(savedUser.getPassword())       // encoded password
-                .authorities(new SimpleGrantedAuthority("ROLE_" + savedUser.getRole().name())) // map role
-                .build();
-        String token = jwtService.generateToken(userDetails, savedUser.getId());// 4. Generate JWT token for the saved user
-        logger.info("JWT token generated for user {}", savedUser.getUsername());
+        logger.info("User {} created with role {}", savedUser.getUsername(), savedUser.getRole());
+        return savedUser;
+    }
+
+    /** Throws BadCredentialsException (→ 401) when the username/password is wrong. */
+    public AuthResponseDTO login(LoginRequestDTO request) {
+        loginAttemptService.checkNotLocked(request.getUsername());
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+            );
+        } catch (AuthenticationException e) {
+            loginAttemptService.loginFailed(request.getUsername());
+            logger.warn("Failed login for user {}", request.getUsername());
+            throw e;
+        }
+        loginAttemptService.loginSucceeded(request.getUsername());
+        User user = this.userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new BadRequestException("User not found"));
+        String token = jwtService.generateToken((UserDetails) authentication.getPrincipal(), user.getId());
+        logger.info("User {} logged in", request.getUsername());
         return new AuthResponseDTO(token);
     }
 
-    public AuthResponseDTO login(LoginRequestDTO request) {
-        logger.info("Attempting login for user: {}", request.getUsername());
-
-        // authenticate user credentials
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
-                        request.getPassword()
-                )
-        );
-        // fetch user from DB
-        User user = this.userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> {
-                    logger.warn("Login failed: User {} not found", request.getUsername());
-                    return new RuntimeException("User not found!");
-                });
-
-        Long userId = user.getId();
-        // check authentication
-        if (authentication.isAuthenticated()) {
-            // generate JWT token for logged-in user
-            String token = jwtService.generateToken((org.springframework.security.core.userdetails.User) authentication.getPrincipal(), userId);
-            logger.info("User {} logged in successfully", request.getUsername());
-            return new AuthResponseDTO(token);
-        } else {
-            logger.warn("Login failed: Invalid credentials for user {}", request.getUsername());
-            throw new RuntimeException("Invalid credentials");
+    public static Role parseRole(String role) {
+        if (role == null || role.isBlank()) {
+            throw new BadRequestException("Role is required");
         }
+        try {
+            return Role.valueOf(role.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Unknown role: " + role);
+        }
+    }
+
+    private static UserDetails toUserDetails(User user) {
+        return org.springframework.security.core.userdetails.User
+                .withUsername(user.getUsername())
+                .password(user.getPassword())
+                .authorities(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+                .build();
     }
 }

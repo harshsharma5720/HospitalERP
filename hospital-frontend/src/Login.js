@@ -1,19 +1,26 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Lottie from "lottie-react";
 import LoginAnim from "./assets/LoginAnim.json";
-import { getRoleFromToken, getUserIdFromToken } from "./utils/jwtUtils";
+import { getRoleFromToken } from "./utils/jwtUtils";
+import { getErrorMessage } from "./utils/apiError";
+import useAuthStore, { homePathForRole } from "./Store/useAuthStore";
+import { API_BASE_URL } from "./config";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const login = useAuthStore((s) => s.login);
 
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
 
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    new URLSearchParams(location.search).get("expired") ? "Your session has expired. Please log in again." : ""
+  );
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -24,23 +31,21 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const response = await axios.post("http://localhost:8080/api/auth/login", {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
         username: formData.username,
         password: formData.password,
       });
 
       const token = response.data.token;
       if (token) {
-        localStorage.setItem("jwtToken", token);
-        alert("Login successful!");
-        window.location.href = "/redirect";
-
+        login(token);
+        // Go back to the protected page that sent the user here, otherwise to their role's home
+        navigate(location.state?.from || homePathForRole(getRoleFromToken(token)), { replace: true });
       } else {
         setError("Login successful, but token not received.");
       }
     } catch (err) {
-      console.error("Login error:", err);
-      setError("Invalid credentials. Please try again.");
+      setError(getErrorMessage(err, "Invalid credentials. Please try again."));
     }
   };
 

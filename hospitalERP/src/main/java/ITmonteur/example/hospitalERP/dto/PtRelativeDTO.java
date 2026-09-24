@@ -2,15 +2,21 @@ package ITmonteur.example.hospitalERP.dto;
 
 import ITmonteur.example.hospitalERP.entities.Gender;
 import ITmonteur.example.hospitalERP.entities.RelationShip;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
 
 import java.time.LocalDate;
 
 public class PtRelativeDTO {
 
     private Long id;
+    @NotBlank(message = "Name is required")
     private String name;
     private Gender gender;
+    @PastOrPresent(message = "Date of birth cannot be in the future")
     private LocalDate dob;
+    @NotNull(message = "Relationship is required")
     private RelationShip relationship;
     private Long patientAadharNo;
 

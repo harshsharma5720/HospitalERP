@@ -1,12 +1,18 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../../config";
+import { getErrorMessage } from "../../utils/apiError";
+import { toLocalISODate } from "../../utils/dateUtils";
 
 export default function ManageDoctor() {
   const [doctors, setDoctors] = useState([]);
   const [filteredDoctors, setFilteredDoctors] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  // userIds of doctors with an approved leave covering today
+  const [onLeaveUserIds, setOnLeaveUserIds] = useState(new Set());
+  const [presenceFilter, setPresenceFilter] = useState(null); // null | "present" | "absent"
 
   const token = localStorage.getItem("jwtToken");
   const navigate = useNavigate();
@@ -15,7 +21,7 @@ export default function ManageDoctor() {
   const fetchDoctors = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:8080/api/patient/getAllDoctors",
+        `${API_BASE_URL}/api/patient/getAllDoctors`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -26,7 +32,7 @@ export default function ManageDoctor() {
 
           try {
             const countRes = await axios.get(
-              `http://localhost:8080/api/admin/doctorAppointmentCount/${doc.id}`,
+              `${API_BASE_URL}/api/admin/doctorAppointmentCount/${doc.id}`,
               {
                 headers: { Authorization: `Bearer ${token}` },
               }
@@ -54,6 +60,16 @@ export default function ManageDoctor() {
 
       setDoctors(doctorsWithCounts);
       setFilteredDoctors(doctorsWithCounts);
+
+      const today = toLocalISODate();
+      const leavesRes = await axios.get(`${API_BASE_URL}/api/admin/allApproved`);
+      setOnLeaveUserIds(
+        new Set(
+          leavesRes.data
+            .filter((l) => l.startDate <= today && l.endDate >= today)
+            .map((l) => l.userId)
+        )
+      );
     } catch (error) {
       console.error("Error fetching doctors:", error);
     } finally {
@@ -63,7 +79,7 @@ export default function ManageDoctor() {
 
   const fetchAppointmentCount = async (userId) => {
     const response = await axios.get(
-      `http://localhost:8080/api/admin/doctorAppointmentCount/${userId}`,
+      `${API_BASE_URL}/api/admin/doctorAppointmentCount/${userId}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -80,7 +96,7 @@ export default function ManageDoctor() {
 
     try {
       await axios.delete(
-        `http://localhost:8080/api/doctor/delete/${id}`,
+        `${API_BASE_URL}/api/doctor/delete/${id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -88,8 +104,7 @@ export default function ManageDoctor() {
       alert("Doctor removed successfully!");
       fetchDoctors();
     } catch (error) {
-      console.error("Delete failed:", error);
-      alert("Delete failed!");
+      alert(getErrorMessage(error, "Delete failed!"));
     }
   };
 
@@ -109,12 +124,11 @@ export default function ManageDoctor() {
 
   if (loading) return <p className="text-center mt-5">Loading doctors...</p>;
 
-  const presentDoctors = filteredDoctors.filter(
-    (d) => d.isPresent !== false
-  );
-  const absentDoctors = filteredDoctors.filter(
-    (d) => d.isPresent === false
-  );
+  const isAbsent = (d) => onLeaveUserIds.has(d.userId);
+  const presentDoctors = filteredDoctors.filter((d) => !isAbsent(d));
+  const absentDoctors = filteredDoctors.filter(isAbsent);
+  const visibleDoctors =
+    presenceFilter === "absent" ? absentDoctors : presenceFilter === "present" ? presentDoctors : filteredDoctors;
 
   // ================= UI =================
   return (
@@ -149,7 +163,7 @@ export default function ManageDoctor() {
             </tr>
           </thead>
           <tbody>
-            {filteredDoctors.map((doc, index) => (
+            {visibleDoctors.map((doc, index) => (
               <tr key={doc.id} className="border-b">
                 <td className="p-3 font-bold">#{index + 1}</td>
                 <td className="p-3">{doc.name}</td>
@@ -203,10 +217,10 @@ export default function ManageDoctor() {
           </p>
 
           <button
-            onClick={() => navigate("/admin/doctors/absent")}
+            onClick={() => setPresenceFilter(presenceFilter === "absent" ? null : "absent")}
             className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
           >
-            View Absent Doctors
+            {presenceFilter === "absent" ? "Show All Doctors" : "View Absent Doctors"}
           </button>
         </div>
 
@@ -221,10 +235,10 @@ export default function ManageDoctor() {
           </p>
 
           <button
-            onClick={() => navigate("/admin/doctors/present")}
+            onClick={() => setPresenceFilter(presenceFilter === "present" ? null : "present")}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
           >
-            View Present Doctors
+            {presenceFilter === "present" ? "Show All Doctors" : "View Present Doctors"}
           </button>
         </div>
       </div>
