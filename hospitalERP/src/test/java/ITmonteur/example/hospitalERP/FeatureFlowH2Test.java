@@ -10,6 +10,7 @@ import org.springframework.http.*;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -268,6 +269,84 @@ class FeatureFlowH2Test {
                 + "?date=" + tomorrow + "&shift=MORNING", patient, null).getBody())).isEmpty();
         assertThat(json.readTree(call(HttpMethod.GET, "/api/slots/available/" + doctorId
                 + "?date=" + dayAfter + "&shift=MORNING", patient, null).getBody())).isNotEmpty();
+    }
+
+    // Every endpoint that step 1.6 moves to another controller/module, exercised end to end
+    @Test
+    void endpointsMovedInStep16KeepWorking() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+        long doctorUserId = json.readTree(call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"drmove","email":"drmove@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111115","role":"DOCTOR"}""").getBody()).get("id").asLong();
+        call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"drother","email":"drother@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111116","role":"DOCTOR"}""");
+        call(HttpMethod.POST, "/api/admin/receptionist", admin, """
+                {"username":"deskmove","email":"deskmove@example.com","password":"desk-1234","phoneNumber":"+919812345670"}""");
+        String doctor = login("drmove", "doctor-123");
+        String otherDoctor = login("drother", "doctor-123");
+        String desk = login("deskmove", "desk-1234");
+        long doctorId = findDoctorId("drmove");
+
+        // Public doctor directory under /api/patient (no login needed)
+        assertThat(call(HttpMethod.GET, "/api/patient/getAllDoctors", null, null).getBody()).contains("drmove");
+        assertThat(call(HttpMethod.GET, "/api/patient/getAllBySpecialization?specialization=NOT_ASSIGNED", null, null)
+                .getBody()).contains("drmove");
+        assertThat(json.readTree(call(HttpMethod.GET, "/api/patient/getAllBySpecialization?specialization=nonsense",
+                null, null).getBody())).isEmpty();
+
+        // Schedule endpoint (doctor's own)
+        assertThat(json.readTree(call(HttpMethod.GET, "/api/doctor/" + doctorUserId + "/schedule", doctor, null)
+                .getBody())).hasSize(14);
+
+        // A patient books one slot; the receptionist books another on the patient's behalf
+        String patient = register("movepatient");
+        long patientId = json.readTree(call(HttpMethod.GET, "/api/patient/getAccount/" + userIdOf(patient), patient, null)
+                .getBody()).get("patientId").asLong();
+        JsonNode slots = json.readTree(call(HttpMethod.GET, "/api/slots/available/" + doctorId
+                + "?date=" + LocalDate.now().plusDays(1) + "&shift=EVENING", patient, null).getBody());
+        long byPatient = book(patient, slots.get(0).get("id").asLong());
+        ResponseEntity<String> deskBooking = call(HttpMethod.POST, "/api/receptionist/NewAppointment", desk,
+                "{\"slotId\":" + slots.get(1).get("id").asLong() + ",\"ptInfoId\":" + patientId + "}");
+        assertThat(deskBooking.getStatusCode()).isEqualTo(HttpStatus.OK);
+        long byDesk = json.readTree(deskBooking.getBody()).get("appointmentID").asLong();
+
+        // Receptionist lists
+        assertThat(ids(call(HttpMethod.GET, "/api/receptionist/getAppointments", desk, null))).contains(byPatient, byDesk);
+        assertThat(ids(call(HttpMethod.GET, "/api/receptionist/getAppointmentByDoctor/drmove", desk, null)))
+                .containsExactlyInAnyOrder(byPatient, byDesk);
+        // Pending lists for the doctor (doctor, receptionist and admin views)
+        for (String[] view : new String[][]{{"/api/doctor", doctor}, {"/api/receptionist", desk}, {"/api/admin", admin}}) {
+            assertThat(ids(call(HttpMethod.GET, view[0] + "/doctorPendingAppointments/" + doctorUserId, view[1], null)))
+                    .containsExactlyInAnyOrder(byPatient, byDesk);
+        }
+
+        // Only the appointment's own doctor can complete it
+        assertThat(call(HttpMethod.PUT, "/api/doctor/complete/" + byPatient, otherDoctor, null).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        ResponseEntity<String> completed = call(HttpMethod.PUT, "/api/doctor/complete/" + byPatient, doctor, null);
+        assertThat(completed.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(completed.getBody()).isEqualTo("Appointment marked as completed successfully.");
+        for (String[] view : new String[][]{{"/api/doctor", doctor}, {"/api/receptionist", desk}, {"/api/admin", admin}}) {
+            assertThat(ids(call(HttpMethod.GET, view[0] + "/doctorCompletedAppointments/" + doctorUserId, view[1], null)))
+                    .containsExactly(byPatient);
+        }
+        JsonNode counts = json.readTree(call(HttpMethod.GET, "/api/admin/doctorAppointmentCount/" + doctorId, admin, null).getBody());
+        assertThat(counts.get("pending").asLong()).isEqualTo(1);
+        assertThat(counts.get("completed").asLong()).isEqualTo(1);
+
+        // Receptionist cancels the other booking (kept as history)
+        ResponseEntity<String> cancelled = call(HttpMethod.DELETE, "/api/receptionist/deleteAppointment/" + byDesk, desk, null);
+        assertThat(cancelled.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(cancelled.getBody()).isEqualTo("Appointment cancelled successfully!");
+        assertThat(appointmentStatus(patient, byDesk)).isEqualTo("CANCELLED_BY_PATIENT");
+    }
+
+    private List<Long> ids(ResponseEntity<String> response) throws Exception {
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        List<Long> ids = new java.util.ArrayList<>();
+        json.readTree(response.getBody()).forEach(a -> ids.add(a.get("appointmentID").asLong()));
+        return ids;
     }
 
     private String appointmentStatus(String token, long appointmentId) throws Exception {

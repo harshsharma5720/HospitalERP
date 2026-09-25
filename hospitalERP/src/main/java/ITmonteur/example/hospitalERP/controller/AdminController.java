@@ -3,7 +3,7 @@ package ITmonteur.example.hospitalERP.controller;
 import ITmonteur.example.hospitalERP.dto.*;
 import ITmonteur.example.hospitalERP.entities.LeaveStatus;
 import ITmonteur.example.hospitalERP.services.AdminService;
-import ITmonteur.example.hospitalERP.services.DoctorService;
+import ITmonteur.example.hospitalERP.services.AppointmentService;
 import ITmonteur.example.hospitalERP.services.LeaveRequestService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +26,7 @@ public class AdminController {
     @Autowired
     private LeaveRequestService leaveRequestService;
     @Autowired
-    private DoctorService doctorService;
+    private AppointmentService appointmentService;
 
     private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
 
@@ -86,20 +86,20 @@ public class AdminController {
     // -------------------- Doctor appointments --------------------
     @GetMapping("/doctorPendingAppointments/{userId}")
     public ResponseEntity<List<AppointmentDTO>> getPendingAppointmentsForDoctor(@PathVariable Long userId) {
-        return ResponseEntity.ok(this.doctorService.getAllPendingAppointmentsByDoctorId(userId));
+        return ResponseEntity.ok(this.appointmentService.getPendingAppointmentsForDoctorUser(userId));
     }
 
     @GetMapping("/doctorCompletedAppointments/{userId}")
     public ResponseEntity<List<AppointmentDTO>> getCompletedAppointmentsForDoctor(@PathVariable Long userId) {
-        return ResponseEntity.ok(this.doctorService.getAllCompletedAppointmentsByDoctorId(userId));
+        return ResponseEntity.ok(this.appointmentService.getCompletedAppointmentsForDoctorUser(userId));
     }
 
     // Note: takes the doctor's own id (doctor.id), not the user id
     @GetMapping("/doctorAppointmentCount/{doctorId}")
     public ResponseEntity<Map<String, Long>> getAppointmentCount(@PathVariable Long doctorId) {
         return ResponseEntity.ok(Map.of(
-                "pending", this.doctorService.getPendingCount(doctorId),
-                "completed", this.doctorService.getCompletedCount(doctorId)));
+                "pending", this.appointmentService.countPendingForDoctor(doctorId),
+                "completed", this.appointmentService.countCompletedForDoctor(doctorId)));
     }
 
     // -------------------- Users --------------------

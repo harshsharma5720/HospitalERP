@@ -78,9 +78,7 @@ public class AppointmentService {
 
     /** All appointments of the logged-in doctor. */
     public List<AppointmentDTO> getAppointmentsForDoctor() {
-        Long userId = currentUserService.getCurrentUserId();
-        Doctor doctor = doctorRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "userId", userId));
+        Doctor doctor = doctorByUserId(currentUserService.getCurrentUserId());
         return toDTOs(appointmentRepository.findByDoctor_Id(doctor.getId()));
     }
 
@@ -190,6 +188,52 @@ public class AppointmentService {
         return AppointmentMapper.toDTO(appointmentRepository.save(appointment));
     }
 
+    // ---------------------------------------------------------------- doctor views
+    // (moved from DoctorService in step 1.6; same behaviour)
+
+    /** Only the doctor who owns the appointment (or an admin) can complete it. */
+    @Transactional
+    public String markAsCompleted(long appointmentId) {
+        Appointment appointment = findAppointment(appointmentId);
+        if (!currentUserService.hasRole(Role.ADMIN)) {
+            Long userId = currentUserService.getCurrentUserId();
+            boolean ownsAppointment = appointment.getDoctor() != null && appointment.getDoctor().getUser() != null
+                    && Objects.equals(appointment.getDoctor().getUser().getId(), userId);
+            if (!ownsAppointment) {
+                throw new ForbiddenException("You can only complete your own appointments");
+            }
+        }
+        if (appointment.getStatus() == AppointmentStatus.COMPLETED || appointment.isCompleted()) {
+            return "Appointment is already marked as completed.";
+        }
+        if (!appointment.isActive()) {
+            throw new BadRequestException("A cancelled appointment cannot be completed");
+        }
+        appointment.setStatus(AppointmentStatus.COMPLETED);
+        appointmentRepository.save(appointment);
+        return "Appointment marked as completed successfully.";
+    }
+
+    /** userId = the doctor's user id; allowed for the doctor, admins and receptionists. */
+    public List<AppointmentDTO> getPendingAppointmentsForDoctorUser(Long userId) {
+        currentUserService.requireSelfOrRole(userId, Role.ADMIN, Role.RECEPTIONIST);
+        return toDTOs(appointmentRepository.findPendingByDoctorId(doctorByUserId(userId).getId()));
+    }
+
+    public List<AppointmentDTO> getCompletedAppointmentsForDoctorUser(Long userId) {
+        currentUserService.requireSelfOrRole(userId, Role.ADMIN, Role.RECEPTIONIST);
+        return toDTOs(appointmentRepository.findCompletedByDoctorId(doctorByUserId(userId).getId()));
+    }
+
+    /** doctorId = doctor.id (not the user id). */
+    public long countPendingForDoctor(Long doctorId) {
+        return appointmentRepository.countPendingByDoctorId(doctorId);
+    }
+
+    public long countCompletedForDoctor(Long doctorId) {
+        return appointmentRepository.countCompletedByDoctorId(doctorId);
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private void applyPatientDetails(Appointment appointment, PtInfo ptInfo, AppointmentDTO dto) {
@@ -244,6 +288,11 @@ public class AppointmentService {
         if (!isPatient) {
             throw new ForbiddenException("You can only change your own appointments");
         }
+    }
+
+    private Doctor doctorByUserId(Long userId) {
+        return doctorRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "userId", userId));
     }
 
     private PtInfo currentPatient() {

@@ -1,9 +1,6 @@
 package ITmonteur.example.hospitalERP.controller;
 
-import ITmonteur.example.hospitalERP.dto.DoctorDTO;
 import ITmonteur.example.hospitalERP.dto.PtInfoDTO;
-import ITmonteur.example.hospitalERP.entities.Specialist;
-import ITmonteur.example.hospitalERP.services.DoctorService;
 import ITmonteur.example.hospitalERP.services.PtInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -20,9 +17,6 @@ public class PtInfoController {
     @Autowired
     private PtInfoService ptInfoService;
 
-    @Autowired
-    private DoctorService doctorService;
-
     // Get all patient accounts (admin / receptionist)
     @GetMapping("/getAll")
     public ResponseEntity<List<PtInfoDTO>> getAllAccounts(){
@@ -33,18 +27,6 @@ public class PtInfoController {
     @GetMapping("/getAccount/{ptId}")
     public ResponseEntity<PtInfoDTO> getAccountById(@PathVariable long ptId){
         return ResponseEntity.ok(this.ptInfoService.getPtInfoById(ptId));
-    }
-
-    // Public doctor directory
-    @GetMapping("/getAllDoctors")
-    public ResponseEntity<List<DoctorDTO>> getAllDoctors() {
-        return ResponseEntity.ok(this.doctorService.getAllDoctors());
-    }
-
-    @GetMapping("/getAllBySpecialization")
-    public ResponseEntity<List<DoctorDTO>> getDoctorsBySpecialization(@RequestParam String specialization){
-        Specialist specialist = DoctorService.parseSpecialist(specialization);
-        return ResponseEntity.ok(specialist == null ? List.of() : doctorService.findDoctorsBySpecialization(specialist));
     }
 
     // Delete account by user ID

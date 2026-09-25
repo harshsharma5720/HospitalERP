@@ -1,19 +1,13 @@
 package ITmonteur.example.hospitalERP.services;
 
-import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.dto.DoctorDTO;
-import ITmonteur.example.hospitalERP.dto.AppointmentMapper;
 import ITmonteur.example.hospitalERP.dto.DoctorMapper;
-import ITmonteur.example.hospitalERP.entities.Appointment;
-import ITmonteur.example.hospitalERP.entities.AppointmentStatus;
 import ITmonteur.example.hospitalERP.entities.Doctor;
 import ITmonteur.example.hospitalERP.entities.Role;
 import ITmonteur.example.hospitalERP.entities.Specialist;
 import ITmonteur.example.hospitalERP.entities.User;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
-import ITmonteur.example.hospitalERP.exception.ForbiddenException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
-import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.UserRepository;
 import org.slf4j.Logger;
@@ -24,7 +18,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 
 @Service
 public class DoctorService {
@@ -32,17 +25,15 @@ public class DoctorService {
     private static final Logger logger = LoggerFactory.getLogger(DoctorService.class);
 
     private final DoctorRepository doctorRepository;
-    private final AppointmentRepository appointmentRepository;
     private final UserRepository userRepository;
     private final CurrentUserService currentUserService;
     private final FileStorageService fileStorageService;
     private final UserAccountService userAccountService;
 
-    public DoctorService(DoctorRepository doctorRepository, AppointmentRepository appointmentRepository,
+    public DoctorService(DoctorRepository doctorRepository,
                          UserRepository userRepository, CurrentUserService currentUserService,
                          FileStorageService fileStorageService, UserAccountService userAccountService) {
         this.doctorRepository = doctorRepository;
-        this.appointmentRepository = appointmentRepository;
         this.userRepository = userRepository;
         this.currentUserService = currentUserService;
         this.fileStorageService = fileStorageService;
@@ -135,53 +126,6 @@ public class DoctorService {
         }
         logger.info("Doctor deleted with ID: {}", doctorId);
         return true;
-    }
-
-    // Only the doctor who owns the appointment (or an admin) can complete it
-    @Transactional
-    public String markAsCompleted(long appointmentId) {
-        Appointment appointment = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", appointmentId));
-        if (!currentUserService.hasRole(Role.ADMIN)) {
-            Long userId = currentUserService.getCurrentUserId();
-            boolean ownsAppointment = appointment.getDoctor() != null && appointment.getDoctor().getUser() != null
-                    && Objects.equals(appointment.getDoctor().getUser().getId(), userId);
-            if (!ownsAppointment) {
-                throw new ForbiddenException("You can only complete your own appointments");
-            }
-        }
-        if (appointment.getStatus() == AppointmentStatus.COMPLETED || appointment.isCompleted()) {
-            return "Appointment is already marked as completed.";
-        }
-        if (!appointment.isActive()) {
-            throw new BadRequestException("A cancelled appointment cannot be completed");
-        }
-        appointment.setStatus(AppointmentStatus.COMPLETED);
-        appointmentRepository.save(appointment);
-        return "Appointment marked as completed successfully.";
-    }
-
-    // userId = the doctor's user id; allowed for the doctor, admins and receptionists
-    public List<AppointmentDTO> getAllPendingAppointmentsByDoctorId(Long userId) {
-        currentUserService.requireSelfOrRole(userId, Role.ADMIN, Role.RECEPTIONIST);
-        Doctor doctor = doctorByUserId(userId);
-        return appointmentRepository.findPendingByDoctorId(doctor.getId()).stream()
-                .map(AppointmentMapper::toDTO).toList();
-    }
-
-    public List<AppointmentDTO> getAllCompletedAppointmentsByDoctorId(Long userId) {
-        currentUserService.requireSelfOrRole(userId, Role.ADMIN, Role.RECEPTIONIST);
-        Doctor doctor = doctorByUserId(userId);
-        return appointmentRepository.findCompletedByDoctorId(doctor.getId()).stream()
-                .map(AppointmentMapper::toDTO).toList();
-    }
-
-    public long getPendingCount(Long doctorId) {
-        return appointmentRepository.countPendingByDoctorId(doctorId);
-    }
-
-    public long getCompletedCount(Long doctorId) {
-        return appointmentRepository.countCompletedByDoctorId(doctorId);
     }
 
     private Doctor doctorByUserId(Long userId) {

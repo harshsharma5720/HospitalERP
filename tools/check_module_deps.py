@@ -95,6 +95,9 @@ CLASS_MODULE = {
     'RelativeDeletedEvent': 'patients', 'AppointmentRelativeUnlinker': 'appointments',
     # added in step 1.5 (leave approval via event)
     'DoctorLeaveApprovedEvent': 'staff', 'SlotLeaveBlocker': 'scheduling', 'AppointmentLeaveCanceller': 'appointments',
+    # added in step 1.6 (endpoints moved to the module that owns them; URLs unchanged)
+    'DoctorAppointmentController': 'appointments', 'ReceptionistAppointmentController': 'appointments',
+    'DoctorScheduleController': 'scheduling', 'DoctorDirectoryController': 'staff',
 }
 
 
