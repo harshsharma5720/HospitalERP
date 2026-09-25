@@ -6,12 +6,12 @@ import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ConflictException;
 import ITmonteur.example.hospitalERP.exception.ForbiddenException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
-import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
+import ITmonteur.example.hospitalERP.events.DoctorLeaveApprovedEvent;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.LeaveRequestRepository;
-import ITmonteur.example.hospitalERP.repositories.SlotRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,20 +26,20 @@ public class LeaveRequestService {
 
     private final LeaveRequestRepository leaveRequestRepository;
     private final DoctorRepository doctorRepository;
-    private final AppointmentRepository appointmentRepository;
-    private final SlotRepository slotRepository;
-    private final NotificationService notificationService;
     private final CurrentUserService currentUserService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public LeaveRequestService(LeaveRequestRepository leaveRequestRepository, DoctorRepository doctorRepository,
-                               AppointmentRepository appointmentRepository, SlotRepository slotRepository,
-                               NotificationService notificationService, CurrentUserService currentUserService) {
+                               CurrentUserService currentUserService, ApplicationEventPublisher eventPublisher) {
         this.leaveRequestRepository = leaveRequestRepository;
         this.doctorRepository = doctorRepository;
-        this.appointmentRepository = appointmentRepository;
-        this.slotRepository = slotRepository;
-        this.notificationService = notificationService;
         this.currentUserService = currentUserService;
+        this.eventPublisher = eventPublisher;
+    }
+
+    /** Whether the user has an APPROVED leave covering the date. Used by the scheduling module. */
+    public boolean isOnApprovedLeave(Long userId, LocalDate date) {
+        return leaveRequestRepository.isOnApprovedLeave(userId, date);
     }
 
     /** Applies for leave as the logged-in user (the userId/role in the request are ignored). */
@@ -103,8 +103,9 @@ public class LeaveRequestService {
     }
 
     /**
-     * Admin decision on a pending leave. Approving a doctor's leave cancels their
-     * upcoming appointments in that period, blocks the slots and notifies the patients.
+     * Admin decision on a pending leave. Approving a doctor's leave publishes
+     * {@link DoctorLeaveApprovedEvent}: in the same transaction the scheduling module blocks the
+     * slots and the appointments module cancels the bookings and notifies the patients.
      */
     @Transactional
     public LeaveRequestDTO updateLeaveStatus(Long id, LeaveStatus status) {
@@ -119,7 +120,8 @@ public class LeaveRequestService {
         leaveRequestRepository.save(leave);
         if (status == LeaveStatus.APPROVED && leave.getUser().getRole() == Role.DOCTOR) {
             doctorRepository.findByUserId(leave.getUser().getId())
-                    .ifPresent(doctor -> applyDoctorLeave(doctor, leave));
+                    .ifPresent(doctor -> eventPublisher.publishEvent(
+                            new DoctorLeaveApprovedEvent(doctor.getId(), leave.getStartDate(), leave.getEndDate())));
         }
         logger.info("Leave request {} {}", id, status);
         return toDto(leave);
@@ -136,27 +138,6 @@ public class LeaveRequestService {
         }
         leaveRequestRepository.delete(leaveRequest);
         return true;
-    }
-
-    private void applyDoctorLeave(Doctor doctor, LeaveRequest leave) {
-        List<Appointment> appointments = appointmentRepository
-                .findByDoctor_IdAndDateBetween(doctor.getId(), leave.getStartDate(), leave.getEndDate());
-        int cancelled = 0;
-        for (Appointment appt : appointments) {
-            if (!appt.isActive()) {
-                continue;
-            }
-            appt.setStatus(AppointmentStatus.CANCELLED_BY_DOCTOR);
-            appointmentRepository.save(appt);
-            notificationService.appointmentCancelledByDoctorLeave(AppointmentService.notificationInfo(appt));
-            cancelled++;
-        }
-        List<Slot> slots = slotRepository
-                .findByDoctor_IdAndDateBetween(doctor.getId(), leave.getStartDate(), leave.getEndDate());
-        slots.forEach(slot -> slot.setAvailable(false));
-        slotRepository.saveAll(slots);
-        logger.info("Doctor {} leave {}..{}: cancelled {} appointments, blocked {} slots",
-                doctor.getId(), leave.getStartDate(), leave.getEndDate(), cancelled, slots.size());
     }
 
     private static void validateDates(LocalDate start, LocalDate end) {

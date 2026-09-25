@@ -2,7 +2,8 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.dto.DoctorDTO;
-import ITmonteur.example.hospitalERP.dto.EntityMapper;
+import ITmonteur.example.hospitalERP.dto.AppointmentMapper;
+import ITmonteur.example.hospitalERP.dto.DoctorMapper;
 import ITmonteur.example.hospitalERP.entities.Appointment;
 import ITmonteur.example.hospitalERP.entities.AppointmentStatus;
 import ITmonteur.example.hospitalERP.entities.Doctor;
@@ -50,26 +51,26 @@ public class DoctorService {
 
     // Get all doctors (public directory)
     public List<DoctorDTO> getAllDoctors() {
-        return doctorRepository.findAll().stream().map(EntityMapper::toDoctorDTO).toList();
+        return doctorRepository.findAll().stream().map(DoctorMapper::toDTO).toList();
     }
 
     public DoctorDTO getDoctorByDoctorId(Long doctorId) {
         Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
-        return EntityMapper.toDoctorDTO(doctor);
+        return DoctorMapper.toDTO(doctor);
     }
 
     // Get doctor by user ID (the doctor themself or an admin)
     public DoctorDTO getDoctorByUserId(Long userId) {
         currentUserService.requireSelfOrRole(userId, Role.ADMIN);
-        return EntityMapper.toDoctorDTO(doctorByUserId(userId));
+        return DoctorMapper.toDTO(doctorByUserId(userId));
     }
 
     public List<DoctorDTO> findDoctorsBySpecialization(Specialist specialization) {
         return doctorRepository.findBySpecialist(specialization)
                 .orElse(List.of())
                 .stream()
-                .map(EntityMapper::toDoctorDTO)
+                .map(DoctorMapper::toDTO)
                 .toList();
     }
 
@@ -119,7 +120,7 @@ public class DoctorService {
         }
         Doctor updatedDoctor = doctorRepository.save(doctor);
         logger.info("Doctor profile updated for user {}", userId);
-        return EntityMapper.toDoctorDTO(updatedDoctor);
+        return DoctorMapper.toDTO(updatedDoctor);
     }
 
     // Delete doctor by doctor ID (admin only), including their appointments, slots and login
@@ -165,14 +166,14 @@ public class DoctorService {
         currentUserService.requireSelfOrRole(userId, Role.ADMIN, Role.RECEPTIONIST);
         Doctor doctor = doctorByUserId(userId);
         return appointmentRepository.findPendingByDoctorId(doctor.getId()).stream()
-                .map(EntityMapper::toAppointmentDTO).toList();
+                .map(AppointmentMapper::toDTO).toList();
     }
 
     public List<AppointmentDTO> getAllCompletedAppointmentsByDoctorId(Long userId) {
         currentUserService.requireSelfOrRole(userId, Role.ADMIN, Role.RECEPTIONIST);
         Doctor doctor = doctorByUserId(userId);
         return appointmentRepository.findCompletedByDoctorId(doctor.getId()).stream()
-                .map(EntityMapper::toAppointmentDTO).toList();
+                .map(AppointmentMapper::toDTO).toList();
     }
 
     public long getPendingCount(Long doctorId) {

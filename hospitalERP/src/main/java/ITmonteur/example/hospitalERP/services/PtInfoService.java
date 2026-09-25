@@ -1,6 +1,6 @@
 package ITmonteur.example.hospitalERP.services;
 
-import ITmonteur.example.hospitalERP.dto.EntityMapper;
+import ITmonteur.example.hospitalERP.dto.PatientMapper;
 import ITmonteur.example.hospitalERP.dto.PtInfoDTO;
 import ITmonteur.example.hospitalERP.entities.PtInfo;
 import ITmonteur.example.hospitalERP.entities.Role;
@@ -42,13 +42,13 @@ public class PtInfoService {
 
     // Get all patients info (admin / receptionist)
     public List<PtInfoDTO> getAllPtInfo() {
-        return ptInfoRepository.findAll().stream().map(EntityMapper::toPtInfoDTO).toList();
+        return ptInfoRepository.findAll().stream().map(PatientMapper::toDTO).toList();
     }
 
     // Get patient info by user ID (the patient themself or an admin)
     public PtInfoDTO getPtInfoById(long userId) {
         currentUserService.requireSelfOrRole(userId, Role.ADMIN);
-        return EntityMapper.toPtInfoDTO(patientByUserId(userId));
+        return PatientMapper.toDTO(patientByUserId(userId));
     }
 
     // Deletes the patient account, their relatives and appointments (self or admin)
@@ -103,7 +103,7 @@ public class PtInfoService {
             }
             userRepository.save(user);
         }
-        PtInfoDTO updated = EntityMapper.toPtInfoDTO(ptInfoRepository.save(ptInfo));
+        PtInfoDTO updated = PatientMapper.toDTO(ptInfoRepository.save(ptInfo));
         logger.info("Patient profile updated for user {}", userId);
         return updated;
     }

@@ -8,7 +8,6 @@ import ITmonteur.example.hospitalERP.exception.ConflictException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.DoctorScheduleRepository;
-import ITmonteur.example.hospitalERP.repositories.LeaveRequestRepository;
 import ITmonteur.example.hospitalERP.repositories.SlotRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,15 +33,15 @@ public class SlotService {
 
     private final SlotRepository slotRepository;
     private final DoctorRepository doctorRepository;
-    private final LeaveRequestRepository leaveRequestRepository;
+    private final LeaveRequestService leaveRequestService;
     private final DoctorScheduleRepository doctorScheduleRepository;
 
     public SlotService(SlotRepository slotRepository, DoctorRepository doctorRepository,
-                       LeaveRequestRepository leaveRequestRepository,
+                       LeaveRequestService leaveRequestService,
                        DoctorScheduleRepository doctorScheduleRepository) {
         this.slotRepository = slotRepository;
         this.doctorRepository = doctorRepository;
-        this.leaveRequestRepository = leaveRequestRepository;
+        this.leaveRequestService = leaveRequestService;
         this.doctorScheduleRepository = doctorScheduleRepository;
     }
 
@@ -163,7 +162,7 @@ public class SlotService {
 
     private boolean isDoctorOnLeave(Doctor doctor, LocalDate date) {
         return doctor != null && doctor.getUser() != null
-                && leaveRequestRepository.isOnApprovedLeave(doctor.getUser().getId(), date);
+                && leaveRequestService.isOnApprovedLeave(doctor.getUser().getId(), date);
     }
 
     private Doctor findDoctor(Long doctorId) {

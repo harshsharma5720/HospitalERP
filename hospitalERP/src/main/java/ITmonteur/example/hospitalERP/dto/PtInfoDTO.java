@@ -3,7 +3,6 @@ package ITmonteur.example.hospitalERP.dto;
 import ITmonteur.example.hospitalERP.entities.Gender;
 
 import java.time.LocalDate;
-import java.util.List;
 
 public class PtInfoDTO {
     private long patientId;
@@ -14,7 +13,6 @@ public class PtInfoDTO {
     private String contactNo;
     private LocalDate dob;
     private Gender gender;
-    private List<AppointmentDTO> appointment;
     private String userName;
     private String profileImage;
 
@@ -23,7 +21,7 @@ public class PtInfoDTO {
 
     public PtInfoDTO(long patientId, String patientName,String email, String patientAddress,
                      Long patientAadharNo,String contactNo, LocalDate dob,Gender gender,
-                     List<AppointmentDTO> appointment, String userName, String profileImage) {
+                     String userName, String profileImage) {
         this.patientId = patientId;
         this.patientName = patientName;
         this.email=email;
@@ -32,7 +30,6 @@ public class PtInfoDTO {
         this.contactNo = contactNo;
         this.dob = dob;
         this.gender = gender;
-        this.appointment = appointment;
         this.userName=userName;
         this.profileImage=profileImage;
     }
@@ -101,13 +98,7 @@ public class PtInfoDTO {
         this.gender = gender;
     }
 
-    public List<AppointmentDTO> getAppointment() {
-        return appointment;
-    }
 
-    public void setAppointment(List<AppointmentDTO> appointment) {
-        this.appointment = appointment;
-    }
 
     public String getUserName() { return userName;  }
 

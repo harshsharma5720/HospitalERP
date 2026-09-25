@@ -7,6 +7,7 @@ import ITmonteur.example.hospitalERP.entities.User;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.*;
+import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ public class UserAccountService {
     private final SlotService slotService;
     private final NotificationService notificationService;
     private final CurrentUserService currentUserService;
+    private final EntityManager entityManager;
 
     public UserAccountService(UserRepository userRepository, PtInfoRepository ptInfoRepository,
                               DoctorRepository doctorRepository, ReceptionistRepository receptionistRepository,
@@ -47,7 +49,8 @@ public class UserAccountService {
                               LeaveRequestRepository leaveRequestRepository,
                               ConsultationRepository consultationRepository,
                               DoctorScheduleRepository doctorScheduleRepository, SlotService slotService,
-                              NotificationService notificationService, CurrentUserService currentUserService) {
+                              NotificationService notificationService, CurrentUserService currentUserService,
+                              EntityManager entityManager) {
         this.userRepository = userRepository;
         this.ptInfoRepository = ptInfoRepository;
         this.doctorRepository = doctorRepository;
@@ -60,6 +63,7 @@ public class UserAccountService {
         this.slotService = slotService;
         this.notificationService = notificationService;
         this.currentUserService = currentUserService;
+        this.entityManager = entityManager;
     }
 
     @Transactional
@@ -75,13 +79,12 @@ public class UserAccountService {
         switch (user.getRole()) {
             case PATIENT -> {
                 ptInfoRepository.findByUser_Id(userId).ifPresent(this::deletePatientProfile);
-                userRepository.delete(user);
+                userRepository.deleteById(userId); // by id: the persistence context was cleared
             }
             case DOCTOR -> {
-                // Doctor.user is cascaded, so deleting the doctor profile also deletes the user
-                doctorRepository.findByUserId(userId).ifPresentOrElse(
-                        this::deleteDoctorProfile,
-                        () -> userRepository.delete(user));
+                // The profile goes first (it references the user), then the login account
+                doctorRepository.findByUserId(userId).ifPresent(this::deleteDoctorProfile);
+                userRepository.deleteById(userId); // by id: the persistence context was cleared
             }
             case RECEPTIONIST -> {
                 receptionistRepository.findByUser_Id(userId).ifPresent(receptionistRepository::delete);
@@ -93,24 +96,39 @@ public class UserAccountService {
     }
 
     private void deletePatientProfile(PtInfo patient) {
-        List<Appointment> upcoming = appointmentRepository.findPendingByPatientId(patient.getPatientId());
+        Long patientId = patient.getPatientId();
+        List<Appointment> upcoming = appointmentRepository.findPendingByPatientId(patientId);
         upcoming.forEach(a -> slotService.releaseSlot(a.getSlot()));
-        consultationRepository.deleteItemsByPatientId(patient.getPatientId());
-        consultationRepository.deleteByPatientId(patient.getPatientId());
-        appointmentRepository.deleteByPatientId(patient.getPatientId());
-        ptInfoRepository.delete(patient); // relatives are removed by cascade
+        writeAndForgetLoadedEntities();
+        consultationRepository.deleteItemsByPatientId(patientId);
+        consultationRepository.deleteByPatientId(patientId);
+        appointmentRepository.deleteByPatientId(patientId);
+        ptInfoRepository.deleteById(patientId); // relatives are removed by cascade
     }
 
     /** Also used for legacy doctor rows that have no linked user. */
     @Transactional
     public void deleteDoctorProfile(Doctor doctor) {
-        List<Appointment> upcoming = appointmentRepository.findPendingByDoctorId(doctor.getId());
+        Long doctorId = doctor.getId();
+        List<Appointment> upcoming = appointmentRepository.findPendingByDoctorId(doctorId);
         upcoming.forEach(a -> notificationService.appointmentCancelled(AppointmentService.notificationInfo(a)));
-        consultationRepository.deleteItemsByDoctorId(doctor.getId());
-        consultationRepository.deleteByDoctorId(doctor.getId());
-        appointmentRepository.deleteByDoctorId(doctor.getId());
-        slotRepository.deleteByDoctorId(doctor.getId());
-        doctorScheduleRepository.deleteByDoctorId(doctor.getId());
-        doctorRepository.delete(doctor);
+        writeAndForgetLoadedEntities();
+        consultationRepository.deleteItemsByDoctorId(doctorId);
+        consultationRepository.deleteByDoctorId(doctorId);
+        appointmentRepository.deleteByDoctorId(doctorId);
+        slotRepository.deleteByDoctorId(doctorId);
+        doctorScheduleRepository.deleteByDoctorId(doctorId);
+        doctorRepository.deleteById(doctorId);
+    }
+
+    /**
+     * The bulk deletes below bypass Hibernate's in-memory state. Appointments and slots loaded
+     * above would otherwise stay "managed" while pointing at rows that no longer exist, and the
+     * final flush fails ("references an unsaved transient instance"). So: write pending changes
+     * (e.g. released slots) now, then detach everything; later deletes work by id.
+     */
+    private void writeAndForgetLoadedEntities() {
+        entityManager.flush();
+        entityManager.clear();
     }
 }

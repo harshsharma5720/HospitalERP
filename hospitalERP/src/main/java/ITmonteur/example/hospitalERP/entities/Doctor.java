@@ -4,8 +4,6 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
-import java.util.List;
-
 @Entity
 @Table(name = "doctor")
 public class Doctor {
@@ -19,17 +17,14 @@ public class Doctor {
     private Specialist specialist; // CARDIOLOGY, DENTISTRY, etc.
     @Column(unique = true, nullable = false)
     private String email;
-    private String password; // encrypted
     @Column(nullable = false)
     private String phoneNumber;
     private String userName;
     private String profileImage;
 
-    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Appointment> appointments;
-    @Enumerated(EnumType.STRING)
-    private Role role = Role.DOCTOR;
-    @OneToOne(cascade = CascadeType.ALL)
+    // No cascade: the login account belongs to the identity module and is deleted explicitly
+    // (UserAccountService). @OnDelete only affects the generated FK (ON DELETE CASCADE).
+    @OneToOne
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "user_id", referencedColumnName = "id") // FK column in Doctor table
     private User user;
@@ -37,19 +32,15 @@ public class Doctor {
     public Doctor() {
     }
 
-    public Doctor(Long id, String name, Specialist specialist,
-                  String email, String password, String phoneNumber,String profileImage,String userName,
-                  List<Appointment> appointments, Role role, User user) {
+    public Doctor(Long id, String name, Specialist specialist, String email, String phoneNumber,
+                  String profileImage, String userName, User user) {
         this.id = id;
         this.name = name;
         this.specialist = specialist;
         this.email = email;
-        this.password = password;
         this.phoneNumber = phoneNumber;
         this.userName = userName;
-        this.profileImage=profileImage;
-        this.appointments=appointments;
-        this.role = role;
+        this.profileImage = profileImage;
         this.user = user;
     }
 
@@ -85,13 +76,7 @@ public class Doctor {
         this.email = email;
     }
 
-    public String getPassword() {
-        return password;
-    }
 
-    public void setPassword(String password) {
-        this.password = password;
-    }
 
     public String getPhoneNumber() {
         return phoneNumber;
@@ -101,13 +86,7 @@ public class Doctor {
         this.phoneNumber = phoneNumber;
     }
 
-    public Role getRole() {
-        return role;
-    }
 
-    public void setRole(Role role) {
-        this.role = role;
-    }
 
     public User getUser() {
         return user;
@@ -125,13 +104,7 @@ public class Doctor {
         this.userName = userName;
     }
 
-    public List<Appointment> getAppointments() {
-        return appointments;
-    }
 
-    public void setAppointments(List<Appointment> appointments) {
-        this.appointments = appointments;
-    }
 
     public String getProfileImage() {
         return profileImage;

@@ -1,7 +1,7 @@
 package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
-import ITmonteur.example.hospitalERP.dto.EntityMapper;
+import ITmonteur.example.hospitalERP.dto.AppointmentMapper;
 import ITmonteur.example.hospitalERP.entities.*;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ForbiddenException;
@@ -61,7 +61,7 @@ public class AppointmentService {
     public AppointmentDTO getAppointmentByID(long appointmentID) {
         Appointment appointment = findAppointment(appointmentID);
         requireCanView(appointment);
-        return EntityMapper.toAppointmentDTO(appointment);
+        return AppointmentMapper.toDTO(appointment);
     }
 
     public List<AppointmentDTO> getAllPatientCompletedAppointments(Long userId) {
@@ -135,7 +135,7 @@ public class AppointmentService {
         Appointment saved = appointmentRepository.save(appointment);
         logger.info("Appointment {} booked for slot {}", saved.getAppointmentID(), slot.getId());
         notificationService.appointmentBooked(notificationInfo(saved));
-        return EntityMapper.toAppointmentDTO(saved);
+        return AppointmentMapper.toDTO(saved);
     }
 
     /** Soft-cancels: the record is kept for history and the slot becomes bookable again. */
@@ -151,7 +151,7 @@ public class AppointmentService {
         Appointment saved = appointmentRepository.save(appointment);
         logger.info("Appointment {} cancelled", appointmentID);
         notificationService.appointmentCancelled(notificationInfo(saved));
-        return EntityMapper.toAppointmentDTO(saved);
+        return AppointmentMapper.toDTO(saved);
     }
 
     /** Reschedules (when slotId changes) and/or updates the note and patient details. */
@@ -187,7 +187,7 @@ public class AppointmentService {
             appointment.setReminderSent(false); // remind again for the new date
             logger.info("Appointment {} rescheduled to slot {}", appointmentID, newSlot.getId());
         }
-        return EntityMapper.toAppointmentDTO(appointmentRepository.save(appointment));
+        return AppointmentMapper.toDTO(appointmentRepository.save(appointment));
     }
 
     // ---------------------------------------------------------------- helpers
@@ -261,7 +261,7 @@ public class AppointmentService {
     }
 
     private static List<AppointmentDTO> toDTOs(List<Appointment> appointments) {
-        return appointments.stream().map(EntityMapper::toAppointmentDTO).toList();
+        return appointments.stream().map(AppointmentMapper::toDTO).toList();
     }
 
     static NotificationService.AppointmentInfo notificationInfo(Appointment appointment) {

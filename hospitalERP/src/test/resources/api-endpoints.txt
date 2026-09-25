@@ -1,0 +1,83 @@
+DELETE /api/admin/{id}
+DELETE /api/doctor/delete/{id} auth=hasRole('ADMIN')
+DELETE /api/leaves/{id}
+DELETE /api/patient/deleteAccount/{ptId}
+DELETE /api/patient/relative/delete/{id}
+DELETE /api/receptionist/delete/{receptionistId} auth=hasRole('ADMIN')
+DELETE /api/receptionist/deleteAppointment/{appointmentId}
+DELETE /appointment/CancelAppointment/{appointmentId}
+GET /api/admin/allApproved
+GET /api/admin/allPending
+GET /api/admin/allRejected
+GET /api/admin/allUsers
+GET /api/admin/doctorAppointmentCount/{doctorId}
+GET /api/admin/doctorCompletedAppointments/{userId}
+GET /api/admin/doctorPendingAppointments/{userId}
+GET /api/admin/{id}
+GET /api/auth/otp-required
+GET /api/consultations/appointment/{appointmentId}
+GET /api/consultations/appointment/{appointmentId}/prescription.pdf
+GET /api/consultations/my auth=hasRole('PATIENT')
+GET /api/consultations/patient/{patientId} auth=hasAnyRole('DOCTOR', 'ADMIN')
+GET /api/doctor/doctorCompletedAppointments/{userId}
+GET /api/doctor/doctorPendingAppointments/{userId}
+GET /api/doctor/get/{id}
+GET /api/doctor/getAll
+GET /api/doctor/getAllBySpecialization
+GET /api/doctor/getDoctor/{id}
+GET /api/doctor/{userId}/schedule
+GET /api/leaves/all auth=hasRole('ADMIN')
+GET /api/leaves/approved/{userId}
+GET /api/leaves/pending/{userId}
+GET /api/leaves/rejected/{userId}
+GET /api/leaves/user/{userId}
+GET /api/leaves/{id}
+GET /api/patient/getAccount/{ptId}
+GET /api/patient/getAll
+GET /api/patient/getAllBySpecialization
+GET /api/patient/getAllDoctors
+GET /api/patient/relative/patient/{patientId}
+GET /api/patient/relative/{id}
+GET /api/receptionist/doctorCompletedAppointments/{userId}
+GET /api/receptionist/doctorPendingAppointments/{userId}
+GET /api/receptionist/getAll auth=hasRole('ADMIN')
+GET /api/receptionist/getAppointmentByDoctor/{doctorName}
+GET /api/receptionist/getAppointments
+GET /api/receptionist/getReceptionist/{receptionistId}
+GET /api/slots/available/{doctorId}
+GET /appointment/allCompletedAppointments
+GET /appointment/allPendingAppointments
+GET /appointment/appointmentId/{myId}
+GET /appointment/appointmentsByDoctor/{doctorName}
+GET /appointment/getAll
+GET /appointment/getDoctorAppointments
+GET /appointment/getPatientAppointments
+GET /appointment/patientCompletedAppointments/{userId}
+GET /appointment/patientPendingAppointments/{userId}
+POST /api/admin/doctor
+POST /api/admin/patient
+POST /api/admin/receptionist
+POST /api/admin/users
+POST /api/auth/forgot-password
+POST /api/auth/login
+POST /api/auth/register
+POST /api/auth/reset-password
+POST /api/auth/send-otp
+POST /api/auth/verify-otp
+POST /api/leaves/apply
+POST /api/patient/relative/add
+POST /api/receptionist/NewAppointment
+POST /api/slots/generate/{doctorId}
+POST /appointment/NewAppointment
+PUT /api/admin/approve/{leaveId}
+PUT /api/admin/reject/{leaveId}
+PUT /api/consultations/appointment/{appointmentId} auth=hasRole('DOCTOR')
+PUT /api/doctor/complete/{appointmentId}
+PUT /api/doctor/update/{id} consumes=multipart/form-data
+PUT /api/doctor/{userId}/schedule
+PUT /api/leaves/{id}
+PUT /api/leaves/{id}/status auth=hasRole('ADMIN')
+PUT /api/patient/relative/update/{id}
+PUT /api/patient/updateAccount/{ptId} consumes=multipart/form-data
+PUT /api/receptionist/{id} consumes=multipart/form-data
+PUT /appointment/update/{appointmentId}

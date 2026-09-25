@@ -2,20 +2,18 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.dto.LeaveRequestDTO;
 import ITmonteur.example.hospitalERP.entities.*;
+import ITmonteur.example.hospitalERP.events.DoctorLeaveApprovedEvent;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
-import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.LeaveRequestRepository;
-import ITmonteur.example.hospitalERP.repositories.SlotRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,18 +26,15 @@ class LeaveRequestServiceTest {
 
     @Mock private LeaveRequestRepository leaveRequestRepository;
     @Mock private DoctorRepository doctorRepository;
-    @Mock private AppointmentRepository appointmentRepository;
-    @Mock private SlotRepository slotRepository;
-    @Mock private NotificationService notificationService;
     @Mock private CurrentUserService currentUserService;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     private LeaveRequestService service;
     private User doctorUser;
 
     @BeforeEach
     void setUp() {
-        service = new LeaveRequestService(leaveRequestRepository, doctorRepository, appointmentRepository,
-                slotRepository, notificationService, currentUserService);
+        service = new LeaveRequestService(leaveRequestRepository, doctorRepository, currentUserService, eventPublisher);
         doctorUser = new User();
         doctorUser.setId(5L);
         doctorUser.setRole(Role.DOCTOR);
@@ -75,35 +70,35 @@ class LeaveRequestServiceTest {
     }
 
     @Test
-    void approvingDoctorLeaveCancelsOnlyActiveAppointmentsAndBlocksSlots() {
-        LeaveRequest leave = new LeaveRequest();
-        leave.setUser(doctorUser);
-        leave.setStatus(LeaveStatus.PENDING);
-        leave.setStartDate(LocalDate.now().plusDays(1));
-        leave.setEndDate(LocalDate.now().plusDays(2));
+    void approvingDoctorLeavePublishesTheEventWithDoctorIdAndDates() {
+        LeaveRequest leave = pendingLeave(doctorUser);
         when(leaveRequestRepository.findById(1L)).thenReturn(Optional.of(leave));
-
         Doctor doctor = new Doctor();
         doctor.setId(7L);
         doctor.setUser(doctorUser);
         when(doctorRepository.findByUserId(5L)).thenReturn(Optional.of(doctor));
 
-        Appointment active = appointment(AppointmentStatus.SCHEDULED);
-        Appointment alreadyCancelled = appointment(AppointmentStatus.CANCELLED_BY_PATIENT);
-        when(appointmentRepository.findByDoctor_IdAndDateBetween(7L, leave.getStartDate(), leave.getEndDate()))
-                .thenReturn(List.of(active, alreadyCancelled));
-        Slot slot = new Slot(leave.getStartDate(), LocalTime.NOON, LocalTime.NOON.plusMinutes(10), doctor, Shift.MORNING);
-        when(slotRepository.findByDoctor_IdAndDateBetween(7L, leave.getStartDate(), leave.getEndDate()))
-                .thenReturn(List.of(slot));
-
         service.updateLeaveStatus(1L, LeaveStatus.APPROVED);
 
         assertThat(leave.getStatus()).isEqualTo(LeaveStatus.APPROVED);
-        assertThat(active.getStatus()).isEqualTo(AppointmentStatus.CANCELLED_BY_DOCTOR);
-        assertThat(active.isActive()).isFalse();
-        assertThat(alreadyCancelled.getStatus()).isEqualTo(AppointmentStatus.CANCELLED_BY_PATIENT);
-        assertThat(slot.isAvailable()).isFalse();
-        verify(notificationService, times(1)).appointmentCancelledByDoctorLeave(any());
+        verify(eventPublisher).publishEvent(
+                new DoctorLeaveApprovedEvent(7L, leave.getStartDate(), leave.getEndDate()));
+    }
+
+    @Test
+    void rejectingOrNonDoctorLeavePublishesNothing() {
+        LeaveRequest rejected = pendingLeave(doctorUser);
+        when(leaveRequestRepository.findById(1L)).thenReturn(Optional.of(rejected));
+        service.updateLeaveStatus(1L, LeaveStatus.REJECTED);
+
+        User receptionist = new User();
+        receptionist.setId(6L);
+        receptionist.setRole(Role.RECEPTIONIST);
+        LeaveRequest receptionistLeave = pendingLeave(receptionist);
+        when(leaveRequestRepository.findById(2L)).thenReturn(Optional.of(receptionistLeave));
+        service.updateLeaveStatus(2L, LeaveStatus.APPROVED);
+
+        verifyNoInteractions(eventPublisher);
     }
 
     @Test
@@ -117,11 +112,12 @@ class LeaveRequestServiceTest {
                 .isInstanceOf(BadRequestException.class);
     }
 
-    private static Appointment appointment(AppointmentStatus status) {
-        Appointment appointment = new Appointment();
-        appointment.setStatus(status);
-        appointment.setPatientName("P");
-        appointment.setDate(LocalDate.now().plusDays(1));
-        return appointment;
+    private static LeaveRequest pendingLeave(User user) {
+        LeaveRequest leave = new LeaveRequest();
+        leave.setUser(user);
+        leave.setStatus(LeaveStatus.PENDING);
+        leave.setStartDate(LocalDate.now().plusDays(1));
+        leave.setEndDate(LocalDate.now().plusDays(2));
+        return leave;
     }
 }

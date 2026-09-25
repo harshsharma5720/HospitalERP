@@ -35,3 +35,7 @@ build/
 ### Secrets & runtime data ###
 .env
 uploads/
+
+### JVM crash files ###
+hs_err_pid*.log
+replay_pid*.log

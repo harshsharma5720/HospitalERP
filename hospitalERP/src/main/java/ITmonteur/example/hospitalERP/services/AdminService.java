@@ -49,7 +49,7 @@ public class AdminService {
         User user = authService.createUser(registerRequestDTO, Role.PATIENT);
         PtInfo patient = ptInfoRepository.findByUser_Id(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Patient", "userId", user.getId()));
-        return EntityMapper.toPtInfoDTO(patient);
+        return PatientMapper.toDTO(patient);
     }
 
     // -------------------- Create Doctor --------------------
@@ -58,7 +58,7 @@ public class AdminService {
         User user = authService.createUser(registerRequestDTO, Role.DOCTOR);
         Doctor doctor = doctorRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "userId", user.getId()));
-        return EntityMapper.toDoctorDTO(doctor);
+        return DoctorMapper.toDTO(doctor);
     }
 
     // -------------------- Create Receptionist --------------------

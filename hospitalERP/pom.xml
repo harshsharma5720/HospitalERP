@@ -28,6 +28,8 @@
 	</scm>
 	<properties>
 		<java.version>17</java.version>
+		<!-- Extra test-JVM options, e.g. ./mvnw test -DargLine="-Xmx512m"; merged into Surefire's argLine below -->
+		<argLine></argLine>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -123,6 +125,28 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<!-- Exposes ${org.mockito:mockito-core:jar} (path of the Mockito jar) for the Surefire config below -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>properties</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- Load Mockito as a Java agent instead of letting it self-attach at runtime.
+			     Self-attaching starts a second JVM (fails when memory is low) and is being
+			     phased out by the JDK; this is Mockito's recommended setup for Java 21+. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

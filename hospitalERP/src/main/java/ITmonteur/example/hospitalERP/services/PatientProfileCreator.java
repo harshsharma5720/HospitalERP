@@ -1,0 +1,43 @@
+package ITmonteur.example.hospitalERP.services;
+
+import ITmonteur.example.hospitalERP.entities.Gender;
+import ITmonteur.example.hospitalERP.entities.PtInfo;
+import ITmonteur.example.hospitalERP.entities.Role;
+import ITmonteur.example.hospitalERP.entities.User;
+import ITmonteur.example.hospitalERP.events.UserRegisteredEvent;
+import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Creates the patient profile when a PATIENT account is registered.
+ * Synchronous listener: runs in the registration transaction. Belongs to the patients module.
+ */
+@Component
+public class PatientProfileCreator {
+
+    private final PtInfoRepository ptInfoRepository;
+
+    public PatientProfileCreator(PtInfoRepository ptInfoRepository) {
+        this.ptInfoRepository = ptInfoRepository;
+    }
+
+    @EventListener
+    public void onUserRegistered(UserRegisteredEvent event) {
+        User user = event.user();
+        if (user.getRole() != Role.PATIENT) {
+            return;
+        }
+        PtInfo patient = new PtInfo();
+        patient.setEmail(user.getEmail());
+        patient.setUserName(user.getUsername());
+        patient.setUser(user);
+        patient.setPatientName(user.getUsername());
+        patient.setPatientAddress("Not provided");
+        patient.setContactNo(user.getPhoneNumber());
+        patient.setPatientAadharNo(null);
+        patient.setGender(Gender.OTHER);
+        patient.setDob(null); // asked for on the profile page instead of a fake date
+        ptInfoRepository.save(patient);
+    }
+}

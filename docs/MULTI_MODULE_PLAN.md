@@ -3,7 +3,7 @@
 **Date:** 2026-09-25
 **Starting point:** commit `2bc6d31` on branch `fix/code-review-issues`
 **Scope:** backend (`hospitalERP/`). The frontend is covered by an optional parallel track (Phase 5).
-**Status:** plan only; nothing implemented yet.
+**Status:** in progress on branch `refactor/modules`. See §12 for the progress log.
 
 ---
 
@@ -98,7 +98,7 @@ com.itmonteur.hospitalerp.appointments.web      ← hidden
 
 ---
 
-## 3. Class-to-Module Mapping (all 90 current classes)
+## 3. Class-to-Module Mapping (all 92 current classes)
 
 | Module | Classes |
 |---|---|
@@ -194,8 +194,9 @@ All work happens in the **current packages**, so each change is small, behaviora
 | 1.8 | **Schedule change via event.** `DoctorScheduleService` publishes `ScheduleChangedEvent(doctorId)`. Appointments collects slot IDs still used by appointments and calls scheduling's `SlotService.deleteUnusedSlots(doctorId, fromDate, keepIds)`. The JPQL no longer mentions `Appointment`. | hidden scheduling → appointments |
 | 1.9 | **Notifications after commit.** `AppointmentService` publishes `AppointmentBookedEvent` / `AppointmentCancelledEvent`. `AppointmentNotificationListener` (appointments) calls the notifications API after commit. `NotificationService` keeps plain-value methods and gains no domain dependency. | transaction/notification ordering |
 | 1.10 | Run the checker: **0 cycles**. Update `SecurityRulesTest` mocks for the new controllers. Snapshot unchanged. | — |
+| 1.11 | **Remove remaining cross-module repository calls** (§5 rule 2; added 2026-09-25 after step 1.2 found 29 of them). Steps 1.4–1.7 remove about a third. For the rest, the owning module gets small public methods, e.g. `DoctorService.getDoctorEntityByUserId`, `PatientService.getPatientEntity…`, identity `UserService.updateContactDetails(userId, email, phone)` (used by the profile updates in patients/staff). The checker is extended to report cross-module repository use, so Phase 2's Modulith check has nothing left to find. | rule 2 |
 
-**Exit:** 0 cycles, all tests green, endpoint snapshot identical, `FeatureFlowH2Test` (full booking → consultation → PDF flow) green.
+**Exit:** 0 cycles, **0 cross-module repository calls**, all tests green, endpoint snapshot identical, `FeatureFlowH2Test` (full booking → consultation → PDF flow) green.
 
 ### Phase 2 — Package by Module + Spring Modulith (≈ 2–3 days)
 
@@ -249,7 +250,7 @@ hospitalERP/
 
 | Step | Work |
 |---|---|
-| 4.1 | **Flyway:**<br>• baseline the current MySQL schema (`V1__baseline.sql`);<br>• switch `ddl-auto` to `validate`;<br>• future changes go in per-module folders (`db/migration/appointments/…`) with one global version sequence (e.g. `V2026_10_01_1__appointments_add_x.sql`). |
+| 4.1 | **Flyway:**<br>• baseline the current MySQL schema (`V1__baseline.sql`);<br>• drop the columns left unused by step 1.3 (`doctor.password`, `doctor.role`, `patient.role`, `patient_relative.role`, `receptionist.role`);<br>• switch `ddl-auto` to `validate`;<br>• future changes go in per-module folders (`db/migration/appointments/…`) with one global version sequence (e.g. `V2026_10_01_1__appointments_add_x.sql`). |
 | 4.2 | **Per-module security rules (optional):** each module contributes its URL rules through a small `ModuleSecurityRules` bean. `SecurityConfig` in `app` then only combines them, so adding a module doesn't mean editing a central file. |
 | 4.3 | **CI** (GitHub Actions): `./mvnw verify` + `npm test` + `npm run build` on every PR. `ModularityTest` and Enforcer keep the boundaries from eroding. |
 | 4.4 | One short `README.md` per module: purpose, public API, events published and consumed. |
@@ -350,3 +351,31 @@ Every phase leaves the application working and releasable. There's no "big bang"
 | Separate database per module | Only together with a microservice extraction. |
 | Replacing entity references with plain IDs | Only for a module that is about to be extracted; downward entity references are fine inside a monolith. |
 | API gateway, service discovery, distributed tracing | Only after the first real extraction. |
+
+---
+
+## 12. Progress Log
+
+Work goes one step at a time. After each step: report, then wait for approval before the next.
+
+| Step | Status | Date | Notes |
+|---|---|---|---|
+| 0.1 Branch | ✅ done | 2026-09-25 | `refactor/modules` created from `origin/main` (`49635d8`, which already contains PR #2) |
+| 0.2 Endpoint contract test | ✅ done | 2026-09-25 | `EndpointContractTest` + `src/test/resources/api-endpoints.txt` (83 endpoints). Verified it fails when a URL changes. Regenerate after an **intended** API change: `./mvnw test -Dtest=EndpointContractTest -DupdateEndpointSnapshot=true` |
+| 0.3 Dependency checker | ✅ done | 2026-09-25 | `python tools/check_module_deps.py` (exit 1 while violations exist). Baseline: 18 disallowed dependencies; two-way pairs = C1–C7 + 3 caused by `EntityMapper` |
+| 0.4 Pin table name, unused imports | ✅ done | 2026-09-25 | `@Table(name = "leave_request")` on `LeaveRequest` (same name as before); removed unused `Doctor` imports from `PtInfoRepository`, `ReceptionistRepository` |
+| 0.5 Baseline | ✅ done | 2026-09-25 | Backend 62 tests (1 skipped: needs MySQL), frontend 13 tests, all green |
+| 1.1 Split `EntityMapper` | ✅ done | 2026-09-25 | Replaced by `AppointmentMapper`, `DoctorMapper` and `PatientMapper` (mapping code unchanged). Checker: 18 → 10 disallowed dependencies; two-way pairs 10 → 7 (C1–C7 left). Backend 62 tests green (1 skipped). Tests were run with `-DargLine="-Xmx512m -javaagent:<mockito-core jar>"` because this machine was low on memory; see note below. |
+| 1.1a Test setup fix (optional mini-step) | ✅ done | 2026-09-25 | `pom.xml`: Surefire loads Mockito as `-javaagent` (via `maven-dependency-plugin:properties`), with an empty `argLine` property so `-DargLine=…` still works. `.gitignore`: `hs_err_pid*.log`, `replay_pid*.log`. Plain `./mvnw test` passes again (62, 1 skipped); the self-attach warning is gone. |
+| 1.2 Registration via event | ✅ done | 2026-09-25 | New `UserRegisteredEvent` (identity). `AuthService.createUser` only saves the user and publishes it. `PatientProfileCreator` (patients) and `StaffProfileCreator` (staff) create the profile in synchronous `@EventListener`s, in the same transaction. Removes **C1, C2**. Checker: 10 → 8 disallowed, pairs 7 → 5. Tests: +4 unit (`ProfileCreatorsTest`) and +1 end-to-end (`creatingUsersCreatesTheirProfiles`: admin creates doctor / receptionist / patient, self-registered patient). Backend 67 green (1 skipped), run with `-DargLine="-Xms64m -Xmx512m"` because memory was low again. |
+| 1.3 Remove reverse links & unused fields | ✅ done | 2026-09-25 | Removed `PtInfo.appointments`, `Doctor.appointments`, `PtInfoDTO.appointment` (was always `null`, unused by the frontend), `Doctor.password`, and the `role` fields of `Doctor`/`PtInfo`/`PtRelative`/`Receptionist`, plus their constructor parameters. `Doctor.user` no longer cascades: `UserAccountService` deletes the login explicitly. **Pre-existing bug found and fixed:** deleting a doctor (or patient) who still had upcoming bookings failed with HTTP 500 (`TransientObjectException`, reproduced on the pre-1.3 code too). Fix: flush + clear before the bulk deletes, then delete by id. New end-to-end test `deletingAccountsRemovesProfilesAndLogins`. Checker unchanged (8 / 5) as expected: the entity-level edges are gone, and the service-level ones go in 1.4–1.6. Backend 68 green (1 skipped). No DB change: the now-unused columns (`doctor.password`, `*.role`) stay in MySQL until a Flyway migration drops them (Phase 4). |
+| 1.4 Relative deletion via event | ✅ done | 2026-09-25 | New `RelativeDeletedEvent` (patients). `PtRelativeService.deleteRelative` publishes it instead of calling `AppointmentRepository`. `AppointmentRelativeUnlinker` (appointments) clears the link in a synchronous listener before the relative row is deleted. **C3 fully removed.** Checker: 8 → 7 disallowed, pairs 5 → 4. New end-to-end test `deletingARelativeKeepsTheirAppointments`, verified to fail (409) when the listener is switched off. Backend 69 green (1 skipped). |
+| 1.5 Leave approval via event | ✅ done | 2026-09-25 | New `DoctorLeaveApprovedEvent(doctorId, start, end)` (staff), published by `LeaveRequestService.updateLeaveStatus`. `SlotLeaveBlocker` (scheduling) blocks the slots and `AppointmentLeaveCanceller` (appointments) cancels active bookings and notifies patients; both synchronous, same transaction, same behaviour as before. `SlotService` now asks `LeaveRequestService.isOnApprovedLeave(…)` instead of `LeaveRequestRepository`. `LeaveRequestService` no longer uses appointments, slots or notifications. End-to-end test `approvingDoctorLeaveCancelsBookingsAndBlocksSlots` was written **first** and passed on the old code; it fails if either listener is switched off (verified). +2 listener unit tests, `LeaveRequestServiceTest` adapted. Checker: 7 → 6 disallowed (staff → notifications gone); pairs still 4, because C4/C5 also come from endpoints (step 1.6). Backend 73 green (1 skipped). |
+| 1.6 – 1.11 | ⏳ | | |
+
+**Note: running tests when memory is low (found in step 1.1).** Mockito attaches itself to the test JVM by starting a second Java process. With less than about 1 GB of free memory that process can't start, and every test using mocks fails with `Could not initialize plugin: interface org.mockito.plugins.MockMaker`. It isn't a code problem. Workarounds:
+- run with `-DargLine="-Xms64m -Xmx512m -XX:+UseSerialGC -javaagent:C:/Users/<you>/.m2/repository/org/mockito/mockito-core/5.17.0/mockito-core-5.17.0.jar"`; or
+- close other applications.
+
+The permanent fix, which Mockito also recommends for Java 21+, is to load the agent in the Surefire configuration of `pom.xml`. That's a small optional step, pending approval.
+

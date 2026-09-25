@@ -18,8 +18,6 @@ public class PtRelative {
     private RelationShip relationship;
     @Column(nullable = true)
     private Long patientAadharNo;
-    @Enumerated(EnumType.STRING)
-    private Role role = Role.PATIENT;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id")
     private PtInfo ptInfo;
@@ -27,14 +25,13 @@ public class PtRelative {
     public PtRelative() {}
 
     public PtRelative(Long id, String name, Gender gender, LocalDate dob,
-                      RelationShip relationship, Long patientAadharNo,Role role ,PtInfo ptInfo) {
+                      RelationShip relationship, Long patientAadharNo, PtInfo ptInfo) {
         this.id = id;
         this.name = name;
         this.gender = gender;
         this.dob = dob;
         this.relationship = relationship;
         this.patientAadharNo = patientAadharNo;
-        this.role=role;
         this.ptInfo = ptInfo;
     }
 
@@ -88,13 +85,7 @@ public class PtRelative {
         this.patientAadharNo = patientAadharNo;
     }
 
-    public Role getRole() {
-        return role;
-    }
 
-    public void setRole(Role role) {
-        this.role = role;
-    }
 
     public PtInfo getPtInfo() {
         return ptInfo;

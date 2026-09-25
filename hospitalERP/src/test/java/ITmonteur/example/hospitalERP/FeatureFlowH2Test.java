@@ -111,7 +111,189 @@ class FeatureFlowH2Test {
         assertThat(bad.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
+    // The admin endpoints read the new profile right after creating the user, so they only
+    // succeed if the UserRegisteredEvent listeners created it inside the same transaction.
+    @Test
+    void creatingUsersCreatesTheirProfiles() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+        String body = "{\"username\":\"%s\",\"email\":\"%s@example.com\",\"password\":\"secret-123\","
+                + "\"phoneNumber\":\"+919812345678\"}";
+
+        ResponseEntity<String> doctor = call(HttpMethod.POST, "/api/admin/doctor", admin, body.formatted("drnew", "drnew"));
+        assertThat(doctor.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(json.readTree(doctor.getBody()).get("specialist").asText()).isEqualTo("NOT_ASSIGNED");
+
+        ResponseEntity<String> receptionist = call(HttpMethod.POST, "/api/admin/receptionist", admin,
+                body.formatted("frontdesk", "frontdesk"));
+        assertThat(receptionist.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(json.readTree(receptionist.getBody()).get("userName").asText()).isEqualTo("frontdesk");
+
+        ResponseEntity<String> patient = call(HttpMethod.POST, "/api/admin/patient", admin, body.formatted("walkin", "walkin"));
+        assertThat(patient.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(json.readTree(patient.getBody()).get("patientName").asText()).isEqualTo("walkin");
+
+        // A self-registered patient can use patient endpoints straight away (profile exists)
+        String self = register("selfreg");
+        assertThat(call(HttpMethod.GET, "/appointment/getPatientAppointments", self, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+    }
+
+    // Account deletion must remove the profile, everything that references it, and the login.
+    // Both deletions happen while the accounts still have upcoming bookings.
+    @Test
+    void deletingAccountsRemovesProfilesAndLogins() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+
+        // A doctor working tomorrow 10:00-11:30 in 30-minute slots (3 slots)
+        long doctorUserId = json.readTree(call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"drgone","email":"drgone@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111112","role":"DOCTOR"}""").getBody()).get("id").asLong();
+        String doctor = login("drgone", "doctor-123");
+        long doctorId = findDoctorId("drgone");
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        assertThat(call(HttpMethod.PUT, "/api/doctor/" + doctorUserId + "/schedule", doctor,
+                "[{\"dayOfWeek\":\"" + tomorrow.getDayOfWeek() + "\",\"shift\":\"MORNING\",\"working\":true,"
+                        + "\"startTime\":\"10:00\",\"endTime\":\"11:30\",\"slotMinutes\":30}]").getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        String slotsUrl = "/api/slots/available/" + doctorId + "?date=" + tomorrow + "&shift=MORNING";
+
+        // "leaver": a completed visit with a consultation + an upcoming booking
+        String leaver = register("leaver");
+        JsonNode slots = json.readTree(call(HttpMethod.GET, slotsUrl, leaver, null).getBody());
+        assertThat(slots).hasSize(3);
+        long visit = book(leaver, slots.get(0).get("id").asLong());
+        long leaversUpcomingSlot = slots.get(1).get("id").asLong();
+        book(leaver, leaversUpcomingSlot);
+        assertThat(call(HttpMethod.PUT, "/api/consultations/appointment/" + visit, doctor,
+                "{\"diagnosis\":\"Migraine\",\"medicines\":[{\"medicineName\":\"Paracetamol\"}]}").getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        // "stayer": an upcoming booking with the same doctor
+        String stayer = register("stayer");
+        book(stayer, slots.get(2).get("id").asLong());
+
+        // 1) leaver deletes their own account: login gone, their upcoming slot is bookable again
+        assertThat(call(HttpMethod.DELETE, "/api/patient/deleteAccount/" + userIdOf(leaver), leaver, null)
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(loginStatus("leaver", "secret-123")).isEqualTo(HttpStatus.UNAUTHORIZED);
+        JsonNode freeAgain = json.readTree(call(HttpMethod.GET, slotsUrl, stayer, null).getBody());
+        assertThat(freeAgain.findValuesAsText("id")).contains(String.valueOf(leaversUpcomingSlot));
+
+        // 2) admin deletes the doctor (stayer still booked): profile, bookings and login all go
+        assertThat(call(HttpMethod.DELETE, "/api/doctor/delete/" + doctorId, admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        assertThat(loginStatus("drgone", "doctor-123")).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(call(HttpMethod.GET, "/api/doctor/getDoctor/" + doctorId, null, null).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(json.readTree(call(HttpMethod.GET, "/appointment/getPatientAppointments", stayer, null).getBody()))
+                .isEmpty();
+
+        // 3) admin deletes a receptionist (by receptionist id)
+        ResponseEntity<String> receptionist = call(HttpMethod.POST, "/api/admin/receptionist", admin, """
+                {"username":"deskgone","email":"deskgone@example.com","password":"desk-1234","phoneNumber":"+919812345679"}""");
+        long receptionistId = json.readTree(receptionist.getBody()).get("id").asLong();
+        assertThat(call(HttpMethod.DELETE, "/api/receptionist/delete/" + receptionistId, admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        assertThat(loginStatus("deskgone", "desk-1234")).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    // Deleting a relative keeps their appointment history; only the link to the relative goes
+    @Test
+    void deletingARelativeKeepsTheirAppointments() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+        call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"drrel","email":"drrel@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111113","role":"DOCTOR"}""");
+        long doctorId = findDoctorId("drrel");
+        String patient = register("parent");
+
+        ResponseEntity<String> added = call(HttpMethod.POST, "/api/patient/relative/add", patient, """
+                {"name":"Little Ravi","gender":"MALE","dob":"2018-05-01","relationship":"SON"}""");
+        assertThat(added.getStatusCode()).isEqualTo(HttpStatus.OK);
+        long relativeId = json.readTree(added.getBody()).get("id").asLong();
+
+        JsonNode slots = json.readTree(call(HttpMethod.GET, "/api/slots/available/" + doctorId
+                + "?date=" + LocalDate.now().plusDays(1) + "&shift=MORNING", patient, null).getBody());
+        ResponseEntity<String> booked = call(HttpMethod.POST, "/appointment/NewAppointment", patient,
+                "{\"slotId\":" + slots.get(0).get("id").asLong() + ",\"relativeId\":" + relativeId + "}");
+        assertThat(booked.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(json.readTree(booked.getBody()).get("relativeId").asLong()).isEqualTo(relativeId);
+
+        assertThat(call(HttpMethod.DELETE, "/api/patient/relative/delete/" + relativeId, patient, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+
+        JsonNode appointments = json.readTree(call(HttpMethod.GET, "/appointment/getPatientAppointments", patient, null).getBody());
+        assertThat(appointments).hasSize(1);
+        assertThat(appointments.get(0).get("patientName").asText()).isEqualTo("Little Ravi");
+        assertThat(appointments.get(0).get("relativeId").isNull()).isTrue();
+        assertThat(call(HttpMethod.GET, "/api/patient/relative/" + relativeId, patient, null).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    // Approving a doctor's leave cancels their bookings in that period and blocks the free slots
+    @Test
+    void approvingDoctorLeaveCancelsBookingsAndBlocksSlots() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+        call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"drleave","email":"drleave@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111114","role":"DOCTOR"}""");
+        String doctor = login("drleave", "doctor-123");
+        long doctorId = findDoctorId("drleave");
+        String patient = register("leavepatient");
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        LocalDate dayAfter = tomorrow.plusDays(1);
+
+        JsonNode tomorrowSlots = json.readTree(call(HttpMethod.GET, "/api/slots/available/" + doctorId
+                + "?date=" + tomorrow + "&shift=MORNING", patient, null).getBody());
+        long bookedTomorrow = book(patient, tomorrowSlots.get(0).get("id").asLong());
+        long freeSlotTomorrow = tomorrowSlots.get(1).get("id").asLong();
+        JsonNode dayAfterSlots = json.readTree(call(HttpMethod.GET, "/api/slots/available/" + doctorId
+                + "?date=" + dayAfter + "&shift=MORNING", patient, null).getBody());
+        long bookedDayAfter = book(patient, dayAfterSlots.get(0).get("id").asLong());
+
+        // Leave for tomorrow only
+        ResponseEntity<String> applied = call(HttpMethod.POST, "/api/leaves/apply", doctor,
+                "{\"startDate\":\"" + tomorrow + "\",\"endDate\":\"" + tomorrow + "\",\"reason\":\"Conference\"}");
+        assertThat(applied.getStatusCode()).isEqualTo(HttpStatus.OK);
+        long leaveId = json.readTree(applied.getBody()).get("id").asLong();
+        assertThat(call(HttpMethod.PUT, "/api/admin/approve/" + leaveId, admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+
+        // Tomorrow's booking is cancelled, the day after is untouched
+        assertThat(appointmentStatus(patient, bookedTomorrow)).isEqualTo("CANCELLED_BY_DOCTOR");
+        assertThat(appointmentStatus(patient, bookedDayAfter)).isEqualTo("SCHEDULED");
+        // Tomorrow's free slot is blocked (booking it directly is refused), and none are offered
+        assertThat(call(HttpMethod.POST, "/appointment/NewAppointment", patient,
+                "{\"slotId\":" + freeSlotTomorrow + "}").getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(json.readTree(call(HttpMethod.GET, "/api/slots/available/" + doctorId
+                + "?date=" + tomorrow + "&shift=MORNING", patient, null).getBody())).isEmpty();
+        assertThat(json.readTree(call(HttpMethod.GET, "/api/slots/available/" + doctorId
+                + "?date=" + dayAfter + "&shift=MORNING", patient, null).getBody())).isNotEmpty();
+    }
+
+    private String appointmentStatus(String token, long appointmentId) throws Exception {
+        return json.readTree(call(HttpMethod.GET, "/appointment/appointmentId/" + appointmentId, token, null)
+                .getBody()).get("status").asText();
+    }
+
+    private long book(String patientToken, long slotId) throws Exception {
+        ResponseEntity<String> res = call(HttpMethod.POST, "/appointment/NewAppointment", patientToken,
+                "{\"slotId\":" + slotId + "}");
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return json.readTree(res.getBody()).get("appointmentID").asLong();
+    }
+
     // ------------------------------------------------------------------ helpers
+
+    private HttpStatusCode loginStatus(String username, String password) {
+        return call(HttpMethod.POST, "/api/auth/login", null,
+                "{\"username\":\"" + username + "\",\"password\":\"" + password + "\"}").getStatusCode();
+    }
+
+    // Reads the userId claim from the (unverified) JWT payload
+    private long userIdOf(String token) throws Exception {
+        String payload = new String(java.util.Base64.getUrlDecoder().decode(token.split("\\.")[1]), StandardCharsets.UTF_8);
+        return json.readTree(payload).get("userId").asLong();
+    }
 
     private String register(String username) {
         ResponseEntity<String> res = call(HttpMethod.POST, "/api/auth/register", null,

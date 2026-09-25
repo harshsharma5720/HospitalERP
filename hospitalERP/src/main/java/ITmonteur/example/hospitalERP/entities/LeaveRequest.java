@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
+// Explicit name (same as the default) so moving/renaming this class can never rename the table
+@Table(name = "leave_request")
 public class LeaveRequest {
 
     @Id

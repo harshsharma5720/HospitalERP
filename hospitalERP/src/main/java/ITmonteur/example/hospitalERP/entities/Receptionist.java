@@ -19,10 +19,8 @@ public class Receptionist {
     private Gender gender;
     private String userName;
     private String profileImage;
-    @Enumerated(EnumType.STRING)
-    private Role role = Role.RECEPTIONIST;
     @OneToOne
-    @JoinColumn(name = "user_id", referencedColumnName = "id") // FK column in Doctor table
+    @JoinColumn(name = "user_id", referencedColumnName = "id") // FK column in receptionist table
     private User user;
 
     private int age;
@@ -43,7 +41,7 @@ public class Receptionist {
     }
 
     public Receptionist(Long id, String name, String email, String phone, Gender gender, String userName
-            ,String profileImage ,Role role, User user, int age) {
+            ,String profileImage, User user, int age) {
         this.id = id;
         this.name = name;
         this.email = email;
@@ -51,7 +49,6 @@ public class Receptionist {
         this.gender = gender;
         this.userName=userName;
         this.profileImage=profileImage;
-        this.role = role;
         this.user = user;
         this.age = age;
     }
@@ -112,13 +109,7 @@ public class Receptionist {
         this.age = age;
     }
 
-    public Role getRole() {
-        return role;
-    }
 
-    public void setRole(Role role) {
-        this.role = role;
-    }
 
     public User getUser() {
         return user;

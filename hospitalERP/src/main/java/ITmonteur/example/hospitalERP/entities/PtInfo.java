@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 @Entity
@@ -24,12 +23,8 @@ public class PtInfo {
     private LocalDate dob;
     @Enumerated(EnumType.STRING)
     private Gender gender;
-    @OneToMany(mappedBy = "ptInfo", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Appointment> appointments = new ArrayList<>();
     private String userName;
     private String profileImage;
-    @Enumerated(EnumType.STRING)
-    private Role role = Role.PATIENT;
     @OneToMany(mappedBy = "ptInfo", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PtRelative> relatives = new ArrayList<>();
     @OneToOne
@@ -41,8 +36,7 @@ public class PtInfo {
 
     public PtInfo(Long patientId, String patientName, String email, String patientAddress,
                   Long patientAadharNo, String contactNo, LocalDate dob, Gender gender,
-                  List<Appointment> appointments, String userName, String profileImage,Role role,
-                  List<PtRelative> relatives ,User user) {
+                  String userName, String profileImage, List<PtRelative> relatives, User user) {
         this.patientId = patientId;
         this.patientName = patientName;
         this.email = email;
@@ -51,11 +45,9 @@ public class PtInfo {
         this.contactNo = contactNo;
         this.dob = dob;
         this.gender = gender;
-        this.appointments = appointments;
         this.userName = userName;
-        this.profileImage=profileImage;
-        this.role = role;
-        this.relatives=relatives;
+        this.profileImage = profileImage;
+        this.relatives = relatives;
         this.user = user;
     }
 
@@ -123,13 +115,7 @@ public class PtInfo {
         this.gender = gender;
     }
 
-    public List<Appointment> getAppointments() {
-        return appointments;
-    }
 
-    public void setAppointments(List<Appointment> appointments) {
-        this.appointments = appointments;
-    }
 
     public String getUserName() {
         return userName;
@@ -139,13 +125,7 @@ public class PtInfo {
         this.userName = userName;
     }
 
-    public Role getRole() {
-        return role;
-    }
 
-    public void setRole(Role role) {
-        this.role = role;
-    }
 
     public User getUser() {
         return user;

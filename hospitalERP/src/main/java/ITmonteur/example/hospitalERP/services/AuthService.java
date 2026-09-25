@@ -1,17 +1,17 @@
 package ITmonteur.example.hospitalERP.services;
 
-import ITmonteur.example.hospitalERP.entities.*;
+import ITmonteur.example.hospitalERP.entities.Role;
+import ITmonteur.example.hospitalERP.entities.User;
+import ITmonteur.example.hospitalERP.events.UserRegisteredEvent;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ConflictException;
-import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
-import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
-import ITmonteur.example.hospitalERP.repositories.ReceptionistRepository;
 import ITmonteur.example.hospitalERP.repositories.UserRepository;
 import ITmonteur.example.hospitalERP.dto.AuthResponseDTO;
 import ITmonteur.example.hospitalERP.dto.LoginRequestDTO;
 import ITmonteur.example.hospitalERP.dto.RegisterRequestDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -38,15 +38,11 @@ public class AuthService {
     @Autowired
     private AuthenticationManager authenticationManager;
     @Autowired
-    private DoctorRepository doctorRepository;
-    @Autowired
-    private PtInfoRepository ptInfoRepository;
-    @Autowired
     private OtpService otpService;
     @Autowired
-    private ReceptionistRepository receptionistRepository;
-    @Autowired
     private LoginAttemptService loginAttemptService;
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     @Value("${app.otp.required:true}")
     private boolean otpRequired;
@@ -72,7 +68,11 @@ public class AuthService {
         return new AuthResponseDTO(jwtService.generateToken(toUserDetails(savedUser), savedUser.getId()));
     }
 
-    /** Creates the user plus its role profile (doctor / patient / receptionist). Admin use only. */
+    /**
+     * Creates the user and publishes {@link UserRegisteredEvent}. The patients and staff modules
+     * create the matching profile (patient / doctor / receptionist) in synchronous listeners,
+     * inside this same transaction. Admin use + public registration.
+     */
     @Transactional
     public User createUser(RegisterRequestDTO request, Role role) {
         logger.info("Creating {} account: {}", role, request.getUsername());
@@ -89,45 +89,7 @@ public class AuthService {
         user.setRole(role);
         user.setPhoneNumber(request.getPhoneNumber());
         User savedUser = userRepository.save(user);
-        // Role-based entity creation
-        switch (savedUser.getRole()) {
-            case DOCTOR:
-                Doctor doctor = new Doctor();
-                doctor.setEmail(savedUser.getEmail());
-                doctor.setUserName(savedUser.getUsername()); // foreign key (username)
-                doctor.setName(savedUser.getUsername());
-                doctor.setSpecialist(Specialist.NOT_ASSIGNED);
-                doctor.setPhoneNumber(savedUser.getPhoneNumber());
-                doctor.setUser(savedUser);
-                doctorRepository.save(doctor);
-                break;
-            case PATIENT:
-                PtInfo patient = new PtInfo();
-                patient.setEmail(savedUser.getEmail());
-                patient.setUserName(savedUser.getUsername());
-                patient.setUser(savedUser);
-                patient.setPatientName(savedUser.getUsername());
-                patient.setPatientAddress("Not provided");
-                patient.setContactNo(savedUser.getPhoneNumber());
-                patient.setPatientAadharNo(null);
-                patient.setGender(Gender.OTHER);
-                patient.setDob(null); // asked for on the profile page instead of a fake date
-                ptInfoRepository.save(patient);
-                break;
-            case RECEPTIONIST:
-                Receptionist receptionist = new Receptionist();
-                receptionist.setEmail(savedUser.getEmail());
-                receptionist.setUserName(savedUser.getUsername());
-                receptionist.setName(savedUser.getUsername());
-                receptionist.setPhone(savedUser.getPhoneNumber());
-                receptionist.setUser(savedUser);
-                receptionist.setGender(Gender.OTHER);
-                receptionistRepository.save(receptionist);
-                break;
-            default:
-                // ADMIN has no profile entity
-                break;
-        }
+        eventPublisher.publishEvent(new UserRegisteredEvent(savedUser));
         logger.info("User {} created with role {}", savedUser.getUsername(), savedUser.getRole());
         return savedUser;
     }

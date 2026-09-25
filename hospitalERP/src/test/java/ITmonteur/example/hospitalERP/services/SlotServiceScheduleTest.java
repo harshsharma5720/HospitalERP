@@ -3,7 +3,6 @@ package ITmonteur.example.hospitalERP.services;
 import ITmonteur.example.hospitalERP.entities.*;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.DoctorScheduleRepository;
-import ITmonteur.example.hospitalERP.repositories.LeaveRequestRepository;
 import ITmonteur.example.hospitalERP.repositories.SlotRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +32,7 @@ class SlotServiceScheduleTest {
         SlotRepository slotRepository = mock(SlotRepository.class);
         scheduleRepository = mock(DoctorScheduleRepository.class);
         DoctorRepository doctorRepository = mock(DoctorRepository.class);
-        LeaveRequestRepository leaveRepository = mock(LeaveRequestRepository.class);
+        LeaveRequestService leaveService = mock(LeaveRequestService.class);
         doctor = new Doctor();
         doctor.setId(7L);
         when(doctorRepository.findById(7L)).thenReturn(Optional.of(doctor));
@@ -44,7 +43,7 @@ class SlotServiceScheduleTest {
             }
             return inv.getArgument(0);
         });
-        service = new SlotService(slotRepository, doctorRepository, leaveRepository, scheduleRepository);
+        service = new SlotService(slotRepository, doctorRepository, leaveService, scheduleRepository);
     }
 
     private void schedule(boolean working, LocalTime start, LocalTime end, int minutes) {

@@ -6,12 +6,13 @@ import ITmonteur.example.hospitalERP.entities.PtRelative;
 import ITmonteur.example.hospitalERP.entities.Role;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ForbiddenException;
+import ITmonteur.example.hospitalERP.events.RelativeDeletedEvent;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
-import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
 import ITmonteur.example.hospitalERP.repositories.PtRelativeRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,15 +27,15 @@ public class PtRelativeService {
 
     private final PtRelativeRepository ptRelativeRepository;
     private final PtInfoRepository ptInfoRepository;
-    private final AppointmentRepository appointmentRepository;
     private final CurrentUserService currentUserService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public PtRelativeService(PtRelativeRepository ptRelativeRepository, PtInfoRepository ptInfoRepository,
-                             AppointmentRepository appointmentRepository, CurrentUserService currentUserService) {
+                             CurrentUserService currentUserService, ApplicationEventPublisher eventPublisher) {
         this.ptRelativeRepository = ptRelativeRepository;
         this.ptInfoRepository = ptInfoRepository;
-        this.appointmentRepository = appointmentRepository;
         this.currentUserService = currentUserService;
+        this.eventPublisher = eventPublisher;
     }
 
     /** Patients always add to their own account; admins must pass patientId. */
@@ -86,7 +87,8 @@ public class PtRelativeService {
     public String deleteRelative(Long id) {
         PtRelative relative = findRelative(id);
         requireOwner(relative.getPtInfo());
-        appointmentRepository.clearRelative(id);
+        // The appointments module unlinks the relative from bookings (synchronously, same transaction)
+        eventPublisher.publishEvent(new RelativeDeletedEvent(id));
         ptRelativeRepository.delete(relative);
         logger.info("Relative deleted with ID: {}", id);
         return "Relative removed successfully!";
