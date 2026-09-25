@@ -2,8 +2,11 @@ package ITmonteur.example.hospitalERP.controller;
 
 import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.dto.DoctorDTO;
+import ITmonteur.example.hospitalERP.dto.DoctorScheduleDTO;
 import ITmonteur.example.hospitalERP.entities.Specialist;
+import ITmonteur.example.hospitalERP.services.DoctorScheduleService;
 import ITmonteur.example.hospitalERP.services.DoctorService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,6 +22,8 @@ public class DoctorController {
 
     @Autowired
     private DoctorService doctorService;
+    @Autowired
+    private DoctorScheduleService doctorScheduleService;
 
     // Get all doctors
     @GetMapping("/getAll")
@@ -66,6 +71,18 @@ public class DoctorController {
             @RequestPart("doctorDTO") DoctorDTO doctorDTO,
             @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
         return ResponseEntity.ok(this.doctorService.updateDoctor(id, doctorDTO, profileImage));
+    }
+
+    // Weekly working hours (self or admin); id = the doctor's user id
+    @GetMapping("/{userId}/schedule")
+    public ResponseEntity<List<DoctorScheduleDTO>> getSchedule(@PathVariable Long userId) {
+        return ResponseEntity.ok(this.doctorScheduleService.getSchedule(userId));
+    }
+
+    @PutMapping("/{userId}/schedule")
+    public ResponseEntity<List<DoctorScheduleDTO>> updateSchedule(@PathVariable Long userId,
+                                                                  @Valid @RequestBody List<@Valid DoctorScheduleDTO> schedule) {
+        return ResponseEntity.ok(this.doctorScheduleService.updateSchedule(userId, schedule));
     }
 
     // Delete doctor by doctor ID

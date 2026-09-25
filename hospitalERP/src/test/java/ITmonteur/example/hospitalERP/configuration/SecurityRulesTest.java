@@ -38,6 +38,8 @@ class SecurityRulesTest {
     @MockitoBean private SmsService smsService;
     @MockitoBean private JWTService jwtService;
     @MockitoBean private CustomUserDetailsService customUserDetailsService;
+    @MockitoBean private PasswordResetService passwordResetService;
+    @MockitoBean private DoctorScheduleService doctorScheduleService;
 
     @Test
     void anonymousUserGets401OnProtectedEndpoint() throws Exception {

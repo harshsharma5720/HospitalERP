@@ -184,6 +184,7 @@ public class AppointmentService {
             appointment.setDoctor(newSlot.getDoctor());
             appointment.setShift(newSlot.getShift());
             appointment.setDate(newSlot.getDate());
+            appointment.setReminderSent(false); // remind again for the new date
             logger.info("Appointment {} rescheduled to slot {}", appointmentID, newSlot.getId());
         }
         return EntityMapper.toAppointmentDTO(appointmentRepository.save(appointment));

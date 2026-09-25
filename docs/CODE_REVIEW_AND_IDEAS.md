@@ -410,3 +410,29 @@ Grouped by module and roughly ordered by value against effort. ⭐ marks ideas t
 All of this was verified with automated tests and a production frontend build, **not** against a real MySQL database and not by clicking through the UI. Before merging:
 - Start against your existing database. Hibernate adds the nullable column `appointments.relative_id` automatically.
 - Click through: book, reschedule, cancel, book for a relative, approve/reject leave, profile update with image, admin create user.
+
+---
+
+## 10. New Features Added (2026-09-24)
+
+These four ideas from section 7 are now implemented (backend, frontend and tests).
+
+| Feature | From idea | Backend | Frontend |
+|---|---|---|---|
+| **Appointment reminders** | 7.1 | `AppointmentReminderService`: hourly `@Scheduled` job. SMS and email for tomorrow's active appointments. Sent once (`appointments.reminder_sent`), and sent again after a reschedule. Configured with `REMINDERS_ENABLED` / `REMINDERS_CRON`. | — (automatic) |
+| **Consultation notes & e-prescriptions** | 7.1, 7.2 | `Consultation` + `PrescriptionItem` entities; `ConsultationService` (only the treating doctor writes; patient / doctor / admin read; receptionists blocked); `PrescriptionPdfService` (OpenPDF, letterhead from `HOSPITAL_*`). Endpoints: `PUT/GET /api/consultations/appointment/{id}`, `GET …/prescription.pdf`, `GET /api/consultations/my`, `GET /api/consultations/patient/{patientId}` | Doctor: **Start Consultation** form (vitals, symptoms, diagnosis, medicines, advice, follow-up, the patient's previous visits) → saves and completes the appointment. Patient: diagnosis, medicines and a **Download Prescription** button on completed visits. |
+| **Doctor schedule management** | 7.2 | `DoctorSchedule` entity (7 days × MORNING/EVENING: working flag, hours, slot length). Unset days use the old defaults. Slot generation now reconciles with the schedule: missing slots are created, unbooked slots outside the hours are blocked, and **booked slots are never touched**. Endpoints: `GET/PUT /api/doctor/{userId}/schedule` (self or admin). | `/doctor/schedule` page (**My Schedule** in the doctor sidebar), with "Copy Monday to Tue–Fri". |
+| **Forgot password** | 7.1 | `PasswordResetService`: 6-digit code (reuses `OtpService`: hashed, 5-minute expiry, 5 attempts, 60 s cooldown) sent by SMS and email. The response is identical whether or not the account exists. A successful reset also lifts the login lock. Endpoints: `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`. | `/forgot-password` page; "Forgot password?" link on login. |
+
+**Database changes:** all applied automatically by `ddl-auto=update`, and no existing data changes.
+- New tables: `consultations`, `prescription_items`, `doctor_schedules`.
+- One new nullable column: `appointments.reminder_sent`.
+
+**Tests added:**
+- Backend (27 new, 61 total):
+  - unit tests for reminders, consultations, PDF, schedule-aware slot generation, schedule validation and password reset;
+  - H2 tests for the new queries;
+  - an end-to-end HTTP test: admin creates a doctor → doctor sets hours → patient books from those hours → doctor writes a consultation → patient downloads the PDF → another patient is refused.
+- Frontend (4 new, 13 total): forgot-password flow, schedule page and consultation form.
+
+**Not covered yet:** a real MySQL run and a manual click-through. SMS and email delivery were only verified with mocks.

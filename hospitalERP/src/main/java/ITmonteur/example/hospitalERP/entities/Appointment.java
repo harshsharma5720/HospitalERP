@@ -46,6 +46,8 @@ public class Appointment {
     // Legacy column kept in sync with status so existing rows stay readable
     @Column(nullable = false)
     private boolean isCompleted = false;
+    // Set once the day-before reminder has been sent (nullable so existing rows need no migration)
+    private Boolean reminderSent;
 
     // --- Constructors ---
     public Appointment() {}
@@ -106,6 +108,9 @@ public class Appointment {
         return !isCompleted
                 && (status == AppointmentStatus.SCHEDULED || status == AppointmentStatus.CONFIRMED);
     }
+
+    public boolean isReminderSent() { return Boolean.TRUE.equals(reminderSent); }
+    public void setReminderSent(boolean reminderSent) { this.reminderSent = reminderSent; }
 
     public PtRelative getRelative() { return relative; }
     public void setRelative(PtRelative relative) { this.relative = relative; }

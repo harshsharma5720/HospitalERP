@@ -6,6 +6,7 @@ import HomePage from "./HomePage";
 import AppointmentPage from "./AppointmentPage";
 import LoginPage from "./Login";
 import RegisterPage from "./Register";
+import ForgotPasswordPage from "./ForgotPasswordPage";
 import Footer from "./Footer";
 import DoctorPage from "./DoctorPage";
 import ContactUsPage from "./ContactUsPage";
@@ -40,6 +41,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/doctors" element={<DoctorPage />} />
         <Route path="/contact" element={<ContactUsPage />} />
         <Route path="/treatments" element={<Treatments />} />

@@ -90,6 +90,21 @@ public class SmsService {
                 + "- Hospital ERP");
     }
 
+    public void sendReminderSms(String phoneNumber, String patientName, String doctorName, String date, String time) {
+        send(phoneNumber, "Dear " + patientName + ",\n"
+                + "Reminder: your appointment with Dr. " + doctorName + " is tomorrow.\n"
+                + "Date: " + date + "\n"
+                + "Time: " + time + "\n"
+                + "Please reach 10 minutes early.\n"
+                + "- Hospital ERP");
+    }
+
+    public void sendPasswordResetSms(String phoneNumber, String otp, int validMinutes) {
+        send(phoneNumber, "Your Hospital ERP password reset code is: " + otp
+                + "\nValid for " + validMinutes + " minutes."
+                + "\nIf you didn't request this, ignore this message.");
+    }
+
     static String mask(String phoneNumber) {
         if (phoneNumber == null || phoneNumber.length() < 4) {
             return "****";

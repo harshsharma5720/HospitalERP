@@ -6,6 +6,7 @@ import axios from "axios";
 import { API_BASE_URL } from "./config";
 import { toLocalISODate } from "./utils/dateUtils";
 import { getErrorMessage } from "./utils/apiError";
+import { downloadPrescription } from "./utils/downloadPrescription";
 
 const STATUS_LABELS = {
   SCHEDULED: "Scheduled",
@@ -28,6 +29,8 @@ const formatTime = (time) => (time ? String(time).slice(0, 5) : "");
 export default function AppointmentDetails() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Consultation notes by appointment id (only completed visits have one)
+  const [consultations, setConsultations] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,6 +45,12 @@ export default function AppointmentDetails() {
           return aUpcoming ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date);
         });
         setAppointments(sorted);
+        try {
+          const history = await axios.get(`${API_BASE_URL}/api/consultations/my`);
+          setConsultations(Object.fromEntries(history.data.map((c) => [c.appointmentId, c])));
+        } catch {
+          setConsultations({});
+        }
       } catch (err) {
         alert(getErrorMessage(err, "Could not load your appointments. Please try again later."));
       } finally {
@@ -175,6 +184,10 @@ export default function AppointmentDetails() {
                       {appointment.message || "No message"}
                     </p>
 
+                    {consultations[appointment.appointmentID] && (
+                      <ConsultationSummary consultation={consultations[appointment.appointmentID]} />
+                    )}
+
                     <div className="flex flex-col gap-3 mt-4">
                       {upcoming ? (
                         <>
@@ -204,6 +217,20 @@ export default function AppointmentDetails() {
                           </button>
                         </>
                       ) : (
+                        <>
+                        {consultations[appointment.appointmentID] && (
+                          <button
+                            onClick={() => downloadPrescription(appointment.appointmentID)}
+                            className="
+                              w-full bg-gradient-to-br
+                              from-green-500 to-emerald-700
+                              text-white py-2 rounded-lg font-semibold
+                              hover:opacity-90 transition-all
+                            "
+                          >
+                            Download Prescription
+                          </button>
+                        )}
                         <button
                           onClick={() => handleBookAgain(appointment)}
                           className="
@@ -215,6 +242,7 @@ export default function AppointmentDetails() {
                         >
                           Book Again
                         </button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -236,6 +264,43 @@ export default function AppointmentDetails() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Diagnosis, medicines and follow-up from the doctor's consultation
+function ConsultationSummary({ consultation }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-3 p-3 rounded-lg bg-white/70 dark:bg-[#0a1124] border border-green-200 dark:border-[#233565]">
+      <p><strong>Diagnosis:</strong> {consultation.diagnosis}</p>
+      {consultation.followUpDate && (
+        <p><strong>Follow-up:</strong> {consultation.followUpDate}</p>
+      )}
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="text-sm text-blue-700 dark:text-[#50d4f2] mt-1"
+      >
+        {open ? "Hide details" : `Show details (${consultation.medicines.length} medicines)`}
+      </button>
+      {open && (
+        <div className="text-sm mt-2 space-y-1">
+          {consultation.symptoms && <p><strong>Symptoms:</strong> {consultation.symptoms}</p>}
+          {consultation.medicines.length > 0 && (
+            <ul className="list-disc ml-5">
+              {consultation.medicines.map((m, i) => (
+                <li key={i}>
+                  <strong>{m.medicineName}</strong>
+                  {[m.dosage, m.frequency, m.duration, m.instructions].filter(Boolean).length > 0 &&
+                    ` — ${[m.dosage, m.frequency, m.duration, m.instructions].filter(Boolean).join(", ")}`}
+                </li>
+              ))}
+            </ul>
+          )}
+          {consultation.notes && <p><strong>Advice:</strong> {consultation.notes}</p>}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,10 +1,13 @@
 package ITmonteur.example.hospitalERP.controller;
 
 import ITmonteur.example.hospitalERP.dto.AuthResponseDTO;
+import ITmonteur.example.hospitalERP.dto.ForgotPasswordRequestDTO;
+import ITmonteur.example.hospitalERP.dto.ResetPasswordRequestDTO;
 import ITmonteur.example.hospitalERP.dto.LoginRequestDTO;
 import ITmonteur.example.hospitalERP.dto.RegisterRequestDTO;
 import ITmonteur.example.hospitalERP.services.AuthService;
 import ITmonteur.example.hospitalERP.services.OtpService;
+import ITmonteur.example.hospitalERP.services.PasswordResetService;
 import ITmonteur.example.hospitalERP.services.SmsService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +31,8 @@ public class AuthController {
     private OtpService otpService;
     @Autowired
     private SmsService smsService;
+    @Autowired
+    private PasswordResetService passwordResetService;
 
     // Self-registration for patients (staff accounts are created by an admin)
     @PostMapping("/register")
@@ -67,5 +72,20 @@ public class AuthController {
                 "success", isVerified,
                 "message", isVerified ? "OTP verified successfully" : "Invalid or expired OTP");
         return isVerified ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    // Step 1 of "forgot password": always answers the same, whether or not the account exists
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, Object>> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDTO request) {
+        passwordResetService.requestReset(request.getIdentifier());
+        return ResponseEntity.ok(Map.of("success", true,
+                "message", "If an account exists, a reset code has been sent to its registered phone and email."));
+    }
+
+    // Step 2: set a new password with the code
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, Object>> resetPassword(@Valid @RequestBody ResetPasswordRequestDTO request) {
+        passwordResetService.resetPassword(request.getIdentifier(), request.getCode(), request.getNewPassword());
+        return ResponseEntity.ok(Map.of("success", true, "message", "Password changed. You can now log in."));
     }
 }

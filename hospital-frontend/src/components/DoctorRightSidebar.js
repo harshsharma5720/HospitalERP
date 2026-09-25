@@ -5,6 +5,7 @@ import {
   LogOut,
   FileText,
   LayoutDashboard,
+  Clock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config";
@@ -69,6 +70,12 @@ export default function DoctorRightSidebar({ doctor }) {
             icon={<Calendar size={18} />}
             label="Appointments"
             onClick={() => navigate("/doctor/doctor-appointments")}
+          />
+
+          <SidebarButton
+            icon={<Clock size={18} />}
+            label="My Schedule"
+            onClick={() => navigate("/doctor/schedule")}
           />
 
           <SidebarButton
