@@ -63,6 +63,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     long countByDoctorUserIdAndStatus(Long userId, AppointmentStatus status);
 
+    // Ids of the doctor's slots (from the given date on) that any appointment refers to, whatever its status
+    @Query("SELECT DISTINCT a.slot.id FROM Appointment a WHERE a.slot.doctor.id = :doctorId AND a.slot.date >= :fromDate")
+    List<Long> findSlotIdsInUse(@Param("doctorId") Long doctorId, @Param("fromDate") LocalDate fromDate);
+
     // Whether the doctor has ever seen (or is booked with) this patient
     boolean existsByDoctor_IdAndPtInfo_PatientId(Long doctorId, Long patientId);
 

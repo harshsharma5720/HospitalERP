@@ -100,6 +100,8 @@ CLASS_MODULE = {
     'DoctorScheduleController': 'scheduling', 'DoctorDirectoryController': 'staff',
     # added in step 1.7 (account deletion only in administration)
     'AccountController': 'administration',
+    # added in step 1.8 (schedule change via event)
+    'DoctorScheduleChangedEvent': 'scheduling', 'ScheduleChangeSlotCleaner': 'appointments',
 }
 
 

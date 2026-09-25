@@ -12,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,9 +33,14 @@ public interface SlotRepository extends JpaRepository<Slot,Long> {
     @Query("DELETE FROM Slot s WHERE s.doctor.id = :doctorId")
     void deleteByDoctorId(@Param("doctorId") Long doctorId);
 
-    // Slots from the given date on that no appointment (active or past) refers to
+    // A doctor's slots from the given date on (used when no slot has to be kept)
     @Modifying
-    @Query("DELETE FROM Slot s WHERE s.doctor.id = :doctorId AND s.date >= :fromDate "
-            + "AND NOT EXISTS (SELECT a FROM Appointment a WHERE a.slot = s)")
-    void deleteUnusedFromDate(@Param("doctorId") Long doctorId, @Param("fromDate") LocalDate fromDate);
+    @Query("DELETE FROM Slot s WHERE s.doctor.id = :doctorId AND s.date >= :fromDate")
+    void deleteFromDate(@Param("doctorId") Long doctorId, @Param("fromDate") LocalDate fromDate);
+
+    // Same, but keeps the given slots (keepIds must not be empty)
+    @Modifying
+    @Query("DELETE FROM Slot s WHERE s.doctor.id = :doctorId AND s.date >= :fromDate AND s.id NOT IN :keepIds")
+    void deleteFromDateExcept(@Param("doctorId") Long doctorId, @Param("fromDate") LocalDate fromDate,
+                              @Param("keepIds") Collection<Long> keepIds);
 }

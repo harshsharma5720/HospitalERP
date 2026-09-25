@@ -342,6 +342,45 @@ class FeatureFlowH2Test {
         assertThat(appointmentStatus(patient, byDesk)).isEqualTo("CANCELLED_BY_PATIENT");
     }
 
+    // Changing a schedule keeps booked slots, removes unused future slots and offers only the new hours
+    @Test
+    void changingAScheduleKeepsBookingsAndRemovesUnusedSlots() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+        long doctorUserId = json.readTree(call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"drhours","email":"drhours@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111117","role":"DOCTOR"}""").getBody()).get("id").asLong();
+        String doctor = login("drhours", "doctor-123");
+        long doctorId = findDoctorId("drhours");
+        String patient = register("hourspatient");
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        String slotsUrl = "/api/slots/available/" + doctorId + "?date=" + tomorrow + "&shift=MORNING";
+
+        // Default hours: 09:00-12:00 in 10-minute slots; book 09:00, remember the free 09:10 slot
+        JsonNode before = json.readTree(call(HttpMethod.GET, slotsUrl, patient, null).getBody());
+        assertThat(before.get(0).get("startTime").asText()).startsWith("09:00");
+        long booked = book(patient, before.get(0).get("id").asLong());
+        long unusedOldSlot = before.get(1).get("id").asLong();
+
+        // Doctor now works 10:00-11:00 in 30-minute slots tomorrow morning
+        assertThat(call(HttpMethod.PUT, "/api/doctor/" + doctorUserId + "/schedule", doctor,
+                "[{\"dayOfWeek\":\"" + tomorrow.getDayOfWeek() + "\",\"shift\":\"MORNING\",\"working\":true,"
+                        + "\"startTime\":\"10:00\",\"endTime\":\"11:00\",\"slotMinutes\":30}]").getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+
+        // The unused old slot was deleted (404), not just blocked
+        assertThat(call(HttpMethod.POST, "/appointment/NewAppointment", patient,
+                "{\"slotId\":" + unusedOldSlot + "}").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        // The booking and its 09:00 slot survive
+        JsonNode appointment = json.readTree(call(HttpMethod.GET, "/appointment/appointmentId/" + booked, patient, null).getBody());
+        assertThat(appointment.get("status").asText()).isEqualTo("SCHEDULED");
+        assertThat(appointment.get("startTime").asText()).startsWith("09:00");
+        // Only the new hours are offered
+        List<String> offered = new java.util.ArrayList<>();
+        json.readTree(call(HttpMethod.GET, slotsUrl, patient, null).getBody())
+                .forEach(s -> offered.add(s.get("startTime").asText().substring(0, 5)));
+        assertThat(offered).containsExactly("10:00", "10:30");
+    }
+
     private List<Long> ids(ResponseEntity<String> response) throws Exception {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         List<Long> ids = new java.util.ArrayList<>();

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -101,12 +102,17 @@ public class SlotService {
     }
 
     /**
-     * Removes today's and future slots that no appointment refers to, so they are regenerated
-     * from the new schedule on the next request. Called after a schedule change.
+     * Removes the doctor's slots from {@code fromDate} on, except {@code keepSlotIds}, so they are
+     * regenerated from the new schedule on the next request. Called by the appointments module
+     * after a schedule change, with the slots its bookings still use.
      */
     @Transactional
-    public void resetUnusedFutureSlots(Long doctorId) {
-        slotRepository.deleteUnusedFromDate(doctorId, LocalDate.now());
+    public void deleteUnusedSlots(Long doctorId, LocalDate fromDate, Collection<Long> keepSlotIds) {
+        if (keepSlotIds == null || keepSlotIds.isEmpty()) {
+            slotRepository.deleteFromDate(doctorId, fromDate);
+        } else {
+            slotRepository.deleteFromDateExcept(doctorId, fromDate, keepSlotIds);
+        }
     }
 
     private static String key(LocalTime start, LocalTime end) {

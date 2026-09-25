@@ -153,11 +153,29 @@ class RepositoryQueriesTest {
         em.persist(unused);
         em.flush();
 
-        slotRepository.deleteUnusedFromDate(doctor.getId(), LocalDate.now());
+        java.util.List<Long> inUse = appointmentRepository.findSlotIdsInUse(doctor.getId(), LocalDate.now());
+        assertThat(inUse).containsExactly(booked.getSlot().getId());
+        slotRepository.deleteFromDateExcept(doctor.getId(), LocalDate.now(), inUse);
         em.clear();
 
         assertThat(slotRepository.findById(unused.getId())).isEmpty();
         assertThat(slotRepository.findById(booked.getSlot().getId())).isPresent();
+    }
+
+    @Test
+    void withNothingToKeepAllFutureSlotsOfTheDoctorAreDeleted() {
+        Slot past = new Slot(LocalDate.now().minusDays(1), LocalTime.of(9, 0), LocalTime.of(9, 10), doctor, Shift.MORNING);
+        Slot future = new Slot(tomorrow, LocalTime.of(9, 0), LocalTime.of(9, 10), doctor, Shift.MORNING);
+        em.persist(past);
+        em.persist(future);
+        em.flush();
+
+        assertThat(appointmentRepository.findSlotIdsInUse(doctor.getId(), LocalDate.now())).isEmpty();
+        slotRepository.deleteFromDate(doctor.getId(), LocalDate.now());
+        em.clear();
+
+        assertThat(slotRepository.findById(future.getId())).isEmpty();
+        assertThat(slotRepository.findById(past.getId())).isPresent(); // history before today stays
     }
 
     @Test

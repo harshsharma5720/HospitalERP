@@ -11,6 +11,8 @@ import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.DoctorScheduleRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ITmonteur.example.hospitalERP.events.DoctorScheduleChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,15 +28,15 @@ public class DoctorScheduleService {
 
     private final DoctorScheduleRepository scheduleRepository;
     private final DoctorRepository doctorRepository;
-    private final SlotService slotService;
     private final CurrentUserService currentUserService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public DoctorScheduleService(DoctorScheduleRepository scheduleRepository, DoctorRepository doctorRepository,
-                                 SlotService slotService, CurrentUserService currentUserService) {
+                                 CurrentUserService currentUserService, ApplicationEventPublisher eventPublisher) {
         this.scheduleRepository = scheduleRepository;
         this.doctorRepository = doctorRepository;
-        this.slotService = slotService;
         this.currentUserService = currentUserService;
+        this.eventPublisher = eventPublisher;
     }
 
     /** Full week for the doctor with this user id; unset days/shifts show the hospital default. */
@@ -85,7 +87,8 @@ public class DoctorScheduleService {
             return row;
         }).toList();
         scheduleRepository.saveAll(rows);
-        slotService.resetUnusedFutureSlots(doctor.getId());
+        // The appointments module removes unused future slots (it knows which ones bookings use)
+        eventPublisher.publishEvent(new DoctorScheduleChangedEvent(doctor.getId()));
         logger.info("Schedule updated for doctor {} ({} entries)", doctor.getId(), rows.size());
         return getSchedule(userId);
     }
