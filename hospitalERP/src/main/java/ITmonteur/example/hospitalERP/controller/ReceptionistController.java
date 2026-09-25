@@ -31,14 +31,6 @@ public class ReceptionistController {
         return ResponseEntity.ok(this.receptionistService.getReceptionistByID(receptionistId));
     }
 
-    // Delete receptionist by receptionist ID
-    @DeleteMapping("/delete/{receptionistId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> deleteReceptionist(@PathVariable Long receptionistId) {
-        this.receptionistService.deleteReceptionist(receptionistId);
-        return ResponseEntity.ok("Receptionist deleted successfully!");
-    }
-
     // Update receptionist by user ID (self or admin)
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<ReceptionistDTO> updateReceptionist(

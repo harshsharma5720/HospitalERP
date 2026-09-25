@@ -29,13 +29,6 @@ public class PtInfoController {
         return ResponseEntity.ok(this.ptInfoService.getPtInfoById(ptId));
     }
 
-    // Delete account by user ID
-    @DeleteMapping("/deleteAccount/{ptId}")
-    public ResponseEntity<String> deleteAccountById(@PathVariable long ptId){
-        this.ptInfoService.deletePtInfoById(ptId);
-        return ResponseEntity.ok("Your account has been deleted successfully!!");
-    }
-
     // Update patient account by user ID
     @PutMapping(value = "/updateAccount/{ptId}", consumes = {"multipart/form-data"})
     public ResponseEntity<PtInfoDTO> updateAccountById(

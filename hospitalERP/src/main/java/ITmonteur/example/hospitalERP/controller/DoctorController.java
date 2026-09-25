@@ -5,7 +5,6 @@ import ITmonteur.example.hospitalERP.entities.Specialist;
 import ITmonteur.example.hospitalERP.services.DoctorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -52,11 +51,4 @@ public class DoctorController {
         return ResponseEntity.ok(this.doctorService.updateDoctor(id, doctorDTO, profileImage));
     }
 
-    // Delete doctor by doctor ID
-    @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> deleteDoctorById(@PathVariable Long id) {
-        this.doctorService.deleteDoctor(id);
-        return ResponseEntity.ok("Doctor deleted successfully");
-    }
 }

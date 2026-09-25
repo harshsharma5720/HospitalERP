@@ -28,16 +28,13 @@ public class PtInfoService {
     private final UserRepository userRepository;
     private final CurrentUserService currentUserService;
     private final FileStorageService fileStorageService;
-    private final UserAccountService userAccountService;
 
     public PtInfoService(PtInfoRepository ptInfoRepository, UserRepository userRepository,
-                         CurrentUserService currentUserService, FileStorageService fileStorageService,
-                         UserAccountService userAccountService) {
+                         CurrentUserService currentUserService, FileStorageService fileStorageService) {
         this.ptInfoRepository = ptInfoRepository;
         this.userRepository = userRepository;
         this.currentUserService = currentUserService;
         this.fileStorageService = fileStorageService;
-        this.userAccountService = userAccountService;
     }
 
     // Get all patients info (admin / receptionist)
@@ -49,13 +46,6 @@ public class PtInfoService {
     public PtInfoDTO getPtInfoById(long userId) {
         currentUserService.requireSelfOrRole(userId, Role.ADMIN);
         return PatientMapper.toDTO(patientByUserId(userId));
-    }
-
-    // Deletes the patient account, their relatives and appointments (self or admin)
-    public boolean deletePtInfoById(long userId) {
-        currentUserService.requireSelfOrRole(userId, Role.ADMIN);
-        userAccountService.deleteUser(userId);
-        return true;
     }
 
     // Update patient info by user ID (self or admin). Username cannot be changed here.

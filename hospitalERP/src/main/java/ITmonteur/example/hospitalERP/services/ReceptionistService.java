@@ -27,17 +27,15 @@ public class ReceptionistService {
     private final ModelMapper modelMapper;
     private final CurrentUserService currentUserService;
     private final FileStorageService fileStorageService;
-    private final UserAccountService userAccountService;
 
     public ReceptionistService(ReceptionistRepository receptionistRepository, UserRepository userRepository,
                                ModelMapper modelMapper, CurrentUserService currentUserService,
-                               FileStorageService fileStorageService, UserAccountService userAccountService) {
+                               FileStorageService fileStorageService) {
         this.receptionistRepository = receptionistRepository;
         this.userRepository = userRepository;
         this.modelMapper = modelMapper;
         this.currentUserService = currentUserService;
         this.fileStorageService = fileStorageService;
-        this.userAccountService = userAccountService;
     }
 
     // By user ID (the receptionist themself or an admin)
@@ -48,19 +46,6 @@ public class ReceptionistService {
 
     public List<ReceptionistDTO> getAllReceptionist() {
         return receptionistRepository.findAll().stream().map(this::convertToDTO).toList();
-    }
-
-    // By receptionist ID (admin only; also deletes the login)
-    public boolean deleteReceptionist(Long receptionistID) {
-        Receptionist receptionist = receptionistRepository.findById(receptionistID)
-                .orElseThrow(() -> new ResourceNotFoundException("Receptionist", "id", receptionistID));
-        if (receptionist.getUser() != null) {
-            userAccountService.deleteUser(receptionist.getUser().getId());
-        } else {
-            receptionistRepository.delete(receptionist);
-        }
-        logger.info("Receptionist deleted successfully with ID: {}", receptionistID);
-        return true;
     }
 
     // By user ID (self or admin). Username cannot be changed here.

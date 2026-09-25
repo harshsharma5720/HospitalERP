@@ -28,16 +28,14 @@ public class DoctorService {
     private final UserRepository userRepository;
     private final CurrentUserService currentUserService;
     private final FileStorageService fileStorageService;
-    private final UserAccountService userAccountService;
 
     public DoctorService(DoctorRepository doctorRepository,
                          UserRepository userRepository, CurrentUserService currentUserService,
-                         FileStorageService fileStorageService, UserAccountService userAccountService) {
+                         FileStorageService fileStorageService) {
         this.doctorRepository = doctorRepository;
         this.userRepository = userRepository;
         this.currentUserService = currentUserService;
         this.fileStorageService = fileStorageService;
-        this.userAccountService = userAccountService;
     }
 
     // Get all doctors (public directory)
@@ -112,20 +110,6 @@ public class DoctorService {
         Doctor updatedDoctor = doctorRepository.save(doctor);
         logger.info("Doctor profile updated for user {}", userId);
         return DoctorMapper.toDTO(updatedDoctor);
-    }
-
-    // Delete doctor by doctor ID (admin only), including their appointments, slots and login
-    @Transactional
-    public boolean deleteDoctor(Long doctorId) {
-        Doctor doctor = doctorRepository.findById(doctorId)
-                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
-        if (doctor.getUser() != null) {
-            userAccountService.deleteUser(doctor.getUser().getId());
-        } else {
-            userAccountService.deleteDoctorProfile(doctor);
-        }
-        logger.info("Doctor deleted with ID: {}", doctorId);
-        return true;
     }
 
     private Doctor doctorByUserId(Long userId) {

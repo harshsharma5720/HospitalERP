@@ -98,6 +98,8 @@ CLASS_MODULE = {
     # added in step 1.6 (endpoints moved to the module that owns them; URLs unchanged)
     'DoctorAppointmentController': 'appointments', 'ReceptionistAppointmentController': 'appointments',
     'DoctorScheduleController': 'scheduling', 'DoctorDirectoryController': 'staff',
+    # added in step 1.7 (account deletion only in administration)
+    'AccountController': 'administration',
 }
 
 

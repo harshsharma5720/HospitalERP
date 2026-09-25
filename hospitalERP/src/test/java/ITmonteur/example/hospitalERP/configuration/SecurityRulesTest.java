@@ -1,5 +1,6 @@
 package ITmonteur.example.hospitalERP.configuration;
 
+import ITmonteur.example.hospitalERP.controller.AccountController;
 import ITmonteur.example.hospitalERP.controller.AppointmentController;
 import ITmonteur.example.hospitalERP.controller.AuthController;
 import ITmonteur.example.hospitalERP.controller.DoctorController;
@@ -21,7 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** Verifies the URL-level access rules in SecurityConfig. */
-@WebMvcTest(controllers = {AppointmentController.class, DoctorController.class,
+@WebMvcTest(controllers = {AppointmentController.class, DoctorController.class, AccountController.class,
         LeaveRequestController.class, AuthController.class})
 @Import({SecurityConfig.class, JWTAuthenticationFilter.class})
 @TestPropertySource(properties = "app.cors.allowed-origins=http://localhost:3000")
@@ -40,6 +41,7 @@ class SecurityRulesTest {
     @MockitoBean private CustomUserDetailsService customUserDetailsService;
     @MockitoBean private PasswordResetService passwordResetService;
     @MockitoBean private DoctorScheduleService doctorScheduleService;
+    @MockitoBean private UserAccountService userAccountService;
 
     @Test
     void anonymousUserGets401OnProtectedEndpoint() throws Exception {

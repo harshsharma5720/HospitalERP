@@ -3,6 +3,8 @@ package ITmonteur.example.hospitalERP.services;
 import ITmonteur.example.hospitalERP.entities.Appointment;
 import ITmonteur.example.hospitalERP.entities.Doctor;
 import ITmonteur.example.hospitalERP.entities.PtInfo;
+import ITmonteur.example.hospitalERP.entities.Receptionist;
+import ITmonteur.example.hospitalERP.entities.Role;
 import ITmonteur.example.hospitalERP.entities.User;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
@@ -70,7 +72,7 @@ public class UserAccountService {
     public void deleteUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
-        if (user.getRole() == ITmonteur.example.hospitalERP.entities.Role.ADMIN
+        if (user.getRole() == Role.ADMIN
                 && Objects.equals(currentUserService.getCurrentUserId(), userId)) {
             throw new BadRequestException("Admins cannot delete their own account");
         }
@@ -93,6 +95,42 @@ public class UserAccountService {
             default -> userRepository.delete(user);
         }
         logger.info("Deleted user {} ({})", userId, user.getRole());
+    }
+
+    // ------------------------------------------------------------------ entry points
+    // (moved here from PtInfoService / DoctorService / ReceptionistService in step 1.7)
+
+    /** DELETE /api/patient/deleteAccount/{userId}: the patient themself, or an admin. */
+    @Transactional
+    public void deletePatientAccount(Long userId) {
+        currentUserService.requireSelfOrRole(userId, Role.ADMIN);
+        deleteUser(userId);
+    }
+
+    /** DELETE /api/doctor/delete/{doctorId} (admin): doctor.id, not the user id. */
+    @Transactional
+    public void deleteDoctorByDoctorId(Long doctorId) {
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
+        if (doctor.getUser() != null) {
+            deleteUser(doctor.getUser().getId());
+        } else {
+            deleteDoctorProfile(doctor); // legacy doctor row without a login
+        }
+        logger.info("Doctor deleted with ID: {}", doctorId);
+    }
+
+    /** DELETE /api/receptionist/delete/{receptionistId} (admin): receptionist.id, not the user id. */
+    @Transactional
+    public void deleteReceptionistByReceptionistId(Long receptionistId) {
+        Receptionist receptionist = receptionistRepository.findById(receptionistId)
+                .orElseThrow(() -> new ResourceNotFoundException("Receptionist", "id", receptionistId));
+        if (receptionist.getUser() != null) {
+            deleteUser(receptionist.getUser().getId());
+        } else {
+            receptionistRepository.delete(receptionist); // legacy row without a login
+        }
+        logger.info("Receptionist deleted with ID: {}", receptionistId);
     }
 
     private void deletePatientProfile(PtInfo patient) {
