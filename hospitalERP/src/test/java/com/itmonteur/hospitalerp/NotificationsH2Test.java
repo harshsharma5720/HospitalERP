@@ -1,7 +1,7 @@
 package com.itmonteur.hospitalerp;
 
 import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
-import ITmonteur.example.hospitalERP.services.NotificationService;
+import com.itmonteur.hospitalerp.notifications.NotificationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

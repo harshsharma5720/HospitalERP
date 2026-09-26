@@ -4,6 +4,8 @@ import ITmonteur.example.hospitalERP.entities.Role;
 import ITmonteur.example.hospitalERP.entities.User;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import ITmonteur.example.hospitalERP.repositories.UserRepository;
+import com.itmonteur.hospitalerp.notifications.EmailService;
+import com.itmonteur.hospitalerp.notifications.SmsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

@@ -1,6 +1,7 @@
 package ITmonteur.example.hospitalERP.services;
 
 import com.itmonteur.hospitalerp.common.ConflictException;
+import com.itmonteur.hospitalerp.notifications.SmsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

@@ -8,7 +8,7 @@ import ITmonteur.example.hospitalERP.dto.RegisterRequestDTO;
 import ITmonteur.example.hospitalERP.services.AuthService;
 import ITmonteur.example.hospitalERP.services.OtpService;
 import ITmonteur.example.hospitalERP.services.PasswordResetService;
-import ITmonteur.example.hospitalERP.services.SmsService;
+import com.itmonteur.hospitalerp.notifications.SmsService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

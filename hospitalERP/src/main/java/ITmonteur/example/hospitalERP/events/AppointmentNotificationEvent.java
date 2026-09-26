@@ -1,6 +1,6 @@
 package ITmonteur.example.hospitalERP.events;
 
-import ITmonteur.example.hospitalERP.services.NotificationService;
+import com.itmonteur.hospitalerp.notifications.NotificationService;
 
 /**
  * "Tell the patient/doctor about this appointment". Published inside the transaction that

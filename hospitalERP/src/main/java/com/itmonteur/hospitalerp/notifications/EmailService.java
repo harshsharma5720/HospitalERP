@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.notifications;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;

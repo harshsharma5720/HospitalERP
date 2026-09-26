@@ -2,6 +2,7 @@ package ITmonteur.example.hospitalERP.services;
 
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ConflictException;
+import com.itmonteur.hospitalerp.notifications.SmsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

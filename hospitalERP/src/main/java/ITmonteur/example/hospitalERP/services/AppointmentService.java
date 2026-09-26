@@ -10,6 +10,7 @@ import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
 import com.itmonteur.hospitalerp.common.Gender;
+import com.itmonteur.hospitalerp.notifications.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;

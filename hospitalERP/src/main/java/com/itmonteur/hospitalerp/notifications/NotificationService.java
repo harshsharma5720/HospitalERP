@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.notifications;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

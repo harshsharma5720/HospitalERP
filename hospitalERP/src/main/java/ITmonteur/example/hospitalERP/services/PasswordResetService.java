@@ -4,6 +4,8 @@ import ITmonteur.example.hospitalERP.entities.User;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ConflictException;
 import ITmonteur.example.hospitalERP.repositories.UserRepository;
+import com.itmonteur.hospitalerp.notifications.EmailService;
+import com.itmonteur.hospitalerp.notifications.SmsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;

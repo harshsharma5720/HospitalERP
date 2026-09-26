@@ -1,6 +1,6 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.notifications;
 
-import ITmonteur.example.hospitalERP.configuration.TwilioConfig;
+import com.itmonteur.hospitalerp.notifications.internal.TwilioConfig;
 import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.type.PhoneNumber;
 import org.slf4j.Logger;
@@ -105,7 +105,7 @@ public class SmsService {
                 + "\nIf you didn't request this, ignore this message.");
     }
 
-    static String mask(String phoneNumber) {
+    public static String mask(String phoneNumber) {
         if (phoneNumber == null || phoneNumber.length() < 4) {
             return "****";
         }

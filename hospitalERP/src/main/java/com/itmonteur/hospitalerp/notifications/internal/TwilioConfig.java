@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.configuration;
+package com.itmonteur.hospitalerp.notifications.internal;
 
 import com.twilio.Twilio;
 import jakarta.annotation.PostConstruct;
