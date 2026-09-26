@@ -30,8 +30,26 @@
 		<java.version>17</java.version>
 		<!-- Extra test-JVM options, e.g. ./mvnw test -DargLine="-Xmx512m"; merged into Surefire's argLine below -->
 		<argLine></argLine>
+		<spring-modulith.version>1.4.13</spring-modulith.version>
 	</properties>
+	<dependencyManagement>
+		<dependencies>
+			<!-- Spring Modulith 1.4.x is the line for Spring Boot 3.5 -->
+			<dependency>
+				<groupId>org.springframework.modulith</groupId>
+				<artifactId>spring-modulith-bom</artifactId>
+				<version>${spring-modulith.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<dependencies>
+		<!-- Module annotations (@Modulithic, @ApplicationModule, @NamedInterface); no runtime behaviour -->
+		<dependency>
+			<groupId>org.springframework.modulith</groupId>
+			<artifactId>spring-modulith-api</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
@@ -93,6 +111,17 @@
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Module boundary verification (ModularityTest) and generated module docs -->
+		<dependency>
+			<groupId>org.springframework.modulith</groupId>
+			<artifactId>spring-modulith-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.modulith</groupId>
+			<artifactId>spring-modulith-docs</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<!-- in-memory database for repository tests -->

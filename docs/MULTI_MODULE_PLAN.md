@@ -397,7 +397,8 @@ Behaviour changes in Phase 1, all intended:
 
 Everything else is structural.
 
-| Phase 2 | ⏳ waiting for approval | | Package by module + Spring Modulith (§6). |
+| Phase 2 | 🚧 in progress | | Package by module + Spring Modulith (§6). |
+| 2.1 Add Spring Modulith | ✅ done | 2026-09-26 | `spring-modulith-bom` 1.4.13 (the line for Boot 3.5) imported in `<dependencyManagement>`; `spring-modulith-api` at compile scope (annotations only, no runtime behaviour); `spring-modulith-starter-test` and `spring-modulith-docs` at test scope. No code changes. Checker OK, backend 83 green (1 skipped). |
 
 **Note: running tests when memory is low (found in step 1.1).** Mockito attaches itself to the test JVM by starting a second Java process. With less than about 1 GB of free memory that process can't start, and every test using mocks fails with `Could not initialize plugin: interface org.mockito.plugins.MockMaker`. It isn't a code problem. Workarounds:
 - run with `-DargLine="-Xms64m -Xmx512m -XX:+UseSerialGC -javaagent:C:/Users/<you>/.m2/repository/org/mockito/mockito-core/5.17.0/mockito-core-5.17.0.jar"`; or
