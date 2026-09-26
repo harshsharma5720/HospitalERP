@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP;
+package com.itmonteur.hospitalerp;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;

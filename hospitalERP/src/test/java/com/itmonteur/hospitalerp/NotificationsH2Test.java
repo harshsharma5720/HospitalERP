@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP;
+package com.itmonteur.hospitalerp;
 
 import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
 import ITmonteur.example.hospitalERP.services.NotificationService;

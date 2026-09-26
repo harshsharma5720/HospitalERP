@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP;
+package com.itmonteur.hospitalerp;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +41,8 @@ class EndpointContractTest {
 
     private static final Path SNAPSHOT = Path.of("src/test/resources/api-endpoints.txt");
     private static final String OUR_PACKAGE = HospitalErpApplication.class.getPackageName();
+    // Temporary during Phase 2.2: controllers not moved yet still live in the old package
+    private static final String OLD_PACKAGE = "ITmonteur.example.hospitalERP";
 
     @Autowired
     @Qualifier("requestMappingHandlerMapping")
@@ -73,7 +75,8 @@ class EndpointContractTest {
         List<String> lines = new ArrayList<>();
         for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : handlerMapping.getHandlerMethods().entrySet()) {
             HandlerMethod handler = entry.getValue();
-            if (!handler.getBeanType().getPackageName().startsWith(OUR_PACKAGE)) {
+            String beanPackage = handler.getBeanType().getPackageName();
+            if (!beanPackage.startsWith(OUR_PACKAGE) && !beanPackage.startsWith(OLD_PACKAGE)) {
                 continue; // skip framework endpoints such as /error
             }
             RequestMappingInfo info = entry.getKey();

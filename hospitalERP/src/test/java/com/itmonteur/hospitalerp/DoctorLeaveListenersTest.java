@@ -1,10 +1,12 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp;
 
 import ITmonteur.example.hospitalERP.entities.*;
 import ITmonteur.example.hospitalERP.events.DoctorLeaveApprovedEvent;
 import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import ITmonteur.example.hospitalERP.repositories.SlotRepository;
 import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
+import ITmonteur.example.hospitalERP.services.AppointmentLeaveCanceller;
+import ITmonteur.example.hospitalERP.services.SlotLeaveBlocker;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
 

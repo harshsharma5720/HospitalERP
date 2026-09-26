@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP;
+package com.itmonteur.hospitalerp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

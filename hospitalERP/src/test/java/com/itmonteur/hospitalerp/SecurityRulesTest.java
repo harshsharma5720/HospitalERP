@@ -1,7 +1,8 @@
-package ITmonteur.example.hospitalERP.configuration;
+package com.itmonteur.hospitalerp;
 
 import ITmonteur.example.hospitalERP.controller.*;
 import ITmonteur.example.hospitalERP.services.*;
+import ITmonteur.example.hospitalERP.configuration.JWTAuthenticationFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;

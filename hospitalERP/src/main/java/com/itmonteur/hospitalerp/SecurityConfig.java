@@ -1,6 +1,7 @@
-package ITmonteur.example.hospitalERP.configuration;
+package com.itmonteur.hospitalerp;
 
 import ITmonteur.example.hospitalERP.services.CustomUserDetailsService;
+import ITmonteur.example.hospitalERP.configuration.JWTAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
