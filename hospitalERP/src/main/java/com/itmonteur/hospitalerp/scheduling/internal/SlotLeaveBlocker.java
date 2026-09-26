@@ -1,8 +1,7 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.scheduling.internal;
 
-import ITmonteur.example.hospitalERP.entities.Slot;
+import com.itmonteur.hospitalerp.scheduling.Slot;
 import com.itmonteur.hospitalerp.staff.DoctorLeaveApprovedEvent;
-import ITmonteur.example.hospitalERP.repositories.SlotRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;

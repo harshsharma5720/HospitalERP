@@ -3,7 +3,7 @@ package ITmonteur.example.hospitalERP.repositories;
 import ITmonteur.example.hospitalERP.entities.Appointment;
 import ITmonteur.example.hospitalERP.entities.AppointmentStatus;
 import com.itmonteur.hospitalerp.staff.Doctor;
-import ITmonteur.example.hospitalERP.entities.Shift;
+import com.itmonteur.hospitalerp.scheduling.Shift;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

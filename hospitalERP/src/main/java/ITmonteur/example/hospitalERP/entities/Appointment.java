@@ -8,6 +8,8 @@ import com.itmonteur.hospitalerp.common.Gender;
 import com.itmonteur.hospitalerp.patients.PtInfo;
 import com.itmonteur.hospitalerp.patients.PtRelative;
 import com.itmonteur.hospitalerp.staff.Doctor;
+import com.itmonteur.hospitalerp.scheduling.Shift;
+import com.itmonteur.hospitalerp.scheduling.Slot;
 
 @Entity
 @Table(name = "appointments")

@@ -1,7 +1,7 @@
-package ITmonteur.example.hospitalERP.repositories;
+package com.itmonteur.hospitalerp.scheduling.internal;
 
-import ITmonteur.example.hospitalERP.entities.DoctorSchedule;
-import ITmonteur.example.hospitalERP.entities.Shift;
+import com.itmonteur.hospitalerp.scheduling.DoctorSchedule;
+import com.itmonteur.hospitalerp.scheduling.Shift;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

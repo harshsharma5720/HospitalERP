@@ -1,8 +1,8 @@
-package ITmonteur.example.hospitalERP.controller;
+package com.itmonteur.hospitalerp.scheduling.web;
 
-import ITmonteur.example.hospitalERP.entities.Slot;
-import ITmonteur.example.hospitalERP.entities.Shift;
-import ITmonteur.example.hospitalERP.services.SlotService;
+import com.itmonteur.hospitalerp.scheduling.Slot;
+import com.itmonteur.hospitalerp.scheduling.Shift;
+import com.itmonteur.hospitalerp.scheduling.SlotService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;

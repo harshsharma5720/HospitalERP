@@ -1,7 +1,7 @@
-package ITmonteur.example.hospitalERP.controller;
+package com.itmonteur.hospitalerp.scheduling.web;
 
-import ITmonteur.example.hospitalERP.dto.DoctorScheduleDTO;
-import ITmonteur.example.hospitalERP.services.DoctorScheduleService;
+import com.itmonteur.hospitalerp.scheduling.DoctorScheduleDTO;
+import com.itmonteur.hospitalerp.scheduling.DoctorScheduleService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

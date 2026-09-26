@@ -2,7 +2,7 @@ package ITmonteur.example.hospitalERP.dto;
 
 import ITmonteur.example.hospitalERP.entities.AppointmentStatus;
 import com.itmonteur.hospitalerp.common.Gender;
-import ITmonteur.example.hospitalERP.entities.Shift;
+import com.itmonteur.hospitalerp.scheduling.Shift;
 
 import java.time.LocalDate;
 import java.time.LocalTime;

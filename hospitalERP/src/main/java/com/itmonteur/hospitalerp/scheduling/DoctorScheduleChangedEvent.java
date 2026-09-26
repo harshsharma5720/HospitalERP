@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.events;
+package com.itmonteur.hospitalerp.scheduling;
 
 /**
  * Published by the scheduling module (DoctorScheduleService.updateSchedule) after a doctor's

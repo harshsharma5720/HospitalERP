@@ -3,7 +3,7 @@ package ITmonteur.example.hospitalERP.dto;
 import ITmonteur.example.hospitalERP.entities.Appointment;
 import ITmonteur.example.hospitalERP.entities.AppointmentStatus;
 import com.itmonteur.hospitalerp.staff.Doctor;
-import ITmonteur.example.hospitalERP.entities.Slot;
+import com.itmonteur.hospitalerp.scheduling.Slot;
 
 /**
  * Appointment → DTO, mapped by hand: ModelMapper's implicit matching is ambiguous here

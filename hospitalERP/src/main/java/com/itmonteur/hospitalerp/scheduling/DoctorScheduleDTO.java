@@ -1,6 +1,5 @@
-package ITmonteur.example.hospitalERP.dto;
+package com.itmonteur.hospitalerp.scheduling;
 
-import ITmonteur.example.hospitalERP.entities.Shift;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

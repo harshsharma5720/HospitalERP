@@ -1,7 +1,5 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.scheduling;
 
-import ITmonteur.example.hospitalERP.dto.DoctorScheduleDTO;
-import ITmonteur.example.hospitalERP.entities.Shift;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import org.junit.jupiter.api.Test;
 

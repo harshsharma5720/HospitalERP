@@ -15,6 +15,8 @@ import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import com.itmonteur.hospitalerp.staff.web.DoctorController;
 import com.itmonteur.hospitalerp.staff.web.DoctorDirectoryController;
 import com.itmonteur.hospitalerp.staff.web.LeaveRequestController;
+import com.itmonteur.hospitalerp.scheduling.DoctorScheduleService;
+import com.itmonteur.hospitalerp.scheduling.web.DoctorScheduleController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;

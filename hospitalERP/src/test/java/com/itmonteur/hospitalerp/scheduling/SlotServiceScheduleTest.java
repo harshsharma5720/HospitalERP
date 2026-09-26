@@ -1,8 +1,8 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.scheduling;
 
 import ITmonteur.example.hospitalERP.entities.*;
-import ITmonteur.example.hospitalERP.repositories.DoctorScheduleRepository;
-import ITmonteur.example.hospitalERP.repositories.SlotRepository;
+import com.itmonteur.hospitalerp.scheduling.internal.DoctorScheduleRepository;
+import com.itmonteur.hospitalerp.scheduling.internal.SlotRepository;
 import com.itmonteur.hospitalerp.staff.Doctor;
 import com.itmonteur.hospitalerp.staff.DoctorService;
 import com.itmonteur.hospitalerp.staff.LeaveRequestService;

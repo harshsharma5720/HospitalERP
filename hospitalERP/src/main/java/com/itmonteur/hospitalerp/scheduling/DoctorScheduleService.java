@@ -1,18 +1,15 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.scheduling;
 
-import ITmonteur.example.hospitalERP.dto.DoctorScheduleDTO;
 import com.itmonteur.hospitalerp.staff.Doctor;
-import ITmonteur.example.hospitalERP.entities.DoctorSchedule;
 import com.itmonteur.hospitalerp.identity.Role;
-import ITmonteur.example.hospitalERP.entities.Shift;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
-import ITmonteur.example.hospitalERP.repositories.DoctorScheduleRepository;
+import com.itmonteur.hospitalerp.scheduling.internal.DoctorScheduleRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ITmonteur.example.hospitalERP.events.DoctorScheduleChangedEvent;
 import com.itmonteur.hospitalerp.identity.CurrentUserService;
 import com.itmonteur.hospitalerp.staff.DoctorService;
+import com.itmonteur.hospitalerp.scheduling.internal.ScheduleDefaults;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

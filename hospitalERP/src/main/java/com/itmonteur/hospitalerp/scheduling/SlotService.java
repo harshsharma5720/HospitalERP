@@ -1,15 +1,14 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.scheduling;
 
 import com.itmonteur.hospitalerp.staff.Doctor;
-import ITmonteur.example.hospitalERP.entities.Slot;
-import ITmonteur.example.hospitalERP.entities.Shift;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ConflictException;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
-import ITmonteur.example.hospitalERP.repositories.DoctorScheduleRepository;
-import ITmonteur.example.hospitalERP.repositories.SlotRepository;
+import com.itmonteur.hospitalerp.scheduling.internal.DoctorScheduleRepository;
+import com.itmonteur.hospitalerp.scheduling.internal.SlotRepository;
 import com.itmonteur.hospitalerp.staff.DoctorService;
 import com.itmonteur.hospitalerp.staff.LeaveRequestService;
+import com.itmonteur.hospitalerp.scheduling.internal.ScheduleDefaults;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

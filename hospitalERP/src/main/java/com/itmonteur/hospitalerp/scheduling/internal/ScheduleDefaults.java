@@ -1,6 +1,6 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.scheduling.internal;
 
-import ITmonteur.example.hospitalERP.entities.Shift;
+import com.itmonteur.hospitalerp.scheduling.Shift;
 
 import java.time.LocalTime;
 

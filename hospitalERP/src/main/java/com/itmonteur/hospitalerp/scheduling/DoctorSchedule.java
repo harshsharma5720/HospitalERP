@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.entities;
+package com.itmonteur.hospitalerp.scheduling;
 
 import jakarta.persistence.*;
 
