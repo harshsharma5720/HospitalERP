@@ -1,8 +1,8 @@
-package ITmonteur.example.hospitalERP.controller;
+package com.itmonteur.hospitalerp.staff.web;
 
-import ITmonteur.example.hospitalERP.dto.LeaveRequestDTO;
-import ITmonteur.example.hospitalERP.entities.LeaveStatus;
-import ITmonteur.example.hospitalERP.services.LeaveRequestService;
+import com.itmonteur.hospitalerp.staff.LeaveRequestDTO;
+import com.itmonteur.hospitalerp.staff.LeaveStatus;
+import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

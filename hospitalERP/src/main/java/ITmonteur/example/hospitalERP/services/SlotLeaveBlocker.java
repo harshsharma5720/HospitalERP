@@ -1,7 +1,7 @@
 package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.entities.Slot;
-import ITmonteur.example.hospitalERP.events.DoctorLeaveApprovedEvent;
+import com.itmonteur.hospitalerp.staff.DoctorLeaveApprovedEvent;
 import ITmonteur.example.hospitalERP.repositories.SlotRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

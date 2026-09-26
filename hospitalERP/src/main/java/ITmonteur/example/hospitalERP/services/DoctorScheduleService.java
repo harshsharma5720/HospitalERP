@@ -1,7 +1,7 @@
 package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.dto.DoctorScheduleDTO;
-import ITmonteur.example.hospitalERP.entities.Doctor;
+import com.itmonteur.hospitalerp.staff.Doctor;
 import ITmonteur.example.hospitalERP.entities.DoctorSchedule;
 import com.itmonteur.hospitalerp.identity.Role;
 import ITmonteur.example.hospitalERP.entities.Shift;
@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ITmonteur.example.hospitalERP.events.DoctorScheduleChangedEvent;
 import com.itmonteur.hospitalerp.identity.CurrentUserService;
+import com.itmonteur.hospitalerp.staff.DoctorService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -1,36 +1,32 @@
-package ITmonteur.example.hospitalERP.entities;
+package com.itmonteur.hospitalerp.staff;
 
-import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
-import com.itmonteur.hospitalerp.identity.User;
 
-@Entity
-// Explicit name (same as the default) so moving/renaming this class can never rename the table
-@Table(name = "leave_request")
-public class LeaveRequest {
+public class LeaveRequestDTO {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne
-    @JoinColumn(name = "user_id", referencedColumnName = "id")
-    private User user;
-
-    private String role;
+    private Long userId;   // read-only: always the logged-in user when applying
+    private String role;   // read-only: derived from the user, e.g. "ROLE_DOCTOR"
+    @NotNull(message = "Start date is required")
     private LocalDate startDate;
+    @NotNull(message = "End date is required")
     private LocalDate endDate;
+    @NotBlank(message = "Reason is required")
+    @Size(max = 500, message = "Reason must be at most 500 characters")
     private String reason;
-
-    @Enumerated(EnumType.STRING)
     private LeaveStatus status;
 
-    public LeaveRequest() {
+    public LeaveRequestDTO() {
     }
 
-    public LeaveRequest(Long id, User user, String role, LocalDate startDate, LocalDate endDate, String reason, LeaveStatus status) {
-        this.id = id;
-        this.user = user;
+    public LeaveRequestDTO(Long id ,Long userId, String role, LocalDate startDate, LocalDate endDate,
+                           String reason, LeaveStatus status) {
+        this.id=id;
+        this.userId = userId;
         this.role = role;
         this.startDate = startDate;
         this.endDate = endDate;
@@ -46,12 +42,12 @@ public class LeaveRequest {
         this.id = id;
     }
 
-    public User getUser() {
-        return user;
+    public Long getUserId() {
+        return userId;
     }
 
-    public void setUser(User user) {
-        this.user = user;
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getRole() {

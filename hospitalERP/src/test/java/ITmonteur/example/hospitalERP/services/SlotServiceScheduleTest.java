@@ -3,6 +3,9 @@ package ITmonteur.example.hospitalERP.services;
 import ITmonteur.example.hospitalERP.entities.*;
 import ITmonteur.example.hospitalERP.repositories.DoctorScheduleRepository;
 import ITmonteur.example.hospitalERP.repositories.SlotRepository;
+import com.itmonteur.hospitalerp.staff.Doctor;
+import com.itmonteur.hospitalerp.staff.DoctorService;
+import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

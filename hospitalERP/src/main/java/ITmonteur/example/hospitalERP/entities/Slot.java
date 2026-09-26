@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import com.itmonteur.hospitalerp.staff.Doctor;
 
 @Entity
 @Table(name = "slots")

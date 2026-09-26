@@ -1,7 +1,7 @@
-package ITmonteur.example.hospitalERP.controller;
+package com.itmonteur.hospitalerp.staff.web;
 
-import ITmonteur.example.hospitalERP.dto.ReceptionistDTO;
-import ITmonteur.example.hospitalERP.services.ReceptionistService;
+import com.itmonteur.hospitalerp.staff.ReceptionistDTO;
+import com.itmonteur.hospitalerp.staff.ReceptionistService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

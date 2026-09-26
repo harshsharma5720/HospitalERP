@@ -1,6 +1,6 @@
 package ITmonteur.example.hospitalERP.services;
 
-import ITmonteur.example.hospitalERP.entities.Doctor;
+import com.itmonteur.hospitalerp.staff.Doctor;
 import ITmonteur.example.hospitalERP.entities.Slot;
 import ITmonteur.example.hospitalERP.entities.Shift;
 import com.itmonteur.hospitalerp.common.BadRequestException;
@@ -8,6 +8,8 @@ import com.itmonteur.hospitalerp.common.ConflictException;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.DoctorScheduleRepository;
 import ITmonteur.example.hospitalERP.repositories.SlotRepository;
+import com.itmonteur.hospitalerp.staff.DoctorService;
+import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

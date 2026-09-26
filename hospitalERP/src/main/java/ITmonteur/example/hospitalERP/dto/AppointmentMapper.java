@@ -2,7 +2,7 @@ package ITmonteur.example.hospitalERP.dto;
 
 import ITmonteur.example.hospitalERP.entities.Appointment;
 import ITmonteur.example.hospitalERP.entities.AppointmentStatus;
-import ITmonteur.example.hospitalERP.entities.Doctor;
+import com.itmonteur.hospitalerp.staff.Doctor;
 import ITmonteur.example.hospitalERP.entities.Slot;
 
 /**

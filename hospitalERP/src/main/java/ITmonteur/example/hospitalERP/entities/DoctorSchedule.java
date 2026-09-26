@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
+import com.itmonteur.hospitalerp.staff.Doctor;
 
 /**
  * A doctor's working hours for one weekday + shift.

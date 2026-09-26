@@ -11,6 +11,8 @@ import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.identity.User;
 import com.itmonteur.hospitalerp.patients.PtInfo;
 import com.itmonteur.hospitalerp.patients.PtInfoService;
+import com.itmonteur.hospitalerp.staff.Doctor;
+import com.itmonteur.hospitalerp.staff.DoctorService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

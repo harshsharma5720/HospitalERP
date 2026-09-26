@@ -1,11 +1,10 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.staff;
 
 import java.util.Optional;
-import ITmonteur.example.hospitalERP.dto.ReceptionistDTO;
 import ITmonteur.example.hospitalERP.entities.*;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
-import ITmonteur.example.hospitalERP.repositories.ReceptionistRepository;
+import com.itmonteur.hospitalerp.staff.internal.ReceptionistRepository;
 import com.itmonteur.hospitalerp.common.FileStorageService;
 import com.itmonteur.hospitalerp.common.Gender;
 import com.itmonteur.hospitalerp.identity.CurrentUserService;

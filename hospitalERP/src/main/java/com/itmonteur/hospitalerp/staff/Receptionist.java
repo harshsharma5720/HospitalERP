@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.entities;
+package com.itmonteur.hospitalerp.staff;
 
 import jakarta.persistence.*;
 import com.itmonteur.hospitalerp.common.Gender;

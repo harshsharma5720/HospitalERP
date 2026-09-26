@@ -1,13 +1,16 @@
 package ITmonteur.example.hospitalERP.controller;
 
 import ITmonteur.example.hospitalERP.dto.*;
-import ITmonteur.example.hospitalERP.entities.LeaveStatus;
+import com.itmonteur.hospitalerp.staff.LeaveStatus;
 import ITmonteur.example.hospitalERP.services.AdminService;
 import ITmonteur.example.hospitalERP.services.AppointmentService;
-import ITmonteur.example.hospitalERP.services.LeaveRequestService;
+import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import com.itmonteur.hospitalerp.identity.RegisterRequestDTO;
 import com.itmonteur.hospitalerp.identity.UserDTO;
 import com.itmonteur.hospitalerp.patients.PtInfoDTO;
+import com.itmonteur.hospitalerp.staff.DoctorDTO;
+import com.itmonteur.hospitalerp.staff.LeaveRequestDTO;
+import com.itmonteur.hospitalerp.staff.ReceptionistDTO;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.dto;
+package com.itmonteur.hospitalerp.staff;
 
 import com.itmonteur.hospitalerp.common.Gender;
 

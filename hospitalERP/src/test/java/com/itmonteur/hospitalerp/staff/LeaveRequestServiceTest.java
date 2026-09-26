@@ -1,11 +1,9 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.staff;
 
-import ITmonteur.example.hospitalERP.dto.LeaveRequestDTO;
 import ITmonteur.example.hospitalERP.entities.*;
-import ITmonteur.example.hospitalERP.events.DoctorLeaveApprovedEvent;
 import com.itmonteur.hospitalerp.common.BadRequestException;
-import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
-import ITmonteur.example.hospitalERP.repositories.LeaveRequestRepository;
+import com.itmonteur.hospitalerp.staff.internal.DoctorRepository;
+import com.itmonteur.hospitalerp.staff.internal.LeaveRequestRepository;
 import com.itmonteur.hospitalerp.identity.CurrentUserService;
 import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.identity.User;

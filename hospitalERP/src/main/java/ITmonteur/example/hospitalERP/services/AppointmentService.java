@@ -17,6 +17,8 @@ import com.itmonteur.hospitalerp.patients.PtInfo;
 import com.itmonteur.hospitalerp.patients.PtInfoService;
 import com.itmonteur.hospitalerp.patients.PtRelative;
 import com.itmonteur.hospitalerp.patients.PtRelativeService;
+import com.itmonteur.hospitalerp.staff.Doctor;
+import com.itmonteur.hospitalerp.staff.DoctorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;

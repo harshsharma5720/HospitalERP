@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.entities;
+package com.itmonteur.hospitalerp.staff;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.OnDelete;

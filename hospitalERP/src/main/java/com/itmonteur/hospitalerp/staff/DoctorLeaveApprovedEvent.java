@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.events;
+package com.itmonteur.hospitalerp.staff;
 
 import java.time.LocalDate;
 

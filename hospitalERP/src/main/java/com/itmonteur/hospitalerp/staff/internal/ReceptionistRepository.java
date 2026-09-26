@@ -1,6 +1,6 @@
-package ITmonteur.example.hospitalERP.repositories;
+package com.itmonteur.hospitalerp.staff.internal;
 
-import ITmonteur.example.hospitalERP.entities.Receptionist;
+import com.itmonteur.hospitalerp.staff.Receptionist;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

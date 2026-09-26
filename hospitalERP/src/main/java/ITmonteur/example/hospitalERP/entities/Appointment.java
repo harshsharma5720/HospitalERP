@@ -7,6 +7,7 @@ import java.time.LocalTime;
 import com.itmonteur.hospitalerp.common.Gender;
 import com.itmonteur.hospitalerp.patients.PtInfo;
 import com.itmonteur.hospitalerp.patients.PtRelative;
+import com.itmonteur.hospitalerp.staff.Doctor;
 
 @Entity
 @Table(name = "appointments")

@@ -2,7 +2,7 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.entities.Appointment;
 import ITmonteur.example.hospitalERP.entities.AppointmentStatus;
-import ITmonteur.example.hospitalERP.events.DoctorLeaveApprovedEvent;
+import com.itmonteur.hospitalerp.staff.DoctorLeaveApprovedEvent;
 import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
 import org.slf4j.Logger;

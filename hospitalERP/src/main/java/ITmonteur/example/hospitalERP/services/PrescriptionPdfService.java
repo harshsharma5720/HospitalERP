@@ -1,6 +1,8 @@
 package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.entities.*;
+import com.itmonteur.hospitalerp.staff.Doctor;
+import com.itmonteur.hospitalerp.staff.Specialist;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;

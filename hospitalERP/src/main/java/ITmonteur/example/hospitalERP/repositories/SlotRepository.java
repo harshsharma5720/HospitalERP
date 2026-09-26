@@ -1,7 +1,7 @@
 package ITmonteur.example.hospitalERP.repositories;
 
 import ITmonteur.example.hospitalERP.entities.Slot;
-import ITmonteur.example.hospitalERP.entities.Doctor;
+import com.itmonteur.hospitalerp.staff.Doctor;
 import ITmonteur.example.hospitalERP.entities.Shift;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;

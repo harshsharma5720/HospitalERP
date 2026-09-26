@@ -1,8 +1,8 @@
-package ITmonteur.example.hospitalERP.controller;
+package com.itmonteur.hospitalerp.staff.web;
 
-import ITmonteur.example.hospitalERP.dto.DoctorDTO;
-import ITmonteur.example.hospitalERP.entities.Specialist;
-import ITmonteur.example.hospitalERP.services.DoctorService;
+import com.itmonteur.hospitalerp.staff.DoctorDTO;
+import com.itmonteur.hospitalerp.staff.Specialist;
+import com.itmonteur.hospitalerp.staff.DoctorService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

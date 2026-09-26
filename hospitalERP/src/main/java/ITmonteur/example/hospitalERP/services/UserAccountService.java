@@ -1,9 +1,9 @@
 package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.entities.Appointment;
-import ITmonteur.example.hospitalERP.entities.Doctor;
+import com.itmonteur.hospitalerp.staff.Doctor;
 import com.itmonteur.hospitalerp.patients.PtInfo;
-import ITmonteur.example.hospitalERP.entities.Receptionist;
+import com.itmonteur.hospitalerp.staff.Receptionist;
 import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.identity.User;
 import com.itmonteur.hospitalerp.common.BadRequestException;
@@ -12,6 +12,9 @@ import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
 import com.itmonteur.hospitalerp.identity.CurrentUserService;
 import com.itmonteur.hospitalerp.identity.UserService;
 import com.itmonteur.hospitalerp.patients.PtInfoService;
+import com.itmonteur.hospitalerp.staff.DoctorService;
+import com.itmonteur.hospitalerp.staff.LeaveRequestService;
+import com.itmonteur.hospitalerp.staff.ReceptionistService;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
