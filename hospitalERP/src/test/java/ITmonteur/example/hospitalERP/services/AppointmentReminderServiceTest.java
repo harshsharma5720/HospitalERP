@@ -2,13 +2,16 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.entities.*;
 import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
+import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.*;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 class AppointmentReminderServiceTest {
@@ -18,25 +21,30 @@ class AppointmentReminderServiceTest {
     @Test
     void remindsTomorrowsAppointmentsAndMarksThemSent() {
         AppointmentRepository repo = mock(AppointmentRepository.class);
-        NotificationService notifications = mock(NotificationService.class);
+        ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
         Appointment a = new Appointment();
         a.setPatientName("Asha");
         a.setDate(LocalDate.of(2026, 3, 11));
         a.setStatus(AppointmentStatus.SCHEDULED);
         when(repo.findDueForReminder(LocalDate.of(2026, 3, 11))).thenReturn(List.of(a));
 
-        int sent = new AppointmentReminderService(repo, notifications, clock, true).sendDayBeforeReminders();
+        int sent = new AppointmentReminderService(repo, publisher, clock, true).sendDayBeforeReminders();
 
         assertThat(sent).isEqualTo(1);
         assertThat(a.isReminderSent()).isTrue();
-        verify(notifications).appointmentReminder(any());
+        verify(publisher).publishEvent(notification(AppointmentNotificationEvent.Kind.REMINDER));
         verify(repo).saveAll(List.of(a));
     }
 
     @Test
     void disabledSchedulerDoesNothing() {
         AppointmentRepository repo = mock(AppointmentRepository.class);
-        new AppointmentReminderService(repo, mock(NotificationService.class), clock, false).scheduledRun();
+        new AppointmentReminderService(repo, mock(ApplicationEventPublisher.class), clock, false).scheduledRun();
         verifyNoInteractions(repo);
+    }
+
+    // Matches an AppointmentNotificationEvent of the given kind passed to publishEvent(Object)
+    private static Object notification(AppointmentNotificationEvent.Kind kind) {
+        return argThat((Object e) -> e instanceof AppointmentNotificationEvent n && n.kind() == kind);
     }
 }

@@ -9,9 +9,11 @@ import ITmonteur.example.hospitalERP.entities.User;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.*;
+import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,7 +43,7 @@ public class UserAccountService {
     private final ConsultationRepository consultationRepository;
     private final DoctorScheduleRepository doctorScheduleRepository;
     private final SlotService slotService;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
     private final CurrentUserService currentUserService;
     private final EntityManager entityManager;
 
@@ -51,7 +53,7 @@ public class UserAccountService {
                               LeaveRequestRepository leaveRequestRepository,
                               ConsultationRepository consultationRepository,
                               DoctorScheduleRepository doctorScheduleRepository, SlotService slotService,
-                              NotificationService notificationService, CurrentUserService currentUserService,
+                              ApplicationEventPublisher eventPublisher, CurrentUserService currentUserService,
                               EntityManager entityManager) {
         this.userRepository = userRepository;
         this.ptInfoRepository = ptInfoRepository;
@@ -63,7 +65,7 @@ public class UserAccountService {
         this.consultationRepository = consultationRepository;
         this.doctorScheduleRepository = doctorScheduleRepository;
         this.slotService = slotService;
-        this.notificationService = notificationService;
+        this.eventPublisher = eventPublisher;
         this.currentUserService = currentUserService;
         this.entityManager = entityManager;
     }
@@ -149,7 +151,8 @@ public class UserAccountService {
     public void deleteDoctorProfile(Doctor doctor) {
         Long doctorId = doctor.getId();
         List<Appointment> upcoming = appointmentRepository.findPendingByDoctorId(doctorId);
-        upcoming.forEach(a -> notificationService.appointmentCancelled(AppointmentService.notificationInfo(a)));
+        upcoming.forEach(a -> eventPublisher.publishEvent(new AppointmentNotificationEvent(
+                AppointmentNotificationEvent.Kind.CANCELLED, AppointmentService.notificationInfo(a))));
         writeAndForgetLoadedEntities();
         consultationRepository.deleteItemsByDoctorId(doctorId);
         consultationRepository.deleteByDoctorId(doctorId);

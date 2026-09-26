@@ -8,12 +8,14 @@ import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
 import ITmonteur.example.hospitalERP.repositories.PtRelativeRepository;
+import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -22,6 +24,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,7 +35,7 @@ class AppointmentServiceTest {
     @Mock private PtRelativeRepository ptRelativeRepository;
     @Mock private DoctorRepository doctorRepository;
     @Mock private SlotService slotService;
-    @Mock private NotificationService notificationService;
+    @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private CurrentUserService currentUserService;
 
     private AppointmentService service;
@@ -42,7 +45,7 @@ class AppointmentServiceTest {
     @BeforeEach
     void setUp() {
         service = new AppointmentService(appointmentRepository, ptInfoRepository, ptRelativeRepository,
-                doctorRepository, slotService, notificationService, currentUserService);
+                doctorRepository, slotService, eventPublisher, currentUserService);
         me = patient(10L, 100L, "Asha");
         Doctor doctor = new Doctor();
         doctor.setId(7L);
@@ -69,7 +72,7 @@ class AppointmentServiceTest {
         assertThat(result.getDoctorName()).isEqualTo("Dr Rao");
         assertThat(result.getStatus()).isEqualTo(AppointmentStatus.SCHEDULED);
         verify(ptInfoRepository, never()).findById(999L);
-        verify(notificationService).appointmentBooked(any());
+        verify(eventPublisher).publishEvent(notification(AppointmentNotificationEvent.Kind.BOOKED));
     }
 
     @Test
@@ -174,5 +177,10 @@ class AppointmentServiceTest {
         ptInfo.setGender(Gender.FEMALE);
         ptInfo.setUser(user);
         return ptInfo;
+    }
+
+    // Matches an AppointmentNotificationEvent of the given kind passed to publishEvent(Object)
+    private static Object notification(AppointmentNotificationEvent.Kind kind) {
+        return argThat((Object e) -> e instanceof AppointmentNotificationEvent n && n.kind() == kind);
     }
 }

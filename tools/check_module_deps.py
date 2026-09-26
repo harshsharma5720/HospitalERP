@@ -102,6 +102,8 @@ CLASS_MODULE = {
     'AccountController': 'administration',
     # added in step 1.8 (schedule change via event)
     'DoctorScheduleChangedEvent': 'scheduling', 'ScheduleChangeSlotCleaner': 'appointments',
+    # added in step 1.9 (notifications after commit)
+    'AppointmentNotificationEvent': 'appointments', 'AppointmentNotificationListener': 'appointments',
 }
 
 

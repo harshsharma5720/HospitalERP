@@ -2,9 +2,11 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.entities.Appointment;
 import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
+import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,21 +26,22 @@ public class AppointmentReminderService {
     private static final Logger logger = LoggerFactory.getLogger(AppointmentReminderService.class);
 
     private final AppointmentRepository appointmentRepository;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
     private final boolean enabled;
 
     public AppointmentReminderService(AppointmentRepository appointmentRepository,
-                                      NotificationService notificationService,
+                                      ApplicationEventPublisher eventPublisher,
                                       Clock clock,
                                       @Value("${app.reminders.enabled:true}") boolean enabled) {
         this.appointmentRepository = appointmentRepository;
-        this.notificationService = notificationService;
+        this.eventPublisher = eventPublisher;
         this.clock = clock;
         this.enabled = enabled;
     }
 
     @Scheduled(cron = "${app.reminders.cron:0 0 * * * *}")
+    @Transactional // a self-call would skip the annotation on sendDayBeforeReminders
     public void scheduledRun() {
         if (enabled) {
             sendDayBeforeReminders();
@@ -51,7 +54,8 @@ public class AppointmentReminderService {
         LocalDate tomorrow = LocalDate.now(clock).plusDays(1);
         List<Appointment> due = appointmentRepository.findDueForReminder(tomorrow);
         for (Appointment appointment : due) {
-            notificationService.appointmentReminder(AppointmentService.notificationInfo(appointment));
+            eventPublisher.publishEvent(new AppointmentNotificationEvent(
+                    AppointmentNotificationEvent.Kind.REMINDER, AppointmentService.notificationInfo(appointment)));
             appointment.setReminderSent(true);
         }
         appointmentRepository.saveAll(due);

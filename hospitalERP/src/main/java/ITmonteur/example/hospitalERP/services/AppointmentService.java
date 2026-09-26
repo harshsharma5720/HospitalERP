@@ -10,8 +10,10 @@ import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
 import ITmonteur.example.hospitalERP.repositories.PtRelativeRepository;
+import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,19 +32,19 @@ public class AppointmentService {
     private final PtRelativeRepository ptRelativeRepository;
     private final DoctorRepository doctorRepository;
     private final SlotService slotService;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
     private final CurrentUserService currentUserService;
 
     public AppointmentService(AppointmentRepository appointmentRepository, PtInfoRepository ptInfoRepository,
                               PtRelativeRepository ptRelativeRepository, DoctorRepository doctorRepository,
-                              SlotService slotService, NotificationService notificationService,
+                              SlotService slotService, ApplicationEventPublisher eventPublisher,
                               CurrentUserService currentUserService) {
         this.appointmentRepository = appointmentRepository;
         this.ptInfoRepository = ptInfoRepository;
         this.ptRelativeRepository = ptRelativeRepository;
         this.doctorRepository = doctorRepository;
         this.slotService = slotService;
-        this.notificationService = notificationService;
+        this.eventPublisher = eventPublisher;
         this.currentUserService = currentUserService;
     }
 
@@ -132,7 +134,9 @@ public class AppointmentService {
 
         Appointment saved = appointmentRepository.save(appointment);
         logger.info("Appointment {} booked for slot {}", saved.getAppointmentID(), slot.getId());
-        notificationService.appointmentBooked(notificationInfo(saved));
+        // Sent after commit by AppointmentNotificationListener
+        eventPublisher.publishEvent(new AppointmentNotificationEvent(
+                AppointmentNotificationEvent.Kind.BOOKED, notificationInfo(saved)));
         return AppointmentMapper.toDTO(saved);
     }
 
@@ -148,7 +152,8 @@ public class AppointmentService {
         slotService.releaseSlot(appointment.getSlot());
         Appointment saved = appointmentRepository.save(appointment);
         logger.info("Appointment {} cancelled", appointmentID);
-        notificationService.appointmentCancelled(notificationInfo(saved));
+        eventPublisher.publishEvent(new AppointmentNotificationEvent(
+                AppointmentNotificationEvent.Kind.CANCELLED, notificationInfo(saved)));
         return AppointmentMapper.toDTO(saved);
     }
 
