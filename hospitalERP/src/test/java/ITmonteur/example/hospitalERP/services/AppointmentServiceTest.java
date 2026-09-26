@@ -5,9 +5,6 @@ import ITmonteur.example.hospitalERP.entities.*;
 import ITmonteur.example.hospitalERP.exception.ConflictException;
 import ITmonteur.example.hospitalERP.exception.ForbiddenException;
 import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
-import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
-import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
-import ITmonteur.example.hospitalERP.repositories.PtRelativeRepository;
 import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,9 +28,9 @@ import static org.mockito.Mockito.*;
 class AppointmentServiceTest {
 
     @Mock private AppointmentRepository appointmentRepository;
-    @Mock private PtInfoRepository ptInfoRepository;
-    @Mock private PtRelativeRepository ptRelativeRepository;
-    @Mock private DoctorRepository doctorRepository;
+    @Mock private PtInfoService ptInfoService;
+    @Mock private PtRelativeService ptRelativeService;
+    @Mock private DoctorService doctorService;
     @Mock private SlotService slotService;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private CurrentUserService currentUserService;
@@ -44,8 +41,8 @@ class AppointmentServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AppointmentService(appointmentRepository, ptInfoRepository, ptRelativeRepository,
-                doctorRepository, slotService, eventPublisher, currentUserService);
+        service = new AppointmentService(appointmentRepository, ptInfoService, ptRelativeService,
+                doctorService, slotService, eventPublisher, currentUserService);
         me = patient(10L, 100L, "Asha");
         Doctor doctor = new Doctor();
         doctor.setId(7L);
@@ -59,7 +56,7 @@ class AppointmentServiceTest {
         when(currentUserService.isStaff()).thenReturn(false);
         when(currentUserService.hasRole(Role.PATIENT)).thenReturn(true);
         when(currentUserService.getCurrentUserId()).thenReturn(100L);
-        when(ptInfoRepository.findByUser_Id(100L)).thenReturn(Optional.of(me));
+        when(ptInfoService.findPatientEntityByUserId(100L)).thenReturn(Optional.of(me));
         when(slotService.lockAndBook(55L)).thenReturn(slot);
 
         AppointmentDTO request = new AppointmentDTO();
@@ -71,7 +68,7 @@ class AppointmentServiceTest {
         assertThat(result.getPtInfoId()).isEqualTo(10L);
         assertThat(result.getDoctorName()).isEqualTo("Dr Rao");
         assertThat(result.getStatus()).isEqualTo(AppointmentStatus.SCHEDULED);
-        verify(ptInfoRepository, never()).findById(999L);
+        verify(ptInfoService, never()).findPatientEntity(999L);
         verify(eventPublisher).publishEvent(notification(AppointmentNotificationEvent.Kind.BOOKED));
     }
 
@@ -80,10 +77,10 @@ class AppointmentServiceTest {
         when(currentUserService.isStaff()).thenReturn(false);
         when(currentUserService.hasRole(Role.PATIENT)).thenReturn(true);
         when(currentUserService.getCurrentUserId()).thenReturn(100L);
-        when(ptInfoRepository.findByUser_Id(100L)).thenReturn(Optional.of(me));
+        when(ptInfoService.findPatientEntityByUserId(100L)).thenReturn(Optional.of(me));
         PtRelative strangersRelative = new PtRelative();
         strangersRelative.setPtInfo(patient(11L, 101L, "Other"));
-        when(ptRelativeRepository.findById(3L)).thenReturn(Optional.of(strangersRelative));
+        when(ptRelativeService.findRelativeEntity(3L)).thenReturn(Optional.of(strangersRelative));
 
         AppointmentDTO request = new AppointmentDTO();
         request.setSlotId(55L);

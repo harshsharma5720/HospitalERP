@@ -1,5 +1,6 @@
 package ITmonteur.example.hospitalERP.services;
 
+import java.util.Optional;
 import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.dto.AppointmentMapper;
 import ITmonteur.example.hospitalERP.entities.*;
@@ -7,9 +8,6 @@ import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ForbiddenException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
-import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
-import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
-import ITmonteur.example.hospitalERP.repositories.PtRelativeRepository;
 import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,21 +26,21 @@ public class AppointmentService {
     private static final Logger logger = LoggerFactory.getLogger(AppointmentService.class);
 
     private final AppointmentRepository appointmentRepository;
-    private final PtInfoRepository ptInfoRepository;
-    private final PtRelativeRepository ptRelativeRepository;
-    private final DoctorRepository doctorRepository;
+    private final PtInfoService ptInfoService;
+    private final PtRelativeService ptRelativeService;
+    private final DoctorService doctorService;
     private final SlotService slotService;
     private final ApplicationEventPublisher eventPublisher;
     private final CurrentUserService currentUserService;
 
-    public AppointmentService(AppointmentRepository appointmentRepository, PtInfoRepository ptInfoRepository,
-                              PtRelativeRepository ptRelativeRepository, DoctorRepository doctorRepository,
+    public AppointmentService(AppointmentRepository appointmentRepository, PtInfoService ptInfoService,
+                              PtRelativeService ptRelativeService, DoctorService doctorService,
                               SlotService slotService, ApplicationEventPublisher eventPublisher,
                               CurrentUserService currentUserService) {
         this.appointmentRepository = appointmentRepository;
-        this.ptInfoRepository = ptInfoRepository;
-        this.ptRelativeRepository = ptRelativeRepository;
-        this.doctorRepository = doctorRepository;
+        this.ptInfoService = ptInfoService;
+        this.ptRelativeService = ptRelativeService;
+        this.doctorService = doctorService;
         this.slotService = slotService;
         this.eventPublisher = eventPublisher;
         this.currentUserService = currentUserService;
@@ -112,7 +110,7 @@ public class AppointmentService {
             if (dto.getPtInfoId() == null) {
                 throw new BadRequestException("ptInfoId is required when booking on behalf of a patient");
             }
-            ptInfo = ptInfoRepository.findById(dto.getPtInfoId())
+            ptInfo = ptInfoService.findPatientEntity(dto.getPtInfoId())
                     .orElseThrow(() -> new ResourceNotFoundException("Patient", "id", dto.getPtInfoId()));
         } else if (currentUserService.hasRole(Role.PATIENT)) {
             ptInfo = currentPatient();
@@ -239,11 +237,50 @@ public class AppointmentService {
         return appointmentRepository.countCompletedByDoctorId(doctorId);
     }
 
+    // ---------------------------------------------------------------- module API
+    // (used by clinical and administration instead of AppointmentRepository)
+
+    public Optional<Appointment> findAppointmentEntity(long appointmentId) {
+        return appointmentRepository.findById(appointmentId);
+    }
+
+    /** Called by the clinical module when a consultation is saved for an upcoming appointment. */
+    @Transactional
+    public void markCompletedByConsultation(Appointment appointment) {
+        appointment.setStatus(AppointmentStatus.COMPLETED);
+        appointmentRepository.save(appointment);
+    }
+
+    /** Whether the doctor has (or had) an appointment with the patient. */
+    public boolean hasAppointment(Long doctorId, Long patientId) {
+        return appointmentRepository.existsByDoctor_IdAndPtInfo_PatientId(doctorId, patientId);
+    }
+
+    public List<Appointment> findUpcomingForPatient(Long patientId) {
+        return appointmentRepository.findPendingByPatientId(patientId);
+    }
+
+    public List<Appointment> findUpcomingForDoctor(Long doctorId) {
+        return appointmentRepository.findPendingByDoctorId(doctorId);
+    }
+
+    /** Account deletion: removes all of a patient's appointments (consultations must be removed first). */
+    @Transactional
+    public void deleteAllForPatient(Long patientId) {
+        appointmentRepository.deleteByPatientId(patientId);
+    }
+
+    /** Account deletion: removes all of a doctor's appointments (consultations must be removed first). */
+    @Transactional
+    public void deleteAllForDoctor(Long doctorId) {
+        appointmentRepository.deleteByDoctorId(doctorId);
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private void applyPatientDetails(Appointment appointment, PtInfo ptInfo, AppointmentDTO dto) {
         if (dto.getRelativeId() != null) {
-            PtRelative relative = ptRelativeRepository.findById(dto.getRelativeId())
+            PtRelative relative = ptRelativeService.findRelativeEntity(dto.getRelativeId())
                     .orElseThrow(() -> new ResourceNotFoundException("Relative", "id", dto.getRelativeId()));
             if (relative.getPtInfo() == null
                     || !Objects.equals(relative.getPtInfo().getPatientId(), ptInfo.getPatientId())) {
@@ -296,7 +333,7 @@ public class AppointmentService {
     }
 
     private Doctor doctorByUserId(Long userId) {
-        return doctorRepository.findByUserId(userId)
+        return doctorService.findDoctorEntityByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "userId", userId));
     }
 
@@ -305,7 +342,7 @@ public class AppointmentService {
     }
 
     private PtInfo patientByUserId(Long userId) {
-        return ptInfoRepository.findByUser_Id(userId)
+        return ptInfoService.findPatientEntityByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Patient", "userId", userId));
     }
 

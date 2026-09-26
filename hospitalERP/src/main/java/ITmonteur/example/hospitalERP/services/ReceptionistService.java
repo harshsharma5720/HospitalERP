@@ -1,11 +1,11 @@
 package ITmonteur.example.hospitalERP.services;
 
+import java.util.Optional;
 import ITmonteur.example.hospitalERP.dto.ReceptionistDTO;
 import ITmonteur.example.hospitalERP.entities.*;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.ReceptionistRepository;
-import ITmonteur.example.hospitalERP.repositories.UserRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,16 +23,16 @@ public class ReceptionistService {
     private static final Logger logger = LoggerFactory.getLogger(ReceptionistService.class);
 
     private final ReceptionistRepository receptionistRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final ModelMapper modelMapper;
     private final CurrentUserService currentUserService;
     private final FileStorageService fileStorageService;
 
-    public ReceptionistService(ReceptionistRepository receptionistRepository, UserRepository userRepository,
+    public ReceptionistService(ReceptionistRepository receptionistRepository, UserService userService,
                                ModelMapper modelMapper, CurrentUserService currentUserService,
                                FileStorageService fileStorageService) {
         this.receptionistRepository = receptionistRepository;
-        this.userRepository = userRepository;
+        this.userService = userService;
         this.modelMapper = modelMapper;
         this.currentUserService = currentUserService;
         this.fileStorageService = fileStorageService;
@@ -73,11 +73,7 @@ public class ReceptionistService {
         }
         User user = receptionist.getUser();
         if (user != null) {
-            user.setEmail(receptionist.getEmail());
-            if (receptionist.getPhone() != null) {
-                user.setPhoneNumber(receptionist.getPhone());
-            }
-            userRepository.save(user);
+            userService.updateContactDetails(user, receptionist.getEmail(), receptionist.getPhone());
         }
         return this.convertToDTO(receptionistRepository.save(receptionist));
     }
@@ -89,5 +85,20 @@ public class ReceptionistService {
 
     private ReceptionistDTO convertToDTO(Receptionist receptionist) {
         return modelMapper.map(receptionist, ReceptionistDTO.class);
+    }
+
+    // ------------------------------------------------------------------ module API
+    // (used by other modules instead of ReceptionistRepository)
+
+    public Optional<Receptionist> findReceptionistEntity(Long receptionistId) {
+        return receptionistRepository.findById(receptionistId);
+    }
+
+    public Optional<Receptionist> findReceptionistEntityByUserId(Long userId) {
+        return receptionistRepository.findByUser_Id(userId);
+    }
+
+    public void deleteReceptionistEntity(Receptionist receptionist) {
+        receptionistRepository.delete(receptionist);
     }
 }

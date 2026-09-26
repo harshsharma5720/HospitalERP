@@ -7,7 +7,6 @@ import ITmonteur.example.hospitalERP.entities.Role;
 import ITmonteur.example.hospitalERP.entities.Shift;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
-import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.DoctorScheduleRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,14 +26,14 @@ public class DoctorScheduleService {
     private static final Logger logger = LoggerFactory.getLogger(DoctorScheduleService.class);
 
     private final DoctorScheduleRepository scheduleRepository;
-    private final DoctorRepository doctorRepository;
+    private final DoctorService doctorService;
     private final CurrentUserService currentUserService;
     private final ApplicationEventPublisher eventPublisher;
 
-    public DoctorScheduleService(DoctorScheduleRepository scheduleRepository, DoctorRepository doctorRepository,
+    public DoctorScheduleService(DoctorScheduleRepository scheduleRepository, DoctorService doctorService,
                                  CurrentUserService currentUserService, ApplicationEventPublisher eventPublisher) {
         this.scheduleRepository = scheduleRepository;
-        this.doctorRepository = doctorRepository;
+        this.doctorService = doctorService;
         this.currentUserService = currentUserService;
         this.eventPublisher = eventPublisher;
     }
@@ -148,7 +147,13 @@ public class DoctorScheduleService {
     }
 
     private Doctor doctorByUserId(Long userId) {
-        return doctorRepository.findByUserId(userId)
+        return doctorService.findDoctorEntityByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "userId", userId));
+    }
+
+    // Module API (account deletion): removes a doctor's weekly schedule
+    @Transactional
+    public void deleteAllForDoctor(Long doctorId) {
+        scheduleRepository.deleteByDoctorId(doctorId);
     }
 }

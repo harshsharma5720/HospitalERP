@@ -173,4 +173,10 @@ public class LeaveRequestService {
         return new LeaveRequestDTO(leave.getId(), user != null ? user.getId() : null, role,
                 leave.getStartDate(), leave.getEndDate(), leave.getReason(), leave.getStatus());
     }
+
+    // Module API (account deletion): removes all leave requests of a user
+    @Transactional
+    public void deleteAllForUser(Long userId) {
+        leaveRequestRepository.deleteByUserId(userId);
+    }
 }

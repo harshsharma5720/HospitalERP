@@ -1,5 +1,6 @@
 package ITmonteur.example.hospitalERP.services;
 
+import java.util.Optional;
 import ITmonteur.example.hospitalERP.dto.PtRelativeDTO;
 import ITmonteur.example.hospitalERP.entities.PtInfo;
 import ITmonteur.example.hospitalERP.entities.PtRelative;
@@ -130,5 +131,10 @@ public class PtRelativeService {
         relative.setDob(dto.getDob());
         relative.setRelationship(dto.getRelationship());
         relative.setPatientAadharNo(dto.getPatientAadharNo());
+    }
+
+    // Module API (used by the appointments module instead of PtRelativeRepository)
+    public Optional<PtRelative> findRelativeEntity(Long relativeId) {
+        return ptRelativeRepository.findById(relativeId);
     }
 }

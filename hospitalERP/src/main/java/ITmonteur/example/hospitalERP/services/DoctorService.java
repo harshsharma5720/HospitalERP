@@ -1,5 +1,6 @@
 package ITmonteur.example.hospitalERP.services;
 
+import java.util.Optional;
 import ITmonteur.example.hospitalERP.dto.DoctorDTO;
 import ITmonteur.example.hospitalERP.dto.DoctorMapper;
 import ITmonteur.example.hospitalERP.entities.Doctor;
@@ -9,7 +10,6 @@ import ITmonteur.example.hospitalERP.entities.User;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
-import ITmonteur.example.hospitalERP.repositories.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -25,15 +25,15 @@ public class DoctorService {
     private static final Logger logger = LoggerFactory.getLogger(DoctorService.class);
 
     private final DoctorRepository doctorRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final CurrentUserService currentUserService;
     private final FileStorageService fileStorageService;
 
     public DoctorService(DoctorRepository doctorRepository,
-                         UserRepository userRepository, CurrentUserService currentUserService,
+                         UserService userService, CurrentUserService currentUserService,
                          FileStorageService fileStorageService) {
         this.doctorRepository = doctorRepository;
-        this.userRepository = userRepository;
+        this.userService = userService;
         this.currentUserService = currentUserService;
         this.fileStorageService = fileStorageService;
     }
@@ -103,9 +103,7 @@ public class DoctorService {
         // Keep the login account's contact details in sync with the profile
         User user = doctor.getUser();
         if (user != null) {
-            user.setEmail(doctor.getEmail());
-            user.setPhoneNumber(doctor.getPhoneNumber());
-            userRepository.save(user);
+            userService.updateContactDetails(user, doctor.getEmail(), doctor.getPhoneNumber());
         }
         Doctor updatedDoctor = doctorRepository.save(doctor);
         logger.info("Doctor profile updated for user {}", userId);
@@ -115,5 +113,22 @@ public class DoctorService {
     private Doctor doctorByUserId(Long userId) {
         return doctorRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "userId", userId));
+    }
+
+    // ------------------------------------------------------------------ module API
+    // (used by other modules instead of DoctorRepository)
+
+    public Optional<Doctor> findDoctorEntity(Long doctorId) {
+        return doctorRepository.findById(doctorId);
+    }
+
+    public Optional<Doctor> findDoctorEntityByUserId(Long userId) {
+        return doctorRepository.findByUserId(userId);
+    }
+
+    /** Deletes the doctor row. Callers remove bookings, slots and schedule first. */
+    @Transactional
+    public void deleteDoctorEntity(Long doctorId) {
+        doctorRepository.deleteById(doctorId);
     }
 }

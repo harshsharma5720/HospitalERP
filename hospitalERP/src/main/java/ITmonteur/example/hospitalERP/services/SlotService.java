@@ -6,7 +6,6 @@ import ITmonteur.example.hospitalERP.entities.Shift;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ConflictException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
-import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.DoctorScheduleRepository;
 import ITmonteur.example.hospitalERP.repositories.SlotRepository;
 import org.slf4j.Logger;
@@ -33,15 +32,15 @@ public class SlotService {
     public static final int BOOKING_WINDOW_DAYS = 30;
 
     private final SlotRepository slotRepository;
-    private final DoctorRepository doctorRepository;
+    private final DoctorService doctorService;
     private final LeaveRequestService leaveRequestService;
     private final DoctorScheduleRepository doctorScheduleRepository;
 
-    public SlotService(SlotRepository slotRepository, DoctorRepository doctorRepository,
+    public SlotService(SlotRepository slotRepository, DoctorService doctorService,
                        LeaveRequestService leaveRequestService,
                        DoctorScheduleRepository doctorScheduleRepository) {
         this.slotRepository = slotRepository;
-        this.doctorRepository = doctorRepository;
+        this.doctorService = doctorService;
         this.leaveRequestService = leaveRequestService;
         this.doctorScheduleRepository = doctorScheduleRepository;
     }
@@ -172,7 +171,13 @@ public class SlotService {
     }
 
     private Doctor findDoctor(Long doctorId) {
-        return doctorRepository.findById(doctorId)
+        return doctorService.findDoctorEntity(doctorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
+    }
+
+    // Module API (account deletion): removes all slots of a doctor. Callers remove bookings first.
+    @Transactional
+    public void deleteAllForDoctor(Long doctorId) {
+        slotRepository.deleteByDoctorId(doctorId);
     }
 }

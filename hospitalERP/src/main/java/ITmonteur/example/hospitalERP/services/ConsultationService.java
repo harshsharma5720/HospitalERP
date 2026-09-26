@@ -6,10 +6,7 @@ import ITmonteur.example.hospitalERP.entities.*;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ForbiddenException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
-import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import ITmonteur.example.hospitalERP.repositories.ConsultationRepository;
-import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
-import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -31,19 +28,19 @@ public class ConsultationService {
     private static final Logger logger = LoggerFactory.getLogger(ConsultationService.class);
 
     private final ConsultationRepository consultationRepository;
-    private final AppointmentRepository appointmentRepository;
-    private final DoctorRepository doctorRepository;
-    private final PtInfoRepository ptInfoRepository;
+    private final AppointmentService appointmentService;
+    private final DoctorService doctorService;
+    private final PtInfoService ptInfoService;
     private final CurrentUserService currentUserService;
     private final Clock clock;
 
-    public ConsultationService(ConsultationRepository consultationRepository, AppointmentRepository appointmentRepository,
-                               DoctorRepository doctorRepository, PtInfoRepository ptInfoRepository,
+    public ConsultationService(ConsultationRepository consultationRepository, AppointmentService appointmentService,
+                               DoctorService doctorService, PtInfoService ptInfoService,
                                CurrentUserService currentUserService, Clock clock) {
         this.consultationRepository = consultationRepository;
-        this.appointmentRepository = appointmentRepository;
-        this.doctorRepository = doctorRepository;
-        this.ptInfoRepository = ptInfoRepository;
+        this.appointmentService = appointmentService;
+        this.doctorService = doctorService;
+        this.ptInfoService = ptInfoService;
         this.currentUserService = currentUserService;
         this.clock = clock;
     }
@@ -83,8 +80,7 @@ public class ConsultationService {
         consultation.replaceMedicines(dto.getMedicines().stream().map(ConsultationService::toItem).toList());
 
         if (appointment.isActive()) {
-            appointment.setStatus(AppointmentStatus.COMPLETED);
-            appointmentRepository.save(appointment);
+            appointmentService.markCompletedByConsultation(appointment);
         }
         Consultation saved = consultationRepository.save(consultation);
         logger.info("Consultation saved for appointment {} ({} medicines)", appointmentId, saved.getMedicines().size());
@@ -109,7 +105,7 @@ public class ConsultationService {
     /** The logged-in patient's own medical history. */
     public List<ConsultationDTO> getMyHistory() {
         Long userId = currentUserService.getCurrentUserId();
-        PtInfo patient = ptInfoRepository.findByUser_Id(userId)
+        PtInfo patient = ptInfoService.findPatientEntityByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Patient", "userId", userId));
         return consultationRepository.findHistoryByPatientId(patient.getPatientId()).stream().map(this::toDTO).toList();
     }
@@ -118,7 +114,7 @@ public class ConsultationService {
     public List<ConsultationDTO> getPatientHistory(Long patientId) {
         if (!currentUserService.hasRole(Role.ADMIN)) {
             Doctor doctor = currentDoctor();
-            if (!appointmentRepository.existsByDoctor_IdAndPtInfo_PatientId(doctor.getId(), patientId)) {
+            if (!appointmentService.hasAppointment(doctor.getId(), patientId)) {
                 throw new ForbiddenException("You can only view the history of your own patients");
             }
         }
@@ -150,14 +146,14 @@ public class ConsultationService {
 
     private Doctor currentDoctor() {
         Long userId = currentUserService.getCurrentUserId();
-        return doctorRepository.findByUserId(userId)
+        return doctorService.findDoctorEntityByUserId(userId)
                 .orElseThrow(() -> new ForbiddenException("Only doctors can do this"));
     }
 
     // ------------------------------------------------------------------ mapping
 
     private Appointment findAppointment(long appointmentId) {
-        return appointmentRepository.findById(appointmentId)
+        return appointmentService.findAppointmentEntity(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", appointmentId));
     }
 
@@ -212,5 +208,21 @@ public class ConsultationService {
 
     private static String trimToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    // ------------------------------------------------------------------ module API (account deletion)
+
+    /** Removes all consultations (and prescriptions) of a patient's appointments. */
+    @Transactional
+    public void deleteAllForPatient(Long patientId) {
+        consultationRepository.deleteItemsByPatientId(patientId);
+        consultationRepository.deleteByPatientId(patientId);
+    }
+
+    /** Removes all consultations (and prescriptions) of a doctor's appointments. */
+    @Transactional
+    public void deleteAllForDoctor(Long doctorId) {
+        consultationRepository.deleteItemsByDoctorId(doctorId);
+        consultationRepository.deleteByDoctorId(doctorId);
     }
 }

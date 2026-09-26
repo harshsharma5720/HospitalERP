@@ -1,5 +1,6 @@
 package ITmonteur.example.hospitalERP.services;
 
+import java.util.Optional;
 import ITmonteur.example.hospitalERP.dto.PatientMapper;
 import ITmonteur.example.hospitalERP.dto.PtInfoDTO;
 import ITmonteur.example.hospitalERP.entities.PtInfo;
@@ -8,7 +9,6 @@ import ITmonteur.example.hospitalERP.entities.User;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
-import ITmonteur.example.hospitalERP.repositories.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -25,14 +25,14 @@ public class PtInfoService {
     private static final Logger logger = LoggerFactory.getLogger(PtInfoService.class);
 
     private final PtInfoRepository ptInfoRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final CurrentUserService currentUserService;
     private final FileStorageService fileStorageService;
 
-    public PtInfoService(PtInfoRepository ptInfoRepository, UserRepository userRepository,
+    public PtInfoService(PtInfoRepository ptInfoRepository, UserService userService,
                          CurrentUserService currentUserService, FileStorageService fileStorageService) {
         this.ptInfoRepository = ptInfoRepository;
-        this.userRepository = userRepository;
+        this.userService = userService;
         this.currentUserService = currentUserService;
         this.fileStorageService = fileStorageService;
     }
@@ -87,11 +87,7 @@ public class PtInfoService {
         // Keep the login account's contact details in sync with the profile
         User user = ptInfo.getUser();
         if (user != null) {
-            user.setEmail(ptInfo.getEmail());
-            if (ptInfo.getContactNo() != null) {
-                user.setPhoneNumber(ptInfo.getContactNo());
-            }
-            userRepository.save(user);
+            userService.updateContactDetails(user, ptInfo.getEmail(), ptInfo.getContactNo());
         }
         PtInfoDTO updated = PatientMapper.toDTO(ptInfoRepository.save(ptInfo));
         logger.info("Patient profile updated for user {}", userId);
@@ -101,5 +97,22 @@ public class PtInfoService {
     private PtInfo patientByUserId(long userId) {
         return ptInfoRepository.findByUser_Id(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Patient", "userId", userId));
+    }
+
+    // ------------------------------------------------------------------ module API
+    // (used by other modules instead of PtInfoRepository)
+
+    public Optional<PtInfo> findPatientEntity(Long patientId) {
+        return ptInfoRepository.findById(patientId);
+    }
+
+    public Optional<PtInfo> findPatientEntityByUserId(Long userId) {
+        return ptInfoRepository.findByUser_Id(userId);
+    }
+
+    /** Deletes the patient row; relatives go with it (cascade). Callers remove bookings first. */
+    @Transactional
+    public void deletePatientEntity(Long patientId) {
+        ptInfoRepository.deleteById(patientId);
     }
 }

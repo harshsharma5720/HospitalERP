@@ -3,7 +3,6 @@ package ITmonteur.example.hospitalERP.services;
 import ITmonteur.example.hospitalERP.dto.*;
 import ITmonteur.example.hospitalERP.entities.*;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
-import ITmonteur.example.hospitalERP.repositories.*;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,17 +18,17 @@ public class AdminService {
     @Autowired
     private AuthService authService;
     @Autowired
-    private PtInfoRepository ptInfoRepository;
+    private PtInfoService ptInfoService;
     @Autowired
-    private DoctorRepository doctorRepository;
+    private DoctorService doctorService;
     @Autowired
-    private ReceptionistRepository receptionistRepository;
+    private ReceptionistService receptionistService;
     @Autowired
     private ModelMapper modelMapper;
     @Autowired
     private LeaveRequestService leaveRequestService;
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
     @Autowired
     private UserAccountService userAccountService;
 
@@ -47,7 +46,7 @@ public class AdminService {
     @Transactional
     public PtInfoDTO createPatient(RegisterRequestDTO registerRequestDTO) {
         User user = authService.createUser(registerRequestDTO, Role.PATIENT);
-        PtInfo patient = ptInfoRepository.findByUser_Id(user.getId())
+        PtInfo patient = ptInfoService.findPatientEntityByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Patient", "userId", user.getId()));
         return PatientMapper.toDTO(patient);
     }
@@ -56,7 +55,7 @@ public class AdminService {
     @Transactional
     public DoctorDTO createDoctor(RegisterRequestDTO registerRequestDTO) {
         User user = authService.createUser(registerRequestDTO, Role.DOCTOR);
-        Doctor doctor = doctorRepository.findByUserId(user.getId())
+        Doctor doctor = doctorService.findDoctorEntityByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "userId", user.getId()));
         return DoctorMapper.toDTO(doctor);
     }
@@ -65,7 +64,7 @@ public class AdminService {
     @Transactional
     public ReceptionistDTO createReceptionist(RegisterRequestDTO registerRequestDTO) {
         User user = authService.createUser(registerRequestDTO, Role.RECEPTIONIST);
-        Receptionist receptionist = receptionistRepository.findByUser_Id(user.getId())
+        Receptionist receptionist = receptionistService.findReceptionistEntityByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Receptionist", "userId", user.getId()));
         return modelMapper.map(receptionist, ReceptionistDTO.class);
     }
@@ -81,14 +80,14 @@ public class AdminService {
 
     // -------------------- Users --------------------
     public List<UserDTO> getAllUsers() {
-        return userRepository.findAll()
+        return userService.getAllUsers()
                 .stream()
                 .map(this::convertToDto)
                 .toList();
     }
 
     public UserDTO getUserById(Long userId) {
-        return userRepository.findById(userId)
+        return userService.findUser(userId)
                 .map(this::convertToDto)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
     }

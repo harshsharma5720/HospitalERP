@@ -5,10 +5,7 @@ import ITmonteur.example.hospitalERP.dto.PrescriptionItemDTO;
 import ITmonteur.example.hospitalERP.entities.*;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ForbiddenException;
-import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import ITmonteur.example.hospitalERP.repositories.ConsultationRepository;
-import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
-import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,9 +26,9 @@ import static org.mockito.Mockito.*;
 class ConsultationServiceTest {
 
     @Mock private ConsultationRepository consultationRepository;
-    @Mock private AppointmentRepository appointmentRepository;
-    @Mock private DoctorRepository doctorRepository;
-    @Mock private PtInfoRepository ptInfoRepository;
+    @Mock private AppointmentService appointmentService;
+    @Mock private DoctorService doctorService;
+    @Mock private PtInfoService ptInfoService;
     @Mock private CurrentUserService currentUserService;
 
     private ConsultationService service;
@@ -40,8 +37,8 @@ class ConsultationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ConsultationService(consultationRepository, appointmentRepository, doctorRepository,
-                ptInfoRepository, currentUserService, Clock.systemDefaultZone());
+        service = new ConsultationService(consultationRepository, appointmentService, doctorService,
+                ptInfoService, currentUserService, Clock.systemDefaultZone());
         User doctorUser = new User();
         doctorUser.setId(5L);
         doctor = new Doctor();
@@ -61,7 +58,7 @@ class ConsultationServiceTest {
         appointment.setPatientName("Asha");
         appointment.setDate(LocalDate.now());
         appointment.setStatus(AppointmentStatus.SCHEDULED);
-        lenient().when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
+        lenient().when(appointmentService.findAppointmentEntity(1L)).thenReturn(Optional.of(appointment));
         lenient().when(consultationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -79,15 +76,14 @@ class ConsultationServiceTest {
     @Test
     void treatingDoctorSavesConsultationAndCompletesAppointment() {
         when(currentUserService.getCurrentUserId()).thenReturn(5L);
-        when(doctorRepository.findByUserId(5L)).thenReturn(Optional.of(doctor));
+        when(doctorService.findDoctorEntityByUserId(5L)).thenReturn(Optional.of(doctor));
         when(consultationRepository.findByAppointment_AppointmentID(1L)).thenReturn(Optional.empty());
 
         ConsultationDTO saved = service.saveConsultation(1L, request());
 
         assertThat(saved.getDiagnosis()).isEqualTo("Viral fever");
         assertThat(saved.getMedicines()).extracting(PrescriptionItemDTO::getMedicineName).containsExactly("Paracetamol");
-        assertThat(appointment.getStatus()).isEqualTo(AppointmentStatus.COMPLETED);
-        assertThat(appointment.isCompleted()).isTrue();
+        verify(appointmentService).markCompletedByConsultation(appointment);
     }
 
     @Test
@@ -95,7 +91,7 @@ class ConsultationServiceTest {
         Doctor other = new Doctor();
         other.setId(8L);
         when(currentUserService.getCurrentUserId()).thenReturn(6L);
-        when(doctorRepository.findByUserId(6L)).thenReturn(Optional.of(other));
+        when(doctorService.findDoctorEntityByUserId(6L)).thenReturn(Optional.of(other));
 
         assertThatThrownBy(() -> service.saveConsultation(1L, request())).isInstanceOf(ForbiddenException.class);
         verify(consultationRepository, never()).save(any());
@@ -105,7 +101,7 @@ class ConsultationServiceTest {
     void cancelledAppointmentCannotGetAConsultation() {
         appointment.setStatus(AppointmentStatus.CANCELLED_BY_PATIENT);
         when(currentUserService.getCurrentUserId()).thenReturn(5L);
-        when(doctorRepository.findByUserId(5L)).thenReturn(Optional.of(doctor));
+        when(doctorService.findDoctorEntityByUserId(5L)).thenReturn(Optional.of(doctor));
 
         assertThatThrownBy(() -> service.saveConsultation(1L, request())).isInstanceOf(BadRequestException.class);
     }
@@ -113,7 +109,7 @@ class ConsultationServiceTest {
     @Test
     void followUpMustBeAfterTheVisit() {
         when(currentUserService.getCurrentUserId()).thenReturn(5L);
-        when(doctorRepository.findByUserId(5L)).thenReturn(Optional.of(doctor));
+        when(doctorService.findDoctorEntityByUserId(5L)).thenReturn(Optional.of(doctor));
         ConsultationDTO dto = request();
         dto.setFollowUpDate(LocalDate.now().minusDays(1));
 
@@ -136,8 +132,8 @@ class ConsultationServiceTest {
     void doctorWithoutAppointmentCannotSeePatientHistory() {
         when(currentUserService.hasRole(Role.ADMIN)).thenReturn(false);
         when(currentUserService.getCurrentUserId()).thenReturn(5L);
-        when(doctorRepository.findByUserId(5L)).thenReturn(Optional.of(doctor));
-        when(appointmentRepository.existsByDoctor_IdAndPtInfo_PatientId(7L, 42L)).thenReturn(false);
+        when(doctorService.findDoctorEntityByUserId(5L)).thenReturn(Optional.of(doctor));
+        when(appointmentService.hasAppointment(7L, 42L)).thenReturn(false);
 
         assertThatThrownBy(() -> service.getPatientHistory(42L)).isInstanceOf(ForbiddenException.class);
     }

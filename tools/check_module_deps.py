@@ -104,6 +104,8 @@ CLASS_MODULE = {
     'DoctorScheduleChangedEvent': 'scheduling', 'ScheduleChangeSlotCleaner': 'appointments',
     # added in step 1.9 (notifications after commit)
     'AppointmentNotificationEvent': 'appointments', 'AppointmentNotificationListener': 'appointments',
+    # added in step 1.11 (public API instead of UserRepository)
+    'UserService': 'identity',
 }
 
 
@@ -139,6 +141,7 @@ def main():
     names = sorted(classes, key=len, reverse=True)
     edges = collections.defaultdict(set)   # (from, to) -> {"A -> B"}
     hidden = collections.defaultdict(set)
+    foreign_repos = []                      # plan rule 2: no use of another module's repository
     for name, (path, module) in classes.items():
         src = strip_comments(open(path, encoding='utf-8').read())
         query_strings = ' '.join(re.findall(r'@Query\s*\((.*?)\)\s*\n', src, flags=re.S))
@@ -151,6 +154,8 @@ def main():
                 continue
             if re.search(r'\b' + other + r'\b', code):
                 edges[(module, other_module)].add(f'{name} -> {other}')
+                if other.endswith('Repository'):
+                    foreign_repos.append(f'{module}.{name} -> {other_module}.{other}')
             elif re.search(r'\b' + other + r'\b', query_strings):
                 hidden[(module, other_module)].add(f'{name} -> {other} (inside @Query)')
 
@@ -193,7 +198,11 @@ def main():
         print(f'      {a} -> {b}: {"; ".join(sorted(edges[(a, b)])[:3])}')
         print(f'      {b} -> {a}: {"; ".join(sorted(edges[(b, a)])[:3])}')
 
-    ok = not violations and not cycles and not unmapped
+    print(f"\nUses of another module's repository (plan rule 2): {len(foreign_repos)}")
+    for use in sorted(foreign_repos):
+        print(f'  {use}')
+
+    ok = not violations and not cycles and not unmapped and not foreign_repos
     print('\nRESULT: ' + ('OK - module boundaries respected' if ok else 'VIOLATIONS FOUND'))
     return 0 if ok else 1
 

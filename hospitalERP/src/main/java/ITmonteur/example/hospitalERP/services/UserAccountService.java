@@ -8,7 +8,6 @@ import ITmonteur.example.hospitalERP.entities.Role;
 import ITmonteur.example.hospitalERP.entities.User;
 import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
-import ITmonteur.example.hospitalERP.repositories.*;
 import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
@@ -33,38 +32,35 @@ public class UserAccountService {
 
     private static final Logger logger = LoggerFactory.getLogger(UserAccountService.class);
 
-    private final UserRepository userRepository;
-    private final PtInfoRepository ptInfoRepository;
-    private final DoctorRepository doctorRepository;
-    private final ReceptionistRepository receptionistRepository;
-    private final AppointmentRepository appointmentRepository;
-    private final SlotRepository slotRepository;
-    private final LeaveRequestRepository leaveRequestRepository;
-    private final ConsultationRepository consultationRepository;
-    private final DoctorScheduleRepository doctorScheduleRepository;
+    private final UserService userService;
+    private final PtInfoService ptInfoService;
+    private final DoctorService doctorService;
+    private final ReceptionistService receptionistService;
+    private final LeaveRequestService leaveRequestService;
+    private final AppointmentService appointmentService;
+    private final ConsultationService consultationService;
     private final SlotService slotService;
+    private final DoctorScheduleService doctorScheduleService;
     private final ApplicationEventPublisher eventPublisher;
     private final CurrentUserService currentUserService;
     private final EntityManager entityManager;
 
-    public UserAccountService(UserRepository userRepository, PtInfoRepository ptInfoRepository,
-                              DoctorRepository doctorRepository, ReceptionistRepository receptionistRepository,
-                              AppointmentRepository appointmentRepository, SlotRepository slotRepository,
-                              LeaveRequestRepository leaveRequestRepository,
-                              ConsultationRepository consultationRepository,
-                              DoctorScheduleRepository doctorScheduleRepository, SlotService slotService,
+    // Only other modules' services are used, never their repositories (plan rule 2)
+    public UserAccountService(UserService userService, PtInfoService ptInfoService, DoctorService doctorService,
+                              ReceptionistService receptionistService, LeaveRequestService leaveRequestService,
+                              AppointmentService appointmentService, ConsultationService consultationService,
+                              SlotService slotService, DoctorScheduleService doctorScheduleService,
                               ApplicationEventPublisher eventPublisher, CurrentUserService currentUserService,
                               EntityManager entityManager) {
-        this.userRepository = userRepository;
-        this.ptInfoRepository = ptInfoRepository;
-        this.doctorRepository = doctorRepository;
-        this.receptionistRepository = receptionistRepository;
-        this.appointmentRepository = appointmentRepository;
-        this.slotRepository = slotRepository;
-        this.leaveRequestRepository = leaveRequestRepository;
-        this.consultationRepository = consultationRepository;
-        this.doctorScheduleRepository = doctorScheduleRepository;
+        this.userService = userService;
+        this.ptInfoService = ptInfoService;
+        this.doctorService = doctorService;
+        this.receptionistService = receptionistService;
+        this.leaveRequestService = leaveRequestService;
+        this.appointmentService = appointmentService;
+        this.consultationService = consultationService;
         this.slotService = slotService;
+        this.doctorScheduleService = doctorScheduleService;
         this.eventPublisher = eventPublisher;
         this.currentUserService = currentUserService;
         this.entityManager = entityManager;
@@ -72,29 +68,30 @@ public class UserAccountService {
 
     @Transactional
     public void deleteUser(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userService.findUser(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
         if (user.getRole() == Role.ADMIN
                 && Objects.equals(currentUserService.getCurrentUserId(), userId)) {
             throw new BadRequestException("Admins cannot delete their own account");
         }
-        leaveRequestRepository.deleteByUserId(userId);
+        leaveRequestService.deleteAllForUser(userId);
 
         switch (user.getRole()) {
             case PATIENT -> {
-                ptInfoRepository.findByUser_Id(userId).ifPresent(this::deletePatientProfile);
-                userRepository.deleteById(userId); // by id: the persistence context was cleared
+                ptInfoService.findPatientEntityByUserId(userId).ifPresent(this::deletePatientProfile);
+                userService.deleteUserById(userId); // by id: the persistence context was cleared
             }
             case DOCTOR -> {
                 // The profile goes first (it references the user), then the login account
-                doctorRepository.findByUserId(userId).ifPresent(this::deleteDoctorProfile);
-                userRepository.deleteById(userId); // by id: the persistence context was cleared
+                doctorService.findDoctorEntityByUserId(userId).ifPresent(this::deleteDoctorProfile);
+                userService.deleteUserById(userId); // by id: the persistence context was cleared
             }
             case RECEPTIONIST -> {
-                receptionistRepository.findByUser_Id(userId).ifPresent(receptionistRepository::delete);
-                userRepository.delete(user);
+                receptionistService.findReceptionistEntityByUserId(userId)
+                        .ifPresent(receptionistService::deleteReceptionistEntity);
+                userService.deleteUser(user);
             }
-            default -> userRepository.delete(user);
+            default -> userService.deleteUser(user);
         }
         logger.info("Deleted user {} ({})", userId, user.getRole());
     }
@@ -112,7 +109,7 @@ public class UserAccountService {
     /** DELETE /api/doctor/delete/{doctorId} (admin): doctor.id, not the user id. */
     @Transactional
     public void deleteDoctorByDoctorId(Long doctorId) {
-        Doctor doctor = doctorRepository.findById(doctorId)
+        Doctor doctor = doctorService.findDoctorEntity(doctorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
         if (doctor.getUser() != null) {
             deleteUser(doctor.getUser().getId());
@@ -125,41 +122,39 @@ public class UserAccountService {
     /** DELETE /api/receptionist/delete/{receptionistId} (admin): receptionist.id, not the user id. */
     @Transactional
     public void deleteReceptionistByReceptionistId(Long receptionistId) {
-        Receptionist receptionist = receptionistRepository.findById(receptionistId)
+        Receptionist receptionist = receptionistService.findReceptionistEntity(receptionistId)
                 .orElseThrow(() -> new ResourceNotFoundException("Receptionist", "id", receptionistId));
         if (receptionist.getUser() != null) {
             deleteUser(receptionist.getUser().getId());
         } else {
-            receptionistRepository.delete(receptionist); // legacy row without a login
+            receptionistService.deleteReceptionistEntity(receptionist); // legacy row without a login
         }
         logger.info("Receptionist deleted with ID: {}", receptionistId);
     }
 
     private void deletePatientProfile(PtInfo patient) {
         Long patientId = patient.getPatientId();
-        List<Appointment> upcoming = appointmentRepository.findPendingByPatientId(patientId);
+        List<Appointment> upcoming = appointmentService.findUpcomingForPatient(patientId);
         upcoming.forEach(a -> slotService.releaseSlot(a.getSlot()));
         writeAndForgetLoadedEntities();
-        consultationRepository.deleteItemsByPatientId(patientId);
-        consultationRepository.deleteByPatientId(patientId);
-        appointmentRepository.deleteByPatientId(patientId);
-        ptInfoRepository.deleteById(patientId); // relatives are removed by cascade
+        consultationService.deleteAllForPatient(patientId);
+        appointmentService.deleteAllForPatient(patientId);
+        ptInfoService.deletePatientEntity(patientId); // relatives are removed by cascade
     }
 
     /** Also used for legacy doctor rows that have no linked user. */
     @Transactional
     public void deleteDoctorProfile(Doctor doctor) {
         Long doctorId = doctor.getId();
-        List<Appointment> upcoming = appointmentRepository.findPendingByDoctorId(doctorId);
+        List<Appointment> upcoming = appointmentService.findUpcomingForDoctor(doctorId);
         upcoming.forEach(a -> eventPublisher.publishEvent(new AppointmentNotificationEvent(
                 AppointmentNotificationEvent.Kind.CANCELLED, AppointmentService.notificationInfo(a))));
         writeAndForgetLoadedEntities();
-        consultationRepository.deleteItemsByDoctorId(doctorId);
-        consultationRepository.deleteByDoctorId(doctorId);
-        appointmentRepository.deleteByDoctorId(doctorId);
-        slotRepository.deleteByDoctorId(doctorId);
-        doctorScheduleRepository.deleteByDoctorId(doctorId);
-        doctorRepository.deleteById(doctorId);
+        consultationService.deleteAllForDoctor(doctorId);
+        appointmentService.deleteAllForDoctor(doctorId);
+        slotService.deleteAllForDoctor(doctorId);
+        doctorScheduleService.deleteAllForDoctor(doctorId);
+        doctorService.deleteDoctorEntity(doctorId);
     }
 
     /**
