@@ -1,10 +1,6 @@
 package ITmonteur.example.hospitalERP.configuration;
 
-import ITmonteur.example.hospitalERP.controller.AccountController;
-import ITmonteur.example.hospitalERP.controller.AppointmentController;
-import ITmonteur.example.hospitalERP.controller.AuthController;
-import ITmonteur.example.hospitalERP.controller.DoctorController;
-import ITmonteur.example.hospitalERP.controller.LeaveRequestController;
+import ITmonteur.example.hospitalERP.controller.*;
 import ITmonteur.example.hospitalERP.services.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +19,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Verifies the URL-level access rules in SecurityConfig. */
 @WebMvcTest(controllers = {AppointmentController.class, DoctorController.class, AccountController.class,
-        LeaveRequestController.class, AuthController.class})
+        LeaveRequestController.class, AuthController.class,
+        // moved endpoints (steps 1.6 / 1.7): same URLs, same rules
+        DoctorAppointmentController.class, ReceptionistAppointmentController.class,
+        DoctorScheduleController.class, DoctorDirectoryController.class})
 @Import({SecurityConfig.class, JWTAuthenticationFilter.class})
 @TestPropertySource(properties = "app.cors.allowed-origins=http://localhost:3000")
 class SecurityRulesTest {
@@ -107,5 +106,46 @@ class SecurityRulesTest {
                         .contentType("application/json")
                         .content("{\"username\":\"a\",\"email\":\"not-an-email\",\"password\":\"1\",\"phoneNumber\":\"x\"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    // ---------------------------------------------------------------- moved endpoints keep their rules
+
+    @Test
+    void publicDoctorDirectoryUnderPatientPathNeedsNoLogin() throws Exception {
+        when(doctorService.getAllDoctors()).thenReturn(List.of());
+        mockMvc.perform(get("/api/patient/getAllDoctors")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/patient/getAllBySpecialization").param("specialization", "NEUROLOGY"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "PATIENT")
+    void patientCannotUseDoctorOrFrontDeskAppointmentEndpoints() throws Exception {
+        mockMvc.perform(put("/api/doctor/complete/1")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/doctor/doctorPendingAppointments/1")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/doctor/1/schedule")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/receptionist/getAppointments")).andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/receptionist/deleteAppointment/1")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void anonymousUserGets401OnMovedEndpoints() throws Exception {
+        mockMvc.perform(put("/api/doctor/complete/1")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/receptionist/getAppointments")).andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/api/patient/deleteAccount/1")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(roles = "RECEPTIONIST")
+    void receptionistCanUseFrontDeskEndpointsButNotDeleteStaff() throws Exception {
+        mockMvc.perform(get("/api/receptionist/getAppointments")).andExpect(status().isOk());
+        mockMvc.perform(delete("/api/receptionist/delete/1")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "DOCTOR")
+    void doctorCanUseTheirAppointmentAndScheduleEndpoints() throws Exception {
+        mockMvc.perform(put("/api/doctor/complete/1")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/doctor/1/schedule")).andExpect(status().isOk());
     }
 }

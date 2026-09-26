@@ -286,6 +286,26 @@ cd hospitalERP
 
 # Run tests (no MySQL needed — they use an in-memory H2 database)
 ./mvnw test
+
+# If tests fail to start with "insufficient memory", give the test JVM a smaller heap
+./mvnw test -DargLine="-Xms64m -Xmx512m"
+```
+
+### Module boundaries
+
+The backend is being split into business modules (identity, patients, staff, scheduling, appointments, clinical, administration, …). See [docs/MULTI_MODULE_PLAN.md](docs/MULTI_MODULE_PLAN.md) for the rules and the progress log. Run this check before committing:
+
+```bash
+python tools/check_module_deps.py            # prints "RESULT: OK - module boundaries respected"
+python tools/check_module_deps.py --verbose  # also lists every module-to-module dependency
+```
+
+It fails (exit code 1) if a module uses a module it shouldn't, if two modules depend on each other, or if a module uses another module's repository. When you add a class, add it to `CLASS_MODULE` in the script.
+
+`EndpointContractTest` freezes the public API (all URLs, methods and role checks) in `src/test/resources/api-endpoints.txt`. After an intended API change, regenerate it with:
+
+```bash
+./mvnw test -Dtest=EndpointContractTest -DupdateEndpointSnapshot=true
 ```
 
 ### Frontend

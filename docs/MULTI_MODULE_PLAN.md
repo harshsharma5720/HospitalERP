@@ -381,7 +381,23 @@ Work goes one step at a time. After each step: report, then wait for approval be
 | 1.9 Notifications after commit | ✅ done | 2026-09-25 | New `AppointmentNotificationEvent(kind, info)` (kinds: BOOKED, CANCELLED, CANCELLED_BY_DOCTOR_LEAVE, REMINDER). The 5 senders now publish it instead of calling `NotificationService`: booking, cancel (`AppointmentService`), leave cancellation (`AppointmentLeaveCanceller`), doctor-account deletion (`UserAccountService`) and reminders (`AppointmentReminderService`, whose scheduled entry point is now `@Transactional` because a self-call skipped it). `AppointmentNotificationListener` sends the messages via `@TransactionalEventListener(AFTER_COMMIT)`. **Behaviour fix:** a change that rolls back no longer sends a message. New `NotificationsH2Test`: (1) booking/cancel notify once and a failed booking adds nothing (written first, passed on the old code); (2) rolled-back → nothing sent, committed → sent, which fails with the old immediate sending (verified). Unit tests adapted. Checker still OK. Backend 78 green (1 skipped). |
 | — Commit | ✅ | 2026-09-26 | Step 1.9 committed (`7a92a6e`). |
 | 1.11 No cross-module repository use | ✅ done | 2026-09-26 | Checker now also enforces plan rule 2 (found 24 uses). New `UserService` (identity) replaces `UserRepository` outside identity, incl. `updateContactDetails` for the profile updates. Owning modules got small public methods (`find…Entity…`, `delete…Entity`, `deleteAllFor…`, `findUpcomingFor…`, `hasAppointment`, `markCompletedByConsultation`). `AppointmentService`, `ConsultationService`, `SlotService`, `DoctorScheduleService`, `AdminService`, `UserAccountService` (and the profile services) now call those instead of foreign repositories; account deletion keeps the same order of operations. Unit tests switched to service mocks. **Checker: OK on all 4 rules (0 disallowed, 0 cycles, 0 foreign repositories).** Backend 78 green (1 skipped); endpoint snapshot unchanged. |
-| 1.10 Phase 1 wrap-up | ⏳ | | |
+| — Commit | ✅ | 2026-09-26 | Step 1.11 committed (`7c74219`). |
+| 1.10 Phase 1 wrap-up | ✅ done | 2026-09-26 | `SecurityRulesTest` now includes the 4 controllers added in 1.6 (+5 checks: public directory, patient forbidden on doctor/front-desk endpoints, anonymous 401, receptionist allowed but can't delete staff, doctor allowed). README documents the checker, the endpoint snapshot and the small-heap test command. Final run: checker OK, backend 83 green (1 skipped), frontend 13 green, frontend build OK. |
+
+**Phase 1 exit criteria: all met (2026-09-26).**
+- 0 module cycles, 0 disallowed dependencies, 0 cross-module repository calls (`tools/check_module_deps.py` → OK)
+- all tests green: backend 83 (1 skipped, needs MySQL), frontend 13
+- endpoint snapshot identical (83 endpoints)
+- `FeatureFlowH2Test` green (full booking → consultation → PDF flow and the new safety tests)
+
+Behaviour changes in Phase 1, all intended:
+- deleting an account with upcoming bookings no longer fails (1.3);
+- notifications only go out after a successful commit (1.9);
+- the reminder job now really runs in a transaction (1.9).
+
+Everything else is structural.
+
+| Phase 2 | ⏳ waiting for approval | | Package by module + Spring Modulith (§6). |
 
 **Note: running tests when memory is low (found in step 1.1).** Mockito attaches itself to the test JVM by starting a second Java process. With less than about 1 GB of free memory that process can't start, and every test using mocks fails with `Could not initialize plugin: interface org.mockito.plugins.MockMaker`. It isn't a code problem. Workarounds:
 - run with `-DargLine="-Xms64m -Xmx512m -XX:+UseSerialGC -javaagent:C:/Users/<you>/.m2/repository/org/mockito/mockito-core/5.17.0/mockito-core-5.17.0.jar"`; or
