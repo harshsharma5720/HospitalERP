@@ -2,7 +2,6 @@ package com.itmonteur.hospitalerp.appointments;
 
 import java.util.Optional;
 import com.itmonteur.hospitalerp.appointments.internal.AppointmentMapper;
-import ITmonteur.example.hospitalERP.entities.*;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ForbiddenException;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;

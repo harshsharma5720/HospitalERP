@@ -1,8 +1,7 @@
 package com.itmonteur.hospitalerp;
 
-import ITmonteur.example.hospitalERP.entities.*;
 import com.itmonteur.hospitalerp.appointments.internal.AppointmentRepository;
-import ITmonteur.example.hospitalERP.repositories.ConsultationRepository;
+import com.itmonteur.hospitalerp.clinical.internal.ConsultationRepository;
 import com.itmonteur.hospitalerp.staff.internal.LeaveRequestRepository;
 import com.itmonteur.hospitalerp.scheduling.internal.SlotRepository;
 import com.itmonteur.hospitalerp.common.Gender;
@@ -19,6 +18,8 @@ import com.itmonteur.hospitalerp.scheduling.Shift;
 import com.itmonteur.hospitalerp.scheduling.Slot;
 import com.itmonteur.hospitalerp.appointments.Appointment;
 import com.itmonteur.hospitalerp.appointments.AppointmentStatus;
+import com.itmonteur.hospitalerp.clinical.Consultation;
+import com.itmonteur.hospitalerp.clinical.PrescriptionItem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

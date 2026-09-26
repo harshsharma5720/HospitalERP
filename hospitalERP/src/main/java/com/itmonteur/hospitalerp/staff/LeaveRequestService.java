@@ -1,6 +1,5 @@
 package com.itmonteur.hospitalerp.staff;
 
-import ITmonteur.example.hospitalERP.entities.*;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ConflictException;
 import com.itmonteur.hospitalerp.common.ForbiddenException;

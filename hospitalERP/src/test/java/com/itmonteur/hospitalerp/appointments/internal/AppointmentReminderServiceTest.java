@@ -1,6 +1,5 @@
 package com.itmonteur.hospitalerp.appointments.internal;
 
-import ITmonteur.example.hospitalERP.entities.*;
 import com.itmonteur.hospitalerp.appointments.AppointmentNotificationEvent;
 import com.itmonteur.hospitalerp.appointments.Appointment;
 import com.itmonteur.hospitalerp.appointments.AppointmentStatus;

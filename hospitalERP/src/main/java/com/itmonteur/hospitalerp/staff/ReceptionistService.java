@@ -1,7 +1,6 @@
 package com.itmonteur.hospitalerp.staff;
 
 import java.util.Optional;
-import ITmonteur.example.hospitalERP.entities.*;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
 import com.itmonteur.hospitalerp.staff.internal.ReceptionistRepository;

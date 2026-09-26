@@ -1,8 +1,8 @@
-package ITmonteur.example.hospitalERP.controller;
+package com.itmonteur.hospitalerp.clinical.web;
 
-import ITmonteur.example.hospitalERP.dto.ConsultationDTO;
-import ITmonteur.example.hospitalERP.services.ConsultationService;
-import ITmonteur.example.hospitalERP.services.PrescriptionPdfService;
+import com.itmonteur.hospitalerp.clinical.ConsultationDTO;
+import com.itmonteur.hospitalerp.clinical.ConsultationService;
+import com.itmonteur.hospitalerp.clinical.internal.PrescriptionPdfService;
 import jakarta.validation.Valid;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;

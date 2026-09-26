@@ -18,6 +18,7 @@ import com.itmonteur.hospitalerp.staff.ReceptionistService;
 import com.itmonteur.hospitalerp.scheduling.DoctorScheduleService;
 import com.itmonteur.hospitalerp.scheduling.SlotService;
 import com.itmonteur.hospitalerp.appointments.AppointmentService;
+import com.itmonteur.hospitalerp.clinical.ConsultationService;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

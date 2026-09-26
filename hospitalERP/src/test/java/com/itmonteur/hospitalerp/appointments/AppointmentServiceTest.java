@@ -1,6 +1,5 @@
 package com.itmonteur.hospitalerp.appointments;
 
-import ITmonteur.example.hospitalERP.entities.*;
 import com.itmonteur.hospitalerp.common.ConflictException;
 import com.itmonteur.hospitalerp.common.ForbiddenException;
 import com.itmonteur.hospitalerp.appointments.internal.AppointmentRepository;

@@ -1,7 +1,5 @@
 package ITmonteur.example.hospitalERP.services;
 
-import ITmonteur.example.hospitalERP.dto.*;
-import ITmonteur.example.hospitalERP.entities.*;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
 import com.itmonteur.hospitalerp.identity.AuthService;
 import com.itmonteur.hospitalerp.identity.RegisterRequestDTO;

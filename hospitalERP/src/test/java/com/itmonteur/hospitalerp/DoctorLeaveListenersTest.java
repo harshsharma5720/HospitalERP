@@ -1,6 +1,5 @@
 package com.itmonteur.hospitalerp;
 
-import ITmonteur.example.hospitalERP.entities.*;
 import com.itmonteur.hospitalerp.staff.DoctorLeaveApprovedEvent;
 import com.itmonteur.hospitalerp.appointments.internal.AppointmentRepository;
 import com.itmonteur.hospitalerp.scheduling.internal.SlotRepository;

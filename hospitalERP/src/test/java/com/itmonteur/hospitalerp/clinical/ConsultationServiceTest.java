@@ -1,11 +1,8 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.clinical;
 
-import ITmonteur.example.hospitalERP.dto.ConsultationDTO;
-import ITmonteur.example.hospitalERP.dto.PrescriptionItemDTO;
-import ITmonteur.example.hospitalERP.entities.*;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ForbiddenException;
-import ITmonteur.example.hospitalERP.repositories.ConsultationRepository;
+import com.itmonteur.hospitalerp.clinical.internal.ConsultationRepository;
 import com.itmonteur.hospitalerp.identity.CurrentUserService;
 import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.identity.User;

@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.dto;
+package com.itmonteur.hospitalerp.clinical;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;

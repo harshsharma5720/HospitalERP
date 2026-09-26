@@ -1,6 +1,5 @@
 package com.itmonteur.hospitalerp;
 
-import ITmonteur.example.hospitalERP.entities.*;
 import com.itmonteur.hospitalerp.identity.UserRegisteredEvent;
 import com.itmonteur.hospitalerp.staff.internal.DoctorRepository;
 import com.itmonteur.hospitalerp.patients.internal.PtInfoRepository;
