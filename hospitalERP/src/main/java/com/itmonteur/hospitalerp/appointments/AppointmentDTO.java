@@ -1,6 +1,5 @@
-package ITmonteur.example.hospitalERP.dto;
+package com.itmonteur.hospitalerp.appointments;
 
-import ITmonteur.example.hospitalERP.entities.AppointmentStatus;
 import com.itmonteur.hospitalerp.common.Gender;
 import com.itmonteur.hospitalerp.scheduling.Shift;
 

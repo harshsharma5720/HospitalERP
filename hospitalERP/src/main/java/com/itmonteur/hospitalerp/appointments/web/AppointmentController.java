@@ -1,7 +1,7 @@
-package ITmonteur.example.hospitalERP.controller;
+package com.itmonteur.hospitalerp.appointments.web;
 
-import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
-import ITmonteur.example.hospitalERP.services.AppointmentService;
+import com.itmonteur.hospitalerp.appointments.AppointmentDTO;
+import com.itmonteur.hospitalerp.appointments.AppointmentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

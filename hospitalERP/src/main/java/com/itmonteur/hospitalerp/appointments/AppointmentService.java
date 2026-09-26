@@ -1,14 +1,12 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.appointments;
 
 import java.util.Optional;
-import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
-import ITmonteur.example.hospitalERP.dto.AppointmentMapper;
+import com.itmonteur.hospitalerp.appointments.internal.AppointmentMapper;
 import ITmonteur.example.hospitalERP.entities.*;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ForbiddenException;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
-import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
-import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
+import com.itmonteur.hospitalerp.appointments.internal.AppointmentRepository;
 import com.itmonteur.hospitalerp.common.Gender;
 import com.itmonteur.hospitalerp.notifications.NotificationService;
 import com.itmonteur.hospitalerp.identity.CurrentUserService;
@@ -367,7 +365,7 @@ public class AppointmentService {
         return appointments.stream().map(AppointmentMapper::toDTO).toList();
     }
 
-    static NotificationService.AppointmentInfo notificationInfo(Appointment appointment) {
+    public static NotificationService.AppointmentInfo notificationInfo(Appointment appointment) {
         PtInfo patient = appointment.getPtInfo();
         Doctor doctor = appointment.getDoctor();
         Slot slot = appointment.getSlot();

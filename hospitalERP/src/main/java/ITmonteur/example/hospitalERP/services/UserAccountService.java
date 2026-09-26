@@ -1,6 +1,6 @@
 package ITmonteur.example.hospitalERP.services;
 
-import ITmonteur.example.hospitalERP.entities.Appointment;
+import com.itmonteur.hospitalerp.appointments.Appointment;
 import com.itmonteur.hospitalerp.staff.Doctor;
 import com.itmonteur.hospitalerp.patients.PtInfo;
 import com.itmonteur.hospitalerp.staff.Receptionist;
@@ -8,7 +8,7 @@ import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.identity.User;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
-import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
+import com.itmonteur.hospitalerp.appointments.AppointmentNotificationEvent;
 import com.itmonteur.hospitalerp.identity.CurrentUserService;
 import com.itmonteur.hospitalerp.identity.UserService;
 import com.itmonteur.hospitalerp.patients.PtInfoService;
@@ -17,6 +17,7 @@ import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import com.itmonteur.hospitalerp.staff.ReceptionistService;
 import com.itmonteur.hospitalerp.scheduling.DoctorScheduleService;
 import com.itmonteur.hospitalerp.scheduling.SlotService;
+import com.itmonteur.hospitalerp.appointments.AppointmentService;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

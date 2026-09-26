@@ -1,11 +1,9 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.appointments;
 
-import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.entities.*;
 import com.itmonteur.hospitalerp.common.ConflictException;
 import com.itmonteur.hospitalerp.common.ForbiddenException;
-import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
-import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
+import com.itmonteur.hospitalerp.appointments.internal.AppointmentRepository;
 import com.itmonteur.hospitalerp.common.Gender;
 import com.itmonteur.hospitalerp.identity.CurrentUserService;
 import com.itmonteur.hospitalerp.identity.Role;

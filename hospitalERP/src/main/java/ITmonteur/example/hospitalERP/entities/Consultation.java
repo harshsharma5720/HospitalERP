@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.itmonteur.hospitalerp.appointments.Appointment;
 
 // The doctor's record of a completed appointment: findings, diagnosis and prescription.
 @Entity

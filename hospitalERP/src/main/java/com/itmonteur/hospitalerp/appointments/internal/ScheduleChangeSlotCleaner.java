@@ -1,7 +1,6 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.appointments.internal;
 
 import com.itmonteur.hospitalerp.scheduling.DoctorScheduleChangedEvent;
-import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import com.itmonteur.hospitalerp.scheduling.SlotService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;

@@ -1,7 +1,7 @@
-package ITmonteur.example.hospitalERP.repositories;
+package com.itmonteur.hospitalerp.appointments.internal;
 
-import ITmonteur.example.hospitalERP.entities.Appointment;
-import ITmonteur.example.hospitalERP.entities.AppointmentStatus;
+import com.itmonteur.hospitalerp.appointments.Appointment;
+import com.itmonteur.hospitalerp.appointments.AppointmentStatus;
 import com.itmonteur.hospitalerp.staff.Doctor;
 import com.itmonteur.hospitalerp.scheduling.Shift;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -22,10 +22,10 @@ import java.util.List;
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
     String PENDING = " a.isCompleted = false AND a.status IN ("
-            + "ITmonteur.example.hospitalERP.entities.AppointmentStatus.SCHEDULED, "
-            + "ITmonteur.example.hospitalERP.entities.AppointmentStatus.CONFIRMED) ";
+            + "com.itmonteur.hospitalerp.appointments.AppointmentStatus.SCHEDULED, "
+            + "com.itmonteur.hospitalerp.appointments.AppointmentStatus.CONFIRMED) ";
     String COMPLETED = " (a.isCompleted = true OR a.status = "
-            + "ITmonteur.example.hospitalERP.entities.AppointmentStatus.COMPLETED) ";
+            + "com.itmonteur.hospitalerp.appointments.AppointmentStatus.COMPLETED) ";
 
     List<Appointment> findByDoctor_Name(String doctorName);
 

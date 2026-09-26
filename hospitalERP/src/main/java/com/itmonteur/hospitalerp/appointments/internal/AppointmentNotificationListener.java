@@ -1,6 +1,6 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.appointments.internal;
 
-import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
+import com.itmonteur.hospitalerp.appointments.AppointmentNotificationEvent;
 import com.itmonteur.hospitalerp.notifications.NotificationService;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;

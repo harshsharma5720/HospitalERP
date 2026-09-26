@@ -1,10 +1,10 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.appointments.internal;
 
-import ITmonteur.example.hospitalERP.entities.Appointment;
-import ITmonteur.example.hospitalERP.entities.AppointmentStatus;
+import com.itmonteur.hospitalerp.appointments.Appointment;
+import com.itmonteur.hospitalerp.appointments.AppointmentStatus;
 import com.itmonteur.hospitalerp.staff.DoctorLeaveApprovedEvent;
-import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
-import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
+import com.itmonteur.hospitalerp.appointments.AppointmentNotificationEvent;
+import com.itmonteur.hospitalerp.appointments.AppointmentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
