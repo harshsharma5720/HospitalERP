@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import com.itmonteur.hospitalerp.common.Gender;
+import com.itmonteur.hospitalerp.identity.User;
 
 @Entity
 @Table(name = "patient")

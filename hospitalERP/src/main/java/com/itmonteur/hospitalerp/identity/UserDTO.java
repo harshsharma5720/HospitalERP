@@ -1,6 +1,5 @@
-package ITmonteur.example.hospitalERP.dto;
+package com.itmonteur.hospitalerp.identity;
 
-import ITmonteur.example.hospitalERP.entities.Role;
 
 public class UserDTO {
 

@@ -1,13 +1,15 @@
 package com.itmonteur.hospitalerp;
 
 import ITmonteur.example.hospitalERP.entities.*;
-import ITmonteur.example.hospitalERP.events.UserRegisteredEvent;
+import com.itmonteur.hospitalerp.identity.UserRegisteredEvent;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
 import ITmonteur.example.hospitalERP.repositories.ReceptionistRepository;
 import ITmonteur.example.hospitalERP.services.PatientProfileCreator;
 import ITmonteur.example.hospitalERP.services.StaffProfileCreator;
 import com.itmonteur.hospitalerp.common.Gender;
+import com.itmonteur.hospitalerp.identity.Role;
+import com.itmonteur.hospitalerp.identity.User;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 

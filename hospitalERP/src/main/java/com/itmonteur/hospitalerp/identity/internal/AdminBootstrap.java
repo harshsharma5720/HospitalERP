@@ -1,9 +1,8 @@
-package ITmonteur.example.hospitalERP.configuration;
+package com.itmonteur.hospitalerp.identity.internal;
 
-import ITmonteur.example.hospitalERP.dto.RegisterRequestDTO;
-import ITmonteur.example.hospitalERP.entities.Role;
-import ITmonteur.example.hospitalERP.repositories.UserRepository;
-import ITmonteur.example.hospitalERP.services.AuthService;
+import com.itmonteur.hospitalerp.identity.RegisterRequestDTO;
+import com.itmonteur.hospitalerp.identity.Role;
+import com.itmonteur.hospitalerp.identity.AuthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

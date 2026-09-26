@@ -1,6 +1,5 @@
-package ITmonteur.example.hospitalERP.events;
+package com.itmonteur.hospitalerp.identity;
 
-import ITmonteur.example.hospitalERP.entities.User;
 
 /**
  * Published by the identity module (AuthService.createUser) right after a user is saved.

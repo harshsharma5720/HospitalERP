@@ -1,14 +1,11 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.identity;
 
-import ITmonteur.example.hospitalERP.entities.Role;
-import ITmonteur.example.hospitalERP.entities.User;
-import ITmonteur.example.hospitalERP.events.UserRegisteredEvent;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ConflictException;
-import ITmonteur.example.hospitalERP.repositories.UserRepository;
-import ITmonteur.example.hospitalERP.dto.AuthResponseDTO;
-import ITmonteur.example.hospitalERP.dto.LoginRequestDTO;
-import ITmonteur.example.hospitalERP.dto.RegisterRequestDTO;
+import com.itmonteur.hospitalerp.identity.internal.UserRepository;
+import com.itmonteur.hospitalerp.identity.internal.JWTService;
+import com.itmonteur.hospitalerp.identity.internal.LoginAttemptService;
+import com.itmonteur.hospitalerp.identity.internal.OtpService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;

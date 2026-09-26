@@ -1,7 +1,6 @@
-package ITmonteur.example.hospitalERP.configuration;
+package com.itmonteur.hospitalerp.identity;
 
-import ITmonteur.example.hospitalERP.services.CustomUserDetailsService;
-import ITmonteur.example.hospitalERP.services.JWTService;
+import com.itmonteur.hospitalerp.identity.internal.JWTService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

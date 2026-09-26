@@ -1,13 +1,13 @@
-package ITmonteur.example.hospitalERP.controller;
+package com.itmonteur.hospitalerp.identity.web;
 
-import ITmonteur.example.hospitalERP.dto.AuthResponseDTO;
-import ITmonteur.example.hospitalERP.dto.ForgotPasswordRequestDTO;
-import ITmonteur.example.hospitalERP.dto.ResetPasswordRequestDTO;
-import ITmonteur.example.hospitalERP.dto.LoginRequestDTO;
-import ITmonteur.example.hospitalERP.dto.RegisterRequestDTO;
-import ITmonteur.example.hospitalERP.services.AuthService;
-import ITmonteur.example.hospitalERP.services.OtpService;
-import ITmonteur.example.hospitalERP.services.PasswordResetService;
+import com.itmonteur.hospitalerp.identity.AuthResponseDTO;
+import com.itmonteur.hospitalerp.identity.ForgotPasswordRequestDTO;
+import com.itmonteur.hospitalerp.identity.ResetPasswordRequestDTO;
+import com.itmonteur.hospitalerp.identity.LoginRequestDTO;
+import com.itmonteur.hospitalerp.identity.RegisterRequestDTO;
+import com.itmonteur.hospitalerp.identity.AuthService;
+import com.itmonteur.hospitalerp.identity.internal.OtpService;
+import com.itmonteur.hospitalerp.identity.internal.PasswordResetService;
 import com.itmonteur.hospitalerp.notifications.SmsService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;

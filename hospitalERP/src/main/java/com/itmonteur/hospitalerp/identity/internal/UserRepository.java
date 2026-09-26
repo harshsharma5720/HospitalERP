@@ -1,6 +1,6 @@
-package ITmonteur.example.hospitalERP.repositories;
+package com.itmonteur.hospitalerp.identity.internal;
 
-import ITmonteur.example.hospitalERP.entities.User;
+import com.itmonteur.hospitalerp.identity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

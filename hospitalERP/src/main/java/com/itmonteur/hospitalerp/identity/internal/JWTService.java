@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.identity.internal;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

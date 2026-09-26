@@ -2,8 +2,14 @@ package com.itmonteur.hospitalerp;
 
 import ITmonteur.example.hospitalERP.controller.*;
 import ITmonteur.example.hospitalERP.services.*;
-import ITmonteur.example.hospitalERP.configuration.JWTAuthenticationFilter;
+import com.itmonteur.hospitalerp.identity.JWTAuthenticationFilter;
 import com.itmonteur.hospitalerp.notifications.SmsService;
+import com.itmonteur.hospitalerp.identity.AuthService;
+import com.itmonteur.hospitalerp.identity.CustomUserDetailsService;
+import com.itmonteur.hospitalerp.identity.internal.JWTService;
+import com.itmonteur.hospitalerp.identity.internal.OtpService;
+import com.itmonteur.hospitalerp.identity.internal.PasswordResetService;
+import com.itmonteur.hospitalerp.identity.web.AuthController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;

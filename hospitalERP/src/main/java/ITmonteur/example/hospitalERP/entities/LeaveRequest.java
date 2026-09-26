@@ -3,6 +3,7 @@ package ITmonteur.example.hospitalERP.entities;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
+import com.itmonteur.hospitalerp.identity.User;
 
 @Entity
 // Explicit name (same as the default) so moving/renaming this class can never rename the table

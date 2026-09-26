@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.identity.internal;
 
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ConflictException;

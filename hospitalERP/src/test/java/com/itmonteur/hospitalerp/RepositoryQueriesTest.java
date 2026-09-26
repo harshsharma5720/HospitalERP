@@ -6,6 +6,8 @@ import ITmonteur.example.hospitalERP.repositories.ConsultationRepository;
 import ITmonteur.example.hospitalERP.repositories.LeaveRequestRepository;
 import ITmonteur.example.hospitalERP.repositories.SlotRepository;
 import com.itmonteur.hospitalerp.common.Gender;
+import com.itmonteur.hospitalerp.identity.Role;
+import com.itmonteur.hospitalerp.identity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

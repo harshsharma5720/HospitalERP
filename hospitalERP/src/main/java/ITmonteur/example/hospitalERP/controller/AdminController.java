@@ -5,6 +5,8 @@ import ITmonteur.example.hospitalERP.entities.LeaveStatus;
 import ITmonteur.example.hospitalERP.services.AdminService;
 import ITmonteur.example.hospitalERP.services.AppointmentService;
 import ITmonteur.example.hospitalERP.services.LeaveRequestService;
+import com.itmonteur.hospitalerp.identity.RegisterRequestDTO;
+import com.itmonteur.hospitalerp.identity.UserDTO;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

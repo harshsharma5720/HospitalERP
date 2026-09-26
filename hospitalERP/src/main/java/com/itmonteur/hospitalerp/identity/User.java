@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.entities;
+package com.itmonteur.hospitalerp.identity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;

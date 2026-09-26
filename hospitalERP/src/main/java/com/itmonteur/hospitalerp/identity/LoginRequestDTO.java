@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.dto;
+package com.itmonteur.hospitalerp.identity;
 
 import jakarta.validation.constraints.NotBlank;
 

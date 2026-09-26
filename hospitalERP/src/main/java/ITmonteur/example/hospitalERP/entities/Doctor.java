@@ -3,6 +3,7 @@ package ITmonteur.example.hospitalERP.entities;
 import jakarta.persistence.*;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
+import com.itmonteur.hospitalerp.identity.User;
 
 @Entity
 @Table(name = "doctor")

@@ -1,7 +1,6 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.identity;
 
-import ITmonteur.example.hospitalERP.entities.User;
-import ITmonteur.example.hospitalERP.repositories.UserRepository;
+import com.itmonteur.hospitalerp.identity.internal.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
