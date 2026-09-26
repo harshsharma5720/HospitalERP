@@ -1,7 +1,5 @@
 package com.itmonteur.hospitalerp;
 
-import ITmonteur.example.hospitalERP.controller.*;
-import ITmonteur.example.hospitalERP.services.*;
 import com.itmonteur.hospitalerp.identity.JWTAuthenticationFilter;
 import com.itmonteur.hospitalerp.notifications.SmsService;
 import com.itmonteur.hospitalerp.identity.AuthService;
@@ -21,6 +19,8 @@ import com.itmonteur.hospitalerp.appointments.AppointmentService;
 import com.itmonteur.hospitalerp.appointments.web.AppointmentController;
 import com.itmonteur.hospitalerp.appointments.web.DoctorAppointmentController;
 import com.itmonteur.hospitalerp.appointments.web.ReceptionistAppointmentController;
+import com.itmonteur.hospitalerp.administration.internal.UserAccountService;
+import com.itmonteur.hospitalerp.administration.web.AccountController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;

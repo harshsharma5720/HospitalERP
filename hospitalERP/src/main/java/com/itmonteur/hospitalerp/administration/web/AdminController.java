@@ -1,7 +1,7 @@
-package ITmonteur.example.hospitalERP.controller;
+package com.itmonteur.hospitalerp.administration.web;
 
 import com.itmonteur.hospitalerp.staff.LeaveStatus;
-import ITmonteur.example.hospitalERP.services.AdminService;
+import com.itmonteur.hospitalerp.administration.internal.AdminService;
 import com.itmonteur.hospitalerp.appointments.AppointmentService;
 import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import com.itmonteur.hospitalerp.identity.RegisterRequestDTO;

@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.administration.internal;
 
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
 import com.itmonteur.hospitalerp.identity.AuthService;

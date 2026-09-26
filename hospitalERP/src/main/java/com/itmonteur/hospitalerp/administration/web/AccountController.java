@@ -1,6 +1,6 @@
-package ITmonteur.example.hospitalERP.controller;
+package com.itmonteur.hospitalerp.administration.web;
 
-import ITmonteur.example.hospitalERP.services.UserAccountService;
+import com.itmonteur.hospitalerp.administration.internal.UserAccountService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;

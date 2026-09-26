@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.administration.internal;
 
 import com.itmonteur.hospitalerp.appointments.Appointment;
 import com.itmonteur.hospitalerp.staff.Doctor;
