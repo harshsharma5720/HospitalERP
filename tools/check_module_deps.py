@@ -7,7 +7,8 @@ and reports:
   * dependencies that are not allowed by the plan (section 2.1),
   * dependency cycles between modules,
   * hidden dependencies inside @Query strings,
-  * classes that are not assigned to a module yet.
+  * uses of another module's repository,
+  * classes outside com.itmonteur.hospitalerp (not assigned to a module).
 
 Exit code 0 = clean, 1 = violations found.
 
@@ -15,10 +16,10 @@ Usage (from the repository root):
     python tools/check_module_deps.py            # summary + violations
     python tools/check_module_deps.py --verbose  # also list every module-to-module edge
 
-Module of a class:
-  1. once code lives in com.itmonteur.hospitalerp.<module>...  -> taken from the package (after Phase 2)
-  2. otherwise                                                 -> looked up in CLASS_MODULE below
-When you add a class during Phase 1, add it to CLASS_MODULE.
+Module of a class: taken from its package (step 2.2 moved every class there).
+  com.itmonteur.hospitalerp.<module>[.internal|.web|...]  -> <module>
+  com.itmonteur.hospitalerp                               -> app (main class, SecurityConfig)
+A class anywhere else is reported as unmapped.
 """
 import collections
 import os
@@ -44,71 +45,6 @@ ALLOWED = {
             'clinical', 'administration'},
 }
 
-# Plan section 3: current class -> target module.
-CLASS_MODULE = {
-    # common
-    'ApiResponse': 'common', 'BadRequestException': 'common', 'ConflictException': 'common',
-    'ForbiddenException': 'common', 'ResourceNotFoundException': 'common', 'TooManyRequestsException': 'common',
-    'GlobalExceptionHandler': 'common', 'Gender': 'common', 'FileStorageService': 'common', 'WebConfig': 'common',
-    # notifications
-    'EmailService': 'notifications', 'SmsService': 'notifications', 'NotificationService': 'notifications',
-    'TwilioConfig': 'notifications',
-    # identity
-    'User': 'identity', 'Role': 'identity', 'UserRepository': 'identity', 'UserDTO': 'identity',
-    'AuthService': 'identity', 'AuthController': 'identity', 'JWTService': 'identity',
-    'JWTAuthenticationFilter': 'identity', 'CustomUserDetailsService': 'identity', 'CurrentUserService': 'identity',
-    'OtpService': 'identity', 'LoginAttemptService': 'identity', 'PasswordResetService': 'identity',
-    'AdminBootstrap': 'identity', 'AuthResponseDTO': 'identity', 'LoginRequestDTO': 'identity',
-    'RegisterRequestDTO': 'identity', 'ForgotPasswordRequestDTO': 'identity', 'ResetPasswordRequestDTO': 'identity',
-    # patients
-    'PtInfo': 'patients', 'PtRelative': 'patients', 'RelationShip': 'patients', 'PtInfoRepository': 'patients',
-    'PtRelativeRepository': 'patients', 'PtInfoService': 'patients', 'PtRelativeService': 'patients',
-    'PtInfoController': 'patients', 'PtRelativeController': 'patients', 'PtInfoDTO': 'patients',
-    'PtRelativeDTO': 'patients',
-    # staff
-    'Doctor': 'staff', 'Receptionist': 'staff', 'Specialist': 'staff', 'LeaveRequest': 'staff',
-    'LeaveStatus': 'staff', 'DoctorRepository': 'staff', 'ReceptionistRepository': 'staff',
-    'LeaveRequestRepository': 'staff', 'DoctorService': 'staff', 'ReceptionistService': 'staff',
-    'LeaveRequestService': 'staff', 'DoctorController': 'staff', 'ReceptionistController': 'staff',
-    'LeaveRequestController': 'staff', 'DoctorDTO': 'staff', 'ReceptionistDTO': 'staff', 'LeaveRequestDTO': 'staff',
-    # scheduling
-    'Slot': 'scheduling', 'Shift': 'scheduling', 'DoctorSchedule': 'scheduling', 'SlotRepository': 'scheduling',
-    'DoctorScheduleRepository': 'scheduling', 'SlotService': 'scheduling', 'DoctorScheduleService': 'scheduling',
-    'ScheduleDefaults': 'scheduling', 'SlotController': 'scheduling', 'DoctorScheduleDTO': 'scheduling',
-    # appointments
-    'Appointment': 'appointments', 'AppointmentStatus': 'appointments', 'AppointmentRepository': 'appointments',
-    'AppointmentService': 'appointments', 'AppointmentReminderService': 'appointments',
-    'AppointmentController': 'appointments', 'AppointmentDTO': 'appointments',
-    # clinical
-    'Consultation': 'clinical', 'PrescriptionItem': 'clinical', 'ConsultationRepository': 'clinical',
-    'ConsultationService': 'clinical', 'PrescriptionPdfService': 'clinical', 'ConsultationController': 'clinical',
-    'ConsultationDTO': 'clinical', 'PrescriptionItemDTO': 'clinical',
-    # administration
-    'AdminController': 'administration', 'AdminService': 'administration', 'UserAccountService': 'administration',
-    # app
-    'HospitalErpApplication': 'app', 'SecurityConfig': 'app',
-    # added in step 1.1 (replace the former multi-module EntityMapper)
-    'AppointmentMapper': 'appointments', 'DoctorMapper': 'staff', 'PatientMapper': 'patients',
-    # added in step 1.2 (registration via event)
-    'UserRegisteredEvent': 'identity', 'PatientProfileCreator': 'patients', 'StaffProfileCreator': 'staff',
-    # added in step 1.4 (relative deletion via event)
-    'RelativeDeletedEvent': 'patients', 'AppointmentRelativeUnlinker': 'appointments',
-    # added in step 1.5 (leave approval via event)
-    'DoctorLeaveApprovedEvent': 'staff', 'SlotLeaveBlocker': 'scheduling', 'AppointmentLeaveCanceller': 'appointments',
-    # added in step 1.6 (endpoints moved to the module that owns them; URLs unchanged)
-    'DoctorAppointmentController': 'appointments', 'ReceptionistAppointmentController': 'appointments',
-    'DoctorScheduleController': 'scheduling', 'DoctorDirectoryController': 'staff',
-    # added in step 1.7 (account deletion only in administration)
-    'AccountController': 'administration',
-    # added in step 1.8 (schedule change via event)
-    'DoctorScheduleChangedEvent': 'scheduling', 'ScheduleChangeSlotCleaner': 'appointments',
-    # added in step 1.9 (notifications after commit)
-    'AppointmentNotificationEvent': 'appointments', 'AppointmentNotificationListener': 'appointments',
-    # added in step 1.11 (public API instead of UserRepository)
-    'UserService': 'identity',
-}
-
-
 def strip_comments(src):
     src = re.sub(r'/\*.*?\*/', '', src, flags=re.S)
     return re.sub(r'//[^\n]*', '', src)
@@ -131,8 +67,6 @@ def main():
                 module = pkg.group(1)[len(TARGET_ROOT_PACKAGE) + 1:].split('.')[0]
             elif pkg and pkg.group(1) == TARGET_ROOT_PACKAGE:
                 module = 'app'
-            else:
-                module = CLASS_MODULE.get(name)
             if module is None:
                 unmapped.append(name)
                 module = '<unmapped>'
@@ -177,7 +111,7 @@ def main():
 
     print(f'Classes scanned: {len(classes)}   modules: {len({m for _, m in classes.values()})}')
     if unmapped:
-        print(f'\nUNMAPPED classes (add them to CLASS_MODULE): {", ".join(sorted(unmapped))}')
+        print(f'\nUNMAPPED classes (move them under com.itmonteur.hospitalerp.<module>): {", ".join(sorted(unmapped))}')
     if verbose:
         print('\nAll module edges:')
         for (frm, to), examples in sorted(edges.items()):

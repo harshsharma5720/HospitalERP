@@ -300,7 +300,7 @@ python tools/check_module_deps.py            # prints "RESULT: OK - module bound
 python tools/check_module_deps.py --verbose  # also lists every module-to-module dependency
 ```
 
-It fails (exit code 1) if a module uses a module it shouldn't, if two modules depend on each other, or if a module uses another module's repository. When you add a class, add it to `CLASS_MODULE` in the script.
+It fails (exit code 1) if a module uses a module it shouldn't, if two modules depend on each other, or if a module uses another module's repository. A class belongs to the module named by its package: `com.itmonteur.hospitalerp.<module>` is the module's public API, and its `internal` and `web` sub-packages are for the module itself.
 
 `EndpointContractTest` freezes the public API (all URLs, methods and role checks) in `src/test/resources/api-endpoints.txt`. After an intended API change, regenerate it with:
 
