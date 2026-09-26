@@ -9,6 +9,8 @@ import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.repositories.ConsultationRepository;
 import com.itmonteur.hospitalerp.identity.CurrentUserService;
 import com.itmonteur.hospitalerp.identity.Role;
+import com.itmonteur.hospitalerp.patients.PtInfo;
+import com.itmonteur.hospitalerp.patients.PtInfoService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

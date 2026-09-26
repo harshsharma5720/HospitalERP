@@ -1,16 +1,12 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.patients;
 
 import java.util.Optional;
-import ITmonteur.example.hospitalERP.dto.PtRelativeDTO;
-import ITmonteur.example.hospitalERP.entities.PtInfo;
-import ITmonteur.example.hospitalERP.entities.PtRelative;
 import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ForbiddenException;
-import ITmonteur.example.hospitalERP.events.RelativeDeletedEvent;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
-import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
-import ITmonteur.example.hospitalERP.repositories.PtRelativeRepository;
+import com.itmonteur.hospitalerp.patients.internal.PtInfoRepository;
+import com.itmonteur.hospitalerp.patients.internal.PtRelativeRepository;
 import com.itmonteur.hospitalerp.identity.CurrentUserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

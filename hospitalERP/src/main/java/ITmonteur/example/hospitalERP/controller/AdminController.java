@@ -7,6 +7,7 @@ import ITmonteur.example.hospitalERP.services.AppointmentService;
 import ITmonteur.example.hospitalERP.services.LeaveRequestService;
 import com.itmonteur.hospitalerp.identity.RegisterRequestDTO;
 import com.itmonteur.hospitalerp.identity.UserDTO;
+import com.itmonteur.hospitalerp.patients.PtInfoDTO;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

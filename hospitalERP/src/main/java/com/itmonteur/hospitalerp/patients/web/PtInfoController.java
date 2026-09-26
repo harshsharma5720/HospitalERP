@@ -1,7 +1,7 @@
-package ITmonteur.example.hospitalERP.controller;
+package com.itmonteur.hospitalerp.patients.web;
 
-import ITmonteur.example.hospitalERP.dto.PtInfoDTO;
-import ITmonteur.example.hospitalERP.services.PtInfoService;
+import com.itmonteur.hospitalerp.patients.PtInfoDTO;
+import com.itmonteur.hospitalerp.patients.PtInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

@@ -1,11 +1,10 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.patients.internal;
 
 import com.itmonteur.hospitalerp.common.Gender;
-import ITmonteur.example.hospitalERP.entities.PtInfo;
+import com.itmonteur.hospitalerp.patients.PtInfo;
 import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.identity.User;
 import com.itmonteur.hospitalerp.identity.UserRegisteredEvent;
-import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 

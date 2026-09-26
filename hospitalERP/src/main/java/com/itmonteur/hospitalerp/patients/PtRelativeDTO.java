@@ -1,42 +1,41 @@
-package ITmonteur.example.hospitalERP.entities;
+package com.itmonteur.hospitalerp.patients;
 
-import jakarta.persistence.*;
-import java.time.LocalDate;
 import com.itmonteur.hospitalerp.common.Gender;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
 
-@Entity
-@Table(name = "patient_relative")
-public class PtRelative {
+import java.time.LocalDate;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class PtRelativeDTO {
+
     private Long id;
+    @NotBlank(message = "Name is required")
     private String name;
-    @Enumerated(EnumType.STRING)
     private Gender gender;
+    @PastOrPresent(message = "Date of birth cannot be in the future")
     private LocalDate dob;
-    @Enumerated(EnumType.STRING)
+    @NotNull(message = "Relationship is required")
     private RelationShip relationship;
-    @Column(nullable = true)
     private Long patientAadharNo;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "patient_id")
-    private PtInfo ptInfo;
 
-    public PtRelative() {}
+    // ID of the patient to which this relative belongs
+    private Long patientId;
 
-    public PtRelative(Long id, String name, Gender gender, LocalDate dob,
-                      RelationShip relationship, Long patientAadharNo, PtInfo ptInfo) {
+    public PtRelativeDTO() {}
+
+    public PtRelativeDTO(Long id, String name, Gender gender, LocalDate dob,
+                         RelationShip relationship, Long patientAadharNo, Long patientId) {
         this.id = id;
         this.name = name;
         this.gender = gender;
         this.dob = dob;
         this.relationship = relationship;
         this.patientAadharNo = patientAadharNo;
-        this.ptInfo = ptInfo;
+        this.patientId = patientId;
     }
 
-    // Getters and Setters
+    // Getters & Setters
 
     public Long getId() {
         return id;
@@ -86,13 +85,11 @@ public class PtRelative {
         this.patientAadharNo = patientAadharNo;
     }
 
-
-
-    public PtInfo getPtInfo() {
-        return ptInfo;
+    public Long getPatientId() {
+        return patientId;
     }
 
-    public void setPtInfo(PtInfo ptInfo) {
-        this.ptInfo = ptInfo;
+    public void setPatientId(Long patientId) {
+        this.patientId = patientId;
     }
 }

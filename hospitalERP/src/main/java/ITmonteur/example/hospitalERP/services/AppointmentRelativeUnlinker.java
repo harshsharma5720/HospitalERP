@@ -1,6 +1,6 @@
 package ITmonteur.example.hospitalERP.services;
 
-import ITmonteur.example.hospitalERP.events.RelativeDeletedEvent;
+import com.itmonteur.hospitalerp.patients.RelativeDeletedEvent;
 import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;

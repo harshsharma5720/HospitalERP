@@ -1,6 +1,5 @@
-package ITmonteur.example.hospitalERP.dto;
+package com.itmonteur.hospitalerp.patients;
 
-import ITmonteur.example.hospitalERP.entities.PtInfo;
 
 /** Patient (PtInfo) → DTO. Belongs to the patients module. */
 public final class PatientMapper {

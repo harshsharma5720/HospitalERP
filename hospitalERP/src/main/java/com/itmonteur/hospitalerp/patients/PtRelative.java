@@ -1,42 +1,42 @@
-package ITmonteur.example.hospitalERP.dto;
+package com.itmonteur.hospitalerp.patients;
 
-import com.itmonteur.hospitalerp.common.Gender;
-import ITmonteur.example.hospitalERP.entities.RelationShip;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PastOrPresent;
-
+import jakarta.persistence.*;
 import java.time.LocalDate;
+import com.itmonteur.hospitalerp.common.Gender;
 
-public class PtRelativeDTO {
+@Entity
+@Table(name = "patient_relative")
+public class PtRelative {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @NotBlank(message = "Name is required")
     private String name;
+    @Enumerated(EnumType.STRING)
     private Gender gender;
-    @PastOrPresent(message = "Date of birth cannot be in the future")
     private LocalDate dob;
-    @NotNull(message = "Relationship is required")
+    @Enumerated(EnumType.STRING)
     private RelationShip relationship;
+    @Column(nullable = true)
     private Long patientAadharNo;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "patient_id")
+    private PtInfo ptInfo;
 
-    // ID of the patient to which this relative belongs
-    private Long patientId;
+    public PtRelative() {}
 
-    public PtRelativeDTO() {}
-
-    public PtRelativeDTO(Long id, String name, Gender gender, LocalDate dob,
-                         RelationShip relationship, Long patientAadharNo, Long patientId) {
+    public PtRelative(Long id, String name, Gender gender, LocalDate dob,
+                      RelationShip relationship, Long patientAadharNo, PtInfo ptInfo) {
         this.id = id;
         this.name = name;
         this.gender = gender;
         this.dob = dob;
         this.relationship = relationship;
         this.patientAadharNo = patientAadharNo;
-        this.patientId = patientId;
+        this.ptInfo = ptInfo;
     }
 
-    // Getters & Setters
+    // Getters and Setters
 
     public Long getId() {
         return id;
@@ -86,11 +86,13 @@ public class PtRelativeDTO {
         this.patientAadharNo = patientAadharNo;
     }
 
-    public Long getPatientId() {
-        return patientId;
+
+
+    public PtInfo getPtInfo() {
+        return ptInfo;
     }
 
-    public void setPatientId(Long patientId) {
-        this.patientId = patientId;
+    public void setPtInfo(PtInfo ptInfo) {
+        this.ptInfo = ptInfo;
     }
 }

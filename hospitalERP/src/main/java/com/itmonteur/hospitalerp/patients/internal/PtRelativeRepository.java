@@ -1,6 +1,6 @@
-package ITmonteur.example.hospitalERP.repositories;
+package com.itmonteur.hospitalerp.patients.internal;
 
-import ITmonteur.example.hospitalERP.entities.PtRelative;
+import com.itmonteur.hospitalerp.patients.PtRelative;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

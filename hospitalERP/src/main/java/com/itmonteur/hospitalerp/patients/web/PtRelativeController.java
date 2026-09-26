@@ -1,7 +1,7 @@
-package ITmonteur.example.hospitalERP.controller;
+package com.itmonteur.hospitalerp.patients.web;
 
-import ITmonteur.example.hospitalERP.dto.PtRelativeDTO;
-import ITmonteur.example.hospitalERP.services.PtRelativeService;
+import com.itmonteur.hospitalerp.patients.PtRelativeDTO;
+import com.itmonteur.hospitalerp.patients.PtRelativeService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import com.itmonteur.hospitalerp.common.Gender;
+import com.itmonteur.hospitalerp.patients.PtInfo;
+import com.itmonteur.hospitalerp.patients.PtRelative;
 
 @Entity
 @Table(name = "appointments")

@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.events;
+package com.itmonteur.hospitalerp.patients;
 
 /**
  * Published by the patients module (PtRelativeService.deleteRelative) just before a relative
