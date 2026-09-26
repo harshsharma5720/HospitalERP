@@ -1,6 +1,7 @@
 package ITmonteur.example.hospitalERP.entities;
 
 import jakarta.persistence.*;
+import com.itmonteur.hospitalerp.common.Gender;
 
 @Entity
 @Table(name = "receptionist")

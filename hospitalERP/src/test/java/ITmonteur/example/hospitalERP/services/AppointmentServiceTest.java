@@ -2,10 +2,11 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.dto.AppointmentDTO;
 import ITmonteur.example.hospitalERP.entities.*;
-import ITmonteur.example.hospitalERP.exception.ConflictException;
-import ITmonteur.example.hospitalERP.exception.ForbiddenException;
+import com.itmonteur.hospitalerp.common.ConflictException;
+import com.itmonteur.hospitalerp.common.ForbiddenException;
 import ITmonteur.example.hospitalERP.repositories.AppointmentRepository;
 import ITmonteur.example.hospitalERP.events.AppointmentNotificationEvent;
+import com.itmonteur.hospitalerp.common.Gender;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

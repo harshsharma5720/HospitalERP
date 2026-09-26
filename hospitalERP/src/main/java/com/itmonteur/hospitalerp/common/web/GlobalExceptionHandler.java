@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.exception;
+package com.itmonteur.hospitalerp.common.web;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +20,12 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.itmonteur.hospitalerp.common.ApiResponse;
+import com.itmonteur.hospitalerp.common.BadRequestException;
+import com.itmonteur.hospitalerp.common.ConflictException;
+import com.itmonteur.hospitalerp.common.ForbiddenException;
+import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
+import com.itmonteur.hospitalerp.common.TooManyRequestsException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {

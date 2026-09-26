@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.exception;
+package com.itmonteur.hospitalerp.common;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 public class ResourceNotFoundException extends RuntimeException{

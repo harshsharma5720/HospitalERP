@@ -1,7 +1,7 @@
 package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.entities.Doctor;
-import ITmonteur.example.hospitalERP.entities.Gender;
+import com.itmonteur.hospitalerp.common.Gender;
 import ITmonteur.example.hospitalERP.entities.Receptionist;
 import ITmonteur.example.hospitalERP.entities.Specialist;
 import ITmonteur.example.hospitalERP.entities.User;

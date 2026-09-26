@@ -1,6 +1,6 @@
 package ITmonteur.example.hospitalERP.services;
 
-import ITmonteur.example.hospitalERP.exception.TooManyRequestsException;
+import com.itmonteur.hospitalerp.common.TooManyRequestsException;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;

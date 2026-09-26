@@ -1,6 +1,6 @@
 package ITmonteur.example.hospitalERP.dto;
 
-import ITmonteur.example.hospitalERP.entities.Gender;
+import com.itmonteur.hospitalerp.common.Gender;
 import ITmonteur.example.hospitalERP.entities.RelationShip;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

@@ -2,7 +2,7 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.entities.Role;
 import ITmonteur.example.hospitalERP.entities.User;
-import ITmonteur.example.hospitalERP.exception.BadRequestException;
+import com.itmonteur.hospitalerp.common.BadRequestException;
 import ITmonteur.example.hospitalERP.repositories.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -1,6 +1,6 @@
 package ITmonteur.example.hospitalERP.dto;
 
-import ITmonteur.example.hospitalERP.entities.Gender;
+import com.itmonteur.hospitalerp.common.Gender;
 
 import java.time.LocalDate;
 

@@ -2,7 +2,7 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.entities.Role;
 import ITmonteur.example.hospitalERP.entities.User;
-import ITmonteur.example.hospitalERP.exception.ForbiddenException;
+import com.itmonteur.hospitalerp.common.ForbiddenException;
 import ITmonteur.example.hospitalERP.repositories.UserRepository;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;

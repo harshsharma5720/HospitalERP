@@ -3,7 +3,7 @@ package ITmonteur.example.hospitalERP.services;
 import ITmonteur.example.hospitalERP.dto.LeaveRequestDTO;
 import ITmonteur.example.hospitalERP.entities.*;
 import ITmonteur.example.hospitalERP.events.DoctorLeaveApprovedEvent;
-import ITmonteur.example.hospitalERP.exception.BadRequestException;
+import com.itmonteur.hospitalerp.common.BadRequestException;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.LeaveRequestRepository;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.configuration;
+package com.itmonteur.hospitalerp.common.web;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;

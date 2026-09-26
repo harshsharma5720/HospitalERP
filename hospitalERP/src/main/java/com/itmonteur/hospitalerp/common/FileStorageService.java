@@ -1,6 +1,5 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.common;
 
-import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

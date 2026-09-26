@@ -2,6 +2,7 @@ package ITmonteur.example.hospitalERP.entities;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import com.itmonteur.hospitalerp.common.Gender;
 
 @Entity
 @Table(name = "patient_relative")

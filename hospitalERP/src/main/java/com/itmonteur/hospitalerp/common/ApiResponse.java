@@ -1,4 +1,4 @@
-package ITmonteur.example.hospitalERP.exception;
+package com.itmonteur.hospitalerp.common;
 
 public class ApiResponse {
 

@@ -1,6 +1,5 @@
-package ITmonteur.example.hospitalERP.services;
+package com.itmonteur.hospitalerp.common;
 
-import ITmonteur.example.hospitalERP.exception.BadRequestException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.mock.web.MockMultipartFile;

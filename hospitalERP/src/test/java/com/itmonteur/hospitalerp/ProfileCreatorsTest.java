@@ -7,6 +7,7 @@ import ITmonteur.example.hospitalERP.repositories.PtInfoRepository;
 import ITmonteur.example.hospitalERP.repositories.ReceptionistRepository;
 import ITmonteur.example.hospitalERP.services.PatientProfileCreator;
 import ITmonteur.example.hospitalERP.services.StaffProfileCreator;
+import com.itmonteur.hospitalerp.common.Gender;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 

@@ -2,7 +2,7 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.dto.DoctorScheduleDTO;
 import ITmonteur.example.hospitalERP.entities.Shift;
-import ITmonteur.example.hospitalERP.exception.BadRequestException;
+import com.itmonteur.hospitalerp.common.BadRequestException;
 import org.junit.jupiter.api.Test;
 
 import java.time.DayOfWeek;

@@ -2,7 +2,7 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.dto.*;
 import ITmonteur.example.hospitalERP.entities.*;
-import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
+import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import com.itmonteur.hospitalerp.common.Gender;
 
 @Entity
 @Table(name = "patient")

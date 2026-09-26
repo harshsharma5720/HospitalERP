@@ -2,10 +2,10 @@ package ITmonteur.example.hospitalERP.services;
 
 import ITmonteur.example.hospitalERP.dto.LeaveRequestDTO;
 import ITmonteur.example.hospitalERP.entities.*;
-import ITmonteur.example.hospitalERP.exception.BadRequestException;
-import ITmonteur.example.hospitalERP.exception.ConflictException;
-import ITmonteur.example.hospitalERP.exception.ForbiddenException;
-import ITmonteur.example.hospitalERP.exception.ResourceNotFoundException;
+import com.itmonteur.hospitalerp.common.BadRequestException;
+import com.itmonteur.hospitalerp.common.ConflictException;
+import com.itmonteur.hospitalerp.common.ForbiddenException;
+import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
 import ITmonteur.example.hospitalERP.events.DoctorLeaveApprovedEvent;
 import ITmonteur.example.hospitalERP.repositories.DoctorRepository;
 import ITmonteur.example.hospitalERP.repositories.LeaveRequestRepository;
