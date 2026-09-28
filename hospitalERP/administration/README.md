@@ -20,6 +20,8 @@ None. Nothing else may depend on administration.
 | `AdminController` | `/api/admin/**` — create users, user and staff lists, leave approval/rejection, appointment overviews |
 | `AccountController` | `DELETE /api/patient/deleteAccount/{ptId}`, `DELETE /api/doctor/delete/{id}` and `DELETE /api/receptionist/delete/{receptionistId}` (admin only) |
 
+Access rules (`administration.web.AdministrationSecurityRules`, a `ModuleSecurityRules` bean): `/api/admin/**` admins only.
+
 ## Internal — `administration.internal`
 
 | Class | Purpose |

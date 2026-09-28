@@ -28,6 +28,8 @@ Patient profiles and their relatives (people a patient can book appointments for
 
 Deleting a patient account (`DELETE /api/patient/deleteAccount/{ptId}`) lives in administration, because it spans several modules.
 
+Access rules (`patients.web.PatientsSecurityRules`, a `ModuleSecurityRules` bean): `/api/patient/getAll` admins + receptionists; the rest of `/api/patient/**` patients + admins.
+
 ## Internal — `patients.internal`
 
 `PtInfoRepository`, `PtRelativeRepository`, `PatientProfileCreator`.

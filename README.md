@@ -363,6 +363,12 @@ Generated module documentation lives in [docs/modules/](docs/modules/): `compone
 ./mvnw test -Dtest=EndpointContractTest -Dsurefire.failIfNoSpecifiedTests=false -DupdateEndpointSnapshot=true
 ```
 
+**URL access rules.** Each module declares who may call its URLs in a small `ModuleSecurityRules` bean in its `web` package (for example `StaffSecurityRules`: `/api/doctor/**` for doctors and admins, the doctor list public). `SecurityConfig` in `app` only adds the application-wide rules (error page, health check, uploaded images) and combines the modules' rules: first every module's single-endpoint rules, then every module's URL areas. `AccessRulesContractTest` freezes the result in `app/src/test/resources/api-access.txt` — for every endpoint, whether an anonymous caller, a patient, a doctor, a receptionist and an admin get through. After an intended change, regenerate it with:
+
+```bash
+./mvnw test -Dtest=AccessRulesContractTest -Dsurefire.failIfNoSpecifiedTests=false -DupdateAccessSnapshot=true
+```
+
 ### Frontend
 
 ```bash

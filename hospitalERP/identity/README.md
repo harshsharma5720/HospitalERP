@@ -16,6 +16,7 @@ It does **not** create patient or staff profiles: it publishes `UserRegisteredEv
 | `AuthService` | `register` (self sign-up, always a patient), `createUser(request, role)` (used by administration), `login`, `isOtpRequired`, `parseRole`. |
 | `UserRegisteredEvent` | Published when an account is created. |
 | `CustomUserDetailsService`, `JWTAuthenticationFilter` | Spring Security wiring, used by `SecurityConfig` in `app`. |
+| `ModuleSecurityRules` | Interface for a module's URL access rules (`endpointRules`, `areaRules`); every module with endpoints has one bean, `SecurityConfig` combines them. |
 | `UserDTO`, `RegisterRequestDTO`, `LoginRequestDTO`, `AuthResponseDTO`, `ForgotPasswordRequestDTO`, `ResetPasswordRequestDTO` | Request/response objects. |
 
 ## Events
@@ -26,6 +27,8 @@ It does **not** create patient or staff profiles: it publishes `UserRegisteredEv
 ## Endpoints — `identity.web`
 
 `AuthController`, all public, under `/api/auth`: `register`, `login`, `send-otp`, `verify-otp`, `otp-required`, `forgot-password`, `reset-password`.
+
+Access rules (`identity.web.IdentitySecurityRules`, a `ModuleSecurityRules` bean): `/api/auth/**` is public.
 
 ## Internal — `identity.internal`
 

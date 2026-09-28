@@ -1,6 +1,7 @@
 package com.itmonteur.hospitalerp;
 
 import com.itmonteur.hospitalerp.identity.JWTAuthenticationFilter;
+import com.itmonteur.hospitalerp.identity.ModuleSecurityRules;
 import com.itmonteur.hospitalerp.notifications.SmsService;
 import com.itmonteur.hospitalerp.identity.AuthService;
 import com.itmonteur.hospitalerp.identity.CustomUserDetailsService;
@@ -24,6 +25,9 @@ import com.itmonteur.hospitalerp.administration.web.AccountController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
@@ -36,13 +40,13 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** Verifies the URL-level access rules in SecurityConfig. */
+/** Verifies the URL-level access rules (SecurityConfig + each module's ModuleSecurityRules). */
 @WebMvcTest(controllers = {AppointmentController.class, DoctorController.class, AccountController.class,
         LeaveRequestController.class, AuthController.class,
         // moved endpoints (steps 1.6 / 1.7): same URLs, same rules
         DoctorAppointmentController.class, ReceptionistAppointmentController.class,
         DoctorScheduleController.class, DoctorDirectoryController.class})
-@Import({SecurityConfig.class, JWTAuthenticationFilter.class})
+@Import({SecurityConfig.class, JWTAuthenticationFilter.class, SecurityRulesTest.ModuleRules.class})
 @TestPropertySource(properties = "app.cors.allowed-origins=http://localhost:3000")
 class SecurityRulesTest {
 
@@ -166,5 +170,12 @@ class SecurityRulesTest {
     void doctorCanUseTheirAppointmentAndScheduleEndpoints() throws Exception {
         mockMvc.perform(put("/api/doctor/complete/1")).andExpect(status().isOk());
         mockMvc.perform(get("/api/doctor/1/schedule")).andExpect(status().isOk());
+    }
+
+    /** Every module's URL rules. They are plain @Components, which @WebMvcTest does not load by itself. */
+    @TestConfiguration
+    @ComponentScan(basePackages = "com.itmonteur.hospitalerp", useDefaultFilters = false,
+            includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = ModuleSecurityRules.class))
+    static class ModuleRules {
     }
 }

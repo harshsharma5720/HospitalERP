@@ -2,6 +2,7 @@ package com.itmonteur.hospitalerp;
 
 import com.itmonteur.hospitalerp.identity.CustomUserDetailsService;
 import com.itmonteur.hospitalerp.identity.JWTAuthenticationFilter;
+import com.itmonteur.hospitalerp.identity.ModuleSecurityRules;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -25,6 +26,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 @Configuration
@@ -33,11 +35,17 @@ public class SecurityConfig {
 
     private final JWTAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService customUserDetailsService;
+    // URL rules of the modules, in a fixed order (by class name) so every start builds the same chain
+    private final List<ModuleSecurityRules> moduleRules;
 
     public SecurityConfig(JWTAuthenticationFilter jwtAuthenticationFilter,
-                          CustomUserDetailsService customUserDetailsService) {
+                          CustomUserDetailsService customUserDetailsService,
+                          List<ModuleSecurityRules> moduleRules) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.customUserDetailsService = customUserDetailsService;
+        this.moduleRules = moduleRules.stream()
+                .sorted(Comparator.comparing(rules -> rules.getClass().getName()))
+                .toList();
     }
 
     @Value("${app.cors.allowed-origins:http://localhost:3000}")
@@ -48,40 +56,15 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable()) // stateless JWT API, no session cookies to protect
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .authorizeHttpRequests(auth -> auth
-                        // ---------- public ----------
-                        .requestMatchers("/api/auth/**", "/error", "/actuator/health").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/doctor/getAll",
-                                "/api/doctor/getAllBySpecialization",
-                                "/api/doctor/getDoctor/**",
-                                "/api/patient/getAllDoctors",
-                                "/api/patient/getAllBySpecialization"
-                        ).permitAll()
-
-                        // ---------- role based ----------
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/slots/generate/**").hasRole("ADMIN")
-                        .requestMatchers("/api/slots/**").authenticated()
-                        .requestMatchers("/api/doctor/**").hasAnyRole("DOCTOR", "ADMIN")
-                        .requestMatchers("/api/patient/getAll").hasAnyRole("ADMIN", "RECEPTIONIST")
-                        .requestMatchers("/api/patient/**").hasAnyRole("PATIENT", "ADMIN")
-                        .requestMatchers("/api/receptionist/**").hasAnyRole("RECEPTIONIST", "ADMIN")
-                        .requestMatchers("/api/leaves/**").hasAnyRole("ADMIN", "DOCTOR", "RECEPTIONIST")
-                        // Medical records: receptionists are deliberately excluded
-                        .requestMatchers("/api/consultations/**").hasAnyRole("PATIENT", "DOCTOR", "ADMIN")
-                        .requestMatchers(
-                                "/appointment/getAll",
-                                "/appointment/allPendingAppointments",
-                                "/appointment/allCompletedAppointments",
-                                "/appointment/appointmentsByDoctor/**"
-                        ).hasAnyRole("ADMIN", "RECEPTIONIST")
-                        .requestMatchers("/appointment/getDoctorAppointments").hasRole("DOCTOR")
-                        // Remaining appointment endpoints check ownership inside AppointmentService
-                        .requestMatchers("/appointment/**").hasAnyRole("PATIENT", "DOCTOR", "ADMIN", "RECEPTIONIST")
-                        .anyRequest().authenticated()
-                )
+                .authorizeHttpRequests(auth -> {
+                    // Application-wide: error page, health check, uploaded images (served by common's WebConfig)
+                    auth.requestMatchers("/error", "/actuator/health").permitAll();
+                    auth.requestMatchers(HttpMethod.GET, "/uploads/**").permitAll();
+                    // Each module's own URL rules (see ModuleSecurityRules): single endpoints first, then areas
+                    moduleRules.forEach(rules -> rules.endpointRules(auth));
+                    moduleRules.forEach(rules -> rules.areaRules(auth));
+                    auth.anyRequest().authenticated();
+                })
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, e) ->
                                 writeJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, "Please log in to continue"))

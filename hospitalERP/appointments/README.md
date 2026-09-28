@@ -30,6 +30,8 @@ Booking: create, reschedule and cancel appointments (also for relatives), the li
 | `DoctorAppointmentController` | `/api/doctor` (a doctor's appointments, complete, counts) |
 | `ReceptionistAppointmentController` | `/api/receptionist` (front-desk booking and lists) |
 
+Access rules (`appointments.web.AppointmentsSecurityRules`, a `ModuleSecurityRules` bean): the `/appointment` overview lists admins + receptionists, `getDoctorAppointments` doctors, the rest of `/appointment/**` all roles (ownership is checked in `AppointmentService`).
+
 ## Internal — `appointments.internal`
 
 `AppointmentRepository`, `AppointmentMapper`, the four listeners above, and `AppointmentReminderService` — a scheduled job that sends the day-before reminders.

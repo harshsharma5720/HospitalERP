@@ -32,6 +32,8 @@ Hospital staff: doctor and receptionist profiles, and leave requests. This is wh
 
 Other controllers share some of these prefixes (for example `/api/doctor` schedule and appointment endpoints live in scheduling and appointments). Deleting a doctor or receptionist lives in administration.
 
+Access rules (`staff.web.StaffSecurityRules`, a `ModuleSecurityRules` bean): the doctor directory is public; `/api/doctor/**` doctors + admins, `/api/receptionist/**` receptionists + admins, `/api/leaves/**` staff.
+
 ## Internal — `staff.internal`
 
 `DoctorRepository`, `ReceptionistRepository`, `LeaveRequestRepository`, `StaffProfileCreator`.

@@ -26,6 +26,8 @@ When doctors can be booked: each doctor's weekly working hours and slot length, 
 | `SlotController` | `/api/slots` (`available/{doctorId}`, `generate/{doctorId}`) |
 | `DoctorScheduleController` | `/api/doctor` (weekly schedule endpoints) |
 
+Access rules (`scheduling.web.SchedulingSecurityRules`, a `ModuleSecurityRules` bean): `/api/slots/generate/**` admins; the rest of `/api/slots/**` any logged-in user.
+
 ## Internal — `scheduling.internal`
 
 `SlotRepository`, `DoctorScheduleRepository`, `ScheduleDefaults` (default hours and slot length when a doctor has no schedule yet), `SlotLeaveBlocker`.

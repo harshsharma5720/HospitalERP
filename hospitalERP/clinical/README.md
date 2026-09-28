@@ -22,6 +22,8 @@ None published or consumed.
 
 `ConsultationController` under `/api/consultations`: save and read the consultation for an appointment, download `prescription.pdf`, `my` (a patient's history), `patient/{patientId}` (doctor/admin).
 
+Access rules (`clinical.web.ClinicalSecurityRules`, a `ModuleSecurityRules` bean): `/api/consultations/**` patients, doctors and admins — never receptionists.
+
 ## Internal — `clinical.internal`
 
 `ConsultationRepository`, `PrescriptionPdfService` (builds the PDF with OpenPDF).
