@@ -24,7 +24,6 @@ import com.itmonteur.hospitalerp.staff.ReceptionistService;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,22 +32,28 @@ import java.util.List;
 @Service
 public class AdminService {
 
-    @Autowired
-    private AuthService authService;
-    @Autowired
-    private PtInfoService ptInfoService;
-    @Autowired
-    private DoctorService doctorService;
-    @Autowired
-    private ReceptionistService receptionistService;
-    @Autowired
-    private ModelMapper modelMapper;
-    @Autowired
-    private LeaveRequestService leaveRequestService;
-    @Autowired
-    private UserService userService;
-    @Autowired
-    private UserAccountService userAccountService;
+    private final AuthService authService;
+    private final PtInfoService ptInfoService;
+    private final DoctorService doctorService;
+    private final ReceptionistService receptionistService;
+    private final ModelMapper modelMapper;
+    private final LeaveRequestService leaveRequestService;
+    private final UserService userService;
+    private final UserAccountService userAccountService;
+
+    public AdminService(AuthService authService, PtInfoService ptInfoService, DoctorService doctorService,
+                        ReceptionistService receptionistService, ModelMapper modelMapper,
+                        LeaveRequestService leaveRequestService, UserService userService,
+                        UserAccountService userAccountService) {
+        this.authService = authService;
+        this.ptInfoService = ptInfoService;
+        this.doctorService = doctorService;
+        this.receptionistService = receptionistService;
+        this.modelMapper = modelMapper;
+        this.leaveRequestService = leaveRequestService;
+        this.userService = userService;
+        this.userAccountService = userAccountService;
+    }
 
     private static final Logger logger = LoggerFactory.getLogger(AdminService.class);
 

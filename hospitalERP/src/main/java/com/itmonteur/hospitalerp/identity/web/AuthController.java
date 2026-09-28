@@ -10,7 +10,6 @@ import com.itmonteur.hospitalerp.identity.internal.OtpService;
 import com.itmonteur.hospitalerp.identity.internal.PasswordResetService;
 import com.itmonteur.hospitalerp.notifications.SmsService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,14 +24,18 @@ public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
-    @Autowired
-    private AuthService authService;
-    @Autowired
-    private OtpService otpService;
-    @Autowired
-    private SmsService smsService;
-    @Autowired
-    private PasswordResetService passwordResetService;
+    private final AuthService authService;
+    private final OtpService otpService;
+    private final SmsService smsService;
+    private final PasswordResetService passwordResetService;
+
+    public AuthController(AuthService authService, OtpService otpService, SmsService smsService,
+                          PasswordResetService passwordResetService) {
+        this.authService = authService;
+        this.otpService = otpService;
+        this.smsService = smsService;
+        this.passwordResetService = passwordResetService;
+    }
 
     // Self-registration for patients (staff accounts are created by an admin)
     @PostMapping("/register")

@@ -12,7 +12,6 @@ import com.itmonteur.hospitalerp.staff.LeaveRequestDTO;
 import com.itmonteur.hospitalerp.staff.ReceptionistDTO;
 import com.itmonteur.hospitalerp.appointments.AppointmentDTO;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
@@ -26,13 +25,16 @@ import java.util.Map;
 @RequestMapping("/api/admin")
 public class AdminController {
 
-    @Autowired
-    private AdminService adminService;
+    private final AdminService adminService;
+    private final LeaveRequestService leaveRequestService;
+    private final AppointmentService appointmentService;
 
-    @Autowired
-    private LeaveRequestService leaveRequestService;
-    @Autowired
-    private AppointmentService appointmentService;
+    public AdminController(AdminService adminService, LeaveRequestService leaveRequestService,
+                           AppointmentService appointmentService) {
+        this.adminService = adminService;
+        this.leaveRequestService = leaveRequestService;
+        this.appointmentService = appointmentService;
+    }
 
     private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
 

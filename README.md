@@ -302,6 +302,8 @@ python tools/check_module_deps.py --verbose  # also lists every module-to-module
 
 It fails (exit code 1) if a module uses a module it shouldn't, if two modules depend on each other, or if a module uses another module's repository. A class belongs to the module named by its package: `com.itmonteur.hospitalerp.<module>` is the module's public API, and its `internal` and `web` sub-packages are for the module itself.
 
+`ModularityTest` checks the same boundaries with Spring Modulith on every `./mvnw test`: it fails on a cycle between modules, on one module using another module's `internal`/`web` classes, and on `@Autowired` field injection of another module's beans.
+
 `EndpointContractTest` freezes the public API (all URLs, methods and role checks) in `src/test/resources/api-endpoints.txt`. After an intended API change, regenerate it with:
 
 ```bash
