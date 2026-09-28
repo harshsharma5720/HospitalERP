@@ -1,0 +1,28 @@
+@startuml
+set separator none
+title Scheduling
+
+top to bottom direction
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+Container_Boundary("HospitalErpApplication.HospitalErpApplication_boundary", "HospitalErpApplication", $tags="") {
+  Component(HospitalErpApplication.HospitalErpApplication.Common, "Common", $techn="Module", $descr="", $tags="", $link="")
+  Component(HospitalErpApplication.HospitalErpApplication.Identity, "Identity", $techn="Module", $descr="", $tags="", $link="")
+  Component(HospitalErpApplication.HospitalErpApplication.Staff, "Staff", $techn="Module", $descr="", $tags="", $link="")
+  Component(HospitalErpApplication.HospitalErpApplication.Scheduling, "Scheduling", $techn="Module", $descr="", $tags="", $link="")
+}
+
+Rel(HospitalErpApplication.HospitalErpApplication.Identity, HospitalErpApplication.HospitalErpApplication.Common, "depends on", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Staff, HospitalErpApplication.HospitalErpApplication.Identity, "listens to", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Staff, HospitalErpApplication.HospitalErpApplication.Identity, "uses", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Staff, HospitalErpApplication.HospitalErpApplication.Common, "uses", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Scheduling, HospitalErpApplication.HospitalErpApplication.Staff, "listens to", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Scheduling, HospitalErpApplication.HospitalErpApplication.Common, "depends on", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Scheduling, HospitalErpApplication.HospitalErpApplication.Staff, "uses", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Scheduling, HospitalErpApplication.HospitalErpApplication.Identity, "uses", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+@enduml

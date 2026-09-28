@@ -1,0 +1,11 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`com.itmonteur.hospitalerp.notifications`
+|Spring components
+|_Services_
+
+* `c.i.h.n.EmailService`
+* `c.i.h.n.NotificationService`
+* `c.i.h.n.SmsService`
+|===

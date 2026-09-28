@@ -1,0 +1,21 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`com.itmonteur.hospitalerp.identity`
+|Spring components
+|_Services_
+
+* `c.i.h.i.AuthService`
+* `c.i.h.i.CurrentUserService`
+* `c.i.h.i.CustomUserDetailsService`
+* `c.i.h.i.UserService`
+
+_Others_
+
+* `c.i.h.i.JWTAuthenticationFilter`
+|Bean references
+|* `c.i.h.n.SmsService` (in Notifications)
+* `c.i.h.n.EmailService` (in Notifications)
+|Aggregate roots
+|* `c.i.h.i.User`
+|===

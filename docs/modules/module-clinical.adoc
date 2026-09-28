@@ -1,0 +1,16 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`com.itmonteur.hospitalerp.clinical`
+|Spring components
+|_Services_
+
+* `c.i.h.c.ConsultationService`
+|Bean references
+|* `c.i.h.a.AppointmentService` (in Appointments)
+* `c.i.h.s.DoctorService` (in Staff)
+* `c.i.h.p.PtInfoService` (in Patients)
+* `c.i.h.i.CurrentUserService` (in Identity)
+|Aggregate roots
+|* `c.i.h.c.Consultation`
+|===

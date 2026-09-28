@@ -1,0 +1,17 @@
+@startuml
+set separator none
+title Common
+
+top to bottom direction
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+Container_Boundary("HospitalErpApplication.HospitalErpApplication_boundary", "HospitalErpApplication", $tags="") {
+  Component(HospitalErpApplication.HospitalErpApplication.Common, "Common", $techn="Module", $descr="", $tags="", $link="")
+}
+
+
+SHOW_LEGEND(true)
+@enduml

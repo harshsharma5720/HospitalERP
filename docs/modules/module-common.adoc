@@ -1,0 +1,9 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`com.itmonteur.hospitalerp.common`
+|Spring components
+|_Services_
+
+* `c.i.h.c.FileStorageService`
+|===

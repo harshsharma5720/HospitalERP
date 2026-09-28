@@ -1,0 +1,19 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`com.itmonteur.hospitalerp.scheduling`
+|Spring components
+|_Services_
+
+* `c.i.h.s.DoctorScheduleService`
+* `c.i.h.s.SlotService`
+|Bean references
+|* `c.i.h.s.DoctorService` (in Staff)
+* `c.i.h.i.CurrentUserService` (in Identity)
+* `c.i.h.s.LeaveRequestService` (in Staff)
+|Aggregate roots
+|* `c.i.h.s.DoctorSchedule`
+* `c.i.h.s.Slot`
+|Events listened to
+|* `c.i.h.s.DoctorLeaveApprovedEvent` 
+|===

@@ -304,6 +304,12 @@ It fails (exit code 1) if a module uses a module it shouldn't, if two modules de
 
 `ModularityTest` checks the same boundaries with Spring Modulith on every `./mvnw test`: it fails on a cycle between modules, on one module using another module's `internal`/`web` classes, and on `@Autowired` field injection of another module's beans.
 
+Generated module documentation lives in [docs/modules/](docs/modules/): `components.puml` (how the modules depend on each other) and one `module-<name>.puml` diagram and `module-<name>.adoc` "canvas" per module (its services, aggregates, events and which other modules' beans it uses). Open the `.puml` files with a PlantUML viewer (for example the VS Code *PlantUML* extension). After changing a module, refresh them with:
+
+```bash
+./mvnw test -Dtest=ModularityTest -DupdateModuleDocs=true
+```
+
 `EndpointContractTest` freezes the public API (all URLs, methods and role checks) in `src/test/resources/api-endpoints.txt`. After an intended API change, regenerate it with:
 
 ```bash
