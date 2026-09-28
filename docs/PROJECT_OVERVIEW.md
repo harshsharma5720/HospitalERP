@@ -68,12 +68,18 @@ HospitalERP/
 │   └── app/              # main class, SecurityConfig, application.properties, end-to-end tests
 │                         # (details: README "Backend modules", docs/MULTI_MODULE_PLAN.md)
 │
-├── hospital-frontend/    # React frontend
+├── hospital-frontend/    # React frontend, organised by feature (same areas as the backend modules)
 │   └── src/
-│       ├── pages/admin/  # Admin portal pages
-│       ├── pages/doctor/ # Doctor portal pages
-│       ├── components/   # Shared UI components
-│       └── utils/        # JWT helpers, utilities
+│       ├── app/          # App.js (routes), ProtectedRoute, axios setup, config
+│       ├── features/
+│       │   ├── auth/          # login, register, forgot password, auth store
+│       │   ├── public/        # home, about, contact, treatments
+│       │   ├── appointments/  # booking, appointment details, front-desk dashboard
+│       │   ├── patients/      # profile editing, relatives
+│       │   ├── doctors/       # public doctor list/profile; portal/ = the doctor's own portal
+│       │   ├── clinical/      # consultation modal, prescription download
+│       │   └── admin/         # admin portal
+│       └── shared/       # navbars, footer, loader, popup, theme toggle, utils
 │
 └── docs/                 # Project documentation
 ```
