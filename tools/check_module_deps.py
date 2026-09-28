@@ -22,11 +22,14 @@ Module of a class: taken from its package (step 2.2 moved every class there).
 A class anywhere else is reported as unmapped.
 """
 import collections
+import glob
 import os
 import re
 import sys
 
-SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'hospitalERP', 'src', 'main', 'java')
+BACKEND = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'hospitalERP')
+# main sources of every Maven module (hospitalERP/<module>/src/main/java)
+SOURCE_ROOTS = sorted(glob.glob(os.path.join(BACKEND, '*', 'src', 'main', 'java')))
 TARGET_ROOT_PACKAGE = 'com.itmonteur.hospitalerp'
 
 # Plan section 2.1: which modules each module may use.
@@ -54,7 +57,7 @@ def main():
     verbose = '--verbose' in sys.argv
     classes = {}  # simple name -> (path, module)
     unmapped = []
-    for dirpath, _, filenames in os.walk(SRC):
+    for dirpath, _, filenames in (entry for root in SOURCE_ROOTS for entry in os.walk(root)):
         for filename in filenames:
             if not filename.endswith('.java'):
                 continue

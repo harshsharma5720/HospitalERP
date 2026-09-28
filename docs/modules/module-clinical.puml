@@ -24,6 +24,9 @@ Rel(HospitalErpApplication.HospitalErpApplication.Appointments, HospitalErpAppli
 Rel(HospitalErpApplication.HospitalErpApplication.Appointments, HospitalErpApplication.HospitalErpApplication.Patients, "uses", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Appointments, HospitalErpApplication.HospitalErpApplication.Staff, "uses", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Appointments, HospitalErpApplication.HospitalErpApplication.Identity, "uses", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Patients, HospitalErpApplication.HospitalErpApplication.Identity, "listens to", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Patients, HospitalErpApplication.HospitalErpApplication.Identity, "uses", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Patients, HospitalErpApplication.HospitalErpApplication.Common, "uses", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Staff, HospitalErpApplication.HospitalErpApplication.Identity, "listens to", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Staff, HospitalErpApplication.HospitalErpApplication.Identity, "uses", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Staff, HospitalErpApplication.HospitalErpApplication.Common, "uses", $techn="", $tags="", $link="")
@@ -32,9 +35,6 @@ Rel(HospitalErpApplication.HospitalErpApplication.Clinical, HospitalErpApplicati
 Rel(HospitalErpApplication.HospitalErpApplication.Clinical, HospitalErpApplication.HospitalErpApplication.Staff, "uses", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Clinical, HospitalErpApplication.HospitalErpApplication.Patients, "uses", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Clinical, HospitalErpApplication.HospitalErpApplication.Identity, "uses", $techn="", $tags="", $link="")
-Rel(HospitalErpApplication.HospitalErpApplication.Patients, HospitalErpApplication.HospitalErpApplication.Identity, "listens to", $techn="", $tags="", $link="")
-Rel(HospitalErpApplication.HospitalErpApplication.Patients, HospitalErpApplication.HospitalErpApplication.Identity, "uses", $techn="", $tags="", $link="")
-Rel(HospitalErpApplication.HospitalErpApplication.Patients, HospitalErpApplication.HospitalErpApplication.Common, "uses", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 @enduml
