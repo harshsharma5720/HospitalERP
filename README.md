@@ -369,6 +369,13 @@ Generated module documentation lives in [docs/modules/](docs/modules/): `compone
 ./mvnw test -Dtest=AccessRulesContractTest -Dsurefire.failIfNoSpecifiedTests=false -DupdateAccessSnapshot=true
 ```
 
+### Continuous integration
+
+A GitHub Actions workflow (`.github/workflows/ci.yml`) is **prepared but not in the repository yet**: pushing a workflow file needs a GitHub token with the `workflow` permission. Once added, it runs on every pull request and every push to `main`:
+
+- **Backend:** `python3 tools/check_module_deps.py`, then `./mvnw -B verify` in `hospitalERP/` (Enforcer rules, all module and end-to-end tests on H2, jars). Test reports are uploaded when it fails.
+- **Frontend:** `npm ci`, `npm test`, `npm run build`. The build runs with `CI=false` for now, because CI mode would turn the existing lint warnings into errors; remove that once they are fixed.
+
 ### Frontend
 
 ```bash
