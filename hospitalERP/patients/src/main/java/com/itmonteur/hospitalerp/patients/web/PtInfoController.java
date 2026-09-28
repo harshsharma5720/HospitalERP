@@ -2,7 +2,6 @@ package com.itmonteur.hospitalerp.patients.web;
 
 import com.itmonteur.hospitalerp.patients.PtInfoDTO;
 import com.itmonteur.hospitalerp.patients.PtInfoService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,8 +13,11 @@ import java.util.List;
 @RequestMapping("/api/patient")
 public class PtInfoController {
 
-    @Autowired
-    private PtInfoService ptInfoService;
+    private final PtInfoService ptInfoService;
+
+    public PtInfoController(PtInfoService ptInfoService) {
+        this.ptInfoService = ptInfoService;
+    }
 
     // Get all patient accounts (admin / receptionist)
     @GetMapping("/getAll")

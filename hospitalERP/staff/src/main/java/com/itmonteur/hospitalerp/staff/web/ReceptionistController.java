@@ -2,7 +2,6 @@ package com.itmonteur.hospitalerp.staff.web;
 
 import com.itmonteur.hospitalerp.staff.ReceptionistDTO;
 import com.itmonteur.hospitalerp.staff.ReceptionistService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -15,8 +14,11 @@ import java.util.List;
 @RequestMapping("/api/receptionist")
 public class ReceptionistController {
 
-    @Autowired
-    private ReceptionistService receptionistService;
+    private final ReceptionistService receptionistService;
+
+    public ReceptionistController(ReceptionistService receptionistService) {
+        this.receptionistService = receptionistService;
+    }
 
     // Get all receptionists
     @GetMapping("/getAll")

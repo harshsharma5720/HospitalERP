@@ -3,7 +3,6 @@ package com.itmonteur.hospitalerp.staff.web;
 import com.itmonteur.hospitalerp.staff.DoctorDTO;
 import com.itmonteur.hospitalerp.staff.Specialist;
 import com.itmonteur.hospitalerp.staff.DoctorService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,8 +14,11 @@ import java.util.List;
 @RequestMapping("/api/doctor")
 public class DoctorController {
 
-    @Autowired
-    private DoctorService doctorService;
+    private final DoctorService doctorService;
+
+    public DoctorController(DoctorService doctorService) {
+        this.doctorService = doctorService;
+    }
 
     // Get all doctors
     @GetMapping("/getAll")

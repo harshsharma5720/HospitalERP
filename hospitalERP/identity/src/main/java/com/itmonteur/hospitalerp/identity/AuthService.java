@@ -6,7 +6,6 @@ import com.itmonteur.hospitalerp.identity.internal.UserRepository;
 import com.itmonteur.hospitalerp.identity.internal.JWTService;
 import com.itmonteur.hospitalerp.identity.internal.LoginAttemptService;
 import com.itmonteur.hospitalerp.identity.internal.OtpService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -26,20 +25,25 @@ public class AuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private JWTService jwtService;
-    @Autowired
-    private AuthenticationManager authenticationManager;
-    @Autowired
-    private OtpService otpService;
-    @Autowired
-    private LoginAttemptService loginAttemptService;
-    @Autowired
-    private ApplicationEventPublisher eventPublisher;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JWTService jwtService;
+    private final AuthenticationManager authenticationManager;
+    private final OtpService otpService;
+    private final LoginAttemptService loginAttemptService;
+    private final ApplicationEventPublisher eventPublisher;
+
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JWTService jwtService,
+                       AuthenticationManager authenticationManager, OtpService otpService,
+                       LoginAttemptService loginAttemptService, ApplicationEventPublisher eventPublisher) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+        this.authenticationManager = authenticationManager;
+        this.otpService = otpService;
+        this.loginAttemptService = loginAttemptService;
+        this.eventPublisher = eventPublisher;
+    }
 
     @Value("${app.otp.required:true}")
     private boolean otpRequired;

@@ -3,7 +3,6 @@ package com.itmonteur.hospitalerp.scheduling.web;
 import com.itmonteur.hospitalerp.scheduling.Slot;
 import com.itmonteur.hospitalerp.scheduling.Shift;
 import com.itmonteur.hospitalerp.scheduling.SlotService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
@@ -18,8 +17,11 @@ public class SlotController {
 
     private static final Logger logger = LoggerFactory.getLogger(SlotController.class);
 
-    @Autowired
-    private SlotService slotService;
+    private final SlotService slotService;
+
+    public SlotController(SlotService slotService) {
+        this.slotService = slotService;
+    }
 
     /**
      * Generate 10-minute slots for a specific doctor, date, and shift.

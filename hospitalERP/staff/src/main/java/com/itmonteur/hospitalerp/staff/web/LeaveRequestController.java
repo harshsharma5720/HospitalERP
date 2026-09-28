@@ -6,7 +6,6 @@ import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -20,8 +19,11 @@ public class LeaveRequestController {
 
     private static final Logger logger = LoggerFactory.getLogger(LeaveRequestController.class);
 
-    @Autowired
-    private LeaveRequestService leaveRequestService;
+    private final LeaveRequestService leaveRequestService;
+
+    public LeaveRequestController(LeaveRequestService leaveRequestService) {
+        this.leaveRequestService = leaveRequestService;
+    }
 
     // APPLY FOR LEAVE (always for the logged-in user)
     @PostMapping("/apply")

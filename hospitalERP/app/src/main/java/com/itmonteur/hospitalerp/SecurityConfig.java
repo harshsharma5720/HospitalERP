@@ -3,7 +3,6 @@ package com.itmonteur.hospitalerp;
 import com.itmonteur.hospitalerp.identity.CustomUserDetailsService;
 import com.itmonteur.hospitalerp.identity.JWTAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,10 +31,14 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private JWTAuthenticationFilter jwtAuthenticationFilter;
-    @Autowired
-    private CustomUserDetailsService customUserDetailsService;
+    private final JWTAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomUserDetailsService customUserDetailsService;
+
+    public SecurityConfig(JWTAuthenticationFilter jwtAuthenticationFilter,
+                          CustomUserDetailsService customUserDetailsService) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.customUserDetailsService = customUserDetailsService;
+    }
 
     @Value("${app.cors.allowed-origins:http://localhost:3000}")
     private String allowedOrigins;

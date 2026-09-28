@@ -3,7 +3,6 @@ package com.itmonteur.hospitalerp.patients.web;
 import com.itmonteur.hospitalerp.patients.PtRelativeDTO;
 import com.itmonteur.hospitalerp.patients.PtRelativeService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,8 +13,11 @@ import java.util.List;
 @RequestMapping("/api/patient/relative")
 public class PtRelativeController {
 
-    @Autowired
-    private PtRelativeService ptRelativeService;
+    private final PtRelativeService ptRelativeService;
+
+    public PtRelativeController(PtRelativeService ptRelativeService) {
+        this.ptRelativeService = ptRelativeService;
+    }
 
     @PostMapping("/add")
     public ResponseEntity<PtRelativeDTO> addRelative(@Valid @RequestBody PtRelativeDTO dto) {
