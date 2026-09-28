@@ -85,7 +85,7 @@ CREATE DATABASE hospital_erp;
 
 3. Note your MySQL username and password — you will need them in the next step.
 
-> Tables are created automatically by Hibernate (`spring.jpa.hibernate.ddl-auto=update`) when the backend starts.
+> Tables are created by **Flyway** migrations when the backend starts (see [Database migrations](#database-migrations-flyway)). Hibernate only checks that the tables match the code (`ddl-auto=validate`); it no longer changes them.
 
 ---
 
@@ -239,6 +239,36 @@ Medical records (consultations, prescriptions) are visible only to the patient, 
 
 ---
 
+## Database migrations (Flyway)
+
+The database schema is owned by the migration scripts in `hospitalERP/app/src/main/resources/db/migration/`. Flyway runs the new ones at startup and records them in the `flyway_schema_history` table.
+
+| File | What it does |
+|---|---|
+| `V1__baseline.sql` | The complete schema as of September 2026. Runs only on an **empty** database. |
+| `staff/V2026_09_28_1__staff_drop_unused_columns.sql` | Drops `doctor.password`, `doctor.role`, `receptionist.role` (unused; login data lives in `users`). |
+| `patients/V2026_09_28_2__patients_drop_unused_columns.sql` | Drops `patient.role`, `patient_relative.role`. |
+
+**Changing the schema:** add a new file to the owning module's folder, e.g. `db/migration/appointments/V2026_10_05_1__appointments_add_room.sql`, with the next date-based version. Never edit a migration that has already run anywhere — Flyway checks their checksums and refuses to start. Hibernate then validates the entities against the result, so an entity change without a migration stops the app with a clear "Schema-validation" message.
+
+### Upgrading a database created before Flyway
+
+A database created by the old `ddl-auto=update` has tables but no `flyway_schema_history`. On the first start Flyway marks it as version 1 (it does **not** run the baseline there) and then runs only the two clean-up migrations above. Data is kept. Do it once like this:
+
+1. **Back up** the database:
+   ```bash
+   mysqldump -u root -p --routines --single-transaction hospital_erp > hospital_erp_before_flyway.sql
+   ```
+2. Start the backend as usual (`./mvnw spring-boot:run` in `hospitalERP/`). The log should show
+   `Successfully baselined schema with version: 1`, then `Successfully applied 2 migrations`, then `Started HospitalErpApplication`.
+3. Check the app (login, booking, consultation, PDF).
+
+If it stops with `Schema-validation: missing column / wrong column type …`, your database differs from what the code expects (for example a column created long ago with an old type). Nothing has been lost; send the message to the team. To go back: restore the backup (`mysql -u root -p hospital_erp < hospital_erp_before_flyway.sql`) and run the previous version of the code.
+
+The migrations are tested on a real MySQL 8 in `DatabaseMigrationMySqlTest` (an upgrade of a pre-Flyway database with data, and a fresh install giving the identical schema). It needs Docker and is skipped without it; CI runs it.
+
+---
+
 ## Profile Image Uploads
 
 Profile images are stored on disk at:
@@ -256,6 +286,10 @@ http://localhost:8080/uploads/profileImages/<filename>
 ---
 
 ## Common Issues & Troubleshooting
+
+### Backend fails to start — "Schema-validation" or "Migration checksum mismatch"
+- `Schema-validation: missing column …`: the database doesn't match the code. Usually a migration is missing for an entity change; see [Database migrations](#database-migrations-flyway).
+- `Migration checksum mismatch`: a migration file was edited after it ran. Restore the file; put the change in a new migration.
 
 ### Backend fails to start — database connection error
 - Confirm MySQL is running.
@@ -307,7 +341,8 @@ cd hospitalERP
 # Run the jar (from hospitalERP/, so .env and uploads/ are found)
 java -jar app/target/hospital-app-0.0.1-SNAPSHOT.jar
 
-# Run all tests (no MySQL needed — they use an in-memory H2 database)
+# Run all tests (no MySQL needed — they use an in-memory H2 database;
+# DatabaseMigrationMySqlTest also starts a throw-away MySQL in Docker, and is skipped without Docker)
 ./mvnw test
 
 # Test one module (and the modules it builds on), e.g. clinical

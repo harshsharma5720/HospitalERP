@@ -33,7 +33,8 @@ import java.time.LocalTime;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** Runs the custom JPQL queries against an in-memory H2 database. */
-@DataJpaTest
+// H2 schema from the entities; the Flyway migrations are MySQL SQL (see DatabaseMigrationMySqlTest)
+@DataJpaTest(properties = {"spring.jpa.hibernate.ddl-auto=create-drop", "spring.flyway.enabled=false"})
 @TestPropertySource(properties = {
         "DB_URL=jdbc:h2:mem:test", "DB_USERNAME=sa", "DB_PASSWORD=",
         "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect"

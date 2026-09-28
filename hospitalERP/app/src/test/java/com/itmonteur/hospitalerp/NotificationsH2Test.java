@@ -29,7 +29,7 @@ import static org.mockito.Mockito.*;
         "DB_URL=jdbc:h2:mem:notify;DB_CLOSE_DELAY=-1", "DB_USERNAME=sa", "DB_PASSWORD=",
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
-        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.hibernate.ddl-auto=create-drop", "spring.flyway.enabled=false",
         "OTP_REQUIRED=false", "REMINDERS_ENABLED=false",
         "ADMIN_USERNAME=notifyadmin", "ADMIN_PASSWORD=notify-admin-123"
 })
