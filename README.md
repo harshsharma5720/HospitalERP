@@ -38,12 +38,30 @@ Optional (for OTP/SMS during registration):
 
 ```
 HospitalERP/
-├── hospitalERP/          # Spring Boot backend  → runs on http://localhost:8080
-├── hospital-frontend/    # React frontend       → runs on http://localhost:3000
+├── hospitalERP/              # Spring Boot backend → runs on http://localhost:8080
+│   ├── pom.xml               #   parent build: module list, library versions, build rules
+│   ├── common/               #   one folder (Maven module) per business module ...
+│   ├── notifications/
+│   ├── identity/
+│   ├── patients/
+│   ├── staff/
+│   ├── scheduling/
+│   ├── appointments/
+│   ├── clinical/
+│   ├── administration/
+│   ├── app/                  #   ... and the runnable application (main class, config, end-to-end tests)
+│   └── .env                  #   your local settings (not in git, see Step 3)
+├── hospital-frontend/        # React frontend → runs on http://localhost:3000
 ├── docs/
-│   └── PROJECT_OVERVIEW.md
-└── README.md             # This file
+│   ├── PROJECT_OVERVIEW.md
+│   ├── MULTI_MODULE_PLAN.md  #   module rules and refactor progress log
+│   └── modules/              #   generated module diagrams
+├── tools/
+│   └── check_module_deps.py  #   module boundary check
+└── README.md                 # This file
 ```
+
+The backend modules and what each one may use are described in [Backend modules](#backend-modules).
 
 ---
 
@@ -137,6 +155,8 @@ cd hospitalERP
 cd hospitalERP
 ./mvnw spring-boot:run
 ```
+
+This builds all backend modules and starts the `app` module. Run it from `hospitalERP/`, so the `.env` file and the `uploads/` folder there are used.
 
 Wait until you see:
 ```
@@ -281,26 +301,53 @@ cd hospitalERP
 ./mvnw spring-boot:run        # macOS/Linux
 .\mvnw.cmd spring-boot:run      # Windows
 
-# Build JAR
+# Build (all modules + tests); the runnable jar is app/target/hospital-app-0.0.1-SNAPSHOT.jar
 ./mvnw clean package
 
-# Run tests (no MySQL needed — they use an in-memory H2 database)
+# Run the jar (from hospitalERP/, so .env and uploads/ are found)
+java -jar app/target/hospital-app-0.0.1-SNAPSHOT.jar
+
+# Run all tests (no MySQL needed — they use an in-memory H2 database)
 ./mvnw test
+
+# Test one module (and the modules it builds on), e.g. clinical
+./mvnw -pl clinical -am test
 
 # If tests fail to start with "insufficient memory", give the test JVM a smaller heap
 ./mvnw test -DargLine="-Xms64m -Xmx512m"
 ```
 
-### Module boundaries
+Every build also checks that all modules use the same version of each library (Maven Enforcer). If it fails with "Dependency convergence error", pin that library's version in `<dependencyManagement>` of `hospitalERP/pom.xml`.
 
-The backend is being split into business modules (identity, patients, staff, scheduling, appointments, clinical, administration, …). See [docs/MULTI_MODULE_PLAN.md](docs/MULTI_MODULE_PLAN.md) for the rules and the progress log. Run this check before committing:
+### Backend modules
+
+The backend is a modular monolith: one application and one database, split into Maven modules. A module can only use the modules listed for it; the build fails if two modules depend on each other. See [docs/MULTI_MODULE_PLAN.md](docs/MULTI_MODULE_PLAN.md) for the rules and the progress log.
+
+| Module | Responsibility | May use |
+|---|---|---|
+| `common` | Shared kernel: exceptions + global error handler, `ApiResponse`, `Gender`, file storage | – |
+| `notifications` | Email and SMS delivery, message templates | common |
+| `identity` | Users, roles, login, JWT, OTP, password reset, first-admin bootstrap | common, notifications |
+| `patients` | Patient profiles and relatives | common, identity |
+| `staff` | Doctors, receptionists, leave requests | common, identity |
+| `scheduling` | Doctor weekly schedules and slots | common, identity, staff |
+| `appointments` | Booking, reschedule, cancel, day-before reminders | common, identity, notifications, patients, staff, scheduling |
+| `clinical` | Consultations, prescriptions, prescription PDF, medical history | common, identity, patients, staff, appointments |
+| `administration` | Admin use cases across modules: create users, leave decisions, account deletion | all of the above |
+| `app` | Main class, `SecurityConfig`, `application.properties`, end-to-end tests | all modules |
+
+When a lower module needs something to happen in a higher one (for example, an approved leave must cancel appointments), it publishes an event and the higher module listens.
+
+Inside a module, `com.itmonteur.hospitalerp.<module>` is its public API (what other modules may use); its `internal` and `web` sub-packages are private to the module. Unit tests live in their module's `src/test`; tests that start the whole application live in `app`.
+
+Run this check before committing:
 
 ```bash
 python tools/check_module_deps.py            # prints "RESULT: OK - module boundaries respected"
 python tools/check_module_deps.py --verbose  # also lists every module-to-module dependency
 ```
 
-It fails (exit code 1) if a module uses a module it shouldn't, if two modules depend on each other, or if a module uses another module's repository. A class belongs to the module named by its package: `com.itmonteur.hospitalerp.<module>` is the module's public API, and its `internal` and `web` sub-packages are for the module itself.
+It fails (exit code 1) if a module uses a module it shouldn't (including one it only reaches indirectly), if two modules depend on each other, or if a module uses another module's repository. A class belongs to the module named by its package.
 
 `ModularityTest` checks the same boundaries with Spring Modulith on every `./mvnw test`: it fails on a cycle between modules, on one module using another module's `internal`/`web` classes, and on `@Autowired` field injection of another module's beans.
 
@@ -310,7 +357,7 @@ Generated module documentation lives in [docs/modules/](docs/modules/): `compone
 ./mvnw test -Dtest=ModularityTest -Dsurefire.failIfNoSpecifiedTests=false -DupdateModuleDocs=true
 ```
 
-`EndpointContractTest` freezes the public API (all URLs, methods and role checks) in `src/test/resources/api-endpoints.txt`. After an intended API change, regenerate it with:
+`EndpointContractTest` freezes the public API (all URLs, methods and role checks) in `app/src/test/resources/api-endpoints.txt`. After an intended API change, regenerate it with:
 
 ```bash
 ./mvnw test -Dtest=EndpointContractTest -Dsurefire.failIfNoSpecifiedTests=false -DupdateEndpointSnapshot=true
@@ -350,6 +397,8 @@ npm test        # Run tests
 ## Further Reading
 
 - [Project Overview & Roadmap](docs/PROJECT_OVERVIEW.md) — goals, completed features, and what is left to build
+- [Multi-Module Plan](docs/MULTI_MODULE_PLAN.md) — module rules, phases and progress log
+- [Module diagrams](docs/modules/) — generated by `ModularityTest`
 
 ---
 

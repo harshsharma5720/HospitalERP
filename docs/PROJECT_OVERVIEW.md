@@ -58,14 +58,15 @@ The system supports four roles:
 
 ```
 HospitalERP/
-├── hospitalERP/          # Spring Boot backend (API + database)
-│   └── src/main/java/ITmonteur/example/hospitalERP/
-│       ├── controller/   # REST API endpoints
-│       ├── entities/     # JPA database models
-│       ├── services/     # Business logic
-│       ├── repositories/ # Data access
-│       ├── dto/          # Request/response objects
-│       └── configuration/ # Security, JWT, CORS, file uploads
+├── hospitalERP/          # Spring Boot backend (API + database), a modular monolith
+│   ├── common/ notifications/ identity/ patients/ staff/
+│   ├── scheduling/ appointments/ clinical/ administration/
+│   │                     # one Maven module per business area; inside each:
+│   │                     #   com.itmonteur.hospitalerp.<module>           public API (entities, DTOs, services, events)
+│   │                     #   com.itmonteur.hospitalerp.<module>.internal  repositories, listeners, jobs, config
+│   │                     #   com.itmonteur.hospitalerp.<module>.web       REST controllers
+│   └── app/              # main class, SecurityConfig, application.properties, end-to-end tests
+│                         # (details: README "Backend modules", docs/MULTI_MODULE_PLAN.md)
 │
 ├── hospital-frontend/    # React frontend
 │   └── src/
