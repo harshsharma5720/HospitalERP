@@ -325,20 +325,20 @@ The backend is a modular monolith: one application and one database, split into 
 
 | Module | Responsibility | May use |
 |---|---|---|
-| `common` | Shared kernel: exceptions + global error handler, `ApiResponse`, `Gender`, file storage | – |
-| `notifications` | Email and SMS delivery, message templates | common |
-| `identity` | Users, roles, login, JWT, OTP, password reset, first-admin bootstrap | common, notifications |
-| `patients` | Patient profiles and relatives | common, identity |
-| `staff` | Doctors, receptionists, leave requests | common, identity |
-| `scheduling` | Doctor weekly schedules and slots | common, identity, staff |
-| `appointments` | Booking, reschedule, cancel, day-before reminders | common, identity, notifications, patients, staff, scheduling |
-| `clinical` | Consultations, prescriptions, prescription PDF, medical history | common, identity, patients, staff, appointments |
-| `administration` | Admin use cases across modules: create users, leave decisions, account deletion | all of the above |
+| [`common`](hospitalERP/common/README.md) | Shared kernel: exceptions + global error handler, `ApiResponse`, `Gender`, file storage | – |
+| [`notifications`](hospitalERP/notifications/README.md) | Email and SMS delivery, message templates | common |
+| [`identity`](hospitalERP/identity/README.md) | Users, roles, login, JWT, OTP, password reset, first-admin bootstrap | common, notifications |
+| [`patients`](hospitalERP/patients/README.md) | Patient profiles and relatives | common, identity |
+| [`staff`](hospitalERP/staff/README.md) | Doctors, receptionists, leave requests | common, identity |
+| [`scheduling`](hospitalERP/scheduling/README.md) | Doctor weekly schedules and slots | common, identity, staff |
+| [`appointments`](hospitalERP/appointments/README.md) | Booking, reschedule, cancel, day-before reminders | common, identity, notifications, patients, staff, scheduling |
+| [`clinical`](hospitalERP/clinical/README.md) | Consultations, prescriptions, prescription PDF, medical history | common, identity, patients, staff, appointments |
+| [`administration`](hospitalERP/administration/README.md) | Admin use cases across modules: create users, leave decisions, account deletion | all of the above |
 | `app` | Main class, `SecurityConfig`, `application.properties`, end-to-end tests | all modules |
 
 When a lower module needs something to happen in a higher one (for example, an approved leave must cancel appointments), it publishes an event and the higher module listens.
 
-Inside a module, `com.itmonteur.hospitalerp.<module>` is its public API (what other modules may use); its `internal` and `web` sub-packages are private to the module. Unit tests live in their module's `src/test`; tests that start the whole application live in `app`.
+Each module has a short README (linked in the table): its public API, the events it sends and receives, its endpoints and settings. Inside a module, `com.itmonteur.hospitalerp.<module>` is its public API (what other modules may use); its `internal` and `web` sub-packages are private to the module. Unit tests live in their module's `src/test`; tests that start the whole application live in `app`.
 
 Run this check before committing:
 
