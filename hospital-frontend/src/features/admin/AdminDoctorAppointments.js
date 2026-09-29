@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
-import { API_BASE_URL } from "../../app/config";
+import { getDoctor } from "../doctors/api";
+import * as adminApi from "./api";
 import { getErrorMessage } from "../../shared/utils/apiError";
 
 const formatTime = (time) => (time ? String(time).slice(0, 5) : "");
@@ -16,8 +16,7 @@ export default function AdminDoctorAppointments() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios
-      .get(`${API_BASE_URL}/api/doctor/get/${userId}`)
+    getDoctor(userId)
       .then((res) => setDoctor(res.data))
       .catch(() => setDoctor(null));
   }, [userId]);
@@ -26,8 +25,10 @@ export default function AdminDoctorAppointments() {
     const load = async () => {
       setLoading(true);
       try {
-        const path = viewType === "pending" ? "doctorPendingAppointments" : "doctorCompletedAppointments";
-        const res = await axios.get(`${API_BASE_URL}/api/admin/${path}/${userId}`);
+        const res =
+          viewType === "pending"
+            ? await adminApi.getDoctorPendingAppointments(userId)
+            : await adminApi.getDoctorCompletedAppointments(userId);
         setAppointments(res.data);
       } catch (err) {
         setAppointments([]);

@@ -71,7 +71,7 @@ HospitalERP/
 ├── hospital-frontend/    # React frontend, organised by feature (same areas as the backend modules)
 │   └── src/
 │       ├── app/          # App.js (routes), ProtectedRoute, axios setup, config
-│       ├── features/
+│       ├── features/     # each feature: its pages + api.js (all its backend calls)
 │       │   ├── auth/          # login, register, forgot password, auth store
 │       │   ├── public/        # home, about, contact, treatments
 │       │   ├── appointments/  # booking, appointment details, front-desk dashboard
@@ -79,7 +79,7 @@ HospitalERP/
 │       │   ├── doctors/       # public doctor list/profile; portal/ = the doctor's own portal
 │       │   ├── clinical/      # consultation modal, prescription download
 │       │   └── admin/         # admin portal
-│       └── shared/       # navbars, footer, loader, popup, theme toggle, utils
+│       └── shared/       # navbars, footer, loader, popup, theme toggle, utils, profileApi (own profile, any role)
 │
 └── docs/                 # Project documentation
 ```

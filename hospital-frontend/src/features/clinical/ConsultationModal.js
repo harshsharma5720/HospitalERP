@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { API_BASE_URL } from "../../app/config";
 import { getErrorMessage } from "../../shared/utils/apiError";
+import * as clinicalApi from "./api";
 import { downloadPrescription } from "./downloadPrescription";
 
 const emptyMedicine = { medicineName: "", dosage: "", frequency: "", duration: "", instructions: "" };
@@ -33,7 +32,7 @@ export default function ConsultationModal({ appointment, onClose, onSaved }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/consultations/appointment/${appointment.appointmentID}`);
+        const res = await clinicalApi.getConsultation(appointment.appointmentID);
         const c = res.data;
         setExists(true);
         setForm({
@@ -52,7 +51,7 @@ export default function ConsultationModal({ appointment, onClose, onSaved }) {
       }
       if (appointment.ptInfoId) {
         try {
-          const res = await axios.get(`${API_BASE_URL}/api/consultations/patient/${appointment.ptInfoId}`);
+          const res = await clinicalApi.getPatientHistory(appointment.ptInfoId);
           setHistory(res.data.filter((h) => h.appointmentId !== appointment.appointmentID));
         } catch {
           setHistory([]);
@@ -87,7 +86,7 @@ export default function ConsultationModal({ appointment, onClose, onSaved }) {
     };
     try {
       setSaving(true);
-      await axios.put(`${API_BASE_URL}/api/consultations/appointment/${appointment.appointmentID}`, payload);
+      await clinicalApi.saveConsultation(appointment.appointmentID, payload);
       setExists(true);
       onSaved?.(appointment.appointmentID);
     } catch (err) {

@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import axios from "axios";
 import Navbar from "../../shared/Navbar";
 import TopNavbar from "../../shared/TopNavbar";
-import { API_BASE_URL } from "../../app/config";
+import * as appointmentsApi from "./api";
 
 export default function ReceptionistDashboard() {
   const [doctorName, setDoctorName] = useState("");
@@ -10,14 +9,11 @@ export default function ReceptionistDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [pendingAppointments, setPendingAppointments] = useState([]);
   const [completedAppointments, setCompletedAppointments] = useState([]);
-  const token = localStorage.getItem("jwtToken");
 
   // Fetch all appointments
   const fetchAllAppointments = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/receptionist/getAppointments`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await appointmentsApi.getFrontDeskAppointments();
       setAppointments(res.data);
     } catch (err) {
       console.error("Failed to fetch appointments", err);
@@ -32,10 +28,7 @@ export default function ReceptionistDashboard() {
     }
 
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/receptionist/getAppointmentByDoctor/${doctorName}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await appointmentsApi.getFrontDeskAppointmentsByDoctorName(doctorName);
       setAppointments(res.data);
     } catch (err) {
       console.error("Error fetching doctor appointments", err);
@@ -50,15 +43,9 @@ export default function ReceptionistDashboard() {
     }
 
     try {
-      const pendingRes = await axios.get(
-        `${API_BASE_URL}/api/receptionist/doctorPendingAppointments/${doctorId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const pendingRes = await appointmentsApi.getFrontDeskDoctorPendingAppointments(doctorId);
 
-      const completedRes = await axios.get(
-        `${API_BASE_URL}/api/receptionist/doctorCompletedAppointments/${doctorId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const completedRes = await appointmentsApi.getFrontDeskDoctorCompletedAppointments(doctorId);
 
       setPendingAppointments(pendingRes.data);
       setCompletedAppointments(completedRes.data);

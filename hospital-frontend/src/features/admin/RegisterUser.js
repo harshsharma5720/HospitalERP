@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
-import { API_BASE_URL } from "../../app/config";
+import * as adminApi from "./api";
 import { getErrorMessage } from "../../shared/utils/apiError";
 
 export default function RegisterUser() {
@@ -23,7 +22,7 @@ export default function RegisterUser() {
       return;
     }
     try {
-      await axios.post(`${API_BASE_URL}/api/admin/users`, {
+      await adminApi.createUser({
         email: formData.email,
         username: formData.username,
         phoneNumber: formData.phone,

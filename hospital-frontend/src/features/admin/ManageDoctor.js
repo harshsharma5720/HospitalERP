@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../../app/config";
+import { getAllDoctors } from "../doctors/api";
+import * as adminApi from "./api";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import { toLocalISODate } from "../../shared/utils/dateUtils";
 
@@ -14,29 +14,18 @@ export default function ManageDoctor() {
   const [onLeaveUserIds, setOnLeaveUserIds] = useState(new Set());
   const [presenceFilter, setPresenceFilter] = useState(null); // null | "present" | "absent"
 
-  const token = localStorage.getItem("jwtToken");
   const navigate = useNavigate();
 
   // ================= FETCH DOCTORS =================
   const fetchDoctors = async () => {
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/api/patient/getAllDoctors`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await getAllDoctors();
       const doctorsWithCounts = await Promise.all(
         response.data.map(async (doc) => {
           if (!doc.userId) return doc;
 
           try {
-            const countRes = await axios.get(
-              `${API_BASE_URL}/api/admin/doctorAppointmentCount/${doc.id}`,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-              }
-            );
+            const countRes = await adminApi.getDoctorAppointmentCount(doc.id);
             return {
               ...doc,
               pendingAppointmentsCount: countRes.data.pending,
@@ -62,7 +51,7 @@ export default function ManageDoctor() {
       setFilteredDoctors(doctorsWithCounts);
 
       const today = toLocalISODate();
-      const leavesRes = await axios.get(`${API_BASE_URL}/api/admin/allApproved`);
+      const leavesRes = await adminApi.getApprovedLeaves();
       setOnLeaveUserIds(
         new Set(
           leavesRes.data
@@ -78,12 +67,7 @@ export default function ManageDoctor() {
   };
 
   const fetchAppointmentCount = async (userId) => {
-    const response = await axios.get(
-      `${API_BASE_URL}/api/admin/doctorAppointmentCount/${userId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    const response = await adminApi.getDoctorAppointmentCount(userId);
     return response.data;
   };
 
@@ -95,12 +79,7 @@ export default function ManageDoctor() {
     if (!confirmDelete) return;
 
     try {
-      await axios.delete(
-        `${API_BASE_URL}/api/doctor/delete/${id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await adminApi.deleteDoctor(id);
       alert("Doctor removed successfully!");
       fetchDoctors();
     } catch (error) {

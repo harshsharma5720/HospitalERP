@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getRoleFromToken, getUserIdFromToken } from "../../../shared/utils/jwtUtils";
-import { API_BASE_URL } from "../../../app/config";
+import { getErrorMessage } from "../../../shared/utils/apiError";
+import * as appointmentsApi from "../../appointments/api";
 import ConsultationModal from "../../clinical/ConsultationModal";
 import { downloadPrescription } from "../../clinical/downloadPrescription";
 
@@ -31,19 +32,11 @@ export default function DoctorAppointments() {
 
       setLoading(true);
       try {
-        const endpoint =
+        const response =
           viewType === "pending"
-            ? `${API_BASE_URL}/api/doctor/doctorPendingAppointments/${decodedUserId}`
-            : `${API_BASE_URL}/api/doctor/doctorCompletedAppointments/${decodedUserId}`;
-
-        const response = await fetch(endpoint, {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!response.ok) throw new Error("Failed to fetch appointments");
-        const data = await response.json();
-        setAppointments(data);
+            ? await appointmentsApi.getDoctorPendingAppointments(decodedUserId)
+            : await appointmentsApi.getDoctorCompletedAppointments(decodedUserId);
+        setAppointments(response.data);
       } catch (err) {
         console.error("Error:", err);
       } finally {
@@ -61,27 +54,14 @@ export default function DoctorAppointments() {
     if (!confirmDone) return;
 
     try {
-      const token = localStorage.getItem("jwtToken");
-
-      const response = await fetch(
-        `${API_BASE_URL}/api/doctor/complete/${appointmentID}`,
-        {
-          method: "PUT",
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const response = await appointmentsApi.completeAppointment(appointmentID);
+      alert(response.data);
+      setAppointments((prev) =>
+        prev.filter((a) => a.appointmentID !== appointmentID)
       );
-
-      const result = await response.text();
-      alert(result);
-
-      if (response.ok) {
-        setAppointments((prev) =>
-          prev.filter((a) => a.appointmentID !== appointmentID)
-        );
-      }
     } catch (err) {
       console.error("Error completing appointment:", err);
-      alert("Failed to update appointment status.");
+      alert(getErrorMessage(err, "Failed to update appointment status."));
     }
   };
 

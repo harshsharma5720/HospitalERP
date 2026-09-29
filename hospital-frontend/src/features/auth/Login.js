@@ -1,12 +1,11 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import Lottie from "lottie-react";
 import LoginAnim from "./LoginAnim.json";
 import { getRoleFromToken } from "../../shared/utils/jwtUtils";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import useAuthStore, { homePathForRole } from "./useAuthStore";
-import { API_BASE_URL } from "../../app/config";
+import * as authApi from "./api";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -31,10 +30,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
-        username: formData.username,
-        password: formData.password,
-      });
+      const response = await authApi.login(formData.username, formData.password);
 
       const token = response.data.token;
       if (token) {

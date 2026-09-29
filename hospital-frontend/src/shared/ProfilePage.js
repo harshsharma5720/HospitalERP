@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { getRoleFromToken, getUserIdFromToken } from "./utils/jwtUtils.js";
+import { hasProfile, getOwnProfile } from "./profileApi";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { API_BASE_URL } from "../app/config";
@@ -30,21 +30,12 @@ export default function ProfilePage({ onClose }) {
 
         setRole(userRole);
 
-        let url = "";
-        if (userRole === "ROLE_DOCTOR") {
-          url = `${API_BASE_URL}/api/doctor/get/${userId}`;
-        } else if (userRole === "ROLE_PATIENT") {
-          url = `${API_BASE_URL}/api/patient/getAccount/${userId}`;
-        } else if (userRole === "ROLE_RECEPTIONIST") {
-          url = `${API_BASE_URL}/api/receptionist/getReceptionist/${userId}`;
-        } else {
+        if (!hasProfile(userRole)) {
           alert("Invalid user role detected!");
           return;
         }
 
-        const response = await axios.get(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await getOwnProfile(userRole, userId);
         setUserData(response.data);
         console.log("Fetched profile data:", response.data);
       } catch (error) {

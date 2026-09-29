@@ -1,12 +1,11 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import TopNavbar from "../../shared/TopNavbar";
 import Navbar from "../../shared/Navbar";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import { toLocalISODate } from "../../shared/utils/dateUtils";
 import { useLocation } from "react-router-dom";
-import { API_BASE_URL } from "../../app/config";
+import * as patientsApi from "./api";
 
 // Used for both "/add-relative" and "/edit-relative" (state.relative = relative to edit)
 export default function AddRelativePage() {
@@ -38,10 +37,10 @@ export default function AddRelativePage() {
     try {
       setSaving(true);
       if (editing) {
-        await axios.put(`${API_BASE_URL}/api/patient/relative/update/${editing.id}`, payload);
+        await patientsApi.updateRelative(editing.id, payload);
         alert("Relative updated successfully!");
       } else {
-        await axios.post(`${API_BASE_URL}/api/patient/relative/add`, payload);
+        await patientsApi.addRelative(payload);
         alert("Relative added successfully!");
       }
       navigate("/edit-profile"); // redirect back

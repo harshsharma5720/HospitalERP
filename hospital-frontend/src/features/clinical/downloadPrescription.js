@@ -1,14 +1,10 @@
-import axios from "axios";
-import { API_BASE_URL } from "../../app/config";
 import { getErrorMessage } from "../../shared/utils/apiError";
+import { getPrescriptionPdf } from "./api";
 
 // Downloads the prescription PDF (needs the auth header, so a plain <a href> won't work)
 export const downloadPrescription = async (appointmentId) => {
   try {
-    const res = await axios.get(
-      `${API_BASE_URL}/api/consultations/appointment/${appointmentId}/prescription.pdf`,
-      { responseType: "blob" }
-    );
+    const res = await getPrescriptionPdf(appointmentId);
     const url = URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
     const link = document.createElement("a");
     link.href = url;

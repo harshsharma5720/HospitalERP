@@ -1,6 +1,5 @@
 // Part 1 of 2 — AppointmentPage (neon dark theme) - TOP
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import Navbar from "../../shared/Navbar";
 import TopNavbar from "../../shared/TopNavbar";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -9,7 +8,9 @@ import { calculateAgeFromDOB } from "../../shared/utils/calculateAgeFromDOB";
 import Loader from "../../shared/Loader";
 import { toLocalISODate, addDays } from "../../shared/utils/dateUtils";
 import { getErrorMessage } from "../../shared/utils/apiError";
-import { API_BASE_URL } from "../../app/config";
+import { getAllDoctors } from "../doctors/api";
+import { getPatientAccount, getRelatives } from "../patients/api";
+import * as appointmentsApi from "./api";
 
 export default function AppointmentPage() {
   const location = useLocation();
@@ -50,7 +51,7 @@ export default function AppointmentPage() {
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/patient/getAllDoctors`);
+        const response = await getAllDoctors();
         setDoctors(response.data);
 
         // Prefill doctor if passed from DoctorPage
@@ -118,10 +119,10 @@ export default function AppointmentPage() {
         if (!token) return;
         // 1. Fetch logged-in user
         const userId = getUserIdFromToken(token);
-        const userRes = await axios.get(`${API_BASE_URL}/api/patient/getAccount/${userId}`);
+        const userRes = await getPatientAccount(userId);
         const user = userRes.data;
         // 2. Fetch all relatives of user
-        const relRes = await axios.get(`${API_BASE_URL}/api/patient/relative/patient/${user.patientId}`);
+        const relRes = await getRelatives(user.patientId);
         const relatives = relRes.data;
         // 3. Dropdown options = user + relatives
         const options = [
@@ -207,9 +208,7 @@ export default function AppointmentPage() {
     setSelectedSlotId(null);
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/slots/available/${doctorId}`, {
-        params: { date, shift },
-      });
+      const response = await appointmentsApi.getAvailableSlots(doctorId, date, shift);
       setAvailableSlots(response.data);
     } catch (error) {
       setAvailableSlots([]);
@@ -232,12 +231,12 @@ export default function AppointmentPage() {
       setBookingStatus("loading");
       if (rescheduleData) {
         // Moves the existing appointment to the new slot (the old slot is released by the server)
-        await axios.put(`${API_BASE_URL}/appointment/update/${rescheduleData.appointmentID}`, {
+        await appointmentsApi.rescheduleAppointment(rescheduleData.appointmentID, {
           slotId: selectedSlotId,
           message: formData.message,
         });
       } else {
-        await axios.post(`${API_BASE_URL}/appointment/NewAppointment`, {
+        await appointmentsApi.bookAppointment({
           patientName: formData.patientName,
           gender: formData.gender,
           age: Number(formData.age) || 0,

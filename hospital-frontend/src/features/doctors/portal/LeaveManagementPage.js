@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { getRoleFromToken, getUserIdFromToken } from "../../../shared/utils/jwtUtils";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../../../app/config";
+import { getErrorMessage } from "../../../shared/utils/apiError";
+import { getMyLeaves, applyForLeave } from "../api";
 
 export default function LeaveManagementPage() {
   const [pendingLeaves, setPendingLeaves] = useState([]);
@@ -28,16 +29,8 @@ export default function LeaveManagementPage() {
   const fetchLeaves = async () => {
     setLoading(true);
     try {
-      const endpoint =
-        viewType === "pending"
-          ? `${API_BASE_URL}/api/leaves/pending/${userId}`
-          : `${API_BASE_URL}/api/leaves/approved/${userId}`;
-
-      const response = await fetch(endpoint, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = await response.json();
+      const response = await getMyLeaves(userId, viewType === "pending" ? "pending" : "approved");
+      const data = response.data;
       console.log("Fetched Leaves:", data);
       if (viewType === "pending") setPendingLeaves(data);
       else setApprovedLeaves(data);
@@ -60,22 +53,14 @@ export default function LeaveManagementPage() {
         reason: formData.reason,
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/leaves/apply`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
+      // A rejected request (e.g. overlapping dates) now ends up in catch with the server's reason
+      await applyForLeave(payload);
       alert("Leave Applied Successfully");
       setShowApplyForm(false);
       fetchLeaves();
     } catch (err) {
       console.error("Error applying leave:", err);
-      alert("Failed to apply leave");
+      alert(getErrorMessage(err, "Failed to apply leave"));
     }
   };
 

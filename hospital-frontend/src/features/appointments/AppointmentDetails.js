@@ -2,11 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../shared/Navbar";
 import TopNavbar from "../../shared/TopNavbar";
-import axios from "axios";
-import { API_BASE_URL } from "../../app/config";
 import { toLocalISODate } from "../../shared/utils/dateUtils";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import { downloadPrescription } from "../clinical/downloadPrescription";
+import { getMyHistory } from "../clinical/api";
+import * as appointmentsApi from "./api";
 
 const STATUS_LABELS = {
   SCHEDULED: "Scheduled",
@@ -36,7 +36,7 @@ export default function AppointmentDetails() {
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/appointment/getPatientAppointments`);
+        const response = await appointmentsApi.getMyAppointments();
         // Upcoming first, then most recent history
         const sorted = [...response.data].sort((a, b) => {
           const aUpcoming = isUpcoming(a);
@@ -46,7 +46,7 @@ export default function AppointmentDetails() {
         });
         setAppointments(sorted);
         try {
-          const history = await axios.get(`${API_BASE_URL}/api/consultations/my`);
+          const history = await getMyHistory();
           setConsultations(Object.fromEntries(history.data.map((c) => [c.appointmentId, c])));
         } catch {
           setConsultations({});
@@ -73,7 +73,7 @@ export default function AppointmentDetails() {
     if (!confirmCancel) return;
 
     try {
-      const response = await axios.delete(`${API_BASE_URL}/appointment/CancelAppointment/${appointmentID}`);
+      const response = await appointmentsApi.cancelAppointment(appointmentID);
       alert(response.data);
       // The appointment stays in the history with a "Cancelled" status
       setAppointments((prev) =>

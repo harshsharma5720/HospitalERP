@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import Navbar from "../../shared/Navbar";
 import TopNavbar from "../../shared/TopNavbar";
-import { API_BASE_URL } from "../../app/config";
+import * as patientsApi from "./api";
 
 export default function RelativesList() {
   const location = useLocation();
@@ -18,13 +17,7 @@ export default function RelativesList() {
 
     const fetchRelatives = async () => {
       try {
-        const token = localStorage.getItem("jwtToken");
-        const res = await axios.get(
-          `${API_BASE_URL}/api/patient/relative/patient/${patientId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const res = await patientsApi.getRelatives(patientId);
 
         setRelatives(res.data);
       } catch (err) {
@@ -41,14 +34,7 @@ export default function RelativesList() {
     if (!window.confirm("Are you sure you want to delete this relative?")) return;
 
     try {
-      const token = localStorage.getItem("jwtToken");
-
-      await axios.delete(
-        `${API_BASE_URL}/api/patient/relative/delete/${id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await patientsApi.deleteRelative(id);
 
       setRelatives(relatives.filter((r) => r.id !== id));
       alert("Relative deleted successfully.");

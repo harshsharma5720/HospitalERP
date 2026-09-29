@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { getUserIdFromToken } from "../../../shared/utils/jwtUtils";
 import { API_BASE_URL } from "../../../app/config";
+import * as doctorsApi from "../api";
 
 const SPECIALIST_OPTIONS = [
   "NOT_ASSIGNED",
@@ -28,10 +28,7 @@ export default function MyDoctorProfile() {
     const doctorId = getUserIdFromToken(token);
 
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/doctor/get/${doctorId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await doctorsApi.getDoctor(doctorId);
 
       setDoctor(res.data);
       setFormData(res.data);
@@ -83,16 +80,7 @@ export default function MyDoctorProfile() {
         formDataToSend.append("profileImage", formData.profileImage);
       }
 
-      await axios.put(
-        `${API_BASE_URL}/api/doctor/update/${userIdFromToken}`,
-        formDataToSend,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      await doctorsApi.updateDoctor(userIdFromToken, formDataToSend);
 
       setDoctor(doctorPayload);
       setIsEditing(false);

@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import useAuthStore from "./useAuthStore";
-import { API_BASE_URL } from "../../app/config";
+import * as authApi from "./api";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -26,8 +25,8 @@ export default function RegisterPage() {
   const [otpRequired, setOtpRequired] = useState(true);
 
   useEffect(() => {
-    axios
-      .get(`${API_BASE_URL}/api/auth/otp-required`)
+    authApi
+      .isOtpRequired()
       .then((res) => setOtpRequired(res.data.otpRequired !== false))
       .catch(() => setOtpRequired(true));
   }, []);
@@ -47,9 +46,7 @@ export default function RegisterPage() {
     }
     try {
       setLoading(true);
-      const res = await axios.post(`${API_BASE_URL}/api/auth/send-otp`, {
-        phone: formData.phone,
-      });
+      const res = await authApi.sendOtp(formData.phone);
       alert(res.data.message || "OTP sent successfully!");
       setOtpSent(true);
     } catch (err) {
@@ -62,10 +59,7 @@ export default function RegisterPage() {
   // Verify OTP
   const handleVerifyOtp = async () => {
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/auth/verify-otp`, {
-        phone: formData.phone,
-        otp: formData.otp,
-      });
+      const res = await authApi.verifyOtp(formData.phone, formData.otp);
       if (res.data.success) {
         alert("OTP Verified!");
         setOtpVerified(true);
@@ -93,7 +87,7 @@ export default function RegisterPage() {
     }
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/auth/register`, {
+      const response = await authApi.register({
         email: formData.email,
         username: formData.username,
         phoneNumber: formData.phone,

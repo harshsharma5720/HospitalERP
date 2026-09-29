@@ -1,20 +1,14 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../../app/config";
+import * as adminApi from "./api";
 
 export default function ManageUsers() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const token = localStorage.getItem("jwtToken");
-
   const fetchUsers = async () => {
     try {
-      console.log("Using token:", token);
-      const response = await axios.get(`${API_BASE_URL}/api/admin/allUsers`, {
-        headers: { Authorization: `Bearer ${token}`},
-      });
+      const response = await adminApi.getAllUsers();
       console.log("Fetched users:", response.data);
       setUsers(response.data);
     } catch (error) {
@@ -29,9 +23,7 @@ export default function ManageUsers() {
     if (!confirmDelete) return;
 
     try {
-      const response = await axios.delete(`${API_BASE_URL}/api/admin/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-      });
+      await adminApi.deleteUser(id);
       alert("User deleted successfully!");
       fetchUsers();
     } catch (error) {

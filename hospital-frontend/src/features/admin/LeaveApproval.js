@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { API_BASE_URL } from "../../app/config";
 import { getErrorMessage } from "../../shared/utils/apiError";
+import * as adminApi from "./api";
 
 const TABS = [
-  { key: "PENDING", label: "Pending Leaves", url: "/api/admin/allPending", active: "bg-blue-600 text-white" },
-  { key: "APPROVED", label: "Approved Leaves", url: "/api/admin/allApproved", active: "bg-green-600 text-white" },
-  { key: "REJECTED", label: "Rejected Leaves", url: "/api/admin/allRejected", active: "bg-red-600 text-white" },
+  { key: "PENDING", label: "Pending Leaves", load: adminApi.getPendingLeaves, active: "bg-blue-600 text-white" },
+  { key: "APPROVED", label: "Approved Leaves", load: adminApi.getApprovedLeaves, active: "bg-green-600 text-white" },
+  { key: "REJECTED", label: "Rejected Leaves", load: adminApi.getRejectedLeaves, active: "bg-red-600 text-white" },
 ];
 
 export default function LeaveApproval() {
@@ -22,7 +21,7 @@ export default function LeaveApproval() {
   const fetchLeaves = async () => {
     try {
       const tab = TABS.find((t) => t.key === filter);
-      const response = await axios.get(`${API_BASE_URL}${tab.url}`);
+      const response = await tab.load();
       setLeaves(response.data);
     } catch (error) {
       alert(getErrorMessage(error, "Could not load leave requests."));
@@ -38,7 +37,7 @@ export default function LeaveApproval() {
     if (!window.confirm(question)) return;
     try {
       setBusyId(leaveId);
-      await axios.put(`${API_BASE_URL}/api/admin/${decision}/${leaveId}`);
+      await adminApi.decideLeave(leaveId, decision);
       alert(decision === "approve" ? "Leave Approved Successfully" : "Leave Rejected");
       fetchLeaves();
     } catch (error) {

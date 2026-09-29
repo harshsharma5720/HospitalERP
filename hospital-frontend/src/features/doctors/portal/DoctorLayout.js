@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import axios from "axios";
 import DoctorRightSidebar from "./DoctorRightSidebar";
 import { getUserIdFromToken } from "../../../shared/utils/jwtUtils";
 import Loader from "../../../shared/Loader";
@@ -9,7 +8,7 @@ import DoctorDashboard from "./DoctorDashboard";
 import DoctorAppointments from "./DoctorAppointments";
 import LeaveManagementPage from "./LeaveManagementPage";
 import DoctorSchedulePage from "./DoctorSchedulePage";
-import { API_BASE_URL } from "../../../app/config";
+import { getDoctor } from "../api";
 
 export default function DoctorLayout() {
   const [doctor, setDoctor] = useState(null);
@@ -20,14 +19,7 @@ export default function DoctorLayout() {
         const token = localStorage.getItem("jwtToken");
         const doctorId = getUserIdFromToken(token);
 
-        const res = await axios.get(
-          `${API_BASE_URL}/api/doctor/get/${doctorId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const res = await getDoctor(doctorId);
 
         setDoctor(res.data);
       } catch (err) {

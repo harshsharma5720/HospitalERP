@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../../app/config";
 import { getErrorMessage } from "../../shared/utils/apiError";
+import * as authApi from "./api";
 
 const inputClass = `
   w-full px-4 py-3 rounded-lg
@@ -35,7 +34,7 @@ export default function ForgotPasswordPage() {
     setError("");
     try {
       setBusy(true);
-      const res = await axios.post(`${API_BASE_URL}/api/auth/forgot-password`, { identifier });
+      const res = await authApi.forgotPassword(identifier);
       setInfo(res.data.message);
       setStep(2);
     } catch (err) {
@@ -54,11 +53,7 @@ export default function ForgotPasswordPage() {
     }
     try {
       setBusy(true);
-      await axios.post(`${API_BASE_URL}/api/auth/reset-password`, {
-        identifier,
-        code,
-        newPassword: password,
-      });
+      await authApi.resetPassword(identifier, code, password);
       alert("Password changed. Please log in with your new password.");
       navigate("/login");
     } catch (err) {

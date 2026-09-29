@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "../../shared/Navbar";
 import TopNavbar from "../../shared/TopNavbar";
 import Lottie from "lottie-react";
 import doctorAnimation from "./Doctor.json";
-import { API_BASE_URL } from "../../app/config";
+import { getPublicDoctor } from "./api";
 
 // Public, read-only profile of one doctor (opened from the doctor list)
 export default function DoctorDetailsPage() {
@@ -19,9 +18,7 @@ export default function DoctorDetailsPage() {
     const fetchDoctor = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(
-          `${API_BASE_URL}/api/doctor/getDoctor/${doctorId}`
-        );
+        const response = await getPublicDoctor(doctorId);
         setDoctor(response.data);
         setError("");
       } catch (err) {

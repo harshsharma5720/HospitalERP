@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Users, CalendarCheck, Clock } from "lucide-react";
 import { getRoleFromToken, getUserIdFromToken } from "../../../shared/utils/jwtUtils";
@@ -15,7 +14,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { API_BASE_URL } from "../../../app/config";
+import { getDoctor } from "../api";
+import * as appointmentsApi from "../../appointments/api";
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
@@ -43,8 +43,8 @@ export default function DoctorDashboard() {
       return;
     }
 
-    fetchDoctor(userId, token);
-    fetchAppointments(token);
+    fetchDoctor(userId);
+    fetchAppointments();
   }, []);
 
   useEffect(() => {
@@ -63,24 +63,18 @@ export default function DoctorDashboard() {
     loadAppointments();
   }, []);
 
-  const fetchDoctor = async (id, token) => {
+  const fetchDoctor = async (id) => {
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/doctor/get/${id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await getDoctor(id);
       setDoctor(res.data);
     } catch (err) {
       console.error("Doctor fetch failed", err);
     }
   };
 
-  const fetchAppointments = async (token) => {
+  const fetchAppointments = async () => {
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/appointment/getDoctorAppointments`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await appointmentsApi.getDoctorAppointments();
 
       const data = res.data || [];
       setAppointments(data);
@@ -90,22 +84,8 @@ export default function DoctorDashboard() {
   };
   const fetchPendingAppointments = async (doctorId) => {
     try {
-      const token = localStorage.getItem("jwtToken");
-      const response = await fetch(
-        `${API_BASE_URL}/api/doctor/doctorPendingAppointments/${doctorId}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      if (!response.ok) {
-        throw new Error("Failed to fetch pending appointments");
-      }
-      const data = await response.json();
-      return data; // list of pending appointments
+      const response = await appointmentsApi.getDoctorPendingAppointments(doctorId);
+      return response.data; // list of pending appointments
     } catch (error) {
       console.error("Error fetching pending appointments:", error);
       return [];
@@ -114,24 +94,8 @@ export default function DoctorDashboard() {
 
   const fetchCompletedAppointments = async (doctorId) => {
     try {
-      const token = localStorage.getItem("jwtToken");
-
-      const response = await fetch(
-        `${API_BASE_URL}/api/doctor/doctorCompletedAppointments/${doctorId}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch completed appointments");
-      }
-      const data = await response.json();
-      return data; // list of completed appointments
+      const response = await appointmentsApi.getDoctorCompletedAppointments(doctorId);
+      return response.data; // list of completed appointments
     } catch (error) {
       console.error("Error fetching completed appointments:", error);
       return [];

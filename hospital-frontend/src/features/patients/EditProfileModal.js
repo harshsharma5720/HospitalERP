@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import Navbar from "../../shared/Navbar";
 import TopNavbar from "../../shared/TopNavbar";
 import { getRoleFromToken, getUserIdFromToken } from "../../shared/utils/jwtUtils";
@@ -7,6 +6,9 @@ import { useNavigate } from "react-router-dom";
 import { Pencil } from "lucide-react";
 import { API_BASE_URL } from "../../app/config";
 import { getErrorMessage } from "../../shared/utils/apiError";
+import { hasProfile, getOwnProfile, updateOwnProfile } from "../../shared/profileApi";
+import * as appointmentsApi from "../appointments/api";
+import * as patientsApi from "./api";
 
 export default function ProfilePage({ onClose }) {
   const [userData, setUserData] = useState(null);
@@ -25,43 +27,33 @@ export default function ProfilePage({ onClose }) {
 
     const role = getRoleFromToken(token);
     const userId = getUserIdFromToken(token);
-    fetchUserData(role, userId, token);
-    fetchAppointments(role, userId, token);
-    fetchCompletedAppointments(role, userId , token);
-    fetchPendingAppointments(role, userId , token);
+    fetchUserData(role, userId);
+    fetchAppointments(role);
+    fetchCompletedAppointments(role, userId);
+    fetchPendingAppointments(role, userId);
   }, []);
   useEffect(() => {
     const token = localStorage.getItem("jwtToken");
 
     if (userData?.patientId && token) {
       // Fetch relatives when patient data becomes available
-      fetchRelatives(userData.patientId, token);
+      fetchRelatives(userData.patientId);
     }
   }, [userData]);
 
-  const getRoleEndpoints = (role) => {
+  // Appointment lists per role (the profile itself comes from shared/profileApi)
+  const getAppointmentApi = (role) => {
     switch (role) {
       case "ROLE_PATIENT":
         return {
-          getUrl: (id) => `${API_BASE_URL}/api/patient/getAccount/${id}`,
-          updateUrl: (id) => `${API_BASE_URL}/api/patient/updateAccount/${id}`,
-          appointmentUrl: `${API_BASE_URL}/appointment/getPatientAppointments`,
-          completedAppointmentUrl: (id) => `${API_BASE_URL}/appointment/patientCompletedAppointments/${id}`,
-          pendingAppointmentUrl: (id) => `${API_BASE_URL}/appointment/patientPendingAppointments/${id}`,
+          getAppointments: appointmentsApi.getMyAppointments,
+          getCompleted: appointmentsApi.getPatientCompletedAppointments,
+          getPending: appointmentsApi.getPatientPendingAppointments,
         };
       case "ROLE_DOCTOR":
-        return {
-          getUrl: (id) => `${API_BASE_URL}/api/doctor/get/${id}`,
-          updateUrl: (id) => `${API_BASE_URL}/api/doctor/update/${id}`,
-          appointmentUrl: `${API_BASE_URL}/appointment/getDoctorAppointments`,
-        };
+        return { getAppointments: appointmentsApi.getDoctorAppointments };
       case "ROLE_RECEPTIONIST":
-        return {
-          getUrl: (id) => `${API_BASE_URL}/api/receptionist/getReceptionist/${id}`,
-          updateUrl: (id) =>
-            `${API_BASE_URL}/api/receptionist/${id}`,
-          appointmentUrl: `${API_BASE_URL}/api/receptionist/getAppointments`,
-        };
+        return { getAppointments: appointmentsApi.getFrontDeskAppointments };
       default:
         return null;
     }
@@ -110,14 +102,11 @@ export default function ProfilePage({ onClose }) {
     }
   };
 
-  const fetchUserData = async (role, id, token) => {
+  const fetchUserData = async (role, id) => {
     try {
-      const urls = getRoleEndpoints(role);
-      if (!urls) return;
+      if (!hasProfile(role)) return;
 
-      const response = await axios.get(urls.getUrl(id), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await getOwnProfile(role, id);
 
       let data = response.data;
 
@@ -132,28 +121,21 @@ export default function ProfilePage({ onClose }) {
     }
   };
 
-  const fetchRelatives = async (patientId, token) => {
+  const fetchRelatives = async (patientId) => {
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/api/patient/relative/patient/${patientId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await patientsApi.getRelatives(patientId);
       setRelatives(response.data);
     } catch (err) {
       console.error("Error fetching relatives:", err);
     }
   };
 
-  const fetchAppointments = async (role, id, token) => {
+  const fetchAppointments = async (role) => {
     try {
-      const urls = getRoleEndpoints(role);
-      if (!urls) return;
+      const api = getAppointmentApi(role);
+      if (!api) return;
 
-      const response = await axios.get(urls.appointmentUrl, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.getAppointments();
 
       const data = response.data.appointments || response.data;
       setAppointments(data);
@@ -162,14 +144,12 @@ export default function ProfilePage({ onClose }) {
     }
   };
 
-  const fetchCompletedAppointments = async (role, id, token) => {
+  const fetchCompletedAppointments = async (role, id) => {
     try {
-      const urls = getRoleEndpoints(role);
-      if (!urls || !urls.completedAppointmentUrl) return;
+      const api = getAppointmentApi(role);
+      if (!api || !api.getCompleted) return;
 
-      const response = await axios.get(urls.completedAppointmentUrl(id), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.getCompleted(id);
 
       const data = response.data.appointments || response.data;
       setCompletedAppointment(data);
@@ -178,14 +158,12 @@ export default function ProfilePage({ onClose }) {
     }
   }
 
-  const fetchPendingAppointments = async (role, id, token) => {
+  const fetchPendingAppointments = async (role, id) => {
       try {
-        const urls = getRoleEndpoints(role);
-        if (!urls || !urls.pendingAppointmentUrl) return;
+        const api = getAppointmentApi(role);
+        if (!api || !api.getPending) return;
 
-        const response = await axios.get(urls.pendingAppointmentUrl(id), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await api.getPending(id);
 
         const data = response.data.appointments || response.data;
         setPendingAppointment(data);
@@ -203,7 +181,6 @@ export default function ProfilePage({ onClose }) {
     const token = localStorage.getItem("jwtToken");
     const role = getRoleFromToken(token);
     const userId = getUserIdFromToken(token);
-    const urls = getRoleEndpoints(role);
 
     try {
       const formDataToSend = new FormData();
@@ -222,12 +199,7 @@ export default function ProfilePage({ onClose }) {
         formDataToSend.append("profileImage", profileImage);
       }
 
-      const response = await axios.put(urls.updateUrl(userId), formDataToSend, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await updateOwnProfile(role, userId, formDataToSend);
 
       const saved = { ...response.data, name: response.data.name || response.data.patientName };
       setUserData(saved);

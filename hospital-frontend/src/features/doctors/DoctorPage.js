@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../shared/Navbar";
 import TopNavbar from "../../shared/TopNavbar";
@@ -8,7 +7,7 @@ import PopupForm from "../../shared/PopupForm";
 import Lottie from "lottie-react";
 import doctorAnimation from "./Doctor.json";
 import ScrollAnimate from "../../shared/utils/ScrollAnimate";
-import { API_BASE_URL } from "../../app/config";
+import * as doctorsApi from "./api";
 
 export default function DoctorPage() {
   const [doctors, setDoctors] = useState([]);
@@ -24,20 +23,14 @@ export default function DoctorPage() {
     if (token) {
       const extractedRole = getRoleFromToken(token);
       setRole(extractedRole);
-      fetchAllDoctors(token);
-    } else {
-      fetchAllDoctors(null);
     }
+    fetchAllDoctors();
   }, []);
 
-  const fetchAllDoctors = async (token) => {
+  const fetchAllDoctors = async () => {
     try {
       setLoading(true);
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const response = await axios.get(
-        `${API_BASE_URL}/api/patient/getAllDoctors`,
-        { headers }
-      );
+      const response = await doctorsApi.getAllDoctors();
       setDoctors(response.data);
       setError("");
     } catch (err) {
@@ -50,20 +43,14 @@ export default function DoctorPage() {
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("jwtToken");
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
     if (!searchTerm.trim()) {
-      fetchAllDoctors(token);
+      fetchAllDoctors();
       return;
     }
 
     try {
       setLoading(true);
-      const response = await axios.get(
-        `${API_BASE_URL}/api/patient/getAllBySpecialization?specialization=${searchTerm}`,
-        { headers }
-      );
+      const response = await doctorsApi.getDoctorsBySpecialization(searchTerm);
       setDoctors(response.data);
       setError("");
     } catch (err) {

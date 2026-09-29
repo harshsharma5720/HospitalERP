@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { API_BASE_URL } from "../../../app/config";
+import { getSchedule, saveSchedule } from "../api";
 import { getErrorMessage } from "../../../shared/utils/apiError";
 import useAuthStore from "../../auth/useAuthStore";
 
@@ -23,7 +22,7 @@ export default function DoctorSchedulePage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/doctor/${userId}/schedule`);
+        const res = await getSchedule(userId);
         setEntries(res.data.map((e) => ({ ...e, startTime: hhmm(e.startTime), endTime: hhmm(e.endTime) })));
       } catch (err) {
         setMessage(getErrorMessage(err, "Could not load your schedule."));
@@ -66,7 +65,7 @@ export default function DoctorSchedulePage() {
         endTime: working ? endTime : null,
         slotMinutes: Number(slotMinutes),
       }));
-      const res = await axios.put(`${API_BASE_URL}/api/doctor/${userId}/schedule`, payload);
+      const res = await saveSchedule(userId, payload);
       setEntries(res.data.map((e) => ({ ...e, startTime: hhmm(e.startTime), endTime: hhmm(e.endTime) })));
       setMessage("✔ Schedule saved. Existing bookings are not affected.");
     } catch (err) {
