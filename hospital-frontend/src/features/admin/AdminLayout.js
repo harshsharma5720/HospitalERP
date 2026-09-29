@@ -1,8 +1,7 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
-import TopNavbar from "../../shared/portal/TopNavbar";
-import Navbar from "../../shared/portal/Navbar";
+import TopNavbar from "../../shared/TopNavbar";
 import AdminDashboard from "./AdminDashboard";
 import LeaveApproval from "./LeaveApproval";
 import ManageUsers from "./ManageUsers";
@@ -18,7 +17,7 @@ export default function AdminLayout({ children }) {
 
       {/* RIGHT CONTENT AREA */}
       <div className="flex flex-col flex-1">
-        <TopNavbar />
+        <TopNavbar variant="portal" />
         <div className="p-6">
           <Routes>
                       <Route path="dashboard" element={<AdminDashboard />} />

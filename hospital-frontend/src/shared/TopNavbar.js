@@ -3,7 +3,10 @@ import { User, UserPlus, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../features/auth/useAuthStore";
 
-export default function TopNavbar() {
+// variant "site": public and patient pages (logo with name; logout goes home)
+// variant "portal": admin portal (compact logo; logout goes to the login page)
+export default function TopNavbar({ variant = "site" }) {
+  const portal = variant === "portal";
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState("");
@@ -34,7 +37,7 @@ export default function TopNavbar() {
   const handleLogout = () => {
     useAuthStore.getState().logout(); // clears token + role everywhere
     setIsLoggedIn(false);
-    navigate("/");
+    navigate(portal ? "/login" : "/");
     window.dispatchEvent(new Event("storage"));
   };
 
@@ -51,8 +54,14 @@ export default function TopNavbar() {
     >
       {/* LEFT: LOGO */}
       <div className="flex items-center gap-2">
-        <img src="favicon.png" alt="Hospital Logo" className="h-10 rounded-full" />
-        <h1 className="text-2xl font-bold text-black dark:text-[#50d4f2]">HospitalERP</h1>
+        {portal ? (
+          <img src="download.jpeg" alt="Hospital Logo" className="h-10 rounded-full" />
+        ) : (
+          <>
+            <img src="favicon.png" alt="Hospital Logo" className="h-10 rounded-full" />
+            <h1 className="text-2xl font-bold text-black dark:text-[#50d4f2]">HospitalERP</h1>
+          </>
+        )}
       </div>
 
       {/* CENTER: INFO */}
@@ -87,18 +96,27 @@ export default function TopNavbar() {
       <div className="flex items-center gap-3">
         {isLoggedIn ? (
           <>
-            <span className="text-black dark:text-[#50d4f2] font-semibold">
+            <span className={`${portal ? "text-teal-700" : "text-black"} dark:text-[#50d4f2] font-semibold`}>
               {username}
             </span>
 
             <button
               onClick={handleLogout}
-              className="
+              className={
+                portal
+                  ? `
+                flex items-center gap-2 px-4 py-2 rounded-xl
+                bg-[#1E63DB] dark:bg-[#50d4f2]
+                text-white dark:text-black
+                shadow-lg hover:opacity-90 transition
+              `
+                  : `
                 flex items-center gap-2 px-4 py-2 rounded-xl
                 bg-gradient-to-r from-[#1E63DB] to-[#27496d] dark:bg-[#50d4f2]
                 text-white dark:text-black
                 shadow-lg hover:opacity-90 transition
-              "
+              `
+              }
             >
               <LogOut size={18} /> Logout
             </button>

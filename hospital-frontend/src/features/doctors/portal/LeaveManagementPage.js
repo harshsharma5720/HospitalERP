@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import TopNavbar from "../../../shared/portal/TopNavbar";
 import { getRoleFromToken, getUserIdFromToken } from "../../../shared/utils/jwtUtils";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../../app/config";

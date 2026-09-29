@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import TopNavbar from "../../../shared/portal/TopNavbar";
 import { getRoleFromToken, getUserIdFromToken } from "../../../shared/utils/jwtUtils";
 import { API_BASE_URL } from "../../../app/config";
 import ConsultationModal from "../../clinical/ConsultationModal";

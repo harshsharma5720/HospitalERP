@@ -7,7 +7,8 @@ import Lottie from "lottie-react";
 import doctorAnimation from "./Doctor.json";
 import { API_BASE_URL } from "../../app/config";
 
-export default function DoctorProfile() {
+// Public, read-only profile of one doctor (opened from the doctor list)
+export default function DoctorDetailsPage() {
   const { doctorId } = useParams();
   const [doctor, setDoctor] = useState(null);
   const [error, setError] = useState("");

@@ -14,7 +14,7 @@ import Treatments from "../features/public/Treatments";
 import AboutUs from "../features/public/AboutUs";
 import EditProfilePage from "../features/patients/EditProfileModal";
 import AppointmentDetails from "../features/appointments/AppointmentDetails";
-import DoctorProfile from "../features/doctors/DoctorProfile";
+import DoctorDetailsPage from "../features/doctors/DoctorDetailsPage";
 import AddRelativePage from "../features/patients/AddRelativePage";
 import RelativesList from "../features/patients/RelativesList";
 import ReceptionistAppointmentDashboard from "../features/appointments/ReceptionistAppointmentDashboard";
@@ -46,7 +46,7 @@ function App() {
         <Route path="/contact" element={<ContactUsPage />} />
         <Route path="/treatments" element={<Treatments />} />
         <Route path="/about" element={<AboutUs />} />
-        <Route path="/doctor-profile/:doctorId" element={<DoctorProfile />} />
+        <Route path="/doctor-profile/:doctorId" element={<DoctorDetailsPage />} />
 
         {/* ===================== PATIENT ===================== */}
         <Route path="/appointments" element={<ProtectedRoute roles={PATIENT}><AppointmentPage /></ProtectedRoute>} />

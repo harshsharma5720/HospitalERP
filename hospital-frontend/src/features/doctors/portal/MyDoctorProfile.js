@@ -13,7 +13,8 @@ const SPECIALIST_OPTIONS = [
   "DERMATOLOGY",
 ];
 
-export default function DoctorProfile() {
+// The logged-in doctor's own profile, editable (doctor portal)
+export default function MyDoctorProfile() {
   const [doctor, setDoctor] = useState(null);
   const [formData, setFormData] = useState({});
   const [isEditing, setIsEditing] = useState(false);

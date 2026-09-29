@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
-import TopNavbar from "../../../shared/portal/TopNavbar";
 import DoctorRightSidebar from "./DoctorRightSidebar";
 import { getUserIdFromToken } from "../../../shared/utils/jwtUtils";
 import Loader from "../../../shared/Loader";
-import DoctorProfile from "./DoctorProfile";
+import MyDoctorProfile from "./MyDoctorProfile";
 import DoctorDashboard from "./DoctorDashboard";
 import DoctorAppointments from "./DoctorAppointments";
 import LeaveManagementPage from "./LeaveManagementPage";
@@ -57,7 +56,7 @@ export default function DoctorLayout() {
             <Route path="dashboard" element={<DoctorDashboard />} />
             <Route path="doctor-appointments" element={<DoctorAppointments />} />
             <Route path="leave-management" element={<LeaveManagementPage />} />
-            <Route path="profile" element={<DoctorProfile />} />
+            <Route path="profile" element={<MyDoctorProfile />} />
             <Route path="schedule" element={<DoctorSchedulePage />} />
             <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Routes>
