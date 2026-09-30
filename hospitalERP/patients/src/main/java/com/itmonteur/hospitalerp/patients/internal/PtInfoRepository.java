@@ -1,0 +1,15 @@
+package com.itmonteur.hospitalerp.patients.internal;
+import com.itmonteur.hospitalerp.patients.PtInfo;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+
+@Repository
+public interface PtInfoRepository extends JpaRepository<PtInfo, Long> {
+
+    Optional<PtInfo> findByUserName(String userName);
+    Optional<PtInfo> findByUser_Id(Long id);
+
+}

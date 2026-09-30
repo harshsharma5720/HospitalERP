@@ -8,10 +8,11 @@
 		<version>3.5.5</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>ITmonteur.example</groupId>
-	<artifactId>hospitalERP</artifactId>
+	<groupId>com.itmonteur.hospitalerp</groupId>
+	<artifactId>hospital-erp</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>hospitalERP</name>
+	<packaging>pom</packaging>
+	<name>hospital-erp</name>
 	<description>Hospital ERP software is an integrated system that centralizes and manages a healthcare facility&apos;s operations by combining modules for patient management, financial accounting, human resources, inventory, and supply chain management into a single platform.</description>
 	<url/>
 	<licenses>
@@ -26,103 +27,192 @@
 		<tag/>
 		<url/>
 	</scm>
+
+	<!-- One Maven module per business module, in dependency order (docs/MULTI_MODULE_PLAN.md §2) -->
+	<modules>
+		<module>common</module>
+		<module>notifications</module>
+		<module>identity</module>
+		<module>patients</module>
+		<module>staff</module>
+		<module>scheduling</module>
+		<module>appointments</module>
+		<module>clinical</module>
+		<module>administration</module>
+		<module>app</module>
+	</modules>
+
 	<properties>
 		<java.version>17</java.version>
+		<!-- Extra test-JVM options, e.g. ./mvnw test -DargLine="-Xmx512m"; merged into Surefire's argLine below -->
+		<argLine></argLine>
+		<!-- Only the app module is started by ./mvnw spring-boot:run -->
+		<spring-boot.run.skip>true</spring-boot.run.skip>
+		<spring-modulith.version>1.4.13</spring-modulith.version>
+		<!-- Overrides Spring Boot's 1.21.3: that one can't talk to Docker Engine 29+ (API version too old) -->
+		<testcontainers.version>1.21.4</testcontainers.version>
+		<openpdf.version>2.0.3</openpdf.version>
+		<twilio.version>9.3.0</twilio.version>
+		<modelmapper.version>3.1.1</modelmapper.version>
+		<jjwt.version>0.12.6</jjwt.version>
 	</properties>
-	<dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-actuator</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-security</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-validation</artifactId>
-		</dependency>
-		<!-- PDF generation for e-prescriptions -->
-		<dependency>
-			<groupId>com.github.librepdf</groupId>
-			<artifactId>openpdf</artifactId>
-			<version>2.0.3</version>
-		</dependency>
-		<dependency>
-			<groupId>com.twilio.sdk</groupId>
-			<artifactId>twilio</artifactId>
-			<version>9.3.0</version>
-			<exclusions>
-				<exclusion>
-					<groupId>commons-logging</groupId>
-					<artifactId>commons-logging</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
 
-		<dependency>
-			<groupId>com.mysql</groupId>
-			<artifactId>mysql-connector-j</artifactId>
-			<scope>runtime</scope>
-		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.modelmapper/modelmapper -->
-		<dependency>
-			<groupId>org.modelmapper</groupId>
-			<artifactId>modelmapper</artifactId>
-			<version>3.1.1</version>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-mail</artifactId>
-		</dependency>
+	<dependencyManagement>
+		<dependencies>
+			<!-- Spring Modulith 1.4.x is the line for Spring Boot 3.5 -->
+			<dependency>
+				<groupId>org.springframework.modulith</groupId>
+				<artifactId>spring-modulith-bom</artifactId>
+				<version>${spring-modulith.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+			<!-- Our modules -->
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>hospital-common</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>hospital-notifications</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>hospital-identity</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>hospital-patients</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>hospital-staff</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>hospital-scheduling</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>hospital-appointments</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>hospital-clinical</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>hospital-administration</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<!-- Third-party libraries not managed by Spring Boot; each is used by one module only -->
+			<!-- PDF generation for e-prescriptions (clinical) -->
+			<dependency>
+				<groupId>com.github.librepdf</groupId>
+				<artifactId>openpdf</artifactId>
+				<version>${openpdf.version}</version>
+			</dependency>
+			<!-- SMS (notifications) -->
+			<dependency>
+				<groupId>com.twilio.sdk</groupId>
+				<artifactId>twilio</artifactId>
+				<version>${twilio.version}</version>
+				<exclusions>
+					<exclusion>
+						<groupId>commons-logging</groupId>
+						<artifactId>commons-logging</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<!-- https://mvnrepository.com/artifact/org.modelmapper/modelmapper -->
+			<dependency>
+				<groupId>org.modelmapper</groupId>
+				<artifactId>modelmapper</artifactId>
+				<version>${modelmapper.version}</version>
+			</dependency>
+			<!-- JWT (identity) -->
+			<dependency>
+				<groupId>io.jsonwebtoken</groupId>
+				<artifactId>jjwt-api</artifactId>
+				<version>${jjwt.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>io.jsonwebtoken</groupId>
+				<artifactId>jjwt-impl</artifactId>
+				<version>${jjwt.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>io.jsonwebtoken</groupId>
+				<artifactId>jjwt-jackson</artifactId>
+				<version>${jjwt.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<!-- Test libraries for every module (JUnit, AssertJ, Mockito, Spring test) -->
+	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<dependency>
-			<groupId>org.springframework.security</groupId>
-			<artifactId>spring-security-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<!-- in-memory database for repository tests -->
-		<dependency>
-			<groupId>com.h2database</groupId>
-			<artifactId>h2</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt-api</artifactId>
-			<version>0.12.6</version>
-		</dependency>
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt-impl</artifactId>
-			<version>0.12.6</version>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt-jackson</artifactId> <!-- or jjwt-gson/jjwt-orgjson -->
-			<version>0.12.6</version>
-			<scope>runtime</scope>
-		</dependency>
 	</dependencies>
 
 	<build>
 		<plugins>
+			<!-- Exposes ${org.mockito:mockito-core:jar} (path of the Mockito jar) for the Surefire config below -->
 			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>properties</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- Load Mockito as a Java agent instead of letting it self-attach at runtime.
+			     Self-attaching starts a second JVM (fails when memory is low) and is being
+			     phased out by the JDK; this is Mockito's recommended setup for Java 21+. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>
+				</configuration>
+			</plugin>
+			<!-- Build rules for every module: one version per library across all modules, and the right Java.
+			     (Cycles between our modules need no rule: Maven refuses to build a reactor with a cycle.) -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>enforce-build-rules</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<dependencyConvergence/>
+								<requireJavaVersion>
+									<version>[${java.version},)</version>
+								</requireJavaVersion>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>

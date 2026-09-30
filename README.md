@@ -38,12 +38,30 @@ Optional (for OTP/SMS during registration):
 
 ```
 HospitalERP/
-├── hospitalERP/          # Spring Boot backend  → runs on http://localhost:8080
-├── hospital-frontend/    # React frontend       → runs on http://localhost:3000
+├── hospitalERP/              # Spring Boot backend → runs on http://localhost:8080
+│   ├── pom.xml               #   parent build: module list, library versions, build rules
+│   ├── common/               #   one folder (Maven module) per business module ...
+│   ├── notifications/
+│   ├── identity/
+│   ├── patients/
+│   ├── staff/
+│   ├── scheduling/
+│   ├── appointments/
+│   ├── clinical/
+│   ├── administration/
+│   ├── app/                  #   ... and the runnable application (main class, config, end-to-end tests)
+│   └── .env                  #   your local settings (not in git, see Step 3)
+├── hospital-frontend/        # React frontend → runs on http://localhost:3000
 ├── docs/
-│   └── PROJECT_OVERVIEW.md
-└── README.md             # This file
+│   ├── PROJECT_OVERVIEW.md
+│   ├── MULTI_MODULE_PLAN.md  #   module rules and refactor progress log
+│   └── modules/              #   generated module diagrams
+├── tools/
+│   └── check_module_deps.py  #   module boundary check
+└── README.md                 # This file
 ```
+
+The backend modules and what each one may use are described in [Backend modules](#backend-modules).
 
 ---
 
@@ -67,7 +85,7 @@ CREATE DATABASE hospital_erp;
 
 3. Note your MySQL username and password — you will need them in the next step.
 
-> Tables are created automatically by Hibernate (`spring.jpa.hibernate.ddl-auto=update`) when the backend starts.
+> Tables are created by **Flyway** migrations when the backend starts (see [Database migrations](#database-migrations-flyway)). Hibernate only checks that the tables match the code (`ddl-auto=validate`); it no longer changes them.
 
 ---
 
@@ -137,6 +155,8 @@ cd hospitalERP
 cd hospitalERP
 ./mvnw spring-boot:run
 ```
+
+This builds all backend modules and starts the `app` module. Run it from `hospitalERP/`, so the `.env` file and the `uploads/` folder there are used.
 
 Wait until you see:
 ```
@@ -219,6 +239,38 @@ Medical records (consultations, prescriptions) are visible only to the patient, 
 
 ---
 
+## Database migrations (Flyway)
+
+The database schema is owned by the migration scripts in `hospitalERP/app/src/main/resources/db/migration/`. Flyway runs the new ones at startup and records them in the `flyway_schema_history` table.
+
+| File | What it does |
+|---|---|
+| `V1__baseline.sql` | The complete schema as of September 2026. Runs only on an **empty** database. |
+| `staff/V2026_09_28_1__staff_drop_unused_columns.sql` | Drops `doctor.password`, `doctor.role`, `receptionist.role` (unused; login data lives in `users`). |
+| `patients/V2026_09_28_2__patients_drop_unused_columns.sql` | Drops `patient.role`, `patient_relative.role`. |
+
+**Changing the schema:** add a new file to the owning module's folder, e.g. `db/migration/appointments/V2026_10_05_1__appointments_add_room.sql`, with the next date-based version. Never edit a migration that has already run anywhere — Flyway checks their checksums and refuses to start. Hibernate then validates the entities against the result, so an entity change without a migration stops the app with a clear "Schema-validation" message.
+
+### Upgrading a database created before Flyway
+
+Step-by-step runbook (backup, catch-up run, schema comparison, rehearsal on a copy, rollback, copying the database to another machine): [docs/MYSQL_FLYWAY_UPGRADE.md](docs/MYSQL_FLYWAY_UPGRADE.md).
+
+A database created by the old `ddl-auto=update` has tables but no `flyway_schema_history`. On the first start Flyway marks it as version 1 (it does **not** run the baseline there) and then runs only the two clean-up migrations above. Data is kept. Do it once like this:
+
+1. **Back up** the database:
+   ```bash
+   mysqldump -u root -p --routines --single-transaction hospital_erp > hospital_erp_before_flyway.sql
+   ```
+2. Start the backend as usual (`./mvnw spring-boot:run` in `hospitalERP/`). The log should show
+   `Successfully baselined schema with version: 1`, then `Successfully applied 2 migrations`, then `Started HospitalErpApplication`.
+3. Check the app (login, booking, consultation, PDF).
+
+If it stops with `Schema-validation: missing column / wrong column type …`, your database differs from what the code expects (for example a column created long ago with an old type). Nothing has been lost; send the message to the team. To go back: restore the backup (`mysql -u root -p hospital_erp < hospital_erp_before_flyway.sql`) and run the previous version of the code.
+
+The migrations are tested on a real MySQL 8 in `DatabaseMigrationMySqlTest` (an upgrade of a pre-Flyway database with data, and a fresh install giving the identical schema). It needs Docker and is skipped without it; CI runs it.
+
+---
+
 ## Profile Image Uploads
 
 Profile images are stored on disk at:
@@ -236,6 +288,10 @@ http://localhost:8080/uploads/profileImages/<filename>
 ---
 
 ## Common Issues & Troubleshooting
+
+### Backend fails to start — "Schema-validation" or "Migration checksum mismatch"
+- `Schema-validation: missing column …`: the database doesn't match the code. Usually a migration is missing for an entity change; see [Database migrations](#database-migrations-flyway).
+- `Migration checksum mismatch`: a migration file was edited after it ran. Restore the file; put the change in a new migration.
 
 ### Backend fails to start — database connection error
 - Confirm MySQL is running.
@@ -281,12 +337,81 @@ cd hospitalERP
 ./mvnw spring-boot:run        # macOS/Linux
 .\mvnw.cmd spring-boot:run      # Windows
 
-# Build JAR
+# Build (all modules + tests); the runnable jar is app/target/hospital-app-0.0.1-SNAPSHOT.jar
 ./mvnw clean package
 
-# Run tests (no MySQL needed — they use an in-memory H2 database)
+# Run the jar (from hospitalERP/, so .env and uploads/ are found)
+java -jar app/target/hospital-app-0.0.1-SNAPSHOT.jar
+
+# Run all tests (no MySQL needed — they use an in-memory H2 database;
+# DatabaseMigrationMySqlTest also starts a throw-away MySQL in Docker, and is skipped without Docker)
 ./mvnw test
+
+# Test one module (and the modules it builds on), e.g. clinical
+./mvnw -pl clinical -am test
+
+# If tests fail to start with "insufficient memory", give the test JVM a smaller heap
+./mvnw test -DargLine="-Xms64m -Xmx512m"
 ```
+
+Every build also checks that all modules use the same version of each library (Maven Enforcer). If it fails with "Dependency convergence error", pin that library's version in `<dependencyManagement>` of `hospitalERP/pom.xml`.
+
+### Backend modules
+
+The backend is a modular monolith: one application and one database, split into Maven modules. A module can only use the modules listed for it; the build fails if two modules depend on each other. See [docs/MULTI_MODULE_PLAN.md](docs/MULTI_MODULE_PLAN.md) for the rules and the progress log.
+
+| Module | Responsibility | May use |
+|---|---|---|
+| [`common`](hospitalERP/common/README.md) | Shared kernel: exceptions + global error handler, `ApiResponse`, `Gender`, file storage | – |
+| [`notifications`](hospitalERP/notifications/README.md) | Email and SMS delivery, message templates | common |
+| [`identity`](hospitalERP/identity/README.md) | Users, roles, login, JWT, OTP, password reset, first-admin bootstrap | common, notifications |
+| [`patients`](hospitalERP/patients/README.md) | Patient profiles and relatives | common, identity |
+| [`staff`](hospitalERP/staff/README.md) | Doctors, receptionists, leave requests | common, identity |
+| [`scheduling`](hospitalERP/scheduling/README.md) | Doctor weekly schedules and slots | common, identity, staff |
+| [`appointments`](hospitalERP/appointments/README.md) | Booking, reschedule, cancel, day-before reminders | common, identity, notifications, patients, staff, scheduling |
+| [`clinical`](hospitalERP/clinical/README.md) | Consultations, prescriptions, prescription PDF, medical history | common, identity, patients, staff, appointments |
+| [`administration`](hospitalERP/administration/README.md) | Admin use cases across modules: create users, leave decisions, account deletion | all of the above |
+| `app` | Main class, `SecurityConfig`, `application.properties`, end-to-end tests | all modules |
+
+When a lower module needs something to happen in a higher one (for example, an approved leave must cancel appointments), it publishes an event and the higher module listens.
+
+Each module has a short README (linked in the table): its public API, the events it sends and receives, its endpoints and settings. Inside a module, `com.itmonteur.hospitalerp.<module>` is its public API (what other modules may use); its `internal` and `web` sub-packages are private to the module. Unit tests live in their module's `src/test`; tests that start the whole application live in `app`.
+
+Run this check before committing:
+
+```bash
+python tools/check_module_deps.py            # prints "RESULT: OK - module boundaries respected"
+python tools/check_module_deps.py --verbose  # also lists every module-to-module dependency
+```
+
+It fails (exit code 1) if a module uses a module it shouldn't (including one it only reaches indirectly), if two modules depend on each other, or if a module uses another module's repository. A class belongs to the module named by its package.
+
+`ModularityTest` checks the same boundaries with Spring Modulith on every `./mvnw test`: it fails on a cycle between modules, on one module using another module's `internal`/`web` classes, and on `@Autowired` field injection of another module's beans.
+
+Generated module documentation lives in [docs/modules/](docs/modules/): `components.puml` (how the modules depend on each other) and one `module-<name>.puml` diagram and `module-<name>.adoc` "canvas" per module (its services, aggregates, events and which other modules' beans it uses). Open the `.puml` files with a PlantUML viewer (for example the VS Code *PlantUML* extension). After changing a module, refresh them with:
+
+```bash
+./mvnw test -Dtest=ModularityTest -Dsurefire.failIfNoSpecifiedTests=false -DupdateModuleDocs=true
+```
+
+`EndpointContractTest` freezes the public API (all URLs, methods and role checks) in `app/src/test/resources/api-endpoints.txt`. After an intended API change, regenerate it with:
+
+```bash
+./mvnw test -Dtest=EndpointContractTest -Dsurefire.failIfNoSpecifiedTests=false -DupdateEndpointSnapshot=true
+```
+
+**URL access rules.** Each module declares who may call its URLs in a small `ModuleSecurityRules` bean in its `web` package (for example `StaffSecurityRules`: `/api/doctor/**` for doctors and admins, the doctor list public). `SecurityConfig` in `app` only adds the application-wide rules (error page, health check, uploaded images) and combines the modules' rules: first every module's single-endpoint rules, then every module's URL areas. `AccessRulesContractTest` freezes the result in `app/src/test/resources/api-access.txt` — for every endpoint, whether an anonymous caller, a patient, a doctor, a receptionist and an admin get through. After an intended change, regenerate it with:
+
+```bash
+./mvnw test -Dtest=AccessRulesContractTest -Dsurefire.failIfNoSpecifiedTests=false -DupdateAccessSnapshot=true
+```
+
+### Continuous integration
+
+A GitHub Actions workflow (`.github/workflows/ci.yml`) is **prepared but not in the repository yet**: pushing a workflow file needs a GitHub token with the `workflow` permission. Once added, it runs on every pull request and every push to `main`:
+
+- **Backend:** `python3 tools/check_module_deps.py`, then `./mvnw -B verify` in `hospitalERP/` (Enforcer rules, all module and end-to-end tests on H2, jars). Test reports are uploaded when it fails.
+- **Frontend:** `npm ci`, `npm test`, `npm run build`. CI mode treats lint warnings as errors, so keep the frontend warning-free (check locally with `CI=true npm run build`).
 
 ### Frontend
 
@@ -322,6 +447,8 @@ npm test        # Run tests
 ## Further Reading
 
 - [Project Overview & Roadmap](docs/PROJECT_OVERVIEW.md) — goals, completed features, and what is left to build
+- [Multi-Module Plan](docs/MULTI_MODULE_PLAN.md) — module rules, phases and progress log
+- [Module diagrams](docs/modules/) — generated by `ModularityTest`
 
 ---
 

@@ -1,0 +1,19 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`com.itmonteur.hospitalerp.patients`
+|Spring components
+|_Services_
+
+* `c.i.h.p.PtInfoService`
+* `c.i.h.p.PtRelativeService`
+|Bean references
+|* `c.i.h.i.UserService` (in Identity)
+* `c.i.h.i.CurrentUserService` (in Identity)
+* `c.i.h.c.FileStorageService` (in Common)
+|Aggregate roots
+|* `c.i.h.p.PtInfo`
+* `c.i.h.p.PtRelative`
+|Events listened to
+|* `c.i.h.i.UserRegisteredEvent` 
+|===

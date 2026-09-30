@@ -1,0 +1,39 @@
+== HospitalErpApplication
+plantuml::components.puml[,,format=svg]
+
+== Common
+plantuml::module-common.puml[,,format=svg]
+include::module-common.adoc[]
+
+== Notifications
+plantuml::module-notifications.puml[,,format=svg]
+include::module-notifications.adoc[]
+
+== Identity
+plantuml::module-identity.puml[,,format=svg]
+include::module-identity.adoc[]
+
+== Patients
+plantuml::module-patients.puml[,,format=svg]
+include::module-patients.adoc[]
+
+== Staff
+plantuml::module-staff.puml[,,format=svg]
+include::module-staff.adoc[]
+
+== Scheduling
+plantuml::module-scheduling.puml[,,format=svg]
+include::module-scheduling.adoc[]
+
+== Appointments
+plantuml::module-appointments.puml[,,format=svg]
+include::module-appointments.adoc[]
+
+== Clinical
+plantuml::module-clinical.puml[,,format=svg]
+include::module-clinical.adoc[]
+
+== Administration
+plantuml::module-administration.puml[,,format=svg]
+include::module-administration.adoc[]
+

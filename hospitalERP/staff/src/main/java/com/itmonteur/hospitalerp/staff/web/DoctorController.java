@@ -1,0 +1,56 @@
+package com.itmonteur.hospitalerp.staff.web;
+
+import com.itmonteur.hospitalerp.staff.DoctorDTO;
+import com.itmonteur.hospitalerp.staff.Specialist;
+import com.itmonteur.hospitalerp.staff.DoctorService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+
+// getAll / getAllBySpecialization / getDoctor/{id} are public; the rest needs DOCTOR or ADMIN
+@RestController
+@RequestMapping("/api/doctor")
+public class DoctorController {
+
+    private final DoctorService doctorService;
+
+    public DoctorController(DoctorService doctorService) {
+        this.doctorService = doctorService;
+    }
+
+    // Get all doctors
+    @GetMapping("/getAll")
+    public ResponseEntity<List<DoctorDTO>> getAllDoctors() {
+        return ResponseEntity.ok(this.doctorService.getAllDoctors());
+    }
+
+    @GetMapping("/getAllBySpecialization")
+    public ResponseEntity<List<DoctorDTO>> getDoctorsBySpecialization(@RequestParam String specialisation) {
+        Specialist specialist = DoctorService.parseSpecialist(specialisation);
+        return ResponseEntity.ok(specialist == null ? List.of() : this.doctorService.findDoctorsBySpecialization(specialist));
+    }
+
+    // Get doctor by user ID (self or admin)
+    @GetMapping("/get/{id}")
+    public ResponseEntity<DoctorDTO> getDoctorByUserId(@PathVariable Long id) {
+        return ResponseEntity.ok(this.doctorService.getDoctorByUserId(id));
+    }
+
+    // Get doctor by doctor ID (public profile)
+    @GetMapping("/getDoctor/{id}")
+    public ResponseEntity<DoctorDTO> getDoctorByDoctorId(@PathVariable Long id) {
+        return ResponseEntity.ok(this.doctorService.getDoctorByDoctorId(id));
+    }
+
+    // Update doctor by user ID (self or admin)
+    @PutMapping(value = "/update/{id}", consumes = {"multipart/form-data"})
+    public ResponseEntity<DoctorDTO> updateDoctor(
+            @PathVariable Long id,
+            @RequestPart("doctorDTO") DoctorDTO doctorDTO,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
+        return ResponseEntity.ok(this.doctorService.updateDoctor(id, doctorDTO, profileImage));
+    }
+
+}

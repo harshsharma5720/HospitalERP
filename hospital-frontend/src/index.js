@@ -1,8 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import './api/setupAxios'; // global JWT header + 401 handling
-import App from './App';
+import './app/setupAxios'; // global JWT header + 401 handling
+import App from './app/App';
 import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
