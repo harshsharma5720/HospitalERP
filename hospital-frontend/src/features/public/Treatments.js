@@ -1,15 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Navbar from "../../shared/Navbar";
 import TopNavbar from "../../shared/TopNavbar";
 import ScrollAnimate from "../../shared/utils/ScrollAnimate";
 
 export default function Treatments() {
-  const [slideIn, setSlideIn] = useState(false);
-
-  useEffect(() => {
-    setSlideIn(true);
-  }, []);
-
   const treatments = [
     {
       title: "Cardiology",

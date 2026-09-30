@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../shared/Navbar";
 import TopNavbar from "../../shared/TopNavbar";
-import { getRoleFromToken } from "../../shared/utils/jwtUtils.js";
 import PopupForm from "../../shared/PopupForm";
 import Lottie from "lottie-react";
 import doctorAnimation from "./Doctor.json";
@@ -14,16 +13,10 @@ export default function DoctorPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [role, setRole] = useState("");
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem("jwtToken");
-    if (token) {
-      const extractedRole = getRoleFromToken(token);
-      setRole(extractedRole);
-    }
     fetchAllDoctors();
   }, []);
 

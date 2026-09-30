@@ -33,7 +33,10 @@ export default function DoctorDashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem("jwtToken");
-    if (!token) return navigate("/login");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
 
     const role = getRoleFromToken(token);
     const userId = getUserIdFromToken(token);
@@ -45,7 +48,7 @@ export default function DoctorDashboard() {
 
     fetchDoctor(userId);
     fetchAppointments();
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     const loadAppointments = async () => {

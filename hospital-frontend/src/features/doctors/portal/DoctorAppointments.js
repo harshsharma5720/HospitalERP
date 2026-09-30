@@ -10,8 +10,6 @@ export default function DoctorAppointments() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const [userId, setUserId] = useState(null);
-  const [role, setRole] = useState(null);
   const [viewType, setViewType] = useState("pending"); // pending or completed
   const [consulting, setConsulting] = useState(null); // appointment open in the consultation form
 
@@ -19,10 +17,7 @@ export default function DoctorAppointments() {
     const fetchAppointments = async () => {
       const token = localStorage.getItem("jwtToken");
       const decodedRole = getRoleFromToken(token);
-      setRole(decodedRole);
-
       const decodedUserId = getUserIdFromToken(token);
-      setUserId(decodedUserId);
 
       if (!token || !decodedRole?.toUpperCase().includes("DOCTOR")) {
         alert("Unauthorized Access! Login as a doctor.");

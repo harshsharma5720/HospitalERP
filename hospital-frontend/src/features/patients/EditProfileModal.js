@@ -10,6 +10,24 @@ import { hasProfile, getOwnProfile, updateOwnProfile } from "../../shared/profil
 import * as appointmentsApi from "../appointments/api";
 import * as patientsApi from "./api";
 
+// Appointment lists per role (the profile itself comes from shared/profileApi)
+const getAppointmentApi = (role) => {
+  switch (role) {
+    case "ROLE_PATIENT":
+      return {
+        getAppointments: appointmentsApi.getMyAppointments,
+        getCompleted: appointmentsApi.getPatientCompletedAppointments,
+        getPending: appointmentsApi.getPatientPendingAppointments,
+      };
+    case "ROLE_DOCTOR":
+      return { getAppointments: appointmentsApi.getDoctorAppointments };
+    case "ROLE_RECEPTIONIST":
+      return { getAppointments: appointmentsApi.getFrontDeskAppointments };
+    default:
+      return null;
+  }
+};
+
 export default function ProfilePage({ onClose }) {
   const [userData, setUserData] = useState(null);
   const [appointments, setAppointments] = useState([]);
@@ -40,24 +58,6 @@ export default function ProfilePage({ onClose }) {
       fetchRelatives(userData.patientId);
     }
   }, [userData]);
-
-  // Appointment lists per role (the profile itself comes from shared/profileApi)
-  const getAppointmentApi = (role) => {
-    switch (role) {
-      case "ROLE_PATIENT":
-        return {
-          getAppointments: appointmentsApi.getMyAppointments,
-          getCompleted: appointmentsApi.getPatientCompletedAppointments,
-          getPending: appointmentsApi.getPatientPendingAppointments,
-        };
-      case "ROLE_DOCTOR":
-        return { getAppointments: appointmentsApi.getDoctorAppointments };
-      case "ROLE_RECEPTIONIST":
-        return { getAppointments: appointmentsApi.getFrontDeskAppointments };
-      default:
-        return null;
-    }
-  };
 
   const GENDER_OPTIONS = ["MALE", "FEMALE", "OTHER"];
   const SPECIALIST_OPTIONS = ["NOT_ASSIGNED", "CARDIOLOGY", "DENTISTRY", "ORTHOPEDICS", "NEUROLOGY", "PEDIATRICS", "DERMATOLOGY"];

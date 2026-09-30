@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { getRoleFromToken, getUserIdFromToken } from "../../../shared/utils/jwtUtils";
 import { useNavigate } from "react-router-dom";
 import { getErrorMessage } from "../../../shared/utils/apiError";
@@ -17,16 +17,8 @@ export default function LeaveManagementPage() {
   const role = getRoleFromToken(token);
   const userId = getUserIdFromToken(token);
 
-  useEffect(() => {
-    if (!token) {
-      alert("Unauthorized access, please login");
-      navigate("/login");
-      return;
-    }
-    fetchLeaves();
-  }, [viewType]);
-
-  const fetchLeaves = async () => {
+  // Stable between renders; only changes with the tab (viewType) or the user
+  const fetchLeaves = useCallback(async () => {
     setLoading(true);
     try {
       const response = await getMyLeaves(userId, viewType === "pending" ? "pending" : "approved");
@@ -39,7 +31,16 @@ export default function LeaveManagementPage() {
       console.error("Error fetching leaves:", err);
     }
     setLoading(false);
-  };
+  }, [userId, viewType]);
+
+  useEffect(() => {
+    if (!token) {
+      alert("Unauthorized access, please login");
+      navigate("/login");
+      return;
+    }
+    fetchLeaves();
+  }, [token, navigate, fetchLeaves]);
 
   // Apply for leave
   const handleSubmit = async (e) => {

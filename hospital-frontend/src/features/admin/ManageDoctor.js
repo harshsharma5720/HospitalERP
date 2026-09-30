@@ -66,11 +66,6 @@ export default function ManageDoctor() {
     }
   };
 
-  const fetchAppointmentCount = async (userId) => {
-    const response = await adminApi.getDoctorAppointmentCount(userId);
-    return response.data;
-  };
-
   // ================= DELETE DOCTOR =================
   const deleteDoctor = async (id) => {
     const confirmDelete = window.confirm(

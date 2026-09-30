@@ -3,14 +3,13 @@ import { NavLink } from "react-router-dom";
 import { Home, Activity, User, Phone, Info, UserCircle } from "lucide-react";
 import ProfilePage from "./ProfilePage";
 import DarkThemeToggle from "./DarkThemeToggle";
-import { getRoleFromToken, getUserIdFromToken } from "./utils/jwtUtils";
+import { getRoleFromToken } from "./utils/jwtUtils";
 
 
 export default function Navbar() {
   const [showProfile, setShowProfile] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [role, setRole] = useState(null);
-  const [userId, setUserId] = useState(null);
 
   const navItems = [
     { name: "Home", path: "/", icon: <Home size={20} /> },
@@ -28,13 +27,9 @@ export default function Navbar() {
       const decodedRole = getRoleFromToken(token);
       console.log("Role from token:", decodedRole);
       setRole(decodedRole);
-
-      const decodedUserId = getUserIdFromToken(token);
-      setUserId(decodedUserId);
     } else {
       setIsLoggedIn(false);
       setRole(null);
-      setUserId(null);
     }
   };
 

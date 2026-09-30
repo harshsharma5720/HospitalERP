@@ -1,7 +1,7 @@
 import React from "react";
 import Navbar from "../../shared/Navbar";
 import TopNavbar from "../../shared/TopNavbar";
-import { FaHeartbeat, FaUserMd, FaHospital, FaPhoneAlt } from "react-icons/fa";
+import { FaHeartbeat, FaHospital, FaPhoneAlt } from "react-icons/fa";
 
 export default function AboutUs() {
   return (
