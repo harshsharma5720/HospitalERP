@@ -253,6 +253,8 @@ The database schema is owned by the migration scripts in `hospitalERP/app/src/ma
 
 ### Upgrading a database created before Flyway
 
+Step-by-step runbook (backup, catch-up run, schema comparison, rehearsal on a copy, rollback, copying the database to another machine): [docs/MYSQL_FLYWAY_UPGRADE.md](docs/MYSQL_FLYWAY_UPGRADE.md).
+
 A database created by the old `ddl-auto=update` has tables but no `flyway_schema_history`. On the first start Flyway marks it as version 1 (it does **not** run the baseline there) and then runs only the two clean-up migrations above. Data is kept. Do it once like this:
 
 1. **Back up** the database:
