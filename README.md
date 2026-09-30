@@ -65,6 +65,34 @@ The backend modules and what each one may use are described in [Backend modules]
 
 ---
 
+## Run with Docker (quickest)
+
+Only [Docker Desktop](https://www.docker.com/products/docker-desktop/) is needed — no Java, Node or MySQL on your machine.
+
+```bash
+cp .env.docker.example .env     # Windows PowerShell: Copy-Item .env.docker.example .env
+# edit .env: at least DB_ROOT_PASSWORD, DB_PASSWORD, JWT_SECRET, ADMIN_PASSWORD
+docker compose up --build
+```
+
+Open **http://localhost:3000** and log in with `ADMIN_USERNAME` / `ADMIN_PASSWORD` from `.env`.
+
+| Container | What | Port on your machine |
+|---|---|---|
+| `frontend` | React app on nginx; also forwards `/api/`, `/appointment/`, `/uploads/` to the backend | `FRONTEND_PORT` (3000) |
+| `backend` | Spring Boot (all modules in one jar, see [Backend modules](#backend-modules)) | `BACKEND_PORT` (8080) |
+| `mysql` | MySQL 8, database `hospital_erp` | `MYSQL_PORT` (3307, localhost only) |
+
+- On the first start the database is empty and **Flyway creates all tables**; nothing to run by hand.
+- Data and uploaded profile images are kept in Docker volumes (`mysql-data`, `uploads`). `docker compose down` keeps them; `docker compose down -v` deletes them.
+- After code changes: `docker compose up --build` again.
+- Logs: `docker compose logs -f backend`. Stop: `Ctrl+C`, then `docker compose down`.
+- The images are defined in [`hospitalERP/Dockerfile`](hospitalERP/Dockerfile) (one image for the whole backend — the modules are libraries, not separate services) and [`hospital-frontend/Dockerfile`](hospital-frontend/Dockerfile) (+ `nginx.conf`). Tests are not run inside the image build; run them with `./mvnw verify` / `npm test`.
+
+To run without Docker, follow the setup below.
+
+---
+
 ## Setup Instructions
 
 ### Step 1 — Clone the repository

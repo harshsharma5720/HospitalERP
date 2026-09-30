@@ -1,0 +1,10 @@
+# Keep the build context small and free of secrets / local data
+**/target/
+target/
+uploads/
+.env
+*.log
+hs_err_pid*
+replay_pid*
+.idea/
+.vscode/

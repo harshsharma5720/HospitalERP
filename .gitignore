@@ -1,0 +1,2 @@
+# Docker Compose settings with passwords and secrets (template: .env.docker.example)
+.env
