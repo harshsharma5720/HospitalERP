@@ -11,10 +11,10 @@
 On the first start of the new code:
 
 1. Flyway sees tables but no `flyway_schema_history` table → it **marks the database as version 1** ("baseline"). It does **not** run `V1__baseline.sql` there.
-2. It runs the two newer migrations, which **permanently drop 5 unused columns**:
-   - `doctor.password`, `doctor.role`, `receptionist.role` (`staff/V2026_09_28_1__staff_drop_unused_columns.sql`)
-   - `patient.role`, `patient_relative.role` (`patients/V2026_09_28_2__patients_drop_unused_columns.sql`)
-   Login data lives in `users`; nothing reads these columns any more. All other data stays.
+2. It runs the newer migrations:
+   - two that **permanently drop 5 unused columns**: `doctor.password`, `doctor.role`, `receptionist.role` (`staff/V2026_09_28_1__staff_drop_unused_columns.sql`) and `patient.role`, `patient_relative.role` (`patients/V2026_09_28_2__patients_drop_unused_columns.sql`). Login data lives in `users`; nothing reads these columns any more.
+   - one that **adds** `users.active` (existing accounts: active) and `users.deactivated_at` (`identity/V2026_09_30_1__identity_account_status.sql`, from the account-deactivation feature — only once that branch is merged).
+   All other data stays.
 3. Hibernate then **validates** (`ddl-auto=validate`): every entity's table and column must exist with a compatible type. If not, the app stops with `Schema-validation: …`.
 
 ⚠ Step 3 happens **after** steps 1–2. If validation fails, the columns are already dropped. That's why this runbook takes a backup first and **rehearses on a copy** before touching the real database.
@@ -122,7 +122,10 @@ mysql -u root -p -e "CREATE DATABASE hospital_erp_reference"
 mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/V1__baseline.sql"
 mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/staff/V2026_09_28_1__staff_drop_unused_columns.sql"
 mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/patients/V2026_09_28_2__patients_drop_unused_columns.sql"
+mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/identity/V2026_09_30_1__identity_account_status.sql"
 ```
+
+(Run every `.sql` file that exists under `db/migration/` in version order — the last line only if that file exists in your checkout.)
 
 (Run these from the repository root; use forward slashes in the `source` paths.)
 
@@ -157,7 +160,8 @@ ORDER BY 1, 2, 3;
 |---|---|---|
 | Exactly 5 rows "only in hospital_erp": `doctor.password`, `doctor.role`, `patient.role`, `patient_relative.role`, `receptionist.role` | Perfect — these are the columns the migrations drop | Continue |
 | Other "only in hospital_erp" rows | Leftover columns from older versions (e.g. `receptionist.password`) | Harmless for the app (validation ignores extra columns). Note them; we can drop them later with a migration |
-| Any "missing in hospital_erp" row | The database is older than the code | Do 5.1 again (catch-up run). If it stays, **stop** and send the list |
+| "missing in hospital_erp": `users.active` and `users.deactivated_at` | Expected — a migration adds them during the upgrade | Continue |
+| Any other "missing in hospital_erp" row | The database is older than the code | Do 5.1 again (catch-up run). If it stays, **stop** and send the list |
 | Any "different type" row (e.g. `varchar(255)` now, `enum(...)` target) | Column created by an older Hibernate version | **Stop.** Send the rows; the fix is a small migration (`ALTER TABLE … MODIFY COLUMN …`) added before the upgrade |
 
 ---
@@ -186,19 +190,22 @@ Command-line arguments override `.env`, so `.env` stays pointed at the real data
 **Expected log lines, in this order:**
 
 ```
-Successfully validated 3 migrations
+Successfully validated 4 migrations
 Successfully baselined schema with version: 1
 Migrating schema `hospital_erp_copy` to version "2026.09.28.1 - staff drop unused columns"
 Migrating schema `hospital_erp_copy` to version "2026.09.28.2 - patients drop unused columns"
-Successfully applied 2 migrations to schema `hospital_erp_copy`, now at version v2026.09.28.2
+Migrating schema `hospital_erp_copy` to version "2026.09.30.1 - identity account status"
+Successfully applied 3 migrations to schema `hospital_erp_copy`, now at version v2026.09.30.1
 Started HospitalErpApplication in … seconds
 ```
+
+(Without the account-deactivation feature merged: 3 validated, 2 applied, and no "identity account status" line.)
 
 **Check the copy** (`mysql -u root -p hospital_erp_copy`):
 
 ```sql
 SELECT installed_rank, version, description, type, success FROM flyway_schema_history ORDER BY installed_rank;
--- expect: 1 BASELINE, 2026.09.28.1 SQL, 2026.09.28.2 SQL, all success = 1
+-- expect: 1 BASELINE, 2026.09.28.1 SQL, 2026.09.28.2 SQL, 2026.09.30.1 SQL, all success = 1
 
 SELECT table_name, column_name FROM information_schema.columns
 WHERE table_schema = DATABASE()
@@ -342,7 +349,7 @@ Remove-Item C:\db-backups\hospital_erp_before_flyway.sql   # patient data
 | Item | Value |
 |---|---|
 | Migration folder | `hospitalERP/app/src/main/resources/db/migration/` |
-| Migrations | `V1__baseline.sql` (full schema, only for empty databases), `staff/V2026_09_28_1__staff_drop_unused_columns.sql`, `patients/V2026_09_28_2__patients_drop_unused_columns.sql` |
+| Migrations | `V1__baseline.sql` (full schema, only for empty databases), `staff/V2026_09_28_1__staff_drop_unused_columns.sql`, `patients/V2026_09_28_2__patients_drop_unused_columns.sql`, `identity/V2026_09_30_1__identity_account_status.sql` (adds `users.active`, `users.deactivated_at`) |
 | Settings (`app/src/main/resources/application.properties`) | `spring.jpa.hibernate.ddl-auto=validate`, `spring.flyway.baseline-on-migrate=true`, `spring.flyway.baseline-version=1` |
 | Tables (13) | appointments, appointments_seq, consultations, doctor, doctor_schedules, doctor_seq, leave_request, patient, patient_relative, prescription_items, receptionist, slots, users (+ `flyway_schema_history` after the upgrade) |
 | Columns dropped | doctor.password, doctor.role, patient.role, patient_relative.role, receptionist.role |

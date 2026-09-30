@@ -3,6 +3,8 @@ package com.itmonteur.hospitalerp.identity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "users")
 public class User {
@@ -22,6 +24,13 @@ public class User {
 
     @Column(nullable = false, length = 15)
     private String phoneNumber;
+
+    // Accounts are deactivated, never deleted while they have history: no login, hidden from
+    // directories, records kept (docs/ACCOUNT_DEACTIVATION_PLAN.md)
+    @Column(nullable = false)
+    private boolean active = true;
+
+    private LocalDateTime deactivatedAt;
 
     public Long getId() {
         return id;
@@ -69,5 +78,21 @@ public class User {
 
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public LocalDateTime getDeactivatedAt() {
+        return deactivatedAt;
+    }
+
+    public void setDeactivatedAt(LocalDateTime deactivatedAt) {
+        this.deactivatedAt = deactivatedAt;
     }
 }
