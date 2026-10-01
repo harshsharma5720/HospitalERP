@@ -179,8 +179,9 @@ class FeatureFlowH2Test {
 
     // Account deletion must remove the profile, everything that references it, and the login.
     // Both deletions happen while the accounts still have upcoming bookings.
+    // Account deactivation, step D.3: the delete endpoints deactivate; history is kept
     @Test
-    void deletingAccountsRemovesProfilesAndLogins() throws Exception {
+    void deactivatingAccountsKeepsHistoryAndCancelsUpcomingBookings() throws Exception {
         String admin = login("flowadmin", "flow-admin-123");
 
         // A doctor working tomorrow 10:00-11:30 in 30-minute slots (3 slots)
@@ -198,41 +199,113 @@ class FeatureFlowH2Test {
 
         // "leaver": a completed visit with a consultation + an upcoming booking
         String leaver = register("leaver");
+        long leaverUserId = userIdOf(leaver);
         JsonNode slots = json.readTree(call(HttpMethod.GET, slotsUrl, leaver, null).getBody());
         assertThat(slots).hasSize(3);
         long visit = book(leaver, slots.get(0).get("id").asLong());
         long leaversUpcomingSlot = slots.get(1).get("id").asLong();
-        book(leaver, leaversUpcomingSlot);
+        long leaversUpcoming = book(leaver, leaversUpcomingSlot);
         assertThat(call(HttpMethod.PUT, "/api/consultations/appointment/" + visit, doctor,
                 "{\"diagnosis\":\"Migraine\",\"medicines\":[{\"medicineName\":\"Paracetamol\"}]}").getStatusCode())
                 .isEqualTo(HttpStatus.OK);
+        long leaverPatientId = json.readTree(call(HttpMethod.GET, "/appointment/appointmentId/" + visit, admin, null)
+                .getBody()).get("ptInfoId").asLong();
         // "stayer": an upcoming booking with the same doctor
         String stayer = register("stayer");
-        book(stayer, slots.get(2).get("id").asLong());
+        long stayersBooking = book(stayer, slots.get(2).get("id").asLong());
 
-        // 1) leaver deletes their own account: login gone, their upcoming slot is bookable again
-        assertThat(call(HttpMethod.DELETE, "/api/patient/deleteAccount/" + userIdOf(leaver), leaver, null)
+        // 1) leaver deactivates their own account (old "delete" endpoint)
+        assertThat(call(HttpMethod.DELETE, "/api/patient/deleteAccount/" + leaverUserId, leaver, null)
                 .getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(loginStatus("leaver", "secret-123")).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(loginStatus("leaver", "secret-123")).isEqualTo(HttpStatus.FORBIDDEN);
+        // ... the upcoming booking is cancelled and its slot is bookable again ...
+        assertThat(appointmentStatus(admin, leaversUpcoming)).isEqualTo("CANCELLED_BY_PATIENT");
         JsonNode freeAgain = json.readTree(call(HttpMethod.GET, slotsUrl, stayer, null).getBody());
         assertThat(freeAgain.findValuesAsText("id")).contains(String.valueOf(leaversUpcomingSlot));
+        // ... and the medical history is kept
+        assertThat(appointmentStatus(admin, visit)).isEqualTo("COMPLETED");
+        assertThat(call(HttpMethod.GET, "/api/consultations/patient/" + leaverPatientId, admin, null).getBody())
+                .contains("Migraine");
 
-        // 2) admin deletes the doctor (stayer still booked): profile, bookings and login all go
+        // 2) admin deactivates the doctor: the stayer's booking is cancelled (not deleted), profile kept
         assertThat(call(HttpMethod.DELETE, "/api/doctor/delete/" + doctorId, admin, null).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
-        assertThat(loginStatus("drgone", "doctor-123")).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(call(HttpMethod.GET, "/api/doctor/getDoctor/" + doctorId, null, null).getStatusCode())
-                .isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(json.readTree(call(HttpMethod.GET, "/appointment/getPatientAppointments", stayer, null).getBody()))
-                .isEmpty();
+        assertThat(loginStatus("drgone", "doctor-123")).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(appointmentStatus(stayer, stayersBooking)).isEqualTo("CANCELLED_BY_DOCTOR");
+        assertThat(call(HttpMethod.GET, "/api/doctor/get/" + doctorUserId, admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.GET, "/api/consultations/patient/" + leaverPatientId, admin, null).getBody())
+                .contains("Migraine");
 
-        // 3) admin deletes a receptionist (by receptionist id)
+        // 3) admin deactivates a receptionist (by receptionist id)
         ResponseEntity<String> receptionist = call(HttpMethod.POST, "/api/admin/receptionist", admin, """
                 {"username":"deskgone","email":"deskgone@example.com","password":"desk-1234","phoneNumber":"+919812345679"}""");
         long receptionistId = json.readTree(receptionist.getBody()).get("id").asLong();
         assertThat(call(HttpMethod.DELETE, "/api/receptionist/delete/" + receptionistId, admin, null).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
-        assertThat(loginStatus("deskgone", "desk-1234")).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(loginStatus("deskgone", "desk-1234")).isEqualTo(HttpStatus.FORBIDDEN);
+
+        // 4) only an admin can reactivate; then login works again
+        assertThat(call(HttpMethod.PUT, "/api/admin/users/" + leaverUserId + "/reactivate", stayer, null)
+                .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        ResponseEntity<String> reactivated = call(HttpMethod.PUT, "/api/admin/users/" + doctorUserId + "/reactivate", admin, null);
+        assertThat(reactivated.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(json.readTree(reactivated.getBody()).get("active").asBoolean()).isTrue();
+        assertThat(loginStatus("drgone", "doctor-123")).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void permanentDeleteOnlyForAccountsWithoutHistory() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+        long adminUserId = userIdOf(admin);
+
+        // A doctor account that never had an appointment (e.g. created by mistake) can be deleted for good
+        long tempUserId = json.readTree(call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"drtemp","email":"drtemp@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111119","role":"DOCTOR"}""").getBody()).get("id").asLong();
+        assertThat(call(HttpMethod.DELETE, "/api/admin/users/" + tempUserId, admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        assertThat(loginStatus("drtemp", "doctor-123")).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(call(HttpMethod.GET, "/api/admin/" + tempUserId, admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+
+        // A patient with a booking can't: deactivate instead
+        String booker = register("booker");
+        long bookerUserId = userIdOf(booker);
+        long doctorUserId = json.readTree(call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"drkeep","email":"drkeep@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111118","role":"DOCTOR"}""").getBody()).get("id").asLong();
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        call(HttpMethod.PUT, "/api/doctor/" + doctorUserId + "/schedule", login("drkeep", "doctor-123"),
+                "[{\"dayOfWeek\":\"" + tomorrow.getDayOfWeek() + "\",\"shift\":\"MORNING\",\"working\":true,"
+                        + "\"startTime\":\"10:00\",\"endTime\":\"10:30\",\"slotMinutes\":30}]");
+        JsonNode slots = json.readTree(call(HttpMethod.GET, "/api/slots/available/" + findDoctorId("drkeep")
+                + "?date=" + tomorrow + "&shift=MORNING", booker, null).getBody());
+        book(booker, slots.get(0).get("id").asLong());
+        ResponseEntity<String> refused = call(HttpMethod.DELETE, "/api/admin/users/" + bookerUserId, admin, null);
+        assertThat(refused.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(refused.getBody()).containsIgnoringCase("deactivate it instead");
+        assertThat(loginStatus("booker", "secret-123")).isEqualTo(HttpStatus.OK);
+
+        // The explicit deactivate endpoint; the user list shows the status
+        assertThat(call(HttpMethod.PUT, "/api/admin/users/" + bookerUserId + "/deactivate", admin, null)
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(loginStatus("booker", "secret-123")).isEqualTo(HttpStatus.FORBIDDEN);
+        JsonNode bookerInList = null;
+        for (JsonNode u : json.readTree(call(HttpMethod.GET, "/api/admin/allUsers", admin, null).getBody())) {
+            if (u.get("id").asLong() == bookerUserId) {
+                bookerInList = u;
+            }
+        }
+        assertThat(bookerInList).isNotNull();
+        assertThat(bookerInList.get("active").asBoolean()).isFalse();
+        assertThat(bookerInList.get("deactivatedAt").isNull()).isFalse();
+
+        // An admin can't lock themself out
+        assertThat(call(HttpMethod.PUT, "/api/admin/users/" + adminUserId + "/deactivate", admin, null)
+                .getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(call(HttpMethod.DELETE, "/api/admin/users/" + adminUserId, admin, null)
+                .getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     // Deleting a relative keeps their appointment history; only the link to the relative goes

@@ -115,8 +115,24 @@ public class AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
     }
 
+    // ---------- account status (docs/ACCOUNT_DEACTIVATION_PLAN.md) ----------
+
+    public UserDTO deactivateUser(Long userId) {
+        return convertToDto(userAccountService.deactivate(userId));
+    }
+
+    public UserDTO reactivateUser(Long userId) {
+        return convertToDto(userAccountService.reactivate(userId));
+    }
+
+    /** Only for accounts without appointments; otherwise 409 "deactivate instead". */
+    public void deleteUserPermanently(Long userId) {
+        userAccountService.deletePermanently(userId);
+    }
+
+    /** The old DELETE /api/admin/{id}: deactivates now (history is kept). */
     public boolean deleteUserById(Long userId) {
-        userAccountService.deleteUser(userId);
+        userAccountService.deactivate(userId);
         logger.info("User deleted by admin: id={}", userId);
         return true;
     }

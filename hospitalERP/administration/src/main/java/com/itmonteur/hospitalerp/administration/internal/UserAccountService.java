@@ -7,6 +7,7 @@ import com.itmonteur.hospitalerp.staff.Receptionist;
 import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.identity.User;
 import com.itmonteur.hospitalerp.common.BadRequestException;
+import com.itmonteur.hospitalerp.common.ConflictException;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
 import com.itmonteur.hospitalerp.appointments.AppointmentNotificationEvent;
 import com.itmonteur.hospitalerp.identity.CurrentUserService;
@@ -30,12 +31,15 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Deletes a user together with everything that references it, in an order the
- * foreign keys allow (leaves → consultations → appointments → slots/schedule → profile → user).
- * Future appointments are cancelled with a notification before being removed.
+ * Account lifecycle (docs/ACCOUNT_DEACTIVATION_PLAN.md).
  *
- * TODO: hospitals usually must keep records, so switch to soft delete (an "active" flag)
- *  once there is a migration tool to add the column safely.
+ * <p><b>Deactivate</b> (the normal way, also what the old "delete" endpoints do now): no login any
+ * more, hidden from directories and booking, upcoming appointments cancelled with a notification —
+ * and all history (appointments, consultations, prescriptions, leaves) kept. <b>Reactivate</b> undoes it.
+ *
+ * <p><b>Delete permanently</b>: only for accounts without any appointment (e.g. created by mistake),
+ * because medical records must be kept. It removes everything that references the user, in an order
+ * the foreign keys allow (leaves → consultations → appointments → slots/schedule → profile → user).
  */
 @Service
 public class UserAccountService {
@@ -76,14 +80,76 @@ public class UserAccountService {
         this.entityManager = entityManager;
     }
 
+    // ------------------------------------------------------------------ deactivate / reactivate
+
     @Transactional
-    public void deleteUser(Long userId) {
-        User user = userService.findUser(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
-        if (user.getRole() == Role.ADMIN
-                && Objects.equals(currentUserService.getCurrentUserId(), userId)) {
-            throw new BadRequestException("Admins cannot delete their own account");
+    public User deactivate(Long userId) {
+        User user = findUser(userId);
+        requireNotOwnAdminAccount(user, "deactivate");
+        if (!user.isActive()) {
+            return user; // already deactivated
         }
+        switch (user.getRole()) {
+            case PATIENT -> ptInfoService.findPatientEntityByUserId(userId)
+                    .ifPresent(patient -> appointmentService.cancelUpcomingForPatient(patient.getPatientId()));
+            case DOCTOR -> doctorService.findDoctorEntityByUserId(userId)
+                    .ifPresent(doctor -> appointmentService.cancelUpcomingForDoctor(doctor.getId()));
+            default -> { } // receptionists and admins have no bookings
+        }
+        userService.deactivate(user);
+        logger.info("Deactivated user {} ({})", userId, user.getRole());
+        return user;
+    }
+
+    @Transactional
+    public User reactivate(Long userId) {
+        User user = findUser(userId);
+        if (!user.isActive()) {
+            userService.reactivate(user);
+            logger.info("Reactivated user {} ({})", userId, user.getRole());
+        }
+        return user;
+    }
+
+    // ------------------------------------------------------------------ permanent delete (no history only)
+
+    @Transactional
+    public void deletePermanently(Long userId) {
+        User user = findUser(userId);
+        requireNotOwnAdminAccount(user, "delete");
+        if (hasHistory(user)) {
+            throw new ConflictException("This account has appointments or medical records, which must be kept. "
+                    + "Deactivate it instead.");
+        }
+        deleteUser(user);
+    }
+
+    private boolean hasHistory(User user) {
+        Long userId = user.getId();
+        return switch (user.getRole()) {
+            case PATIENT -> ptInfoService.findPatientEntityByUserId(userId)
+                    .map(patient -> appointmentService.hasAnyAppointmentForPatient(patient.getPatientId()))
+                    .orElse(false);
+            case DOCTOR -> doctorService.findDoctorEntityByUserId(userId)
+                    .map(doctor -> appointmentService.hasAnyAppointmentForDoctor(doctor.getId()))
+                    .orElse(false);
+            default -> false; // receptionists and admins hold no medical records
+        };
+    }
+
+    private User findUser(Long userId) {
+        return userService.findUser(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+    }
+
+    private void requireNotOwnAdminAccount(User user, String action) {
+        if (user.getRole() == Role.ADMIN && Objects.equals(currentUserService.getCurrentUserId(), user.getId())) {
+            throw new BadRequestException("Admins cannot " + action + " their own account");
+        }
+    }
+
+    private void deleteUser(User user) {
+        Long userId = user.getId();
         leaveRequestService.deleteAllForUser(userId);
 
         switch (user.getRole()) {
@@ -106,40 +172,41 @@ public class UserAccountService {
         logger.info("Deleted user {} ({})", userId, user.getRole());
     }
 
-    // ------------------------------------------------------------------ entry points
-    // (moved here from PtInfoService / DoctorService / ReceptionistService in step 1.7)
+    // ------------------------------------------------------------------ old "delete" endpoints → deactivate
+    // (moved here from PtInfoService / DoctorService / ReceptionistService in step 1.7; URLs unchanged)
 
-    /** DELETE /api/patient/deleteAccount/{userId}: the patient themself, or an admin. */
+    /** DELETE /api/patient/deleteAccount/{userId}: the patient themself, or an admin. Only an admin can reactivate. */
     @Transactional
-    public void deletePatientAccount(Long userId) {
+    public void deactivatePatientAccount(Long userId) {
         currentUserService.requireSelfOrRole(userId, Role.ADMIN);
-        deleteUser(userId);
+        deactivate(userId);
     }
 
     /** DELETE /api/doctor/delete/{doctorId} (admin): doctor.id, not the user id. */
     @Transactional
-    public void deleteDoctorByDoctorId(Long doctorId) {
+    public void deactivateDoctorByDoctorId(Long doctorId) {
         Doctor doctor = doctorService.findDoctorEntity(doctorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
         if (doctor.getUser() != null) {
-            deleteUser(doctor.getUser().getId());
+            deactivate(doctor.getUser().getId());
+        } else if (appointmentService.hasAnyAppointmentForDoctor(doctorId)) {
+            // legacy doctor row without a login: nothing to deactivate, and its history must stay
+            throw new ConflictException("This doctor has appointments and no login account to deactivate.");
         } else {
-            deleteDoctorProfile(doctor); // legacy doctor row without a login
+            deleteDoctorProfile(doctor);
         }
-        logger.info("Doctor deleted with ID: {}", doctorId);
     }
 
     /** DELETE /api/receptionist/delete/{receptionistId} (admin): receptionist.id, not the user id. */
     @Transactional
-    public void deleteReceptionistByReceptionistId(Long receptionistId) {
+    public void deactivateReceptionistByReceptionistId(Long receptionistId) {
         Receptionist receptionist = receptionistService.findReceptionistEntity(receptionistId)
                 .orElseThrow(() -> new ResourceNotFoundException("Receptionist", "id", receptionistId));
         if (receptionist.getUser() != null) {
-            deleteUser(receptionist.getUser().getId());
+            deactivate(receptionist.getUser().getId());
         } else {
-            receptionistService.deleteReceptionistEntity(receptionist); // legacy row without a login
+            receptionistService.deleteReceptionistEntity(receptionist); // legacy row without a login, no records
         }
-        logger.info("Receptionist deleted with ID: {}", receptionistId);
     }
 
     private void deletePatientProfile(PtInfo patient) {

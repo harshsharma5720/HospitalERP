@@ -1,3 +1,4 @@
+DELETE /api/admin/users/{userId} anonymous- patient- doctor- receptionist- admin+
 DELETE /api/admin/{id} anonymous- patient- doctor- receptionist- admin+
 DELETE /api/doctor/delete/{id} anonymous- patient- doctor+ receptionist- admin+
 DELETE /api/leaves/{id} anonymous- patient- doctor+ receptionist+ admin+
@@ -75,6 +76,8 @@ POST /api/slots/generate/{doctorId} anonymous- patient- doctor- receptionist- ad
 POST /appointment/NewAppointment anonymous- patient+ doctor+ receptionist+ admin+
 PUT /api/admin/approve/{leaveId} anonymous- patient- doctor- receptionist- admin+
 PUT /api/admin/reject/{leaveId} anonymous- patient- doctor- receptionist- admin+
+PUT /api/admin/users/{userId}/deactivate anonymous- patient- doctor- receptionist- admin+
+PUT /api/admin/users/{userId}/reactivate anonymous- patient- doctor- receptionist- admin+
 PUT /api/consultations/appointment/{appointmentId} anonymous- patient+ doctor+ receptionist- admin+
 PUT /api/doctor/complete/{appointmentId} anonymous- patient- doctor+ receptionist- admin+
 PUT /api/doctor/update/{id} anonymous- patient- doctor+ receptionist- admin+

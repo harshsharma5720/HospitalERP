@@ -70,6 +70,11 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     // Whether the doctor has ever seen (or is booked with) this patient
     boolean existsByDoctor_IdAndPtInfo_PatientId(Long doctorId, Long patientId);
 
+    // Any appointment at all, whatever its status (an account with history may only be deactivated)
+    boolean existsByPtInfo_PatientId(Long patientId);
+
+    boolean existsByDoctor_Id(Long doctorId);
+
     // Upcoming appointments on the given date that have not been reminded yet
     @Query("SELECT a FROM Appointment a WHERE a.date = :date AND" + PENDING
             + "AND (a.reminderSent IS NULL OR a.reminderSent = false)")

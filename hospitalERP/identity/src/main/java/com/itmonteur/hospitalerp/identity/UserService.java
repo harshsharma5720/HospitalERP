@@ -3,6 +3,7 @@ package com.itmonteur.hospitalerp.identity;
 import com.itmonteur.hospitalerp.identity.internal.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,6 +34,19 @@ public class UserService {
         if (phoneNumber != null) {
             user.setPhoneNumber(phoneNumber);
         }
+        userRepository.save(user);
+    }
+
+    /** No login any more, hidden from directories; all history stays (docs/ACCOUNT_DEACTIVATION_PLAN.md). */
+    public void deactivate(User user) {
+        user.setActive(false);
+        user.setDeactivatedAt(LocalDateTime.now());
+        userRepository.save(user);
+    }
+
+    public void reactivate(User user) {
+        user.setActive(true);
+        user.setDeactivatedAt(null);
         userRepository.save(user);
     }
 
