@@ -265,6 +265,51 @@ public class AppointmentService {
         return appointmentRepository.existsByDoctor_IdAndPtInfo_PatientId(doctorId, patientId);
     }
 
+    // ------------------------------------------------------------------ account deactivation (administration)
+
+    public boolean hasAnyAppointmentForPatient(Long patientId) {
+        return appointmentRepository.existsByPtInfo_PatientId(patientId);
+    }
+
+    public boolean hasAnyAppointmentForDoctor(Long doctorId) {
+        return appointmentRepository.existsByDoctor_Id(doctorId);
+    }
+
+    /** A deactivated patient's bookings from today on: cancelled as if they cancelled them (slot freed, notified). */
+    @Transactional
+    public int cancelUpcomingForPatient(Long patientId) {
+        return cancelFromToday(appointmentRepository.findPendingByPatientId(patientId),
+                AppointmentStatus.CANCELLED_BY_PATIENT);
+    }
+
+    /**
+     * A deactivated doctor's bookings from today on: cancelled, patients notified. The slots are freed;
+     * while the doctor is deactivated nobody can book them, and after a reactivation they are bookable again.
+     */
+    @Transactional
+    public int cancelUpcomingForDoctor(Long doctorId) {
+        return cancelFromToday(appointmentRepository.findPendingByDoctorId(doctorId),
+                AppointmentStatus.CANCELLED_BY_DOCTOR);
+    }
+
+    // Past appointments that were never completed stay as they are (they are history, not bookings)
+    private int cancelFromToday(List<Appointment> pending, AppointmentStatus status) {
+        LocalDate today = LocalDate.now();
+        int cancelled = 0;
+        for (Appointment appointment : pending) {
+            if (appointment.getDate() == null || appointment.getDate().isBefore(today)) {
+                continue;
+            }
+            appointment.setStatus(status);
+            slotService.releaseSlot(appointment.getSlot());
+            Appointment saved = appointmentRepository.save(appointment);
+            eventPublisher.publishEvent(new AppointmentNotificationEvent(
+                    AppointmentNotificationEvent.Kind.CANCELLED, notificationInfo(saved)));
+            cancelled++;
+        }
+        return cancelled;
+    }
+
     public List<Appointment> findUpcomingForPatient(Long patientId) {
         return appointmentRepository.findPendingByPatientId(patientId);
     }

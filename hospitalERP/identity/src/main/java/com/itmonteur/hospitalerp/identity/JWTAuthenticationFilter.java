@@ -51,9 +51,10 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
         try {
             String username = jwtService.extractUsername(jwt);
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                // Roles are loaded from the database, so a role change takes effect immediately
+                // Roles and the account status are loaded from the database, so a role change or a
+                // deactivation takes effect on the next request (a deactivated user's token is ignored)
                 UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
-                if (jwtService.isTokenValid(jwt, userDetails)) {
+                if (userDetails.isEnabled() && jwtService.isTokenValid(jwt, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

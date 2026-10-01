@@ -18,6 +18,7 @@ public final class DoctorMapper {
         if (doctor.getUser() != null) {
             dto.setUserId(doctor.getUser().getId());
         }
+        dto.setActive(doctor.isAccountActive());
         return dto;
     }
 }

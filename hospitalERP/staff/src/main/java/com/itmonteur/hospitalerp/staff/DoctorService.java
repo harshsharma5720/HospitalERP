@@ -37,15 +37,25 @@ public class DoctorService {
         this.fileStorageService = fileStorageService;
     }
 
-    // Get all doctors (public directory)
+    // Get all doctors (public directory). Deactivated doctors are listed for admins only (Manage Doctors).
     public List<DoctorDTO> getAllDoctors() {
-        return doctorRepository.findAll().stream().map(DoctorMapper::toDTO).toList();
+        return listed(doctorRepository.findAll());
     }
 
+    // Public doctor profile; a deactivated doctor is "not found" except for admins
     public DoctorDTO getDoctorByDoctorId(Long doctorId) {
         Doctor doctor = doctorRepository.findById(doctorId)
+                .filter(d -> d.isAccountActive() || currentUserService.hasRole(Role.ADMIN))
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
         return DoctorMapper.toDTO(doctor);
+    }
+
+    private List<DoctorDTO> listed(List<Doctor> doctors) {
+        boolean admin = currentUserService.hasRole(Role.ADMIN);
+        return doctors.stream()
+                .filter(doctor -> admin || doctor.isAccountActive())
+                .map(DoctorMapper::toDTO)
+                .toList();
     }
 
     // Get doctor by user ID (the doctor themself or an admin)
@@ -55,11 +65,7 @@ public class DoctorService {
     }
 
     public List<DoctorDTO> findDoctorsBySpecialization(Specialist specialization) {
-        return doctorRepository.findBySpecialist(specialization)
-                .orElse(List.of())
-                .stream()
-                .map(DoctorMapper::toDTO)
-                .toList();
+        return listed(doctorRepository.findBySpecialist(specialization).orElse(List.of()));
     }
 
     /** Parses a specialization name; unknown values return null so callers can answer with an empty list. */

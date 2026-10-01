@@ -129,7 +129,8 @@ public class SlotService {
             throw new BadRequestException("Appointments can be booked at most " + BOOKING_WINDOW_DAYS + " days ahead");
         }
         Doctor doctor = findDoctor(doctorId);
-        if (isDoctorOnLeave(doctor, date)) {
+        // A deactivated doctor (account status) or one on leave has nothing to book
+        if (!doctor.isAccountActive() || isDoctorOnLeave(doctor, date)) {
             return List.of();
         }
         generateSlots(doctorId, date, shift);
@@ -145,6 +146,9 @@ public class SlotService {
     public Slot lockAndBook(Long slotId) {
         Slot slot = slotRepository.findByIdForUpdate(slotId)
                 .orElseThrow(() -> new ResourceNotFoundException("Slot", "id", slotId));
+        if (!slot.getDoctor().isAccountActive()) {
+            throw new ConflictException("This doctor is no longer available for appointments.");
+        }
         if (!slot.isAvailable()) {
             throw new ConflictException("This slot is no longer available. Please choose another one.");
         }

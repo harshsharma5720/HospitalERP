@@ -11,6 +11,8 @@ public class DoctorDTO {
     private String phoneNumber;
     private String userName;
     private String profileImage;
+    // false = account deactivated (only admins see such doctors in the lists)
+    private boolean active = true;
 
     public DoctorDTO() {
     }
@@ -97,5 +99,13 @@ public class DoctorDTO {
 
     public void setProfileImage(String profileImage) {
         this.profileImage = profileImage;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 }

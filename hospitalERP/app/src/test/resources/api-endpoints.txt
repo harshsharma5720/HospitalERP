@@ -1,3 +1,4 @@
+DELETE /api/admin/users/{userId}
 DELETE /api/admin/{id}
 DELETE /api/doctor/delete/{id} auth=hasRole('ADMIN')
 DELETE /api/leaves/{id}
@@ -71,6 +72,8 @@ POST /api/slots/generate/{doctorId}
 POST /appointment/NewAppointment
 PUT /api/admin/approve/{leaveId}
 PUT /api/admin/reject/{leaveId}
+PUT /api/admin/users/{userId}/deactivate
+PUT /api/admin/users/{userId}/reactivate
 PUT /api/consultations/appointment/{appointmentId} auth=hasRole('DOCTOR')
 PUT /api/doctor/complete/{appointmentId}
 PUT /api/doctor/update/{id} consumes=multipart/form-data

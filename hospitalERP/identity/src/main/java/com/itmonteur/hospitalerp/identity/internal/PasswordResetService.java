@@ -96,7 +96,9 @@ public class PasswordResetService {
         }
         String value = identifier.trim();
         Optional<User> byUsername = userRepository.findByUsername(value);
-        return byUsername.isPresent() ? byUsername : userRepository.findByEmail(value);
+        // A deactivated account is treated like an unknown one: same answer, no code, no reset
+        return (byUsername.isPresent() ? byUsername : userRepository.findByEmail(value))
+                .filter(User::isActive);
     }
 
     private static String key(User user) {

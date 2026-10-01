@@ -93,6 +93,11 @@ public class Doctor {
         return user;
     }
 
+    /** False once the doctor's login account is deactivated: hidden from the directory, not bookable. */
+    public boolean isAccountActive() {
+        return user == null || user.isActive(); // legacy rows without a login count as active
+    }
+
     public void setUser(User user) {
         this.user = user;
     }

@@ -10,12 +10,12 @@ It does **not** create patient or staff profiles: it publishes `UserRegisteredEv
 
 | Class | Purpose |
 |---|---|
-| `User`, `Role` | The account entity (`users` table) and the roles `ADMIN`, `DOCTOR`, `PATIENT`, `RECEPTIONIST`. |
-| `UserService` | Other modules use this instead of the repository: `findUser`, `getAllUsers`, `updateContactDetails(userId, email, phone)` (keeps the login account in sync when a profile's contact data changes), `deleteUser`, `deleteUserById`. |
+| `User`, `Role` | The account entity (`users` table) and the roles `ADMIN`, `DOCTOR`, `PATIENT`, `RECEPTIONIST`. `active` / `deactivatedAt` mark a deactivated account (see [Deactivated accounts](#deactivated-accounts)). |
+| `UserService` | Other modules use this instead of the repository: `findUser`, `getAllUsers`, `updateContactDetails(user, email, phone)` (keeps the login account in sync when a profile's contact data changes), `deactivate(user)` / `reactivate(user)` (only set the flag; the use case is in administration), `deleteUser`, `deleteUserById` (permanent delete). |
 | `CurrentUserService` | The logged-in user: `getCurrentUser`, `getCurrentUserId`, `hasRole`, `hasAnyRole`, `isStaff`, `requireSelfOrRole`. |
 | `AuthService` | `register` (self sign-up, always a patient), `createUser(request, role)` (used by administration), `login`, `isOtpRequired`, `parseRole`. |
 | `UserRegisteredEvent` | Published when an account is created. |
-| `CustomUserDetailsService`, `JWTAuthenticationFilter` | Spring Security wiring, used by `SecurityConfig` in `app`. |
+| `CustomUserDetailsService`, `JWTAuthenticationFilter` | Spring Security wiring, used by `SecurityConfig` in `app`. A deactivated account is a *disabled* user, and the filter ignores its tokens. |
 | `ModuleSecurityRules` | Interface for a module's URL access rules (`endpointRules`, `areaRules`); every module with endpoints has one bean, `SecurityConfig` combines them. |
 | `UserDTO`, `RegisterRequestDTO`, `LoginRequestDTO`, `AuthResponseDTO`, `ForgotPasswordRequestDTO`, `ResetPasswordRequestDTO` | Request/response objects. |
 
@@ -34,6 +34,14 @@ Access rules (`identity.web.IdentitySecurityRules`, a `ModuleSecurityRules` bean
 
 `UserRepository`, `JWTService` (sign/verify tokens), `OtpService` (6-digit codes), `LoginAttemptService` (locks a username for 15 minutes after 5 failed logins), `PasswordResetService`, `AdminBootstrap` (creates the first admin from `ADMIN_*` settings if it doesn't exist).
 
+## Deactivated accounts
+
+Accounts are deactivated, not deleted ([docs/ACCOUNT_DEACTIVATION_PLAN.md](../../docs/ACCOUNT_DEACTIVATION_PLAN.md)). The use case (cancelling bookings, reactivating, the guarded permanent delete) lives in administration. In identity, `users.active = false` means:
+
+- **Login:** the account status is checked only after the password (`SecurityConfig` in `app`), so a wrong password gets the usual 401 and reveals nothing. The right password gets **403** "This account has been deactivated. Please contact the hospital." (`GlobalExceptionHandler` in common). It doesn't count towards the login lock.
+- **Tokens:** `JWTAuthenticationFilter` ignores the token of a deactivated user, so a token issued before the deactivation gets 401 on the next request.
+- **Forgot password:** `PasswordResetService` treats the account like an unknown one: same answer, no code, no reset.
+
 ## Configuration
 
 | Env variable | Default | Meaning |
@@ -46,6 +54,6 @@ Access rules (`identity.web.IdentitySecurityRules`, a `ModuleSecurityRules` bean
 
 ## Tests
 
-`OtpServiceTest`, `PasswordResetServiceTest`; login/registration flows are also covered by the end-to-end tests in `app`.
+`OtpServiceTest`, `PasswordResetServiceTest`; login/registration flows, including a deactivated account, are also covered by the end-to-end tests in `app`.
 
 Module diagram: [docs/modules/module-identity.puml](../../docs/modules/module-identity.puml).

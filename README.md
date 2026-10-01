@@ -262,6 +262,7 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 | Weekly working hours and slot length | Doctor (or admin via API) | `/doctor/schedule` |
 | Leave requests and approval / rejection | Doctor, Admin | `/doctor/leave-management`, `/admin/leave-approval` |
 | Forgot password (6-digit code by SMS / email) | Everyone | `/forgot-password` (link on the login page) |
+| Deactivate / reactivate accounts — no login, hidden from booking, upcoming appointments cancelled, **all history kept**; permanent delete only for accounts without appointments ([details](docs/ACCOUNT_DEACTIVATION_PLAN.md)) | Admin | `/admin/manage-users`, `/admin/manage-doctor` |
 
 Medical records (consultations, prescriptions) are visible only to the patient, their doctor(s) and admins — receptionists cannot read them.
 
@@ -276,6 +277,7 @@ The database schema is owned by the migration scripts in `hospitalERP/app/src/ma
 | `V1__baseline.sql` | The complete schema as of September 2026. Runs only on an **empty** database. |
 | `staff/V2026_09_28_1__staff_drop_unused_columns.sql` | Drops `doctor.password`, `doctor.role`, `receptionist.role` (unused; login data lives in `users`). |
 | `patients/V2026_09_28_2__patients_drop_unused_columns.sql` | Drops `patient.role`, `patient_relative.role`. |
+| `identity/V2026_09_30_1__identity_account_status.sql` | Adds `users.active` and `users.deactivated_at` (accounts are deactivated, not deleted). |
 
 **Changing the schema:** add a new file to the owning module's folder, e.g. `db/migration/appointments/V2026_10_05_1__appointments_add_room.sql`, with the next date-based version. Never edit a migration that has already run anywhere — Flyway checks their checksums and refuses to start. Hibernate then validates the entities against the result, so an entity change without a migration stops the app with a clear "Schema-validation" message.
 
@@ -283,14 +285,14 @@ The database schema is owned by the migration scripts in `hospitalERP/app/src/ma
 
 Step-by-step runbook (backup, catch-up run, schema comparison, rehearsal on a copy, rollback, copying the database to another machine): [docs/MYSQL_FLYWAY_UPGRADE.md](docs/MYSQL_FLYWAY_UPGRADE.md).
 
-A database created by the old `ddl-auto=update` has tables but no `flyway_schema_history`. On the first start Flyway marks it as version 1 (it does **not** run the baseline there) and then runs only the two clean-up migrations above. Data is kept. Do it once like this:
+A database created by the old `ddl-auto=update` has tables but no `flyway_schema_history`. On the first start Flyway marks it as version 1 (it does **not** run the baseline there) and then runs only the later migrations above. Data is kept. Do it once like this:
 
 1. **Back up** the database:
    ```bash
    mysqldump -u root -p --routines --single-transaction hospital_erp > hospital_erp_before_flyway.sql
    ```
 2. Start the backend as usual (`./mvnw spring-boot:run` in `hospitalERP/`). The log should show
-   `Successfully baselined schema with version: 1`, then `Successfully applied 2 migrations`, then `Started HospitalErpApplication`.
+   `Successfully baselined schema with version: 1`, then `Successfully applied 3 migrations`, then `Started HospitalErpApplication`.
 3. Check the app (login, booking, consultation, PDF).
 
 If it stops with `Schema-validation: missing column / wrong column type …`, your database differs from what the code expects (for example a column created long ago with an old type). Nothing has been lost; send the message to the team. To go back: restore the backup (`mysql -u root -p hospital_erp < hospital_erp_before_flyway.sql`) and run the previous version of the code.
@@ -398,7 +400,7 @@ The backend is a modular monolith: one application and one database, split into 
 | [`scheduling`](hospitalERP/scheduling/README.md) | Doctor weekly schedules and slots | common, identity, staff |
 | [`appointments`](hospitalERP/appointments/README.md) | Booking, reschedule, cancel, day-before reminders | common, identity, notifications, patients, staff, scheduling |
 | [`clinical`](hospitalERP/clinical/README.md) | Consultations, prescriptions, prescription PDF, medical history | common, identity, patients, staff, appointments |
-| [`administration`](hospitalERP/administration/README.md) | Admin use cases across modules: create users, leave decisions, account deletion | all of the above |
+| [`administration`](hospitalERP/administration/README.md) | Admin use cases across modules: create users, leave decisions, account deactivation / reactivation (and the guarded permanent delete) | all of the above |
 | `app` | Main class, `SecurityConfig`, `application.properties`, end-to-end tests | all modules |
 
 When a lower module needs something to happen in a higher one (for example, an approved leave must cancel appointments), it publishes an event and the higher module listens.

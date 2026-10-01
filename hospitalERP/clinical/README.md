@@ -11,7 +11,7 @@ Records are visible only to the patient, their treating doctor(s) and admins —
 | Class | Purpose |
 |---|---|
 | `Consultation`, `PrescriptionItem` | Consultation entity (one per appointment) and its prescribed medicines. |
-| `ConsultationService` | `saveConsultation` (treating doctor only; marks the appointment completed), `getByAppointment`, `getForPrescription`, `getMyHistory`, `getPatientHistory`; `deleteAllForPatient/ForDoctor` for account deletion. |
+| `ConsultationService` | `saveConsultation` (treating doctor only; marks the appointment completed), `getByAppointment`, `getForPrescription`, `getMyHistory`, `getPatientHistory`; `deleteAllForPatient/ForDoctor` for the permanent delete of an account (refused while the account has appointments, so medical records are never deleted — accounts are deactivated instead). |
 | `ConsultationDTO`, `PrescriptionItemDTO` | Request/response objects. |
 
 ## Events

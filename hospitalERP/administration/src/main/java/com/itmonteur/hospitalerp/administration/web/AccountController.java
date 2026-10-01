@@ -20,26 +20,28 @@ public class AccountController {
         this.userAccountService = userAccountService;
     }
 
-    // Patient deletes their own account (or an admin does); path id = the patient's user id
+    // These old "delete" URLs deactivate the account now: no login, history kept (docs/ACCOUNT_DEACTIVATION_PLAN.md)
+
+    // Patient deactivates their own account (or an admin does); path id = the patient's user id
     @DeleteMapping("/api/patient/deleteAccount/{ptId}")
     public ResponseEntity<String> deletePatientAccount(@PathVariable long ptId) {
-        userAccountService.deletePatientAccount(ptId);
-        return ResponseEntity.ok("Your account has been deleted successfully!!");
+        userAccountService.deactivatePatientAccount(ptId);
+        return ResponseEntity.ok("Your account has been deactivated.");
     }
 
     // Path id = doctor.id (not the user id)
     @DeleteMapping("/api/doctor/delete/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteDoctorById(@PathVariable Long id) {
-        userAccountService.deleteDoctorByDoctorId(id);
-        return ResponseEntity.ok("Doctor deleted successfully");
+        userAccountService.deactivateDoctorByDoctorId(id);
+        return ResponseEntity.ok("Doctor deactivated");
     }
 
     // Path id = receptionist.id (not the user id)
     @DeleteMapping("/api/receptionist/delete/{receptionistId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteReceptionist(@PathVariable Long receptionistId) {
-        userAccountService.deleteReceptionistByReceptionistId(receptionistId);
-        return ResponseEntity.ok("Receptionist deleted successfully!");
+        userAccountService.deactivateReceptionistByReceptionistId(receptionistId);
+        return ResponseEntity.ok("Receptionist deactivated");
     }
 }

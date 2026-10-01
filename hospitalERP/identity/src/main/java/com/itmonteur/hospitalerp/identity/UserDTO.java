@@ -1,5 +1,6 @@
 package com.itmonteur.hospitalerp.identity;
 
+import java.time.LocalDateTime;
 
 public class UserDTO {
 
@@ -8,6 +9,8 @@ public class UserDTO {
     private String email;
     private Role role;
     private String phoneNumber;
+    private boolean active = true;
+    private LocalDateTime deactivatedAt;
 
     // Constructors
     public UserDTO() {}
@@ -59,5 +62,21 @@ public class UserDTO {
 
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public LocalDateTime getDeactivatedAt() {
+        return deactivatedAt;
+    }
+
+    public void setDeactivatedAt(LocalDateTime deactivatedAt) {
+        this.deactivatedAt = deactivatedAt;
     }
 }

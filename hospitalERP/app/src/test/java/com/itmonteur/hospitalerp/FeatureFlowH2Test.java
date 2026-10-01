@@ -7,9 +7,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,6 +34,7 @@ class FeatureFlowH2Test {
 
     @Autowired private TestRestTemplate rest;
     @Autowired private ObjectMapper json;
+    @Autowired private JdbcTemplate jdbc;
 
     @Test
     void scheduleBookingConsultationAndPrescription() throws Exception {
@@ -112,6 +116,40 @@ class FeatureFlowH2Test {
         assertThat(bad.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
+    // Account deactivation, step D.2 (the deactivate endpoint comes in D.3, so the flag is set directly)
+    @Test
+    void deactivatedAccountCannotLogInAndItsTokensStopWorking() {
+        String token = register("leaving");
+        assertThat(call(HttpMethod.GET, "/appointment/getPatientAppointments", token, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        ResponseEntity<String> resetForUnknown = call(HttpMethod.POST, "/api/auth/forgot-password", null,
+                "{\"identifier\":\"no-such-user\"}");
+
+        setActive("leaving", false);
+
+        // The token it already holds stops working on the next request
+        assertThat(call(HttpMethod.GET, "/appointment/getPatientAppointments", token, null).getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+        // Right password: told the account is deactivated
+        ResponseEntity<String> refused = call(HttpMethod.POST, "/api/auth/login", null,
+                "{\"username\":\"leaving\",\"password\":\"secret-123\"}");
+        assertThat(refused.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(refused.getBody()).contains("deactivated");
+        // Wrong password: the usual answer, nothing about the account is revealed
+        ResponseEntity<String> wrong = call(HttpMethod.POST, "/api/auth/login", null,
+                "{\"username\":\"leaving\",\"password\":\"wrong-123\"}");
+        assertThat(wrong.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(wrong.getBody()).doesNotContain("deactivated");
+        // Password reset answers exactly as for an unknown account
+        ResponseEntity<String> reset = call(HttpMethod.POST, "/api/auth/forgot-password", null,
+                "{\"identifier\":\"leaving\"}");
+        assertThat(reset.getBody()).isEqualTo(resetForUnknown.getBody());
+
+        // Reactivated: login works again
+        setActive("leaving", true);
+        assertThat(loginStatus("leaving", "secret-123")).isEqualTo(HttpStatus.OK);
+    }
+
     // The admin endpoints read the new profile right after creating the user, so they only
     // succeed if the UserRegisteredEvent listeners created it inside the same transaction.
     @Test
@@ -141,8 +179,9 @@ class FeatureFlowH2Test {
 
     // Account deletion must remove the profile, everything that references it, and the login.
     // Both deletions happen while the accounts still have upcoming bookings.
+    // Account deactivation, step D.3: the delete endpoints deactivate; history is kept
     @Test
-    void deletingAccountsRemovesProfilesAndLogins() throws Exception {
+    void deactivatingAccountsKeepsHistoryAndCancelsUpcomingBookings() throws Exception {
         String admin = login("flowadmin", "flow-admin-123");
 
         // A doctor working tomorrow 10:00-11:30 in 30-minute slots (3 slots)
@@ -160,41 +199,162 @@ class FeatureFlowH2Test {
 
         // "leaver": a completed visit with a consultation + an upcoming booking
         String leaver = register("leaver");
+        long leaverUserId = userIdOf(leaver);
         JsonNode slots = json.readTree(call(HttpMethod.GET, slotsUrl, leaver, null).getBody());
         assertThat(slots).hasSize(3);
         long visit = book(leaver, slots.get(0).get("id").asLong());
         long leaversUpcomingSlot = slots.get(1).get("id").asLong();
-        book(leaver, leaversUpcomingSlot);
+        long leaversUpcoming = book(leaver, leaversUpcomingSlot);
         assertThat(call(HttpMethod.PUT, "/api/consultations/appointment/" + visit, doctor,
                 "{\"diagnosis\":\"Migraine\",\"medicines\":[{\"medicineName\":\"Paracetamol\"}]}").getStatusCode())
                 .isEqualTo(HttpStatus.OK);
+        long leaverPatientId = json.readTree(call(HttpMethod.GET, "/appointment/appointmentId/" + visit, admin, null)
+                .getBody()).get("ptInfoId").asLong();
         // "stayer": an upcoming booking with the same doctor
         String stayer = register("stayer");
-        book(stayer, slots.get(2).get("id").asLong());
+        long stayersBooking = book(stayer, slots.get(2).get("id").asLong());
 
-        // 1) leaver deletes their own account: login gone, their upcoming slot is bookable again
-        assertThat(call(HttpMethod.DELETE, "/api/patient/deleteAccount/" + userIdOf(leaver), leaver, null)
+        // 1) leaver deactivates their own account (old "delete" endpoint)
+        assertThat(call(HttpMethod.DELETE, "/api/patient/deleteAccount/" + leaverUserId, leaver, null)
                 .getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(loginStatus("leaver", "secret-123")).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(loginStatus("leaver", "secret-123")).isEqualTo(HttpStatus.FORBIDDEN);
+        // ... the upcoming booking is cancelled and its slot is bookable again ...
+        assertThat(appointmentStatus(admin, leaversUpcoming)).isEqualTo("CANCELLED_BY_PATIENT");
         JsonNode freeAgain = json.readTree(call(HttpMethod.GET, slotsUrl, stayer, null).getBody());
         assertThat(freeAgain.findValuesAsText("id")).contains(String.valueOf(leaversUpcomingSlot));
+        // ... and the medical history is kept
+        assertThat(appointmentStatus(admin, visit)).isEqualTo("COMPLETED");
+        assertThat(call(HttpMethod.GET, "/api/consultations/patient/" + leaverPatientId, admin, null).getBody())
+                .contains("Migraine");
 
-        // 2) admin deletes the doctor (stayer still booked): profile, bookings and login all go
+        // 2) admin deactivates the doctor: the stayer's booking is cancelled (not deleted), profile kept
         assertThat(call(HttpMethod.DELETE, "/api/doctor/delete/" + doctorId, admin, null).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
-        assertThat(loginStatus("drgone", "doctor-123")).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(call(HttpMethod.GET, "/api/doctor/getDoctor/" + doctorId, null, null).getStatusCode())
-                .isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(json.readTree(call(HttpMethod.GET, "/appointment/getPatientAppointments", stayer, null).getBody()))
-                .isEmpty();
+        assertThat(loginStatus("drgone", "doctor-123")).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(appointmentStatus(stayer, stayersBooking)).isEqualTo("CANCELLED_BY_DOCTOR");
+        assertThat(call(HttpMethod.GET, "/api/doctor/get/" + doctorUserId, admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.GET, "/api/consultations/patient/" + leaverPatientId, admin, null).getBody())
+                .contains("Migraine");
 
-        // 3) admin deletes a receptionist (by receptionist id)
+        // 3) admin deactivates a receptionist (by receptionist id)
         ResponseEntity<String> receptionist = call(HttpMethod.POST, "/api/admin/receptionist", admin, """
                 {"username":"deskgone","email":"deskgone@example.com","password":"desk-1234","phoneNumber":"+919812345679"}""");
         long receptionistId = json.readTree(receptionist.getBody()).get("id").asLong();
         assertThat(call(HttpMethod.DELETE, "/api/receptionist/delete/" + receptionistId, admin, null).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
-        assertThat(loginStatus("deskgone", "desk-1234")).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(loginStatus("deskgone", "desk-1234")).isEqualTo(HttpStatus.FORBIDDEN);
+
+        // 4) only an admin can reactivate; then login works again
+        assertThat(call(HttpMethod.PUT, "/api/admin/users/" + leaverUserId + "/reactivate", stayer, null)
+                .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        ResponseEntity<String> reactivated = call(HttpMethod.PUT, "/api/admin/users/" + doctorUserId + "/reactivate", admin, null);
+        assertThat(reactivated.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(json.readTree(reactivated.getBody()).get("active").asBoolean()).isTrue();
+        assertThat(loginStatus("drgone", "doctor-123")).isEqualTo(HttpStatus.OK);
+    }
+
+    // Account deactivation, step D.4
+    @Test
+    void deactivatedDoctorIsHiddenAndCannotBeBooked() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+        long doctorUserId = json.readTree(call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"drhidden","email":"drhidden@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111117","role":"DOCTOR"}""").getBody()).get("id").asLong();
+        long doctorId = findDoctorId("drhidden");
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        call(HttpMethod.PUT, "/api/doctor/" + doctorUserId + "/schedule", login("drhidden", "doctor-123"),
+                "[{\"dayOfWeek\":\"" + tomorrow.getDayOfWeek() + "\",\"shift\":\"MORNING\",\"working\":true,"
+                        + "\"startTime\":\"10:00\",\"endTime\":\"11:00\",\"slotMinutes\":30}]");
+        String patient = register("seeker");
+        String slotsUrl = "/api/slots/available/" + doctorId + "?date=" + tomorrow + "&shift=MORNING";
+        JsonNode slots = json.readTree(call(HttpMethod.GET, slotsUrl, patient, null).getBody());
+        assertThat(slots).hasSize(2);
+        long freeSlot = slots.get(0).get("id").asLong();
+
+        assertThat(call(HttpMethod.PUT, "/api/admin/users/" + doctorUserId + "/deactivate", admin, null)
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // Gone from the public directory, the search and the public profile ...
+        assertThat(doctorUserNames(null, "/api/doctor/getAll")).doesNotContain("drhidden");
+        assertThat(doctorUserNames(patient, "/api/patient/getAllDoctors")).doesNotContain("drhidden");
+        assertThat(doctorUserNames(null, "/api/patient/getAllBySpecialization?specialization=NOT_ASSIGNED"))
+                .doesNotContain("drhidden");
+        assertThat(call(HttpMethod.GET, "/api/doctor/getDoctor/" + doctorId, null, null).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        // ... but admins still see the doctor, marked inactive (Manage Doctors uses this list)
+        JsonNode inAdminList = null;
+        for (JsonNode d : json.readTree(call(HttpMethod.GET, "/api/patient/getAllDoctors", admin, null).getBody())) {
+            if ("drhidden".equals(d.get("userName").asText())) {
+                inAdminList = d;
+            }
+        }
+        assertThat(inAdminList).isNotNull();
+        assertThat(inAdminList.get("active").asBoolean()).isFalse();
+        // No free slots, and a slot that was free can't be booked
+        assertThat(json.readTree(call(HttpMethod.GET, slotsUrl, patient, null).getBody())).isEmpty();
+        assertThat(call(HttpMethod.POST, "/appointment/NewAppointment", patient,
+                "{\"slotId\":" + freeSlot + ",\"message\":\"Checkup\"}").getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+
+        // Reactivated: listed and bookable again
+        call(HttpMethod.PUT, "/api/admin/users/" + doctorUserId + "/reactivate", admin, null);
+        assertThat(doctorUserNames(null, "/api/doctor/getAll")).contains("drhidden");
+        assertThat(json.readTree(call(HttpMethod.GET, slotsUrl, patient, null).getBody())).hasSize(2);
+        book(patient, freeSlot);
+    }
+
+    @Test
+    void permanentDeleteOnlyForAccountsWithoutHistory() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+        long adminUserId = userIdOf(admin);
+
+        // A doctor account that never had an appointment (e.g. created by mistake) can be deleted for good
+        long tempUserId = json.readTree(call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"drtemp","email":"drtemp@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111119","role":"DOCTOR"}""").getBody()).get("id").asLong();
+        assertThat(call(HttpMethod.DELETE, "/api/admin/users/" + tempUserId, admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        assertThat(loginStatus("drtemp", "doctor-123")).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(call(HttpMethod.GET, "/api/admin/" + tempUserId, admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+
+        // A patient with a booking can't: deactivate instead
+        String booker = register("booker");
+        long bookerUserId = userIdOf(booker);
+        long doctorUserId = json.readTree(call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"drkeep","email":"drkeep@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111118","role":"DOCTOR"}""").getBody()).get("id").asLong();
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        call(HttpMethod.PUT, "/api/doctor/" + doctorUserId + "/schedule", login("drkeep", "doctor-123"),
+                "[{\"dayOfWeek\":\"" + tomorrow.getDayOfWeek() + "\",\"shift\":\"MORNING\",\"working\":true,"
+                        + "\"startTime\":\"10:00\",\"endTime\":\"10:30\",\"slotMinutes\":30}]");
+        JsonNode slots = json.readTree(call(HttpMethod.GET, "/api/slots/available/" + findDoctorId("drkeep")
+                + "?date=" + tomorrow + "&shift=MORNING", booker, null).getBody());
+        book(booker, slots.get(0).get("id").asLong());
+        ResponseEntity<String> refused = call(HttpMethod.DELETE, "/api/admin/users/" + bookerUserId, admin, null);
+        assertThat(refused.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(refused.getBody()).containsIgnoringCase("deactivate it instead");
+        assertThat(loginStatus("booker", "secret-123")).isEqualTo(HttpStatus.OK);
+
+        // The explicit deactivate endpoint; the user list shows the status
+        assertThat(call(HttpMethod.PUT, "/api/admin/users/" + bookerUserId + "/deactivate", admin, null)
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(loginStatus("booker", "secret-123")).isEqualTo(HttpStatus.FORBIDDEN);
+        JsonNode bookerInList = null;
+        for (JsonNode u : json.readTree(call(HttpMethod.GET, "/api/admin/allUsers", admin, null).getBody())) {
+            if (u.get("id").asLong() == bookerUserId) {
+                bookerInList = u;
+            }
+        }
+        assertThat(bookerInList).isNotNull();
+        assertThat(bookerInList.get("active").asBoolean()).isFalse();
+        assertThat(bookerInList.get("deactivatedAt").isNull()).isFalse();
+
+        // An admin can't lock themself out
+        assertThat(call(HttpMethod.PUT, "/api/admin/users/" + adminUserId + "/deactivate", admin, null)
+                .getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(call(HttpMethod.DELETE, "/api/admin/users/" + adminUserId, admin, null)
+                .getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     // Deleting a relative keeps their appointment history; only the link to the relative goes
@@ -401,6 +561,19 @@ class FeatureFlowH2Test {
     }
 
     // ------------------------------------------------------------------ helpers
+
+    private List<String> doctorUserNames(String token, String url) throws Exception {
+        List<String> names = new java.util.ArrayList<>();
+        for (JsonNode d : json.readTree(call(HttpMethod.GET, url, token, null).getBody())) {
+            names.add(d.get("userName").asText());
+        }
+        return names;
+    }
+
+    private void setActive(String username, boolean active) {
+        jdbc.update("UPDATE users SET active = ?, deactivated_at = ? WHERE username = ?",
+                active, active ? null : Timestamp.valueOf(LocalDateTime.now()), username);
+    }
 
     private HttpStatusCode loginStatus(String username, String password) {
         return call(HttpMethod.POST, "/api/auth/login", null,

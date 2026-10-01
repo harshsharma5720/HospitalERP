@@ -9,6 +9,7 @@ import com.itmonteur.hospitalerp.identity.internal.OtpService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -103,6 +104,10 @@ public class AuthService {
             authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
             );
+        } catch (DisabledException e) {
+            // Right password, deactivated account: not a failed guess, so it doesn't count towards the lock
+            logger.warn("Login refused for deactivated account {}", request.getUsername());
+            throw e;
         } catch (AuthenticationException e) {
             loginAttemptService.loginFailed(request.getUsername());
             logger.warn("Failed login for user {}", request.getUsername());

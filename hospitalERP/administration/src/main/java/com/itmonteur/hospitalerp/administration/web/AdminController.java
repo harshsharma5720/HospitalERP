@@ -121,9 +121,33 @@ public class AdminController {
         return ResponseEntity.ok(this.adminService.getUserById(id));
     }
 
+    // Old endpoint: deactivates now (history is kept); see /users/{userId}/... below
     @DeleteMapping("/{id}")
     public ResponseEntity<Boolean> deleteUserById(@PathVariable Long id) {
-        logger.info("Admin deleting user {}", id);
+        logger.info("Admin deactivating user {}", id);
         return ResponseEntity.ok(this.adminService.deleteUserById(id));
+    }
+
+    // -------------------- Account status (docs/ACCOUNT_DEACTIVATION_PLAN.md) --------------------
+    // Deactivated: no login, hidden from directories and booking, upcoming appointments cancelled,
+    // all history kept. Permanent delete only for accounts without appointments.
+
+    @PutMapping("/users/{userId}/deactivate")
+    public ResponseEntity<UserDTO> deactivateUser(@PathVariable Long userId) {
+        logger.info("Admin deactivating user {}", userId);
+        return ResponseEntity.ok(this.adminService.deactivateUser(userId));
+    }
+
+    @PutMapping("/users/{userId}/reactivate")
+    public ResponseEntity<UserDTO> reactivateUser(@PathVariable Long userId) {
+        logger.info("Admin reactivating user {}", userId);
+        return ResponseEntity.ok(this.adminService.reactivateUser(userId));
+    }
+
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<String> deleteUserPermanently(@PathVariable Long userId) {
+        logger.info("Admin deleting user {} permanently", userId);
+        this.adminService.deleteUserPermanently(userId);
+        return ResponseEntity.ok("User deleted permanently");
     }
 }
