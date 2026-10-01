@@ -254,6 +254,55 @@ class FeatureFlowH2Test {
         assertThat(loginStatus("drgone", "doctor-123")).isEqualTo(HttpStatus.OK);
     }
 
+    // Account deactivation, step D.4
+    @Test
+    void deactivatedDoctorIsHiddenAndCannotBeBooked() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+        long doctorUserId = json.readTree(call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"drhidden","email":"drhidden@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111117","role":"DOCTOR"}""").getBody()).get("id").asLong();
+        long doctorId = findDoctorId("drhidden");
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        call(HttpMethod.PUT, "/api/doctor/" + doctorUserId + "/schedule", login("drhidden", "doctor-123"),
+                "[{\"dayOfWeek\":\"" + tomorrow.getDayOfWeek() + "\",\"shift\":\"MORNING\",\"working\":true,"
+                        + "\"startTime\":\"10:00\",\"endTime\":\"11:00\",\"slotMinutes\":30}]");
+        String patient = register("seeker");
+        String slotsUrl = "/api/slots/available/" + doctorId + "?date=" + tomorrow + "&shift=MORNING";
+        JsonNode slots = json.readTree(call(HttpMethod.GET, slotsUrl, patient, null).getBody());
+        assertThat(slots).hasSize(2);
+        long freeSlot = slots.get(0).get("id").asLong();
+
+        assertThat(call(HttpMethod.PUT, "/api/admin/users/" + doctorUserId + "/deactivate", admin, null)
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // Gone from the public directory, the search and the public profile ...
+        assertThat(doctorUserNames(null, "/api/doctor/getAll")).doesNotContain("drhidden");
+        assertThat(doctorUserNames(patient, "/api/patient/getAllDoctors")).doesNotContain("drhidden");
+        assertThat(doctorUserNames(null, "/api/patient/getAllBySpecialization?specialization=NOT_ASSIGNED"))
+                .doesNotContain("drhidden");
+        assertThat(call(HttpMethod.GET, "/api/doctor/getDoctor/" + doctorId, null, null).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        // ... but admins still see the doctor, marked inactive (Manage Doctors uses this list)
+        JsonNode inAdminList = null;
+        for (JsonNode d : json.readTree(call(HttpMethod.GET, "/api/patient/getAllDoctors", admin, null).getBody())) {
+            if ("drhidden".equals(d.get("userName").asText())) {
+                inAdminList = d;
+            }
+        }
+        assertThat(inAdminList).isNotNull();
+        assertThat(inAdminList.get("active").asBoolean()).isFalse();
+        // No free slots, and a slot that was free can't be booked
+        assertThat(json.readTree(call(HttpMethod.GET, slotsUrl, patient, null).getBody())).isEmpty();
+        assertThat(call(HttpMethod.POST, "/appointment/NewAppointment", patient,
+                "{\"slotId\":" + freeSlot + ",\"message\":\"Checkup\"}").getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+
+        // Reactivated: listed and bookable again
+        call(HttpMethod.PUT, "/api/admin/users/" + doctorUserId + "/reactivate", admin, null);
+        assertThat(doctorUserNames(null, "/api/doctor/getAll")).contains("drhidden");
+        assertThat(json.readTree(call(HttpMethod.GET, slotsUrl, patient, null).getBody())).hasSize(2);
+        book(patient, freeSlot);
+    }
+
     @Test
     void permanentDeleteOnlyForAccountsWithoutHistory() throws Exception {
         String admin = login("flowadmin", "flow-admin-123");
@@ -512,6 +561,14 @@ class FeatureFlowH2Test {
     }
 
     // ------------------------------------------------------------------ helpers
+
+    private List<String> doctorUserNames(String token, String url) throws Exception {
+        List<String> names = new java.util.ArrayList<>();
+        for (JsonNode d : json.readTree(call(HttpMethod.GET, url, token, null).getBody())) {
+            names.add(d.get("userName").asText());
+        }
+        return names;
+    }
 
     private void setActive(String username, boolean active) {
         jdbc.update("UPDATE users SET active = ?, deactivated_at = ? WHERE username = ?",

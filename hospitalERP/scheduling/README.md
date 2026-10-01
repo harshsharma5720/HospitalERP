@@ -9,7 +9,7 @@ When doctors can be booked: each doctor's weekly working hours and slot length, 
 | Class | Purpose |
 |---|---|
 | `DoctorSchedule`, `Slot`, `Shift` | Entities for a doctor's weekly schedule and a bookable time slot, and the `MORNING` / `EVENING` shift enum. |
-| `SlotService` | `generateSlots`, `getAvailableSlots`, `lockAndBook` (pessimistic lock so a slot can't be double-booked), `releaseSlot`, `deleteUnusedSlots`, `deleteAllForDoctor`, `hoursFor`. |
+| `SlotService` | `generateSlots`, `getAvailableSlots`, `lockAndBook` (pessimistic lock so a slot can't be double-booked), `releaseSlot`, `deleteUnusedSlots`, `deleteAllForDoctor`, `hoursFor`. A deactivated doctor has no available slots and `lockAndBook` refuses their slots (409). |
 | `DoctorScheduleService` | `getSchedule`, `updateSchedule`, `deleteAllForDoctor`. |
 | `DoctorScheduleDTO` | Request/response object for a weekly schedule. |
 | `DoctorScheduleChangedEvent` | Published when a schedule is changed. |
