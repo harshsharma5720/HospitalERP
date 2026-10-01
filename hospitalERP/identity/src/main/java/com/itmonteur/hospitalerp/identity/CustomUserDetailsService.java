@@ -25,6 +25,9 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .withUsername(user.getUsername())
                 .password(user.getPassword()) // must be BCrypt encoded
                 .authorities(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+                // A deactivated account can't log in (checked after the password, see SecurityConfig)
+                // and its tokens are rejected by JWTAuthenticationFilter
+                .disabled(!user.isActive())
                 .build();
     }
 }

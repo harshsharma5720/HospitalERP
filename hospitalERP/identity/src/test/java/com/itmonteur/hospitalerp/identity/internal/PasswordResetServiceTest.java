@@ -58,6 +58,17 @@ class PasswordResetServiceTest {
     }
 
     @Test
+    void deactivatedAccountIsTreatedLikeAnUnknownOne() {
+        user.setActive(false);
+
+        assertThatCode(() -> service.requestReset("asha")).doesNotThrowAnyException();
+        verify(smsService, never()).sendPasswordResetSms(any(), any(), anyInt());
+        assertThatThrownBy(() -> service.resetPassword("asha", "123456", "new-password-1"))
+                .isInstanceOf(BadRequestException.class);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void correctCodeChangesThePasswordOnce() {
         String code = requestAndCaptureCode();
 

@@ -7,9 +7,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,6 +34,7 @@ class FeatureFlowH2Test {
 
     @Autowired private TestRestTemplate rest;
     @Autowired private ObjectMapper json;
+    @Autowired private JdbcTemplate jdbc;
 
     @Test
     void scheduleBookingConsultationAndPrescription() throws Exception {
@@ -110,6 +114,40 @@ class FeatureFlowH2Test {
         ResponseEntity<String> bad = call(HttpMethod.POST, "/api/auth/reset-password", null,
                 "{\"identifier\":\"resetme\",\"code\":\"123456\",\"newPassword\":\"whatever-123\"}");
         assertThat(bad.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    // Account deactivation, step D.2 (the deactivate endpoint comes in D.3, so the flag is set directly)
+    @Test
+    void deactivatedAccountCannotLogInAndItsTokensStopWorking() {
+        String token = register("leaving");
+        assertThat(call(HttpMethod.GET, "/appointment/getPatientAppointments", token, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        ResponseEntity<String> resetForUnknown = call(HttpMethod.POST, "/api/auth/forgot-password", null,
+                "{\"identifier\":\"no-such-user\"}");
+
+        setActive("leaving", false);
+
+        // The token it already holds stops working on the next request
+        assertThat(call(HttpMethod.GET, "/appointment/getPatientAppointments", token, null).getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+        // Right password: told the account is deactivated
+        ResponseEntity<String> refused = call(HttpMethod.POST, "/api/auth/login", null,
+                "{\"username\":\"leaving\",\"password\":\"secret-123\"}");
+        assertThat(refused.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(refused.getBody()).contains("deactivated");
+        // Wrong password: the usual answer, nothing about the account is revealed
+        ResponseEntity<String> wrong = call(HttpMethod.POST, "/api/auth/login", null,
+                "{\"username\":\"leaving\",\"password\":\"wrong-123\"}");
+        assertThat(wrong.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(wrong.getBody()).doesNotContain("deactivated");
+        // Password reset answers exactly as for an unknown account
+        ResponseEntity<String> reset = call(HttpMethod.POST, "/api/auth/forgot-password", null,
+                "{\"identifier\":\"leaving\"}");
+        assertThat(reset.getBody()).isEqualTo(resetForUnknown.getBody());
+
+        // Reactivated: login works again
+        setActive("leaving", true);
+        assertThat(loginStatus("leaving", "secret-123")).isEqualTo(HttpStatus.OK);
     }
 
     // The admin endpoints read the new profile right after creating the user, so they only
@@ -401,6 +439,11 @@ class FeatureFlowH2Test {
     }
 
     // ------------------------------------------------------------------ helpers
+
+    private void setActive(String username, boolean active) {
+        jdbc.update("UPDATE users SET active = ?, deactivated_at = ? WHERE username = ?",
+                active, active ? null : Timestamp.valueOf(LocalDateTime.now()), username);
+    }
 
     private HttpStatusCode loginStatus(String username, String password) {
         return call(HttpMethod.POST, "/api/auth/login", null,

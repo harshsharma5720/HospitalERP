@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AccountStatusUserDetailsChecker;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -89,6 +90,10 @@ public class SecurityConfig {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(customUserDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
+        // Account status (deactivated) is checked only after the password matched, so a wrong
+        // password never reveals that an account exists or is deactivated
+        authProvider.setPreAuthenticationChecks(user -> { });
+        authProvider.setPostAuthenticationChecks(new AccountStatusUserDetailsChecker());
         return authProvider;
     }
 
