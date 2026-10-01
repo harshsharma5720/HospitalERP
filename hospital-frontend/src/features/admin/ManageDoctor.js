@@ -66,19 +66,37 @@ export default function ManageDoctor() {
     }
   };
 
-  // ================= DELETE DOCTOR =================
-  const deleteDoctor = async (id) => {
-    const confirmDelete = window.confirm(
-      "Doctor has resigned. Remove from hospital?"
+  // ================= DEACTIVATE / REACTIVATE (docs/ACCOUNT_DEACTIVATION_PLAN.md) =================
+  // A deactivated doctor can't log in and disappears from booking; upcoming appointments are cancelled
+  // and the patients notified. All history is kept.
+  const deactivateDoctor = async (doc) => {
+    const ok = window.confirm(
+      `Doctor has resigned? Deactivate ${doc.name}?\n\nThey can't log in any more and are hidden from booking. ` +
+        "Their upcoming appointments are cancelled and the patients are notified. All history is kept, " +
+        "and you can reactivate the doctor later."
     );
-    if (!confirmDelete) return;
+    if (!ok) return;
 
     try {
-      await adminApi.deleteDoctor(id);
-      alert("Doctor removed successfully!");
+      if (doc.userId) {
+        await adminApi.deactivateUser(doc.userId);
+      } else {
+        await adminApi.deactivateDoctor(doc.id); // old doctor row without a login account
+      }
+      alert(`${doc.name} deactivated.`);
       fetchDoctors();
     } catch (error) {
-      alert(getErrorMessage(error, "Delete failed!"));
+      alert(getErrorMessage(error, "Deactivation failed!"));
+    }
+  };
+
+  const reactivateDoctor = async (doc) => {
+    try {
+      await adminApi.reactivateUser(doc.userId);
+      alert(`${doc.name} reactivated - bookable again.`);
+      fetchDoctors();
+    } catch (error) {
+      alert(getErrorMessage(error, "Reactivation failed!"));
     }
   };
 
@@ -98,9 +116,11 @@ export default function ManageDoctor() {
 
   if (loading) return <p className="text-center mt-5">Loading doctors...</p>;
 
+  // Present / absent today only counts active doctors (a deactivated doctor is neither)
   const isAbsent = (d) => onLeaveUserIds.has(d.userId);
-  const presentDoctors = filteredDoctors.filter((d) => !isAbsent(d));
-  const absentDoctors = filteredDoctors.filter(isAbsent);
+  const activeDoctors = filteredDoctors.filter((d) => d.active !== false);
+  const presentDoctors = activeDoctors.filter((d) => !isAbsent(d));
+  const absentDoctors = activeDoctors.filter(isAbsent);
   const visibleDoctors =
     presenceFilter === "absent" ? absentDoctors : presenceFilter === "present" ? presentDoctors : filteredDoctors;
 
@@ -138,9 +158,16 @@ export default function ManageDoctor() {
           </thead>
           <tbody>
             {visibleDoctors.map((doc, index) => (
-              <tr key={doc.id} className="border-b">
+              <tr key={doc.id} className={`border-b ${doc.active === false ? "bg-gray-50 text-gray-500" : ""}`}>
                 <td className="p-3 font-bold">#{index + 1}</td>
-                <td className="p-3">{doc.name}</td>
+                <td className="p-3">
+                  {doc.name}
+                  {doc.active === false && (
+                    <span className="ml-2 px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-700 font-semibold">
+                      Deactivated
+                    </span>
+                  )}
+                </td>
                 <td className="p-3">{doc.id}</td>
                 <td className="p-3">{doc.specialist}</td>
                 <td className="p-3">
@@ -155,12 +182,21 @@ export default function ManageDoctor() {
                 </td>
                 <td className="p-3">
                   <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => deleteDoctor(doc.id)}
-                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs"
-                      >
-                        Delete
-                      </button>
+                      {doc.active === false ? (
+                        <button
+                          onClick={() => reactivateDoctor(doc)}
+                          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
+                        >
+                          Reactivate
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => deactivateDoctor(doc)}
+                          className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded text-xs"
+                        >
+                          Deactivate
+                        </button>
+                      )}
 
                       <button
                         onClick={() =>

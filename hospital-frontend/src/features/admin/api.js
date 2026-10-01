@@ -8,9 +8,17 @@ export const getAllUsers = () => axios.get(`${API_BASE_URL}/api/admin/allUsers`)
 
 export const createUser = (user) => axios.post(`${API_BASE_URL}/api/admin/users`, user);
 
-export const deleteUser = (id) => axios.delete(`${API_BASE_URL}/api/admin/${id}`);
+// ---------- account status (docs/ACCOUNT_DEACTIVATION_PLAN.md) ----------
+// Deactivated: no login, hidden from directories and booking, upcoming appointments cancelled; history kept.
+export const deactivateUser = (userId) => axios.put(`${API_BASE_URL}/api/admin/users/${userId}/deactivate`);
 
-export const deleteDoctor = (id) => axios.delete(`${API_BASE_URL}/api/doctor/delete/${id}`);
+export const reactivateUser = (userId) => axios.put(`${API_BASE_URL}/api/admin/users/${userId}/reactivate`);
+
+// Only for accounts without any appointment; otherwise the server answers 409 "Deactivate it instead"
+export const deleteUserPermanently = (userId) => axios.delete(`${API_BASE_URL}/api/admin/users/${userId}`);
+
+// By doctor id; also handles old doctor rows without a login account
+export const deactivateDoctor = (doctorId) => axios.delete(`${API_BASE_URL}/api/doctor/delete/${doctorId}`);
 
 // ---------- leave requests ----------
 export const getPendingLeaves = () => axios.get(`${API_BASE_URL}/api/admin/allPending`);
