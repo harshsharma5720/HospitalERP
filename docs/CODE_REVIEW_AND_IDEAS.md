@@ -251,7 +251,7 @@ The main problems:
 
 ## 7. New Feature Ideas
 
-Grouped by module and roughly ordered by value against effort. ⭐ marks ideas that build directly on what already exists.
+Grouped by module and roughly ordered by value against effort. ⭐ marks ideas that build directly on what already exists. Which ideas are done, partly done or still open: [section 11](#11-feature-status-updated-2026-10-01).
 
 ### 7.1 Patient Experience
 - ⭐ **Medical records / visit history.** When a doctor marks an appointment completed, capture a **consultation note**: diagnosis, symptoms, vitals and follow-up date. The patient can see their full history. This turns the app from a booking tool into an EMR.
@@ -436,3 +436,79 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 - Frontend (4 new, 13 total): forgot-password flow, schedule page and consultation form.
 
 **Not covered yet:** a real MySQL run and a manual click-through. SMS and email delivery were only verified with mocks.
+
+---
+
+## 11. Feature Status (updated 2026-10-01)
+
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (branch `feature/account-deactivation`).
+
+**Done**
+- Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
+- The patient's previous visits shown inside the consultation form; leave approval and rejection.
+- **Account deactivation instead of deletion** (2026-10-01, see below).
+
+**Partly done**
+- **Front-desk booking:** receptionists can book for an existing patient, but can't register a new walk-in patient on the spot.
+- **Doctor dashboard:** real counts of pending and completed appointments, but no analytics (patients per day, no-show rate).
+- **Admin dashboard:** the charts use **hard-coded numbers** (Mon 300, Tue 420 …), so the admin KPIs are effectively not built.
+- **Cancel and reschedule:** both work, but there's no cut-off rule, so a patient can cancel 5 minutes before the appointment.
+
+### Not implemented yet
+
+| # | Feature | Area | Effort |
+|---|---|---|---|
+| 1 | ~~Deactivate accounts instead of deleting them~~ ✅ done 2026-10-01 | compliance | — |
+| 2 | Audit log of who viewed or changed medical records | compliance | 2 days |
+| 3 | Safer login tokens (short access token + refresh token in an `httpOnly` cookie) | security | 2–3 days |
+| 4 | Automatic MySQL backups (backup container in docker-compose) | operations | ½ day |
+| 5 | Notifications that aren't lost when SMS/email is down (Modulith event registry) | reliability | 1 day |
+| 6 | In-app notification centre (bell icon) | platform | 3 days |
+| 7 | Real admin dashboard KPIs (replacing the fake chart data) | admin | 2 days |
+| 8 | Doctor analytics (patients per day, no-show rate, busy hours) | doctor | 2 days |
+| 9 | Cancellation / reschedule cut-off rule | patients | 1 day |
+| 10 | Walk-in patient registration at the front desk | front desk | 1–2 days |
+| 11 | Today's queue: check-in, token numbers, live "now serving" screen | front desk | 4–5 days |
+| 12 | Patient search (phone / name / ID) and pagination on all lists | front desk / platform | 2–3 days |
+| 13 | Waitlist, notified when a slot frees up | patients | 3–4 days |
+| 14 | Family view (each relative's appointments and prescriptions) | patients | 2 days |
+| 15 | Lab report upload, served only to authorised users | clinical | 3 days |
+| 16 | Doctor ratings and feedback (the stars on the doctor page are only decoration) | patients | 2 days |
+| 17 | Departments table instead of the fixed specialist list | admin | 2 days |
+| 18 | Billing: invoices, Razorpay payment, PDF receipt, refunds on doctor leave | ERP | 1–2 weeks |
+| 19 | Pharmacy / inventory, lab management, in-patient wards, HR and payroll, supply chain | ERP | weeks each |
+| 20 | Hindi language option | platform | 3–4 days |
+| 21 | Telemedicine (video consultation link) | platform | 3–5 days |
+| 22 | API docs (Swagger UI) | tooling | ½ day |
+| 23 | End-to-end browser tests (Playwright) | tooling | 2–3 days |
+| 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
+| 25 | Caching of the doctor list and specializations | platform | ½ day |
+
+**Suggested order:** 2 next (legal risk), then 7 (the admin dashboard shows made-up numbers), then 5 and 4, then front-desk work (10, 12, 11) or billing (18).
+
+### Account deactivation (done 2026-10-01)
+
+From idea 7.4. Deleting a patient or doctor used to delete their appointments, consultations and prescriptions as well. Now accounts are **deactivated** and all history is kept. Decisions, steps and details: [ACCOUNT_DEACTIVATION_PLAN.md](ACCOUNT_DEACTIVATION_PLAN.md).
+
+**Backend**
+- A deactivated user can't log in: the right password gets 403 "This account has been deactivated. Please contact the hospital." (checked only after the password, so a wrong password reveals nothing). Tokens they already hold stop working, and forgot-password treats them like an unknown account.
+- Deactivating cancels the account's appointments from today on, frees the slots and sends the cancellation notifications. Past appointments, consultations, prescriptions and leave requests are kept. Reactivating lets the person log in again; cancelled appointments stay cancelled.
+- Deactivated doctors disappear from the doctor lists and their profile page, have no free slots and can't be booked. Admins still see them, marked inactive.
+- Endpoints (admin only): `PUT /api/admin/users/{userId}/deactivate`, `PUT /api/admin/users/{userId}/reactivate`, and `DELETE /api/admin/users/{userId}`: the permanent delete, refused with 409 "… Deactivate it instead." while the account has appointments. The old delete URLs now deactivate. A patient may deactivate their own account (`DELETE /api/patient/deleteAccount/{ptId}`), but only an admin can reactivate it. Admins can't deactivate or delete themselves.
+
+**Frontend**
+- Manage Users: Status column, Deactivate / Reactivate, and a separate "Delete permanently" that shows the server's reason when refused.
+- Manage Doctors: "Deactivated" badge, Deactivate / Reactivate instead of Delete; the present/absent panels count only active doctors.
+- Login shows the "account deactivated" message (no change needed).
+
+**Database change:** Flyway migration `identity/V2026_09_30_1__identity_account_status.sql` adds `users.active` (default true, so existing accounts stay active) and `users.deactivated_at`.
+
+**Tests added:**
+- Backend (4 new, 1 rewritten; 92 passing, 1 skipped without a MySQL `DB_URL`): end-to-end tests for login and tokens, deactivation keeping history and cancelling bookings, the guarded permanent delete, and hidden doctors; a password-reset case. The MySQL migration test also checks that existing users stay active.
+- Frontend (3 new, 24 total): Manage Users status and actions.
+
+**Not covered yet:**
+- Running the migration on the real database: follow [MYSQL_FLYWAY_UPGRADE.md](MYSQL_FLYWAY_UPGRADE.md).
+- A manual click-through.
+- A "deactivate my account" button for patients: it works through the API only.
+- Anonymising personal data (DPDP right to erasure): a later, separate admin action.

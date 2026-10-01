@@ -400,7 +400,7 @@ The backend is a modular monolith: one application and one database, split into 
 | [`scheduling`](hospitalERP/scheduling/README.md) | Doctor weekly schedules and slots | common, identity, staff |
 | [`appointments`](hospitalERP/appointments/README.md) | Booking, reschedule, cancel, day-before reminders | common, identity, notifications, patients, staff, scheduling |
 | [`clinical`](hospitalERP/clinical/README.md) | Consultations, prescriptions, prescription PDF, medical history | common, identity, patients, staff, appointments |
-| [`administration`](hospitalERP/administration/README.md) | Admin use cases across modules: create users, leave decisions, account deletion | all of the above |
+| [`administration`](hospitalERP/administration/README.md) | Admin use cases across modules: create users, leave decisions, account deactivation / reactivation (and the guarded permanent delete) | all of the above |
 | `app` | Main class, `SecurityConfig`, `application.properties`, end-to-end tests | all modules |
 
 When a lower module needs something to happen in a higher one (for example, an approved leave must cancel appointments), it publishes an event and the higher module listens.

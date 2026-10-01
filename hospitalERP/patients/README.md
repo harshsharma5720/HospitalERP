@@ -26,7 +26,7 @@ Patient profiles and their relatives (people a patient can book appointments for
 | `PtInfoController` | `/api/patient` (profile) |
 | `PtRelativeController` | `/api/patient/relative` |
 
-Deleting a patient account (`DELETE /api/patient/deleteAccount/{ptId}`) lives in administration, because it spans several modules.
+Closing a patient account (`DELETE /api/patient/deleteAccount/{ptId}`, the patient themself or an admin) lives in administration, because it spans several modules. Despite the old name it **deactivates**: the profile and all history are kept, and only an admin can reactivate. `deletePatientEntity` is only used by the admin's permanent delete, which is refused while the patient has appointments ([docs/ACCOUNT_DEACTIVATION_PLAN.md](../../docs/ACCOUNT_DEACTIVATION_PLAN.md)).
 
 Access rules (`patients.web.PatientsSecurityRules`, a `ModuleSecurityRules` bean): `/api/patient/getAll` admins + receptionists; the rest of `/api/patient/**` patients + admins.
 
