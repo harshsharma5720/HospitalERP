@@ -19,6 +19,7 @@ None. Nothing else may depend on administration.
 |---|---|
 | `AdminController` | `/api/admin/**` — create users, user and staff lists, leave approval/rejection, appointment overviews; account status: `PUT /users/{userId}/deactivate`, `PUT /users/{userId}/reactivate`, `DELETE /users/{userId}` (permanent, only without appointments — otherwise 409). The old `DELETE /{id}` deactivates. |
 | `AccountController` | `DELETE /api/patient/deleteAccount/{ptId}` (the patient themself or an admin), `DELETE /api/doctor/delete/{id}` and `DELETE /api/receptionist/delete/{receptionistId}` (admin only) — despite the old names, these **deactivate**. |
+| `AuditLogController` | `GET /api/admin/audit-log` — the [audit log](../audit/README.md), newest first. Optional filters `patientId`, `username`, `action`, `from` / `to` (days, `yyyy-MM-dd`, both included); `page` (from 0) and `size` (default 50, at most 100). Returns `{entries, page, size, totalEntries, totalPages}`; each entry has the patient's current name. A bad filter is a 400. |
 
 Access rules (`administration.web.AdministrationSecurityRules`, a `ModuleSecurityRules` bean): `/api/admin/**` admins only.
 
@@ -27,6 +28,7 @@ Access rules (`administration.web.AdministrationSecurityRules`, a `ModuleSecurit
 | Class | Purpose |
 |---|---|
 | `AdminService` | The admin use cases, calling the other modules' services. |
+| `AuditLogQuery`, `AuditLogPage` | Reads the audit log for `AuditLogController` and adds the patients' names (`PtInfoService.findPatientNames`, one query per page), since the audit module can't depend on patients. |
 | `UserAccountService` | Account lifecycle. **Deactivate**: cancels bookings from today on (patient: as if they cancelled, slot freed; doctor: `CANCELLED_BY_DOCTOR`, patients notified), then `users.active = false`; all history stays. **Reactivate** undoes it. **Delete permanently** only without any appointment: leave requests, then the role's data — consultations → appointments → (doctor: slots and weekly schedule) → profile, then the login account. Admins can't deactivate or delete themselves. Every change goes into the [audit log](../audit/README.md) — user created (`recordCreated`, called by `AdminService`), deactivated, reactivated, deleted, with the account's username and role in the details; a call that changes nothing records nothing. Uses only other modules' public services, never their repositories. |
 
 ## Configuration

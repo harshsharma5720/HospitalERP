@@ -30,7 +30,7 @@ It records what other modules tell it to; it knows nothing about consultations o
 
 ## Endpoints
 
-None. Admins see the log through administration (`GET /api/admin/audit-log`, step A.4).
+None. Admins read the log through administration: `GET /api/admin/audit-log` (filters, paging, patient names — see the [administration README](../administration/README.md)).
 
 ## Internal — `audit.internal`
 

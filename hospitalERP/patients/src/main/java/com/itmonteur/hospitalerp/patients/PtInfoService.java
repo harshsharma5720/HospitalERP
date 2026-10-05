@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -145,6 +147,13 @@ public class PtInfoService {
 
     public Optional<PtInfo> findPatientEntityByUserId(Long userId) {
         return ptInfoRepository.findByUser_Id(userId);
+    }
+
+    /** Current names by patient id, in one query (e.g. for a page of the audit log). Unknown ids are left out. */
+    public Map<Long, String> findPatientNames(Collection<Long> patientIds) {
+        Map<Long, String> names = new HashMap<>();
+        ptInfoRepository.findAllById(patientIds).forEach(patient -> names.put(patient.getPatientId(), patient.getPatientName()));
+        return names;
     }
 
     /** Deletes the patient row; relatives go with it (cascade). Callers remove bookings first. */

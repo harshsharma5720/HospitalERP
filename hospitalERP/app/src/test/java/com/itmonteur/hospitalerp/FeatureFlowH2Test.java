@@ -687,6 +687,60 @@ class FeatureFlowH2Test {
         assertThat(accountAudit(adminUserId)).as("refused: nothing recorded").isEmpty();
     }
 
+    // Audit log, step A.4: GET /api/admin/audit-log - admins only; filters, paging, newest first, patient names
+    @Test
+    void adminReadsTheAuditLog() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+        String patient = register("logpatient");
+        long userId = userIdOf(patient);
+        long patientId = patientIdOf("logpatient");
+        assertThat(updateProfile(admin, userId, "{\"patientName\":\"Asha Verma\"}").getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.GET, "/api/patient/getAccount/" + userId, patient, null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.GET, "/api/patient/getAccount/" + userId, admin, null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        String url = "/api/admin/audit-log?patientId=" + patientId;
+
+        JsonNode all = auditPage(admin, url);
+        assertThat(all.get("totalEntries").asLong()).isEqualTo(3);
+        assertThat(all.get("totalPages").asInt()).isEqualTo(1);
+        assertThat(all.get("size").asInt()).as("default page size").isEqualTo(50);
+        assertThat(all.get("entries").findValuesAsText("action"))
+                .containsExactly("PATIENT_PROFILE_VIEWED", "PATIENT_PROFILE_VIEWED", "PATIENT_PROFILE_UPDATED");
+        JsonNode newest = all.get("entries").get(0);
+        assertThat(newest.get("actorUsername").asText()).isEqualTo("flowadmin");
+        assertThat(newest.get("actorRole").asText()).isEqualTo("ADMIN");
+        assertThat(newest.get("patientName").asText()).as("the current name").isEqualTo("Asha Verma");
+        assertThat(newest.get("targetType").asText()).isEqualTo("PATIENT");
+        assertThat(newest.get("occurredAt").asText()).startsWith(LocalDate.now().toString());
+        assertThat(all.get("entries").get(2).get("details").asText()).isEqualTo("changed: name");
+
+        // Filters: user, action, days
+        assertThat(auditPage(admin, url + "&username=logpatient").get("totalEntries").asLong()).isEqualTo(1);
+        assertThat(auditPage(admin, url + "&action=PATIENT_PROFILE_UPDATED").get("totalEntries").asLong()).isEqualTo(1);
+        String today = LocalDate.now().toString();
+        assertThat(auditPage(admin, url + "&from=" + today + "&to=" + today).get("totalEntries").asLong()).isEqualTo(3);
+        assertThat(auditPage(admin, url + "&from=" + LocalDate.now().plusDays(1)).get("totalEntries").asLong()).isZero();
+
+        // Paging (the size is capped at 100)
+        JsonNode second = auditPage(admin, url + "&page=1&size=2");
+        assertThat(second.get("page").asInt()).isEqualTo(1);
+        assertThat(second.get("totalPages").asInt()).isEqualTo(2);
+        assertThat(second.get("entries").findValuesAsText("action")).containsExactly("PATIENT_PROFILE_UPDATED");
+        assertThat(auditPage(admin, url + "&size=1000").get("size").asInt()).isEqualTo(100);
+
+        // Bad parameters are a 400, and only admins may read the log
+        assertThat(call(HttpMethod.GET, url + "&action=NOPE", admin, null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(call(HttpMethod.GET, url + "&from=05-10-2026", admin, null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(call(HttpMethod.GET, url + "&from=" + today + "&to=" + LocalDate.now().minusDays(1), admin, null)
+                .getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(call(HttpMethod.GET, url, patient, null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    private JsonNode auditPage(String token, String url) throws Exception {
+        ResponseEntity<String> response = call(HttpMethod.GET, url, token, null);
+        assertThat(response.getStatusCode()).as(url).isEqualTo(HttpStatus.OK);
+        return json.readTree(response.getBody());
+    }
+
     private List<String> accountAudit(long userId) {
         return jdbc.queryForList("SELECT CONCAT_WS(' ', action, actor_username, details) FROM audit_log "
                 + "WHERE target_id = ? AND action IN ('USER_CREATED', 'ACCOUNT_DEACTIVATED', 'ACCOUNT_REACTIVATED', "
