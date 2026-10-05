@@ -4,7 +4,7 @@ The audit log: **who viewed or changed which patient record, and when** ([docs/A
 
 It records what other modules tell it to; it knows nothing about consultations or patients itself.
 
-**Depends on:** common, identity · **Used by:** patients, clinical, administration (from steps A.2–A.4), app
+**Depends on:** common, identity · **Used by:** clinical (medical records), app; patients and administration from step A.3
 
 ## Public API — `com.itmonteur.hospitalerp.audit`
 

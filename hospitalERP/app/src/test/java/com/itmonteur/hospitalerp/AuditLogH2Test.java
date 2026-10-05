@@ -104,7 +104,8 @@ class AuditLogH2Test {
         assertThat(entry.getPatientId()).isEqualTo(patient);
         assertThat(entry.getIpAddress()).isEqualTo("203.0.113.7");
         assertThat(entry.getDetails()).as("cut to the column size").hasSize(255);
-        assertThat(entry.getOccurredAt()).isAfter(before).isBeforeOrEqualTo(LocalDateTime.now());
+        // the database rounds to microseconds, so "now" may be a fraction behind the stored time
+        assertThat(entry.getOccurredAt()).isAfter(before).isBefore(LocalDateTime.now().plusSeconds(1));
     }
 
     @Test

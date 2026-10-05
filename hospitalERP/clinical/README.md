@@ -4,7 +4,9 @@ Medical records: the doctor's consultation notes for an appointment (vitals, dia
 
 Records are visible only to the patient, their treating doctor(s) and admins — never to receptionists.
 
-**Depends on:** common, identity, patients, staff, appointments · **Used by:** administration
+Every successful read or write of a record goes into the [audit log](../audit/README.md): consultation viewed / saved ("created" or "updated"), prescription downloaded, medical history viewed (the patient's own, or by a doctor or admin). A refused attempt reads nothing, so it records nothing.
+
+**Depends on:** common, identity, audit, patients, staff, appointments · **Used by:** administration
 
 ## Public API — `com.itmonteur.hospitalerp.clinical`
 
@@ -37,6 +39,6 @@ Access rules (`clinical.web.ClinicalSecurityRules`, a `ModuleSecurityRules` bean
 
 ## Tests
 
-`ConsultationServiceTest`, `PrescriptionPdfServiceTest`; the full booking → consultation → PDF flow is in `FeatureFlowH2Test` (`app`).
+`ConsultationServiceTest`, `PrescriptionPdfServiceTest`; the full booking → consultation → PDF flow and the audit entries for every read and write (`medicalRecordAccessIsAudited`) are in `FeatureFlowH2Test` (`app`).
 
 Module diagram: [docs/modules/module-clinical.puml](../../docs/modules/module-clinical.puml).
