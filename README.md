@@ -397,7 +397,7 @@ The backend is a modular monolith: one application and one database, split into 
 | [`notifications`](hospitalERP/notifications/README.md) | Email and SMS delivery, message templates | common |
 | [`identity`](hospitalERP/identity/README.md) | Users, roles, login, JWT, OTP, password reset, first-admin bootstrap | common, notifications |
 | [`audit`](hospitalERP/audit/README.md) | Audit log: who viewed or changed which patient record, and when (append-only) | common, identity |
-| [`patients`](hospitalERP/patients/README.md) | Patient profiles and relatives | common, identity |
+| [`patients`](hospitalERP/patients/README.md) | Patient profiles and relatives | common, identity, audit |
 | [`staff`](hospitalERP/staff/README.md) | Doctors, receptionists, leave requests | common, identity |
 | [`scheduling`](hospitalERP/scheduling/README.md) | Doctor weekly schedules and slots | common, identity, staff |
 | [`appointments`](hospitalERP/appointments/README.md) | Booking, reschedule, cancel, day-before reminders | common, identity, notifications, patients, staff, scheduling |

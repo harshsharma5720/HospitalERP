@@ -1,6 +1,8 @@
 package com.itmonteur.hospitalerp.administration.internal;
 
 import com.itmonteur.hospitalerp.appointments.Appointment;
+import com.itmonteur.hospitalerp.audit.AuditAction;
+import com.itmonteur.hospitalerp.audit.AuditLog;
 import com.itmonteur.hospitalerp.staff.Doctor;
 import com.itmonteur.hospitalerp.patients.PtInfo;
 import com.itmonteur.hospitalerp.staff.Receptionist;
@@ -40,6 +42,9 @@ import java.util.Objects;
  * <p><b>Delete permanently</b>: only for accounts without any appointment (e.g. created by mistake),
  * because medical records must be kept. It removes everything that references the user, in an order
  * the foreign keys allow (leaves → consultations → appointments → slots/schedule → profile → user).
+ *
+ * <p>Every change of an account goes into the audit log (docs/AUDIT_LOG_PLAN.md): created, deactivated,
+ * reactivated, deleted. A call that changes nothing (e.g. deactivating twice) records nothing.
  */
 @Service
 public class UserAccountService {
@@ -57,6 +62,7 @@ public class UserAccountService {
     private final DoctorScheduleService doctorScheduleService;
     private final ApplicationEventPublisher eventPublisher;
     private final CurrentUserService currentUserService;
+    private final AuditLog auditLog;
     private final EntityManager entityManager;
 
     // Only other modules' services are used, never their repositories (plan rule 2)
@@ -65,7 +71,7 @@ public class UserAccountService {
                               AppointmentService appointmentService, ConsultationService consultationService,
                               SlotService slotService, DoctorScheduleService doctorScheduleService,
                               ApplicationEventPublisher eventPublisher, CurrentUserService currentUserService,
-                              EntityManager entityManager) {
+                              AuditLog auditLog, EntityManager entityManager) {
         this.userService = userService;
         this.ptInfoService = ptInfoService;
         this.doctorService = doctorService;
@@ -77,7 +83,13 @@ public class UserAccountService {
         this.doctorScheduleService = doctorScheduleService;
         this.eventPublisher = eventPublisher;
         this.currentUserService = currentUserService;
+        this.auditLog = auditLog;
         this.entityManager = entityManager;
+    }
+
+    /** Called by the admin's "create user" use cases once the account (and its profile) exists. */
+    public void recordCreated(User user) {
+        audit(AuditAction.USER_CREATED, user, patientIdOf(user));
     }
 
     // ------------------------------------------------------------------ deactivate / reactivate
@@ -98,6 +110,7 @@ public class UserAccountService {
         }
         userService.deactivate(user);
         logger.info("Deactivated user {} ({})", userId, user.getRole());
+        audit(AuditAction.ACCOUNT_DEACTIVATED, user, patientIdOf(user));
         return user;
     }
 
@@ -107,6 +120,7 @@ public class UserAccountService {
         if (!user.isActive()) {
             userService.reactivate(user);
             logger.info("Reactivated user {} ({})", userId, user.getRole());
+            audit(AuditAction.ACCOUNT_REACTIVATED, user, patientIdOf(user));
         }
         return user;
     }
@@ -121,7 +135,9 @@ public class UserAccountService {
             throw new ConflictException("This account has appointments or medical records, which must be kept. "
                     + "Deactivate it instead.");
         }
+        Long patientId = patientIdOf(user); // looked up before the profile is gone
         deleteUser(user);
+        audit(AuditAction.ACCOUNT_DELETED, user, patientId);
     }
 
     private boolean hasHistory(User user) {
@@ -135,6 +151,17 @@ public class UserAccountService {
                     .orElse(false);
             default -> false; // receptionists and admins hold no medical records
         };
+    }
+
+    private Long patientIdOf(User user) {
+        return user.getRole() == Role.PATIENT
+                ? ptInfoService.findPatientEntityByUserId(user.getId()).map(PtInfo::getPatientId).orElse(null)
+                : null;
+    }
+
+    // The target's username and role go into the details: they stay readable after a permanent delete
+    private void audit(AuditAction action, User user, Long patientId) {
+        auditLog.record(action, patientId, user.getId(), user.getUsername() + " (" + user.getRole() + ")");
     }
 
     private User findUser(Long userId) {
@@ -194,6 +221,7 @@ public class UserAccountService {
             throw new ConflictException("This doctor has appointments and no login account to deactivate.");
         } else {
             deleteDoctorProfile(doctor);
+            auditLog.record(AuditAction.ACCOUNT_DELETED, null, null, "doctor profile " + doctorId + " (no login account)");
         }
     }
 
@@ -206,6 +234,8 @@ public class UserAccountService {
             deactivate(receptionist.getUser().getId());
         } else {
             receptionistService.deleteReceptionistEntity(receptionist); // legacy row without a login, no records
+            auditLog.record(AuditAction.ACCOUNT_DELETED, null, null,
+                    "receptionist profile " + receptionistId + " (no login account)");
         }
     }
 
