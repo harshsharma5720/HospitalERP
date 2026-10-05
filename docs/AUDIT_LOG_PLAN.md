@@ -1,0 +1,43 @@
+# Audit log — plan
+
+**Branch:** `feature/audit-log` (from `main` = 3ee05b6)
+**Why:** nothing records today who opened a consultation, downloaded a prescription or changed a patient's profile. Medical data rules (DPDP Act 2023, the draft DISHA rules, HIPAA as the usual reference) expect a record of **who viewed or changed which patient record, and when**.
+**Idea list:** [CODE_REVIEW_AND_IDEAS.md](CODE_REVIEW_AND_IDEAS.md#not-implemented-yet) — "not implemented yet" #2.
+
+## Decisions (2026-10-05)
+
+| Question | Decision |
+|---|---|
+| What is recorded | **Medical records:** consultation viewed / saved, prescription downloaded, medical history viewed (a patient's own and by a doctor or admin). **Patient profiles:** profile viewed / updated, the all-patients list viewed. **Admin account actions:** user created, account deactivated / reactivated / deleted permanently. Not recorded: logins, appointment changes. |
+| Who can see it | **Admins only:** Admin → Audit Log page with filters (patient, user, action, date range) and paging. |
+| Retention | **Kept forever.** The app never changes or deletes entries. |
+
+## What an entry holds
+
+When (server time), who (user id, username and role at that moment, kept even if the account is deleted later), the action, the patient concerned (if any), what was touched (appointment, patient or user id), a short detail (e.g. "role DOCTOR" or the names of changed fields, **never medical content**), and the client's IP address.
+
+## Design
+
+- **New module `audit`** (`hospital-audit`), low in the module graph like notifications: it uses common and identity (for the current user). clinical, patients and administration call it; `app` assembles it. Public API: `AuditLog` (`record`, `search`), `AuditAction`, `AuditEntryDTO`.
+- **Recording:** the actor, time and IP are taken when `record` is called; the entry is written **after the surrounding transaction commits**, in its own transaction (the same pattern as the appointment notifications). A change that is rolled back leaves no entry, and read-only transactions work too. If writing the entry fails, the error is logged and the user's request still succeeds: a doctor must be able to open a record even if the audit table has a problem.
+- **Storage:** table `audit_log` (Flyway, `db/migration/audit/`). No foreign keys, so entries outlive deleted accounts; indexes for patient, user and time. The entity is `@Immutable` and its repository has no update or delete methods. The action is stored as text, so new actions need no migration.
+- **IP address:** the request's address. Behind the Docker nginx that is nginx itself, so the `X-Real-IP` header nginx sets is used instead, but only when the request comes from a private or local address, so a caller from outside can't fake it.
+- **Viewing:** `GET /api/admin/audit-log` in administration, inside the existing admin-only area (no new access rule); patient names are added there, because the audit module can't depend on patients.
+
+## Steps
+
+| Step | Work | Checked by |
+|---|---|---|
+| A.1 | **Module + storage:** `audit` module (pom, checker, README), `audit_log` migration, entity, `AuditLog.record` / `search`, after-commit writer, IP helper. No callers yet. | Tests for commit / rollback / no transaction / write failure, search filters, IP rule; MySQL migration test (upgrade and fresh install identical); `ModularityTest`; checker |
+| A.2 | **Medical records:** clinical records consultation viewed / saved, prescription downloaded, history viewed. A refused access records nothing. | End-to-end test |
+| A.3 | **Patient profiles + admin account actions:** patients (profile viewed / updated with the changed field names, all-patients list); administration (user created, deactivated, reactivated, deleted permanently). | End-to-end tests |
+| A.4 | **Admin API:** `GET /api/admin/audit-log` — filters (patient, username, action, from / to), paging, newest first, patient names. | End-to-end test; endpoint and access snapshots updated on purpose |
+| A.5 | **Frontend:** Admin → Audit Log page (filters, table, paging) and a sidebar link. | Frontend tests + build |
+| A.6 | **Docs:** module READMEs (new audit README; clinical, patients, administration), README, idea list status, MySQL runbook, module diagrams. | — |
+
+## Progress log
+
+| Step | Status | Date | Notes |
+|---|---|---|---|
+| A.0 Plan + decisions | ✅ done | 2026-10-05 | This file. |
+| A.1 Module + storage | ✅ done | 2026-10-05 | New Maven module **`audit`** (`hospital-audit`, uses common + identity): parent and app poms, checker, [MULTI_MODULE_PLAN.md](MULTI_MODULE_PLAN.md) §2.1, [audit README](../hospitalERP/audit/README.md). Public API: `AuditLog.record(action, patientId, targetId, details)` and `search(filter, page, size)` (newest first, max 100 per page, `to` includes the whole day), `AuditAction` (11 actions, each knows what its target id is), `AuditFilter`, `AuditEntryDTO`. `record` takes the actor from the login (none for a job), the time from the `Clock` and the IP, then publishes an internal event; `AuditEntryWriter` writes it **after commit** (`@TransactionalEventListener`, `fallbackExecution`) in its own `REQUIRES_NEW` transaction and only logs a failure. `ClientAddress`: `X-Real-IP` believed only from private / local addresses, host names never looked up. Table `audit_log` (`audit/V2026_10_05_1__audit_log.sql`): no foreign keys, `action` as varchar (entity `@JdbcTypeCode(VARCHAR)`), indexes (patient, time), (username, time), (time); `@Immutable` entity, repository without update / delete. Tests: `ClientAddressTest` (6), `AuditEntryWriterTest` (2), `AuditLogH2Test` (6: commit / rollback, read-only and no transaction, actor / time / IP, a failed write via the NOT NULL column, filters and paging; shares FeatureFlowH2Test's context to save memory). Mutation check: a writer without after-commit makes the commit test fail. `DatabaseMigrationMySqlTest`: 5 migrations, upgrade and fresh install identical, Hibernate validates the new entity on MySQL. MySQL runbook and README (migrations and module tables) updated. No callers and no endpoint yet (snapshots unchanged). Checker OK, 106 backend tests (1 skipped). |

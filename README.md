@@ -278,6 +278,7 @@ The database schema is owned by the migration scripts in `hospitalERP/app/src/ma
 | `staff/V2026_09_28_1__staff_drop_unused_columns.sql` | Drops `doctor.password`, `doctor.role`, `receptionist.role` (unused; login data lives in `users`). |
 | `patients/V2026_09_28_2__patients_drop_unused_columns.sql` | Drops `patient.role`, `patient_relative.role`. |
 | `identity/V2026_09_30_1__identity_account_status.sql` | Adds `users.active` and `users.deactivated_at` (accounts are deactivated, not deleted). |
+| `audit/V2026_10_05_1__audit_log.sql` | Creates the empty, append-only `audit_log` table ([audit log](docs/AUDIT_LOG_PLAN.md)). |
 
 **Changing the schema:** add a new file to the owning module's folder, e.g. `db/migration/appointments/V2026_10_05_1__appointments_add_room.sql`, with the next date-based version. Never edit a migration that has already run anywhere — Flyway checks their checksums and refuses to start. Hibernate then validates the entities against the result, so an entity change without a migration stops the app with a clear "Schema-validation" message.
 
@@ -395,6 +396,7 @@ The backend is a modular monolith: one application and one database, split into 
 | [`common`](hospitalERP/common/README.md) | Shared kernel: exceptions + global error handler, `ApiResponse`, `Gender`, file storage | – |
 | [`notifications`](hospitalERP/notifications/README.md) | Email and SMS delivery, message templates | common |
 | [`identity`](hospitalERP/identity/README.md) | Users, roles, login, JWT, OTP, password reset, first-admin bootstrap | common, notifications |
+| [`audit`](hospitalERP/audit/README.md) | Audit log: who viewed or changed which patient record, and when (append-only) | common, identity |
 | [`patients`](hospitalERP/patients/README.md) | Patient profiles and relatives | common, identity |
 | [`staff`](hospitalERP/staff/README.md) | Doctors, receptionists, leave requests | common, identity |
 | [`scheduling`](hospitalERP/scheduling/README.md) | Doctor weekly schedules and slots | common, identity, staff |

@@ -34,11 +34,12 @@
 | `common` | Shared kernel: exceptions + `GlobalExceptionHandler`, `ApiResponse`, `Gender`, `FileStorageService`, upload `WebConfig` | nothing |
 | `notifications` | Delivery channels: email, SMS (Twilio), message templates. Knows nothing about appointments. | common |
 | `identity` | Users, roles, login, JWT, OTP, password reset, login throttling, current-user lookup, first-admin bootstrap | common, notifications |
-| `patients` | Patient profiles, relatives | common, identity |
+| `audit` | Audit log: who viewed or changed which patient record, and when (added 2026-10-05, [AUDIT_LOG_PLAN.md](AUDIT_LOG_PLAN.md)) | common, identity |
+| `patients` | Patient profiles, relatives | common, identity, audit |
 | `staff` | Doctors, receptionists, leave requests (grows into HR later) | common, identity |
 | `scheduling` | Doctor weekly schedules, slots, slot generation/locking | common, identity, staff |
 | `appointments` | Booking, reschedule, cancel, lists, day-before reminders | common, identity, notifications, patients, staff, scheduling |
-| `clinical` | Consultations, prescriptions, prescription PDF, medical history | common, identity, patients, staff, appointments |
+| `clinical` | Consultations, prescriptions, prescription PDF, medical history | common, identity, audit, patients, staff, appointments |
 | `administration` | Admin use cases that span modules: create users of any role, leave decisions, **account deletion** | all of the above |
 | `app` | `main()` class, `SecurityConfig`, beans (`Clock`, `ModelMapper`), `application.properties`, end-to-end tests | all of the above |
 
@@ -74,6 +75,8 @@
                           │   common   │  (used by every module)
                           └────────────┘
 ```
+
+Added later: **`audit`** sits between identity and patients — it uses identity (the current user) and is used by patients, clinical and administration ([AUDIT_LOG_PLAN.md](AUDIT_LOG_PLAN.md)).
 
 **Rule:** a module never depends on anything above it. When a lower module needs something to happen in a higher one (for example, staff approves a leave and appointments must be cancelled), it **publishes an event** and the higher module listens.
 

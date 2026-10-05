@@ -33,6 +33,7 @@
 		<module>common</module>
 		<module>notifications</module>
 		<module>identity</module>
+		<module>audit</module>
 		<module>patients</module>
 		<module>staff</module>
 		<module>scheduling</module>
@@ -82,6 +83,11 @@
 			<dependency>
 				<groupId>${project.groupId}</groupId>
 				<artifactId>hospital-identity</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>hospital-audit</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
