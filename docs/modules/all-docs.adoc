@@ -13,13 +13,17 @@ include::module-notifications.adoc[]
 plantuml::module-identity.puml[,,format=svg]
 include::module-identity.adoc[]
 
-== Patients
-plantuml::module-patients.puml[,,format=svg]
-include::module-patients.adoc[]
+== Audit
+plantuml::module-audit.puml[,,format=svg]
+include::module-audit.adoc[]
 
 == Staff
 plantuml::module-staff.puml[,,format=svg]
 include::module-staff.adoc[]
+
+== Patients
+plantuml::module-patients.puml[,,format=svg]
+include::module-patients.adoc[]
 
 == Scheduling
 plantuml::module-scheduling.puml[,,format=svg]

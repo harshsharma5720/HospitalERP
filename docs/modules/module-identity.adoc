@@ -13,6 +13,7 @@
 _Others_
 
 * `c.i.h.i.JWTAuthenticationFilter`
+* `c.i.h.i.ModuleSecurityRules` (via `c.i.h.i.web.IdentitySecurityRules`)
 |Bean references
 |* `c.i.h.n.SmsService` (in Notifications)
 * `c.i.h.n.EmailService` (in Notifications)

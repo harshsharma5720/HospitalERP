@@ -1,0 +1,11 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`com.itmonteur.hospitalerp.audit`
+|Spring components
+|_Services_
+
+* `c.i.h.a.AuditLog`
+|Bean references
+|* `c.i.h.i.CurrentUserService` (in Identity)
+|===

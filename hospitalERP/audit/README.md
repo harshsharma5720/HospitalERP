@@ -47,3 +47,5 @@ None.
 ## Tests
 
 `ClientAddressTest` (IP rule), `AuditEntryWriterTest` (own transaction, a failed write never reaches the caller); `AuditLogH2Test` in `app` (written only after commit, read-only and no transaction, actor / time / IP, failed writes, search filters and paging); `DatabaseMigrationMySqlTest` checks the migration on MySQL.
+
+Module diagram: [docs/modules/module-audit.puml](../../docs/modules/module-audit.puml).

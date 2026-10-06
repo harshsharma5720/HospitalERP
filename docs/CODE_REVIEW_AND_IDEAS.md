@@ -251,7 +251,7 @@ The main problems:
 
 ## 7. New Feature Ideas
 
-Grouped by module and roughly ordered by value against effort. ⭐ marks ideas that build directly on what already exists. Which ideas are done, partly done or still open: [section 11](#11-feature-status-updated-2026-10-01).
+Grouped by module and roughly ordered by value against effort. ⭐ marks ideas that build directly on what already exists. Which ideas are done, partly done or still open: [section 11](#11-feature-status-updated-2026-10-06).
 
 ### 7.1 Patient Experience
 - ⭐ **Medical records / visit history.** When a doctor marks an appointment completed, capture a **consultation note**: diagnosis, symptoms, vitals and follow-up date. The patient can see their full history. This turns the app from a booking tool into an EMR.
@@ -439,14 +439,15 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ---
 
-## 11. Feature Status (updated 2026-10-01)
+## 11. Feature Status (updated 2026-10-06)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (branch `feature/account-deactivation`).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (merged, PR #5) and the audit log (branch `feature/audit-log`).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
 - The patient's previous visits shown inside the consultation form; leave approval and rejection.
 - **Account deactivation instead of deletion** (2026-10-01, see below).
+- **Audit log** of who viewed or changed medical records, patient profiles and accounts (2026-10-05, see below).
 
 **Partly done**
 - **Front-desk booking:** receptionists can book for an existing patient, but can't register a new walk-in patient on the spot.
@@ -459,7 +460,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | # | Feature | Area | Effort |
 |---|---|---|---|
 | 1 | ~~Deactivate accounts instead of deleting them~~ ✅ done 2026-10-01 | compliance | — |
-| 2 | Audit log of who viewed or changed medical records | compliance | 2 days |
+| 2 | ~~Audit log of who viewed or changed medical records~~ ✅ done 2026-10-05 | compliance | — |
 | 3 | Safer login tokens (short access token + refresh token in an `httpOnly` cookie) | security | 2–3 days |
 | 4 | Automatic MySQL backups (backup container in docker-compose) | operations | ½ day |
 | 5 | Notifications that aren't lost when SMS/email is down (Modulith event registry) | reliability | 1 day |
@@ -484,7 +485,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** 2 next (legal risk), then 7 (the admin dashboard shows made-up numbers), then 5 and 4, then front-desk work (10, 12, 11) or billing (18).
+**Suggested order:** 7 next (the admin dashboard shows made-up numbers), then 5 and 4, then front-desk work (10, 12, 11) or billing (18).
 
 ### Account deactivation (done 2026-10-01)
 
@@ -512,3 +513,28 @@ From idea 7.4. Deleting a patient or doctor used to delete their appointments, c
 - A manual click-through.
 - A "deactivate my account" button for patients: it works through the API only.
 - Anonymising personal data (DPDP right to erasure): a later, separate admin action.
+
+### Audit log (done 2026-10-05)
+
+From idea 7.4 ("audit log") — #2 above. Nothing recorded who opened a consultation, downloaded a prescription or changed a patient's profile. Now every such access is in an **append-only audit log** that only admins can read. Decisions, steps and details: [AUDIT_LOG_PLAN.md](AUDIT_LOG_PLAN.md).
+
+**Backend**
+- New module `audit` (uses common and identity; used by clinical, patients and administration). Each entry holds the time, the user (id, username and role at that moment), the action, the patient, what was touched (appointment, patient or user), a short detail and the IP address. Entries are never changed or deleted, and outlive deleted accounts.
+- **Recorded:** consultation viewed / saved ("created" or "updated"), prescription downloaded, medical history viewed (the patient's own, or by a doctor or admin); patient profile viewed / updated (the **names** of the changed fields, never their values) and the all-patients list; user created, account deactivated / reactivated / deleted.
+- **Not recorded:** refused attempts (nothing was read), calls that change nothing (e.g. deactivating twice), logins and appointment changes (left out on purpose).
+- An entry is written **after** the change it describes is committed, so a rolled-back change leaves none; if writing fails, the error is logged and the user's request still succeeds. Behind the Docker nginx, the client's real IP comes from `X-Real-IP`, believed only from private or local addresses.
+- `GET /api/admin/audit-log` (admins only): filters by patient, username, action and days; paging (50 per page, at most 100); newest first; each entry with the patient's current name.
+
+**Frontend**
+- Admin → **Audit Log** (`/admin/audit-log`): filters, a readable table (time, user and role, action, patient, record, details, IP) and Previous / Next.
+
+**Database change:** Flyway migration `audit/V2026_10_05_1__audit_log.sql` creates the empty `audit_log` table (no foreign keys; `action` as text, so new actions need no migration).
+
+**Tests added:**
+- Backend (18 new; 110 passing, 1 skipped without a MySQL `DB_URL`): the recording rules (commit / rollback, read-only and no transaction, failed writes, IP rule), search filters and paging, four end-to-end tests (medical records, patient profiles, account actions, the admin endpoint); the MySQL migration test checks the new migration.
+- Frontend (4 new, 28 total): the Audit Log page.
+
+**Not covered yet:**
+- Running the migration on the real database ([MYSQL_FLYWAY_UPGRADE.md](MYSQL_FLYWAY_UPGRADE.md)) and a manual click-through.
+- Patients can't see who viewed their records yet ("admins only" was the decision); logins and appointment changes aren't recorded.
+- Other screens that show patient data (e.g. appointment lists with patient names) aren't audited; only profiles and medical records are.

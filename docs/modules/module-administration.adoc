@@ -9,6 +9,7 @@
 * `c.i.h.s.ReceptionistService` (in Staff)
 * `c.i.h.s.LeaveRequestService` (in Staff)
 * `c.i.h.i.UserService` (in Identity)
+* `c.i.h.a.AuditLog` (in Audit)
 * `c.i.h.a.AppointmentService` (in Appointments)
 * `c.i.h.c.ConsultationService` (in Clinical)
 * `c.i.h.s.SlotService` (in Scheduling)
