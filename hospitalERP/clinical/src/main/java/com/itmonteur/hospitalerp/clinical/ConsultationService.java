@@ -1,5 +1,7 @@
 package com.itmonteur.hospitalerp.clinical;
 
+import com.itmonteur.hospitalerp.audit.AuditAction;
+import com.itmonteur.hospitalerp.audit.AuditLog;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ForbiddenException;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
@@ -27,6 +29,8 @@ import java.util.Objects;
  * Consultation notes and prescriptions.
  * Medical records are visible only to the patient, the treating doctor(s) and admins —
  * receptionists can manage appointments but cannot read clinical notes.
+ * Every successful read or write goes into the audit log (docs/AUDIT_LOG_PLAN.md); a refused one reads
+ * nothing, so it records nothing.
  */
 @Service
 public class ConsultationService {
@@ -38,16 +42,18 @@ public class ConsultationService {
     private final DoctorService doctorService;
     private final PtInfoService ptInfoService;
     private final CurrentUserService currentUserService;
+    private final AuditLog auditLog;
     private final Clock clock;
 
     public ConsultationService(ConsultationRepository consultationRepository, AppointmentService appointmentService,
                                DoctorService doctorService, PtInfoService ptInfoService,
-                               CurrentUserService currentUserService, Clock clock) {
+                               CurrentUserService currentUserService, AuditLog auditLog, Clock clock) {
         this.consultationRepository = consultationRepository;
         this.appointmentService = appointmentService;
         this.doctorService = doctorService;
         this.ptInfoService = ptInfoService;
         this.currentUserService = currentUserService;
+        this.auditLog = auditLog;
         this.clock = clock;
     }
 
@@ -74,6 +80,7 @@ public class ConsultationService {
                     created.setCreatedAt(now);
                     return created;
                 });
+        boolean isNew = consultation.getId() == null;
         consultation.setSymptoms(trimToNull(dto.getSymptoms()));
         consultation.setDiagnosis(dto.getDiagnosis().trim());
         consultation.setNotes(trimToNull(dto.getNotes()));
@@ -90,12 +97,14 @@ public class ConsultationService {
         }
         Consultation saved = consultationRepository.save(consultation);
         logger.info("Consultation saved for appointment {} ({} medicines)", appointmentId, saved.getMedicines().size());
+        auditLog.record(AuditAction.CONSULTATION_SAVED, patientIdOf(appointment), appointmentId, isNew ? "created" : "updated");
         return toDTO(saved);
     }
 
     public ConsultationDTO getByAppointment(long appointmentId) {
         Consultation consultation = findByAppointment(appointmentId);
         requireCanRead(consultation.getAppointment());
+        auditLog.record(AuditAction.CONSULTATION_VIEWED, patientIdOf(consultation.getAppointment()), appointmentId, null);
         return toDTO(consultation);
     }
 
@@ -105,6 +114,7 @@ public class ConsultationService {
         Consultation consultation = findByAppointment(appointmentId);
         requireCanRead(consultation.getAppointment());
         consultation.getMedicines().size(); // initialise while the session is open
+        auditLog.record(AuditAction.PRESCRIPTION_DOWNLOADED, patientIdOf(consultation.getAppointment()), appointmentId, null);
         return consultation;
     }
 
@@ -113,6 +123,7 @@ public class ConsultationService {
         Long userId = currentUserService.getCurrentUserId();
         PtInfo patient = ptInfoService.findPatientEntityByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Patient", "userId", userId));
+        auditLog.record(AuditAction.MEDICAL_HISTORY_VIEWED, patient.getPatientId(), patient.getPatientId(), null);
         return consultationRepository.findHistoryByPatientId(patient.getPatientId()).stream().map(this::toDTO).toList();
     }
 
@@ -124,6 +135,7 @@ public class ConsultationService {
                 throw new ForbiddenException("You can only view the history of your own patients");
             }
         }
+        auditLog.record(AuditAction.MEDICAL_HISTORY_VIEWED, patientId, patientId, null);
         return consultationRepository.findHistoryByPatientId(patientId).stream().map(this::toDTO).toList();
     }
 
@@ -148,6 +160,11 @@ public class ConsultationService {
         if (!isPatient && !isDoctor) {
             throw new ForbiddenException("You are not allowed to view this medical record");
         }
+    }
+
+    // The account holder: a booking for a relative belongs to the patient who made it
+    private static Long patientIdOf(Appointment appointment) {
+        return appointment.getPtInfo() == null ? null : appointment.getPtInfo().getPatientId();
     }
 
     private Doctor currentDoctor() {

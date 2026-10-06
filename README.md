@@ -263,6 +263,7 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 | Leave requests and approval / rejection | Doctor, Admin | `/doctor/leave-management`, `/admin/leave-approval` |
 | Forgot password (6-digit code by SMS / email) | Everyone | `/forgot-password` (link on the login page) |
 | Deactivate / reactivate accounts — no login, hidden from booking, upcoming appointments cancelled, **all history kept**; permanent delete only for accounts without appointments ([details](docs/ACCOUNT_DEACTIVATION_PLAN.md)) | Admin | `/admin/manage-users`, `/admin/manage-doctor` |
+| Audit log — who viewed or changed which medical record, patient profile or account, and when; filters by patient, user, action and dates; entries kept forever ([details](docs/AUDIT_LOG_PLAN.md)) | Admin | `/admin/audit-log` |
 
 Medical records (consultations, prescriptions) are visible only to the patient, their doctor(s) and admins — receptionists cannot read them.
 
@@ -278,6 +279,7 @@ The database schema is owned by the migration scripts in `hospitalERP/app/src/ma
 | `staff/V2026_09_28_1__staff_drop_unused_columns.sql` | Drops `doctor.password`, `doctor.role`, `receptionist.role` (unused; login data lives in `users`). |
 | `patients/V2026_09_28_2__patients_drop_unused_columns.sql` | Drops `patient.role`, `patient_relative.role`. |
 | `identity/V2026_09_30_1__identity_account_status.sql` | Adds `users.active` and `users.deactivated_at` (accounts are deactivated, not deleted). |
+| `audit/V2026_10_05_1__audit_log.sql` | Creates the empty, append-only `audit_log` table ([audit log](docs/AUDIT_LOG_PLAN.md)). |
 
 **Changing the schema:** add a new file to the owning module's folder, e.g. `db/migration/appointments/V2026_10_05_1__appointments_add_room.sql`, with the next date-based version. Never edit a migration that has already run anywhere — Flyway checks their checksums and refuses to start. Hibernate then validates the entities against the result, so an entity change without a migration stops the app with a clear "Schema-validation" message.
 
@@ -395,11 +397,12 @@ The backend is a modular monolith: one application and one database, split into 
 | [`common`](hospitalERP/common/README.md) | Shared kernel: exceptions + global error handler, `ApiResponse`, `Gender`, file storage | – |
 | [`notifications`](hospitalERP/notifications/README.md) | Email and SMS delivery, message templates | common |
 | [`identity`](hospitalERP/identity/README.md) | Users, roles, login, JWT, OTP, password reset, first-admin bootstrap | common, notifications |
-| [`patients`](hospitalERP/patients/README.md) | Patient profiles and relatives | common, identity |
+| [`audit`](hospitalERP/audit/README.md) | Audit log: who viewed or changed which patient record, and when (append-only) | common, identity |
+| [`patients`](hospitalERP/patients/README.md) | Patient profiles and relatives | common, identity, audit |
 | [`staff`](hospitalERP/staff/README.md) | Doctors, receptionists, leave requests | common, identity |
 | [`scheduling`](hospitalERP/scheduling/README.md) | Doctor weekly schedules and slots | common, identity, staff |
 | [`appointments`](hospitalERP/appointments/README.md) | Booking, reschedule, cancel, day-before reminders | common, identity, notifications, patients, staff, scheduling |
-| [`clinical`](hospitalERP/clinical/README.md) | Consultations, prescriptions, prescription PDF, medical history | common, identity, patients, staff, appointments |
+| [`clinical`](hospitalERP/clinical/README.md) | Consultations, prescriptions, prescription PDF, medical history | common, identity, audit, patients, staff, appointments |
 | [`administration`](hospitalERP/administration/README.md) | Admin use cases across modules: create users, leave decisions, account deactivation / reactivation (and the guarded permanent delete) | all of the above |
 | `app` | Main class, `SecurityConfig`, `application.properties`, end-to-end tests | all modules |
 

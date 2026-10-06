@@ -1,0 +1,19 @@
+@startuml
+set separator none
+title Audit
+
+top to bottom direction
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+Container_Boundary("HospitalErpApplication.HospitalErpApplication_boundary", "HospitalErpApplication", $tags="") {
+  Component(HospitalErpApplication.HospitalErpApplication.Identity, "Identity", $techn="Module", $descr="", $tags="", $link="")
+  Component(HospitalErpApplication.HospitalErpApplication.Audit, "Audit", $techn="Module", $descr="", $tags="", $link="")
+}
+
+Rel(HospitalErpApplication.HospitalErpApplication.Audit, HospitalErpApplication.HospitalErpApplication.Identity, "uses", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+@enduml

@@ -1,5 +1,7 @@
 package com.itmonteur.hospitalerp.clinical;
 
+import com.itmonteur.hospitalerp.audit.AuditAction;
+import com.itmonteur.hospitalerp.audit.AuditLog;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ForbiddenException;
 import com.itmonteur.hospitalerp.clinical.internal.ConsultationRepository;
@@ -27,6 +29,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +40,7 @@ class ConsultationServiceTest {
     @Mock private DoctorService doctorService;
     @Mock private PtInfoService ptInfoService;
     @Mock private CurrentUserService currentUserService;
+    @Mock private AuditLog auditLog;
 
     private ConsultationService service;
     private Doctor doctor;
@@ -45,7 +49,7 @@ class ConsultationServiceTest {
     @BeforeEach
     void setUp() {
         service = new ConsultationService(consultationRepository, appointmentService, doctorService,
-                ptInfoService, currentUserService, Clock.systemDefaultZone());
+                ptInfoService, currentUserService, auditLog, Clock.systemDefaultZone());
         User doctorUser = new User();
         doctorUser.setId(5L);
         doctor = new Doctor();
@@ -91,6 +95,7 @@ class ConsultationServiceTest {
         assertThat(saved.getDiagnosis()).isEqualTo("Viral fever");
         assertThat(saved.getMedicines()).extracting(PrescriptionItemDTO::getMedicineName).containsExactly("Paracetamol");
         verify(appointmentService).markCompletedByConsultation(appointment);
+        verify(auditLog).record(eq(AuditAction.CONSULTATION_SAVED), any(), eq(1L), eq("created"));
     }
 
     @Test
@@ -102,6 +107,7 @@ class ConsultationServiceTest {
 
         assertThatThrownBy(() -> service.saveConsultation(1L, request())).isInstanceOf(ForbiddenException.class);
         verify(consultationRepository, never()).save(any());
+        verifyNoInteractions(auditLog);
     }
 
     @Test
@@ -133,6 +139,7 @@ class ConsultationServiceTest {
         when(currentUserService.getCurrentUserId()).thenReturn(999L);
 
         assertThatThrownBy(() -> service.getByAppointment(1L)).isInstanceOf(ForbiddenException.class);
+        verifyNoInteractions(auditLog); // a refused read records nothing
     }
 
     @Test
@@ -143,5 +150,6 @@ class ConsultationServiceTest {
         when(appointmentService.hasAppointment(7L, 42L)).thenReturn(false);
 
         assertThatThrownBy(() -> service.getPatientHistory(42L)).isInstanceOf(ForbiddenException.class);
+        verifyNoInteractions(auditLog);
     }
 }

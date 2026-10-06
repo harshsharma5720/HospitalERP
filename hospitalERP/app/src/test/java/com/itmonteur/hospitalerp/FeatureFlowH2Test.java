@@ -2,6 +2,10 @@ package com.itmonteur.hospitalerp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.itmonteur.hospitalerp.audit.AuditAction;
+import com.itmonteur.hospitalerp.audit.AuditEntryDTO;
+import com.itmonteur.hospitalerp.audit.AuditFilter;
+import com.itmonteur.hospitalerp.audit.AuditLog;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,6 +39,7 @@ class FeatureFlowH2Test {
     @Autowired private TestRestTemplate rest;
     @Autowired private ObjectMapper json;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private AuditLog auditLog;
 
     @Test
     void scheduleBookingConsultationAndPrescription() throws Exception {
@@ -539,6 +544,225 @@ class FeatureFlowH2Test {
         json.readTree(call(HttpMethod.GET, slotsUrl, patient, null).getBody())
                 .forEach(s -> offered.add(s.get("startTime").asText().substring(0, 5)));
         assertThat(offered).containsExactly("10:00", "10:30");
+    }
+
+    // Audit log, step A.2 (docs/AUDIT_LOG_PLAN.md): every read or write of a medical record is recorded
+    @Test
+    void medicalRecordAccessIsAudited() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+        long doctorUserId = json.readTree(call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"draudit","email":"draudit@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111115","role":"DOCTOR"}""").getBody()).get("id").asLong();
+        assertThat(call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"drother","email":"drother@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111116","role":"DOCTOR"}""").getStatusCode()).isEqualTo(HttpStatus.OK);
+        String doctor = login("draudit", "doctor-123");
+        String otherDoctor = login("drother", "doctor-123");
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        assertThat(call(HttpMethod.PUT, "/api/doctor/" + doctorUserId + "/schedule", doctor,
+                "[{\"dayOfWeek\":\"" + tomorrow.getDayOfWeek() + "\",\"shift\":\"MORNING\",\"working\":true,"
+                        + "\"startTime\":\"10:00\",\"endTime\":\"10:30\",\"slotMinutes\":30}]").getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        String patient = register("auditpatient");
+        JsonNode slots = json.readTree(call(HttpMethod.GET, "/api/slots/available/" + findDoctorId("draudit")
+                + "?date=" + tomorrow + "&shift=MORNING", patient, null).getBody());
+        long visit = book(patient, slots.get(0).get("id").asLong());
+        long patientId = json.readTree(call(HttpMethod.GET, "/appointment/appointmentId/" + visit, admin, null)
+                .getBody()).get("ptInfoId").asLong();
+        String consultationUrl = "/api/consultations/appointment/" + visit;
+        String historyUrl = "/api/consultations/patient/" + patientId;
+
+        // Writes: the doctor creates the consultation, then corrects it
+        assertThat(call(HttpMethod.PUT, consultationUrl, doctor,
+                "{\"diagnosis\":\"Migraine\",\"medicines\":[{\"medicineName\":\"Paracetamol\"}]}").getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.PUT, consultationUrl, doctor,
+                "{\"diagnosis\":\"Tension headache\",\"medicines\":[{\"medicineName\":\"Paracetamol\"}]}").getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        // Reads: the patient (record, prescription, own history), the doctor and an admin (history)
+        assertThat(call(HttpMethod.GET, consultationUrl, patient, null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        HttpHeaders pdfHeaders = new HttpHeaders();
+        pdfHeaders.setBearerAuth(patient);
+        assertThat(rest.exchange(consultationUrl + "/prescription.pdf", HttpMethod.GET, new HttpEntity<>(pdfHeaders),
+                byte[].class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.GET, "/api/consultations/my", patient, null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.GET, historyUrl, doctor, null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.GET, historyUrl, admin, null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        // Refused attempts read nothing, so they record nothing
+        String stranger = register("auditstranger");
+        assertThat(call(HttpMethod.GET, consultationUrl, stranger, null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(call(HttpMethod.GET, historyUrl, otherDoctor, null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(call(HttpMethod.PUT, consultationUrl, otherDoctor,
+                "{\"diagnosis\":\"Other\",\"medicines\":[{\"medicineName\":\"Aspirin\"}]}").getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+
+        List<AuditEntryDTO> entries = auditLog.search(new AuditFilter(patientId, null, null, null, null), 0, 100).getContent();
+        assertThat(entries).extracting(e -> e.getAction() + " " + e.getActorUsername() + " " + e.getActorRole()
+                        + " " + e.getTargetId() + " " + e.getDetails())
+                .containsExactly( // newest first
+                        "MEDICAL_HISTORY_VIEWED flowadmin ADMIN " + patientId + " null",
+                        "MEDICAL_HISTORY_VIEWED draudit DOCTOR " + patientId + " null",
+                        "MEDICAL_HISTORY_VIEWED auditpatient PATIENT " + patientId + " null",
+                        "PRESCRIPTION_DOWNLOADED auditpatient PATIENT " + visit + " null",
+                        "CONSULTATION_VIEWED auditpatient PATIENT " + visit + " null",
+                        "CONSULTATION_SAVED draudit DOCTOR " + visit + " updated",
+                        "CONSULTATION_SAVED draudit DOCTOR " + visit + " created");
+        assertThat(entries).allSatisfy(e -> assertThat(e.getIpAddress()).isIn("127.0.0.1", "0:0:0:0:0:0:0:1"));
+    }
+
+    // Audit log, step A.3: patient profiles - viewed, updated (with the changed field names), listed
+    @Test
+    void patientProfileAccessIsAudited() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+        String patient = register("profpatient");
+        long userId = userIdOf(patient);
+        long patientId = patientIdOf("profpatient");
+        String profileUrl = "/api/patient/getAccount/" + userId;
+
+        assertThat(call(HttpMethod.GET, profileUrl, patient, null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.GET, profileUrl, admin, null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.GET, profileUrl, register("profnosy"), null).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN); // refused: nothing recorded
+        String change = "{\"contactNo\":\"+919800000001\",\"patientAddress\":\"12 MG Road, Pune\"}";
+        assertThat(updateProfile(admin, userId, change).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(updateProfile(patient, userId, change).getStatusCode()).isEqualTo(HttpStatus.OK); // same values
+
+        assertThat(auditLog.search(new AuditFilter(patientId, null, null, null, null), 0, 100).getContent())
+                .extracting(e -> e.getAction() + " " + e.getActorUsername() + " " + e.getTargetId() + " " + e.getDetails())
+                .containsExactly( // newest first
+                        "PATIENT_PROFILE_UPDATED profpatient " + patientId + " no change",
+                        "PATIENT_PROFILE_UPDATED flowadmin " + patientId + " changed: phone, address",
+                        "PATIENT_PROFILE_VIEWED flowadmin " + patientId + " null",
+                        "PATIENT_PROFILE_VIEWED profpatient " + patientId + " null");
+
+        // The front desk lists all patients
+        assertThat(call(HttpMethod.POST, "/api/admin/receptionist", admin, """
+                {"username":"profdesk","email":"profdesk@example.com","password":"desk-1234","phoneNumber":"+919812345670"}""")
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.GET, "/api/patient/getAll", login("profdesk", "desk-1234"), null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        List<AuditEntryDTO> listed = auditLog.search(new AuditFilter(null, "profdesk", AuditAction.PATIENT_LIST_VIEWED,
+                null, null), 0, 100).getContent();
+        assertThat(listed).hasSize(1);
+        assertThat(listed.get(0).getActorRole()).isEqualTo("RECEPTIONIST");
+        assertThat(listed.get(0).getPatientId()).isNull();
+        assertThat(listed.get(0).getDetails()).matches("\\d+ patients");
+    }
+
+    // Audit log, step A.3: admin account actions (and a patient closing their own account)
+    @Test
+    void accountActionsAreAudited() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+        assertThat(call(HttpMethod.POST, "/api/admin/patient", admin, """
+                {"username":"accpatient","email":"accpatient@example.com","password":"patient-123",
+                 "phoneNumber":"+919800000002"}""").getStatusCode()).isEqualTo(HttpStatus.OK);
+        long patientUserId = jdbc.queryForObject("SELECT id FROM users WHERE username = 'accpatient'", Long.class);
+        long doctorUserId = json.readTree(call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"accdoctor","email":"accdoctor@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111117","role":"DOCTOR"}""").getBody()).get("id").asLong();
+        String doctorUrl = "/api/admin/users/" + doctorUserId;
+
+        // Repeating a deactivate or reactivate changes nothing, so it records nothing
+        for (String action : List.of("deactivate", "deactivate", "reactivate", "reactivate")) {
+            assertThat(call(HttpMethod.PUT, doctorUrl + "/" + action, admin, null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+        assertThat(call(HttpMethod.DELETE, doctorUrl, admin, null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.DELETE, "/api/patient/deleteAccount/" + patientUserId,
+                login("accpatient", "patient-123"), null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        long adminUserId = userIdOf(admin);
+        assertThat(call(HttpMethod.PUT, "/api/admin/users/" + adminUserId + "/deactivate", admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+
+        assertThat(accountAudit(doctorUserId)).containsExactly( // oldest first
+                "USER_CREATED flowadmin accdoctor (DOCTOR)",
+                "ACCOUNT_DEACTIVATED flowadmin accdoctor (DOCTOR)",
+                "ACCOUNT_REACTIVATED flowadmin accdoctor (DOCTOR)",
+                "ACCOUNT_DELETED flowadmin accdoctor (DOCTOR)");
+        assertThat(accountAudit(patientUserId)).containsExactly(
+                "USER_CREATED flowadmin accpatient (PATIENT)",
+                "ACCOUNT_DEACTIVATED accpatient accpatient (PATIENT)");
+        assertThat(jdbc.queryForList("SELECT DISTINCT patient_id FROM audit_log WHERE target_id = ? AND action IN "
+                + "('USER_CREATED', 'ACCOUNT_DEACTIVATED')", Long.class, patientUserId))
+                .as("a patient account's entries carry the patient id").containsExactly(patientIdOf("accpatient"));
+        assertThat(accountAudit(adminUserId)).as("refused: nothing recorded").isEmpty();
+    }
+
+    // Audit log, step A.4: GET /api/admin/audit-log - admins only; filters, paging, newest first, patient names
+    @Test
+    void adminReadsTheAuditLog() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+        String patient = register("logpatient");
+        long userId = userIdOf(patient);
+        long patientId = patientIdOf("logpatient");
+        assertThat(updateProfile(admin, userId, "{\"patientName\":\"Asha Verma\"}").getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.GET, "/api/patient/getAccount/" + userId, patient, null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.GET, "/api/patient/getAccount/" + userId, admin, null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        String url = "/api/admin/audit-log?patientId=" + patientId;
+
+        JsonNode all = auditPage(admin, url);
+        assertThat(all.get("totalEntries").asLong()).isEqualTo(3);
+        assertThat(all.get("totalPages").asInt()).isEqualTo(1);
+        assertThat(all.get("size").asInt()).as("default page size").isEqualTo(50);
+        assertThat(all.get("entries").findValuesAsText("action"))
+                .containsExactly("PATIENT_PROFILE_VIEWED", "PATIENT_PROFILE_VIEWED", "PATIENT_PROFILE_UPDATED");
+        JsonNode newest = all.get("entries").get(0);
+        assertThat(newest.get("actorUsername").asText()).isEqualTo("flowadmin");
+        assertThat(newest.get("actorRole").asText()).isEqualTo("ADMIN");
+        assertThat(newest.get("patientName").asText()).as("the current name").isEqualTo("Asha Verma");
+        assertThat(newest.get("targetType").asText()).isEqualTo("PATIENT");
+        assertThat(newest.get("occurredAt").asText()).startsWith(LocalDate.now().toString());
+        assertThat(all.get("entries").get(2).get("details").asText()).isEqualTo("changed: name");
+
+        // Filters: user, action, days
+        assertThat(auditPage(admin, url + "&username=logpatient").get("totalEntries").asLong()).isEqualTo(1);
+        assertThat(auditPage(admin, url + "&action=PATIENT_PROFILE_UPDATED").get("totalEntries").asLong()).isEqualTo(1);
+        String today = LocalDate.now().toString();
+        assertThat(auditPage(admin, url + "&from=" + today + "&to=" + today).get("totalEntries").asLong()).isEqualTo(3);
+        assertThat(auditPage(admin, url + "&from=" + LocalDate.now().plusDays(1)).get("totalEntries").asLong()).isZero();
+
+        // Paging (the size is capped at 100)
+        JsonNode second = auditPage(admin, url + "&page=1&size=2");
+        assertThat(second.get("page").asInt()).isEqualTo(1);
+        assertThat(second.get("totalPages").asInt()).isEqualTo(2);
+        assertThat(second.get("entries").findValuesAsText("action")).containsExactly("PATIENT_PROFILE_UPDATED");
+        assertThat(auditPage(admin, url + "&size=1000").get("size").asInt()).isEqualTo(100);
+
+        // Bad parameters are a 400, and only admins may read the log
+        assertThat(call(HttpMethod.GET, url + "&action=NOPE", admin, null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(call(HttpMethod.GET, url + "&from=05-10-2026", admin, null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(call(HttpMethod.GET, url + "&from=" + today + "&to=" + LocalDate.now().minusDays(1), admin, null)
+                .getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(call(HttpMethod.GET, url, patient, null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    private JsonNode auditPage(String token, String url) throws Exception {
+        ResponseEntity<String> response = call(HttpMethod.GET, url, token, null);
+        assertThat(response.getStatusCode()).as(url).isEqualTo(HttpStatus.OK);
+        return json.readTree(response.getBody());
+    }
+
+    private List<String> accountAudit(long userId) {
+        return jdbc.queryForList("SELECT CONCAT_WS(' ', action, actor_username, details) FROM audit_log "
+                + "WHERE target_id = ? AND action IN ('USER_CREATED', 'ACCOUNT_DEACTIVATED', 'ACCOUNT_REACTIVATED', "
+                + "'ACCOUNT_DELETED') ORDER BY id", String.class, userId);
+    }
+
+    private long patientIdOf(String username) {
+        return jdbc.queryForObject("SELECT p.patient_id FROM patient p JOIN users u ON u.id = p.user_id "
+                + "WHERE u.username = ?", Long.class, username);
+    }
+
+    // PUT /api/patient/updateAccount/{userId} is multipart: a JSON part "ptInfoDTO" (+ an optional image)
+    private ResponseEntity<String> updateProfile(String token, long userId, String profileJson) {
+        HttpHeaders jsonPart = new HttpHeaders();
+        jsonPart.setContentType(MediaType.APPLICATION_JSON);
+        org.springframework.util.MultiValueMap<String, Object> form = new org.springframework.util.LinkedMultiValueMap<>();
+        form.add("ptInfoDTO", new HttpEntity<>(profileJson, jsonPart));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.setBearerAuth(token);
+        return rest.exchange("/api/patient/updateAccount/" + userId, HttpMethod.PUT, new HttpEntity<>(form, headers),
+                String.class);
     }
 
     private List<Long> ids(ResponseEntity<String> response) throws Exception {

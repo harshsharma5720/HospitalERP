@@ -1,7 +1,9 @@
 # MySQL database upgrade to Flyway — runbook
 
-**Purpose:** move an existing HospitalERP MySQL database (built by the old `ddl-auto=update`) onto the Flyway migrations of branch `refactor/modules`, safely, before that branch is merged into `main`.
-**Status (2026-09-30):** not done yet. The real database lives on the **other laptop**. Everything in the code is ready and tested on a throw-away MySQL 8 (`DatabaseMigrationMySqlTest`); what's missing is a run against the real data.
+**Purpose:** move an existing HospitalERP MySQL database (built by the old `ddl-auto=update`) onto the Flyway migrations that `main` uses since the module refactor was merged (PR #3, 2026-09-30), safely.
+**Status (2026-10-06):** not done yet. The real database lives on the **other laptop**. Everything in the code is ready and tested on a throw-away MySQL 8 (`DatabaseMigrationMySqlTest`); what's missing is a run against the real data.
+
+⚠ **Since the merge, starting `main` on the old database *is* the upgrade** — Flyway runs at startup. So don't start today's `main` against the real database before section 7. The one run of old code this runbook needs (5.1) uses the last `main` before Flyway: commit **`49635d8`**.
 **Background:** [MULTI_MODULE_PLAN.md](MULTI_MODULE_PLAN.md) step 4.1 · README section "Database migrations (Flyway)".
 
 ---
@@ -13,7 +15,8 @@ On the first start of the new code:
 1. Flyway sees tables but no `flyway_schema_history` table → it **marks the database as version 1** ("baseline"). It does **not** run `V1__baseline.sql` there.
 2. It runs the newer migrations:
    - two that **permanently drop 5 unused columns**: `doctor.password`, `doctor.role`, `receptionist.role` (`staff/V2026_09_28_1__staff_drop_unused_columns.sql`) and `patient.role`, `patient_relative.role` (`patients/V2026_09_28_2__patients_drop_unused_columns.sql`). Login data lives in `users`; nothing reads these columns any more.
-   - one that **adds** `users.active` (existing accounts: active) and `users.deactivated_at` (`identity/V2026_09_30_1__identity_account_status.sql`, from the account-deactivation feature — only once that branch is merged).
+   - one that **adds** `users.active` (existing accounts: active) and `users.deactivated_at` (`identity/V2026_09_30_1__identity_account_status.sql`, from the account-deactivation feature, in `main` since PR #5).
+   - one that **creates** the empty `audit_log` table (`audit/V2026_10_05_1__audit_log.sql`, from the audit-log feature — only once `feature/audit-log` is merged).
    All other data stays.
 3. Hibernate then **validates** (`ddl-auto=validate`): every entity's table and column must exist with a compatible type. If not, the app stops with `Schema-validation: …`.
 
@@ -79,18 +82,20 @@ mysqldump -u root -p --single-transaction --routines --triggers --no-tablespaces
 
 ## 5. Catch-up run and pre-check
 
-### 5.1 Catch-up run on `main` (brings an older database up to the version-1 shape)
+### 5.1 Catch-up run on the last pre-Flyway `main` (brings an older database up to the version-1 shape)
 
-If the database was last used with code older than 2026-09-24, it lacks tables the new code needs (e.g. `consultations`, `prescription_items`, `doctor_schedules`) — and Flyway won't create them on an existing database. Starting `main` once lets the old `ddl-auto=update` add whatever is missing. It's what the app has always done on start, so it's safe; harmless if nothing is missing.
+If the database was last used with code older than 2026-09-24, it lacks tables the new code needs (e.g. `consultations`, `prescription_items`, `doctor_schedules`) — and Flyway won't create them on an existing database. Starting the **last `main` before Flyway** (`49635d8`, 2026-09-25) once lets its `ddl-auto=update` add whatever is missing. It's what the app always did on start, so it's safe; harmless if nothing is missing.
 
 ```powershell
-git checkout main
-git pull
+git checkout 49635d8      # "detached HEAD" is expected: you only run this code, nothing is committed here
 cd hospitalERP
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--REMINDERS_ENABLED=false"
+cd ..
 ```
 
-Wait for `Started HospitalErpApplication`, then stop it with `Ctrl+C`.
+Wait for `Started HospitalErpApplication`, then stop it with `Ctrl+C`. (This old code has a single-module `hospitalERP` folder; that's fine.)
+
+⚠ Don't use `git checkout main` for this step: today's `main` would run the Flyway upgrade straight away, without the checks and the rehearsal below.
 
 ### 5.2 Record the data (to compare afterwards)
 
@@ -116,16 +121,17 @@ Write the counts down (or screenshot them).
 Build a **reference** database from the migration files, then list every difference.
 
 ```powershell
-git checkout refactor/modules
+git checkout main
 git pull
 mysql -u root -p -e "CREATE DATABASE hospital_erp_reference"
 mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/V1__baseline.sql"
 mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/staff/V2026_09_28_1__staff_drop_unused_columns.sql"
 mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/patients/V2026_09_28_2__patients_drop_unused_columns.sql"
 mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/identity/V2026_09_30_1__identity_account_status.sql"
+mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/audit/V2026_10_05_1__audit_log.sql"
 ```
 
-(Run every `.sql` file that exists under `db/migration/` in version order — the last line only if that file exists in your checkout.)
+(Run every `.sql` file that exists under `db/migration/` in version order — the last line only once the audit-log feature is merged, i.e. if that file exists in your checkout.)
 
 (Run these from the repository root; use forward slashes in the `source` paths.)
 
@@ -160,8 +166,8 @@ ORDER BY 1, 2, 3;
 |---|---|---|
 | Exactly 5 rows "only in hospital_erp": `doctor.password`, `doctor.role`, `patient.role`, `patient_relative.role`, `receptionist.role` | Perfect — these are the columns the migrations drop | Continue |
 | Other "only in hospital_erp" rows | Leftover columns from older versions (e.g. `receptionist.password`) | Harmless for the app (validation ignores extra columns). Note them; we can drop them later with a migration |
-| "missing in hospital_erp": `users.active` and `users.deactivated_at` | Expected — a migration adds them during the upgrade | Continue |
-| Any other "missing in hospital_erp" row | The database is older than the code | Do 5.1 again (catch-up run). If it stays, **stop** and send the list |
+| "missing in hospital_erp": `users.active`, `users.deactivated_at` and (once the audit log is merged) the 10 columns of `audit_log` | Expected — migrations add them during the upgrade | Continue |
+| Any other "missing in hospital_erp" row | The database is older than the code | Do 5.1 again (catch-up run on `49635d8`). If it stays, **stop** and send the list |
 | Any "different type" row (e.g. `varchar(255)` now, `enum(...)` target) | Column created by an older Hibernate version | **Stop.** Send the rows; the fix is a small migration (`ALTER TABLE … MODIFY COLUMN …`) added before the upgrade |
 
 ---
@@ -180,7 +186,8 @@ mysql -u root -p hospital_erp_copy -e "source C:/db-backups/hospital_erp_before_
 Start the new code **against the copy**, with day-before reminders off (so no SMS/emails go to real patients):
 
 ```powershell
-git checkout refactor/modules
+git checkout main
+git pull
 cd hospitalERP
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--DB_URL=jdbc:mysql://localhost:3306/hospital_erp_copy --REMINDERS_ENABLED=false"
 ```
@@ -190,22 +197,23 @@ Command-line arguments override `.env`, so `.env` stays pointed at the real data
 **Expected log lines, in this order:**
 
 ```
-Successfully validated 4 migrations
+Successfully validated 5 migrations
 Successfully baselined schema with version: 1
 Migrating schema `hospital_erp_copy` to version "2026.09.28.1 - staff drop unused columns"
 Migrating schema `hospital_erp_copy` to version "2026.09.28.2 - patients drop unused columns"
 Migrating schema `hospital_erp_copy` to version "2026.09.30.1 - identity account status"
-Successfully applied 3 migrations to schema `hospital_erp_copy`, now at version v2026.09.30.1
+Migrating schema `hospital_erp_copy` to version "2026.10.05.1 - audit log"
+Successfully applied 4 migrations to schema `hospital_erp_copy`, now at version v2026.10.05.1
 Started HospitalErpApplication in … seconds
 ```
 
-(Without the account-deactivation feature merged: 3 validated, 2 applied, and no "identity account status" line.)
+(Until `feature/audit-log` is merged, `main` has one migration less: 4 validated, 3 applied, no "audit log" line, now at v2026.09.30.1.)
 
 **Check the copy** (`mysql -u root -p hospital_erp_copy`):
 
 ```sql
 SELECT installed_rank, version, description, type, success FROM flyway_schema_history ORDER BY installed_rank;
--- expect: 1 BASELINE, 2026.09.28.1 SQL, 2026.09.28.2 SQL, 2026.09.30.1 SQL, all success = 1
+-- expect: 1 BASELINE, 2026.09.28.1 SQL, 2026.09.28.2 SQL, 2026.09.30.1 SQL, 2026.10.05.1 SQL (once merged), all success = 1
 
 SELECT table_name, column_name FROM information_schema.columns
 WHERE table_schema = DATABASE()
@@ -243,14 +251,14 @@ Only after section 6 passed.
 1. Take a **fresh backup** (section 4, new file name, e.g. `hospital_erp_before_flyway_final.sql`) — the rehearsal was on a copy, but data may have changed since.
 2. Start the new code on the real database (`.env` already points to it):
    ```powershell
-   git checkout refactor/modules
+   git checkout main
    cd hospitalERP
    .\mvnw.cmd spring-boot:run
    ```
 3. Check the same log lines as in section 6 (with `hospital_erp`), the same two SQL checks, and the row counts.
 4. Quick smoke test: log in as admin, doctor and patient; open an appointment and a prescription.
 
-From now on, **don't run the old `main` code against this database** until the branch is merged: old `main` still has `ddl-auto=update` and the old entity fields, so it would add the dropped columns back.
+From now on, **don't run the pre-Flyway code (`49635d8` or older) against this database**: it has `ddl-auto=update` and the old entity fields, so it would add the dropped columns back. Use `main` (or a newer branch) only.
 
 ---
 
@@ -260,9 +268,9 @@ From now on, **don't run the old `main` code against this database** until the b
 |---|---|---|
 | `Schema-validation: missing table [x]` or `missing column [c] in table [t]` | Database older than the code | Restore (section 9 "Roll back"), do the catch-up run (5.1), try again. If it stays, send the message |
 | `Schema-validation: wrong column type encountered in column [c] in table [t]; found [...], but expecting [...]` | Column created by an older Hibernate version | Restore; send the message — a migration `ALTER TABLE t MODIFY COLUMN c <expected>` fixes it |
-| `Found non-empty schema(s) … but no schema history table` | Old code or settings (`baseline-on-migrate` missing) | Make sure you're on `refactor/modules` (`git branch`) |
+| `Found non-empty schema(s) … but no schema history table` | Old code or settings (`baseline-on-migrate` missing) | Make sure you're on `main` (`git branch`), not on `49635d8` |
 | `Validate failed: Migrations have failed validation` / `checksum mismatch` | A migration file was edited after it ran | Restore the file from git (`git checkout -- <file>`); changes go in a **new** migration |
-| `Detected applied migration not resolved locally` | Older code started on an upgraded database | Switch to `refactor/modules` (or after the merge: `main`) |
+| `Detected applied migration not resolved locally` | Code older than the database (e.g. a branch without a migration that already ran) | Switch to the latest `main` (`git checkout main`, `git pull`) |
 | `Communications link failure` | MySQL not running / wrong host or port | Start the MySQL service; check `DB_URL` |
 | `Access denied for user` | Wrong `DB_USERNAME` / `DB_PASSWORD` | Fix `.env` |
 | `Unknown database` | Database name in `DB_URL` wrong | Fix `DB_URL` |
@@ -278,10 +286,10 @@ Any failure during the **rehearsal**: just drop the copy (`DROP DATABASE hospita
 ```powershell
 mysql -u root -p -e "DROP DATABASE hospital_erp; CREATE DATABASE hospital_erp"
 mysql -u root -p hospital_erp -e "source C:/db-backups/hospital_erp_before_flyway_final.sql"
-git checkout main
+git checkout 49635d8
 ```
 
-The app on `main` then works exactly as before.
+The pre-Flyway code (`49635d8`) then works exactly as before. Don't start `main` on the restored database until the problem is fixed — it would run the upgrade again.
 
 **After a successful upgrade, clean up:**
 
@@ -294,13 +302,12 @@ Keep the backup files for a few weeks, then delete them (they contain patient da
 
 ---
 
-## 10. After success: merge
+## 10. After success
 
-1. On GitHub: **Pull requests → New** → base `main`, compare `refactor/modules` → create.
-2. Merge with **"Create a merge commit"** (not squash), so the step-by-step history stays.
-3. On every laptop: `git checkout main`, `git pull`. The upgraded database needs nothing more — Flyway sees it's at the latest version.
-4. Any other developer database gets the same treatment (sections 4–7), or starts empty (Flyway then builds it from `V1__baseline.sql`).
-5. Update the progress log in [MULTI_MODULE_PLAN.md](MULTI_MODULE_PLAN.md) (step 4.1: "your MySQL still to upgrade" → done).
+1. Keep using `main` (`git checkout main`, `git pull`). The upgraded database needs nothing more.
+2. **Later migrations need no runbook:** when a branch with a new migration is merged (e.g. `feature/audit-log`), Flyway applies it on the next start and Hibernate validates the result. A backup (section 4) before that start is still a good habit.
+3. Any other developer database gets the same treatment (sections 4–7), or starts empty (Flyway then builds it from `V1__baseline.sql`).
+4. Update the progress log in [MULTI_MODULE_PLAN.md](MULTI_MODULE_PLAN.md) (step 4.1: "your MySQL still to upgrade" → done).
 
 ---
 
@@ -308,7 +315,7 @@ Keep the backup files for a few weeks, then delete them (they contain patient da
 
 Use this to rehearse here. The real upgrade still happens on the other laptop (section 7 there).
 
-**On the other laptop:** take the backup (section 4) — ideally after the catch-up run (5.1). Move the `.sql` file to this laptop by USB stick or your own private cloud folder (see the privacy note in section 2).
+**On the other laptop:** take the backup (section 4) — ideally after the catch-up run (5.1, on `49635d8`). Move the `.sql` file to this laptop by USB stick or your own private cloud folder (see the privacy note in section 2).
 
 **On this laptop** (MySQL isn't installed here, Docker is — this was tested with the project's migration test):
 
@@ -325,15 +332,16 @@ docker exec hospitalerp-mysql mysql -uroot -pchoose-a-password -e "CREATE DATABA
 docker exec hospitalerp-mysql sh -c "mysql -uroot -pchoose-a-password hospital_erp_copy < /tmp/backup.sql"
 ```
 
-Then follow **section 6** here, with this start command:
+Then follow **section 6** here, with this start command (on `main`):
 
 ```powershell
+git checkout main
 cd hospitalERP
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--DB_URL=jdbc:mysql://localhost:3307/hospital_erp_copy --DB_USERNAME=root --DB_PASSWORD=choose-a-password --REMINDERS_ENABLED=false"
 ```
 
 For the SQL checks use `docker exec -it hospitalerp-mysql mysql -uroot -pchoose-a-password hospital_erp_copy`.
-Section 5.3 works here too: create `hospital_erp_reference` in the container and `docker cp` the three migration files in, then `source` them from `/tmp/…`.
+Section 5.3 works here too: create `hospital_erp_reference` in the container and `docker cp` the migration files in, then `source` them from `/tmp/…`.
 
 **Clean up afterwards:**
 
@@ -349,10 +357,11 @@ Remove-Item C:\db-backups\hospital_erp_before_flyway.sql   # patient data
 | Item | Value |
 |---|---|
 | Migration folder | `hospitalERP/app/src/main/resources/db/migration/` |
-| Migrations | `V1__baseline.sql` (full schema, only for empty databases), `staff/V2026_09_28_1__staff_drop_unused_columns.sql`, `patients/V2026_09_28_2__patients_drop_unused_columns.sql`, `identity/V2026_09_30_1__identity_account_status.sql` (adds `users.active`, `users.deactivated_at`) |
+| Migrations | `V1__baseline.sql` (full schema, only for empty databases), `staff/V2026_09_28_1__staff_drop_unused_columns.sql`, `patients/V2026_09_28_2__patients_drop_unused_columns.sql`, `identity/V2026_09_30_1__identity_account_status.sql` (adds `users.active`, `users.deactivated_at`), `audit/V2026_10_05_1__audit_log.sql` (creates the empty `audit_log` table) |
+| Last `main` before Flyway (for 5.1 and a rollback) | `49635d8` (2026-09-25, merge of PR #2; `ddl-auto=update`) |
 | Settings (`app/src/main/resources/application.properties`) | `spring.jpa.hibernate.ddl-auto=validate`, `spring.flyway.baseline-on-migrate=true`, `spring.flyway.baseline-version=1` |
-| Tables (13) | appointments, appointments_seq, consultations, doctor, doctor_schedules, doctor_seq, leave_request, patient, patient_relative, prescription_items, receptionist, slots, users (+ `flyway_schema_history` after the upgrade) |
+| Tables (13, plus `audit_log` with the audit-log feature) | appointments, appointments_seq, consultations, doctor, doctor_schedules, doctor_seq, leave_request, patient, patient_relative, prescription_items, receptionist, slots, users (+ `flyway_schema_history` after the upgrade) |
 | Columns dropped | doctor.password, doctor.role, patient.role, patient_relative.role, receptionist.role |
 | `.env` keys used here | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `REMINDERS_ENABLED` |
 | Automated proof | `DatabaseMigrationMySqlTest` (needs Docker): upgrade of a pre-Flyway database with data + fresh install give the identical schema |
-| Last tested | 2026-09-28 on MySQL 8.0 (Docker), Flyway 11.7.2, Spring Boot 3.5.5 |
+| Last tested | 2026-10-05 on MySQL 8.0 (Docker) with all 5 migrations, Flyway 11.7.2, Spring Boot 3.5.5 |

@@ -62,6 +62,7 @@ public class AdminService {
     public UserDTO createUser(RegisterRequestDTO registerRequestDTO) {
         Role role = AuthService.parseRole(registerRequestDTO.getRole());
         User user = authService.createUser(registerRequestDTO, role);
+        userAccountService.recordCreated(user);
         return convertToDto(user);
     }
 
@@ -69,6 +70,7 @@ public class AdminService {
     @Transactional
     public PtInfoDTO createPatient(RegisterRequestDTO registerRequestDTO) {
         User user = authService.createUser(registerRequestDTO, Role.PATIENT);
+        userAccountService.recordCreated(user);
         PtInfo patient = ptInfoService.findPatientEntityByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Patient", "userId", user.getId()));
         return PatientMapper.toDTO(patient);
@@ -78,6 +80,7 @@ public class AdminService {
     @Transactional
     public DoctorDTO createDoctor(RegisterRequestDTO registerRequestDTO) {
         User user = authService.createUser(registerRequestDTO, Role.DOCTOR);
+        userAccountService.recordCreated(user);
         Doctor doctor = doctorService.findDoctorEntityByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", "userId", user.getId()));
         return DoctorMapper.toDTO(doctor);
@@ -87,6 +90,7 @@ public class AdminService {
     @Transactional
     public ReceptionistDTO createReceptionist(RegisterRequestDTO registerRequestDTO) {
         User user = authService.createUser(registerRequestDTO, Role.RECEPTIONIST);
+        userAccountService.recordCreated(user);
         Receptionist receptionist = receptionistService.findReceptionistEntityByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Receptionist", "userId", user.getId()));
         return modelMapper.map(receptionist, ReceptionistDTO.class);

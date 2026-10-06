@@ -11,6 +11,7 @@
 * `c.i.h.s.DoctorService` (in Staff)
 * `c.i.h.p.PtInfoService` (in Patients)
 * `c.i.h.i.CurrentUserService` (in Identity)
+* `c.i.h.a.AuditLog` (in Audit)
 |Aggregate roots
 |* `c.i.h.c.Consultation`
 |===

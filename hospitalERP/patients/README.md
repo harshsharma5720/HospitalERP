@@ -2,14 +2,14 @@
 
 Patient profiles and their relatives (people a patient can book appointments for).
 
-**Depends on:** common, identity · **Used by:** appointments, clinical, administration
+**Depends on:** common, identity, audit · **Used by:** appointments, clinical, administration
 
 ## Public API — `com.itmonteur.hospitalerp.patients`
 
 | Class | Purpose |
 |---|---|
 | `PtInfo`, `PtRelative`, `RelationShip` | Entities for the patient profile (linked to its `User`) and relatives, and the relationship enum. |
-| `PtInfoService` | Profile read/update (`getAllPtInfo`, `getPtInfoById`, `updatePtInfoById`) plus what other modules need: `findPatientEntity`, `findPatientEntityByUserId`, `deletePatientEntity`. |
+| `PtInfoService` | Profile read/update (`getAllPtInfo`, `getPtInfoById`, `updatePtInfoById`) plus what other modules need: `findPatientEntity`, `findPatientEntityByUserId`, `findPatientNames` (one query, for the audit log page), `deletePatientEntity`. Views, updates (with the names of the changed fields, never their values) and the all-patients list go into the [audit log](../audit/README.md); a refused view records nothing. |
 | `PtRelativeService` | Add/list/update/delete relatives; `findRelativeEntity` for appointments. |
 | `PtInfoDTO`, `PtRelativeDTO`, `PatientMapper` | Response objects and entity → DTO mapping (also used by administration). |
 | `RelativeDeletedEvent` | Published when a relative is deleted. |
@@ -40,6 +40,6 @@ None.
 
 ## Tests
 
-No unit tests of its own; covered by `ProfileCreatorsTest` and the end-to-end tests in `app`.
+No unit tests of its own; covered by `ProfileCreatorsTest` and the end-to-end tests in `app` (`patientProfileAccessIsAudited` for the audit entries).
 
 Module diagram: [docs/modules/module-patients.puml](../../docs/modules/module-patients.puml).
