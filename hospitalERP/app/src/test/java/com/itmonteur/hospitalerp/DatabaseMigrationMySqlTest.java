@@ -76,13 +76,15 @@ class DatabaseMigrationMySqlTest {
                 "SELECT version, type, success FROM flyway_schema_history ORDER BY installed_rank");
         assertThat(history).extracting(row -> row.get("version") + " " + row.get("type"))
                 .containsExactly("1 BASELINE", "2026.09.28.1 SQL", "2026.09.28.2 SQL", "2026.09.30.1 SQL",
-                        "2026.10.05.1 SQL");
+                        "2026.10.05.1 SQL", "2026.10.06.1 SQL");
         assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isIn(true, 1));
 
         assertThat(legacyColumnsIn(jdbc, "hospital")).isEmpty();
         // Existing accounts stay active after the account-status migration
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE active = 1 AND deactivated_at IS NULL", Integer.class))
                 .isEqualTo(2);
+        // Existing accounts have no creation time; only new ones get one (docs/ADMIN_DASHBOARD_PLAN.md)
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE created_at IS NULL", Integer.class)).isEqualTo(2);
         // The audit log starts empty (docs/AUDIT_LOG_PLAN.md)
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_log", Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT name FROM doctor WHERE id = 1", String.class)).isEqualTo("Rao");

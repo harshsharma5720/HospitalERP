@@ -735,6 +735,24 @@ class FeatureFlowH2Test {
         assertThat(call(HttpMethod.GET, url, patient, null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
+    // Admin dashboard, step B.1 (docs/ADMIN_DASHBOARD_PLAN.md): accounts record when they were created
+    @Test
+    void newAccountsRecordWhenTheyWereCreated() {
+        LocalDateTime before = LocalDateTime.now().minusSeconds(1);
+        register("newcomer");
+        assertThat(call(HttpMethod.POST, "/api/admin/users", login("flowadmin", "flow-admin-123"), """
+                {"username":"drnewcomer","email":"drnewcomer@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111118","role":"DOCTOR"}""").getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        for (String username : List.of("newcomer", "drnewcomer")) {
+            Timestamp createdAt = jdbc.queryForObject("SELECT created_at FROM users WHERE username = ?",
+                    Timestamp.class, username);
+            assertThat(createdAt).as(username).isNotNull();
+            assertThat(createdAt.toLocalDateTime()).as(username)
+                    .isAfter(before).isBefore(LocalDateTime.now().plusSeconds(1));
+        }
+    }
+
     private JsonNode auditPage(String token, String url) throws Exception {
         ResponseEntity<String> response = call(HttpMethod.GET, url, token, null);
         assertThat(response.getStatusCode()).as(url).isEqualTo(HttpStatus.OK);

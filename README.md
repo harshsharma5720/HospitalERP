@@ -280,6 +280,7 @@ The database schema is owned by the migration scripts in `hospitalERP/app/src/ma
 | `patients/V2026_09_28_2__patients_drop_unused_columns.sql` | Drops `patient.role`, `patient_relative.role`. |
 | `identity/V2026_09_30_1__identity_account_status.sql` | Adds `users.active` and `users.deactivated_at` (accounts are deactivated, not deleted). |
 | `audit/V2026_10_05_1__audit_log.sql` | Creates the empty, append-only `audit_log` table ([audit log](docs/AUDIT_LOG_PLAN.md)). |
+| `identity/V2026_10_06_1__identity_user_created_at.sql` | Adds `users.created_at`, set for every new account; older accounts stay empty ([admin dashboard](docs/ADMIN_DASHBOARD_PLAN.md)). |
 
 **Changing the schema:** add a new file to the owning module's folder, e.g. `db/migration/appointments/V2026_10_05_1__appointments_add_room.sql`, with the next date-based version. Never edit a migration that has already run anywhere — Flyway checks their checksums and refuses to start. Hibernate then validates the entities against the result, so an entity change without a migration stops the app with a clear "Schema-validation" message.
 
