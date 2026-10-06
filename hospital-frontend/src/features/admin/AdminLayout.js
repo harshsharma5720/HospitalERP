@@ -8,6 +8,7 @@ import ManageUsers from "./ManageUsers";
 import RegisterUser from "./RegisterUser";
 import ManageDoctor from "./ManageDoctor";
 import AdminDoctorAppointments from "./AdminDoctorAppointments";
+import AuditLog from "./AuditLog";
 
 export default function AdminLayout({ children }) {
   return (
@@ -26,6 +27,7 @@ export default function AdminLayout({ children }) {
                       <Route path="register-user" element={<RegisterUser />} />
                       <Route path="manage-doctor" element={<ManageDoctor />} />
                       <Route path="doctor/:userId/appointments" element={<AdminDoctorAppointments />} />
+                      <Route path="audit-log" element={<AuditLog />} />
                       <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Routes>
         </div>

@@ -263,6 +263,7 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 | Leave requests and approval / rejection | Doctor, Admin | `/doctor/leave-management`, `/admin/leave-approval` |
 | Forgot password (6-digit code by SMS / email) | Everyone | `/forgot-password` (link on the login page) |
 | Deactivate / reactivate accounts — no login, hidden from booking, upcoming appointments cancelled, **all history kept**; permanent delete only for accounts without appointments ([details](docs/ACCOUNT_DEACTIVATION_PLAN.md)) | Admin | `/admin/manage-users`, `/admin/manage-doctor` |
+| Audit log — who viewed or changed which medical record, patient profile or account, and when; filters by patient, user, action and dates; entries kept forever ([details](docs/AUDIT_LOG_PLAN.md)) | Admin | `/admin/audit-log` |
 
 Medical records (consultations, prescriptions) are visible only to the patient, their doctor(s) and admins — receptionists cannot read them.
 
