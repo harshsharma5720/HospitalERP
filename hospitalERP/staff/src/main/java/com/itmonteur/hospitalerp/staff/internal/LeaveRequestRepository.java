@@ -33,6 +33,13 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
             + "AND l.startDate <= :date AND l.endDate >= :date")
     boolean isOnApprovedLeave(@Param("userId") Long userId, @Param("date") LocalDate date);
 
+    // Admin dashboard: active doctors with an APPROVED leave covering the date (each doctor once)
+    @Query("SELECT COUNT(DISTINCT l.user.id) FROM LeaveRequest l "
+            + "WHERE l.status = com.itmonteur.hospitalerp.staff.LeaveStatus.APPROVED "
+            + "AND l.startDate <= :date AND l.endDate >= :date "
+            + "AND l.user.role = com.itmonteur.hospitalerp.identity.Role.DOCTOR AND l.user.active = true")
+    long countDoctorsOnApprovedLeave(@Param("date") LocalDate date);
+
     @Modifying
     @Query("DELETE FROM LeaveRequest l WHERE l.user.id = :userId")
     void deleteByUserId(@Param("userId") Long userId);

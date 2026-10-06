@@ -11,6 +11,7 @@ Booking: create, reschedule and cancel appointments (also for relatives), the li
 | `Appointment`, `AppointmentStatus` | Appointment entity and its status (`SCHEDULED`, `CONFIRMED`, `COMPLETED`, `CANCELLED_BY_PATIENT`, `CANCELLED_BY_DOCTOR`). |
 | `AppointmentService` | Booking (`createAppointment`, `updateAppointmentById`, `cancelAppointment`, `markAsCompleted`) and lists; for other modules: `findAppointmentEntity`, `markCompletedByConsultation` (clinical), `hasAppointment`, `findUpcomingForPatient/ForDoctor`, `deleteAllForPatient/ForDoctor` (administration), `notificationInfo`; for account deactivation (administration): `cancelUpcomingForPatient/ForDoctor` (bookings from today on, slots freed, notified) and `hasAnyAppointmentForPatient/ForDoctor` (guards the permanent delete). |
 | `AppointmentDTO` | Response object. |
+| `AppointmentStatistics` | Admin dashboard figures by appointment date ([docs/ADMIN_DASHBOARD_PLAN.md](../../docs/ADMIN_DASHBOARD_PLAN.md)), all grouped count queries: `perDay(from, to)` → `DailyAppointmentCounts` (completed, open, cancelled by patient / by doctor; days without appointments as zeros), `busiestSpecializations` → `SpecializationCount`, `busiestDoctors` → `DoctorAppointmentCount` (cancelled ones not counted). "Completed" uses the module's usual rule: status `COMPLETED` or an old row with `is_completed` set. |
 | `AppointmentNotificationEvent` | "Notify about this appointment" (`BOOKED`, `CANCELLED`, `CANCELLED_BY_DOCTOR_LEAVE`, `REMINDER`). |
 
 ## Events

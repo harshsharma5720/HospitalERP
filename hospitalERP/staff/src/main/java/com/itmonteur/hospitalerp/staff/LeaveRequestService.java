@@ -42,6 +42,11 @@ public class LeaveRequestService {
         return leaveRequestRepository.isOnApprovedLeave(userId, date);
     }
 
+    /** Active doctors with an APPROVED leave covering the date (admin dashboard, docs/ADMIN_DASHBOARD_PLAN.md). */
+    public long countDoctorsOnLeave(LocalDate date) {
+        return leaveRequestRepository.countDoctorsOnApprovedLeave(date);
+    }
+
     /** Applies for leave as the logged-in user (the userId/role in the request are ignored). */
     public LeaveRequestDTO createLeaveRequest(LeaveRequestDTO dto) {
         User user = currentUserService.getCurrentUser();

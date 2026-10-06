@@ -2,8 +2,11 @@ package com.itmonteur.hospitalerp.appointments.internal;
 
 import com.itmonteur.hospitalerp.appointments.Appointment;
 import com.itmonteur.hospitalerp.appointments.AppointmentStatus;
+import com.itmonteur.hospitalerp.appointments.DoctorAppointmentCount;
+import com.itmonteur.hospitalerp.appointments.SpecializationCount;
 import com.itmonteur.hospitalerp.staff.Doctor;
 import com.itmonteur.hospitalerp.scheduling.Shift;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -92,4 +95,28 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Modifying
     @Query("DELETE FROM Appointment a WHERE a.doctor.id = :doctorId")
     void deleteByDoctorId(@Param("doctorId") Long doctorId);
+
+    // ------------------------------------------------------------------ admin dashboard (AppointmentStatistics)
+
+    String NOT_CANCELLED = " a.status NOT IN ("
+            + "com.itmonteur.hospitalerp.appointments.AppointmentStatus.CANCELLED_BY_DOCTOR, "
+            + "com.itmonteur.hospitalerp.appointments.AppointmentStatus.CANCELLED_BY_PATIENT) ";
+
+    /** Rows of [date, status, isCompleted, count]; AppointmentStatistics turns them into outcomes. */
+    @Query("SELECT a.date, a.status, a.isCompleted, COUNT(a) FROM Appointment a "
+            + "WHERE a.date BETWEEN :from AND :to GROUP BY a.date, a.status, a.isCompleted")
+    List<Object[]> countPerDayStatusAndCompletedFlag(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    @Query("SELECT new com.itmonteur.hospitalerp.appointments.SpecializationCount(d.specialist, COUNT(a)) "
+            + "FROM Appointment a JOIN a.doctor d WHERE a.date BETWEEN :from AND :to AND" + NOT_CANCELLED
+            + "GROUP BY d.specialist ORDER BY COUNT(a) DESC, d.specialist")
+    List<SpecializationCount> countPerSpecialization(@Param("from") LocalDate from, @Param("to") LocalDate to,
+                                                     Pageable pageable);
+
+    @Query("SELECT new com.itmonteur.hospitalerp.appointments.DoctorAppointmentCount(d.id, d.name, d.specialist, "
+            + "COUNT(a), SUM(CASE WHEN" + COMPLETED + "THEN 1 ELSE 0 END)) "
+            + "FROM Appointment a JOIN a.doctor d WHERE a.date BETWEEN :from AND :to AND" + NOT_CANCELLED
+            + "GROUP BY d.id, d.name, d.specialist ORDER BY COUNT(a) DESC, d.name")
+    List<DoctorAppointmentCount> countPerDoctor(@Param("from") LocalDate from, @Param("to") LocalDate to,
+                                                Pageable pageable);
 }
