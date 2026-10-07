@@ -2,15 +2,14 @@ package com.itmonteur.hospitalerp.appointments.internal;
 
 import com.itmonteur.hospitalerp.appointments.AppointmentNotificationEvent;
 import com.itmonteur.hospitalerp.notifications.NotificationService;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Sends appointment emails/SMS once the change is safely stored:
- * AFTER_COMMIT means nothing is sent if the transaction rolls back. (fallbackExecution: if an
- * event is ever published outside a transaction, it is still delivered.) NotificationService
- * itself is @Async, so this never slows down the request. Belongs to the appointments module.
+ * Queues the appointment emails/SMS in the notifications outbox, inside the transaction that books, cancels or
+ * reminds (docs/RELIABLE_NOTIFICATIONS_PLAN.md): the messages are stored exactly when the change is committed -
+ * a rolled-back change leaves none - and the outbox sends them right after the commit, retrying failures.
+ * Belongs to the appointments module.
  */
 @Component
 public class AppointmentNotificationListener {
@@ -21,7 +20,7 @@ public class AppointmentNotificationListener {
         this.notificationService = notificationService;
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @EventListener
     public void onAppointmentNotification(AppointmentNotificationEvent event) {
         switch (event.kind()) {
             case BOOKED -> notificationService.appointmentBooked(event.info());

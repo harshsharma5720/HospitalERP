@@ -18,7 +18,7 @@ Booking: create, reschedule and cancel appointments (also for relatives), the li
 
 - **Publishes:** `AppointmentNotificationEvent(kind, info)` when an appointment is booked or cancelled (`AppointmentService`), cancelled by an approved leave (`AppointmentLeaveCanceller`) or due for a reminder (`AppointmentReminderService`). (Administration publishes it too, for the bookings removed when a doctor account is deleted.)
 - **Listens to:**
-  - `AppointmentNotificationEvent` — `AppointmentNotificationListener` sends SMS/email via notifications **only after the transaction commits** (`@TransactionalEventListener(AFTER_COMMIT)`), so a failed booking never sends a message.
+  - `AppointmentNotificationEvent` — `AppointmentNotificationListener` queues the SMS/email in the notifications outbox **inside the same transaction** (`@EventListener`): they are stored exactly when the booking, cancellation or reminder is committed — a failed booking queues nothing — and sent right after the commit, with retries ([docs/RELIABLE_NOTIFICATIONS_PLAN.md](../../docs/RELIABLE_NOTIFICATIONS_PLAN.md)). The reminder flag and the reminder's messages are therefore saved together.
   - `DoctorLeaveApprovedEvent` (staff) — `AppointmentLeaveCanceller` cancels active bookings in the leave dates.
   - `RelativeDeletedEvent` (patients) — `AppointmentRelativeUnlinker` keeps the bookings but removes the link to the relative.
   - `DoctorScheduleChangedEvent` (scheduling) — `ScheduleChangeSlotCleaner` keeps booked slots and lets scheduling remove the unused ones.
@@ -46,6 +46,6 @@ Access rules (`appointments.web.AppointmentsSecurityRules`, a `ModuleSecurityRul
 
 ## Tests
 
-`AppointmentServiceTest`, `AppointmentReminderServiceTest`; end-to-end booking in `FeatureFlowH2Test`, after-commit notifications in `NotificationsH2Test` (`app`).
+`AppointmentServiceTest`, `AppointmentReminderServiceTest`; end-to-end booking in `FeatureFlowH2Test`, notifications through the outbox in `NotificationsH2Test` (`app`).
 
 Module diagram: [docs/modules/module-appointments.puml](../../docs/modules/module-appointments.puml).
