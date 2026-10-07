@@ -1,0 +1,58 @@
+/*
+ * Admin dashboard colors (docs/ADMIN_DASHBOARD_PLAN.md).
+ * Series: the dataviz reference palette, in a fixed order. "Missed" (past days) and "upcoming" (today) never
+ * share a bar, so the only colors that touch in a stack are completed/missed/upcoming next to cancelled and
+ * completed - those pairs were validated (colorblind separation, contrast) on the white card and, with the
+ * dark steps, on the dark card #1e293b. Aqua and yellow are below 3:1 on white, so the numbers are also in
+ * the table view under the chart.
+ */
+.admin-dash {
+  --dash-surface: #ffffff;
+  --dash-muted: #6b6a66;
+  --dash-grid: #e1e0d9;
+  --dash-axis: #c3c2b7;
+  --dash-hover: rgba(11, 11, 11, 0.05);
+  --dash-completed: #2a78d6;
+  --dash-missed: #eb6834;
+  --dash-upcoming: #eda100;
+  --dash-cancelled: #1baf7a;
+}
+
+.dark .admin-dash {
+  --dash-surface: #1e293b;
+  --dash-muted: #a3a29b;
+  --dash-grid: #334155;
+  --dash-axis: #475569;
+  --dash-hover: rgba(255, 255, 255, 0.06);
+  --dash-completed: #3987e5;
+  --dash-missed: #d95926;
+  --dash-upcoming: #c98500;
+  --dash-cancelled: #199e70;
+}
+
+/* A series' marks and swatches take their color from here (fill="currentColor") */
+.admin-dash .series-completed { color: var(--dash-completed); }
+.admin-dash .series-missed { color: var(--dash-missed); }
+.admin-dash .series-upcoming { color: var(--dash-upcoming); }
+.admin-dash .series-cancelled { color: var(--dash-cancelled); }
+
+.admin-dash .dash-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: currentColor;
+  flex: none;
+}
+
+/* Recessive chrome: solid hairline grid, quiet axis */
+.admin-dash .recharts-cartesian-grid-horizontal line { stroke: var(--dash-grid); }
+.admin-dash .recharts-cartesian-axis-line { stroke: var(--dash-axis); }
+.admin-dash .recharts-cartesian-axis-tick-line { stroke: var(--dash-axis); }
+.admin-dash .recharts-cartesian-axis-tick-value { fill: var(--dash-muted); font-size: 12px; }
+.admin-dash .recharts-tooltip-cursor { fill: var(--dash-hover); }
+
+/* Busiest lists: one hue, a thin bar per row */
+.admin-dash .dash-rank-bar { background: var(--dash-completed); height: 8px; border-radius: 0 4px 4px 0; }
+
+.admin-dash .dash-num { font-variant-numeric: tabular-nums; }

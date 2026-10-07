@@ -20,6 +20,10 @@ export const deleteUserPermanently = (userId) => axios.delete(`${API_BASE_URL}/a
 // By doctor id; also handles old doctor rows without a login account
 export const deactivateDoctor = (doctorId) => axios.delete(`${API_BASE_URL}/api/doctor/delete/${doctorId}`);
 
+// ---------- dashboard (docs/ADMIN_DASHBOARD_PLAN.md) ----------
+// days: 7, 30 or 90 - the period ends today
+export const getDashboard = (days) => axios.get(`${API_BASE_URL}/api/admin/dashboard`, { params: { days } });
+
 // ---------- audit log (docs/AUDIT_LOG_PLAN.md) ----------
 // params: patientId, username, action, from, to (yyyy-MM-dd), page (from 0), size (max 100) - all optional
 export const getAuditLog = (params) => axios.get(`${API_BASE_URL}/api/admin/audit-log`, { params });

@@ -234,7 +234,7 @@ The app will open at **http://localhost:3000**.
 
 | Role | Portal URL | Access |
 |------|------------|--------|
-| **Admin** | `/admin/dashboard` | User management, doctors, leave approval |
+| **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log |
 | **Doctor** | `/doctor/dashboard` | Appointments, leave, profile |
 | **Patient** | `/` (public pages) | Book appointments, manage relatives |
 | **Receptionist** | `/receptionist-appointments` | Manage all appointments |
@@ -264,6 +264,7 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 | Forgot password (6-digit code by SMS / email) | Everyone | `/forgot-password` (link on the login page) |
 | Deactivate / reactivate accounts — no login, hidden from booking, upcoming appointments cancelled, **all history kept**; permanent delete only for accounts without appointments ([details](docs/ACCOUNT_DEACTIVATION_PLAN.md)) | Admin | `/admin/manage-users`, `/admin/manage-doctor` |
 | Audit log — who viewed or changed which medical record, patient profile or account, and when; filters by patient, user, action and dates; entries kept forever ([details](docs/AUDIT_LOG_PLAN.md)) | Admin | `/admin/audit-log` |
+| Admin dashboard with real figures — today's appointments, doctors on leave, active accounts; for the last 7 / 30 / 90 days: appointments per day (completed, upcoming, missed, cancelled), cancellation and missed rates, new patients, busiest specializations and doctors ([details](docs/ADMIN_DASHBOARD_PLAN.md)) | Admin | `/admin/dashboard` |
 
 Medical records (consultations, prescriptions) are visible only to the patient, their doctor(s) and admins — receptionists cannot read them.
 
