@@ -13,6 +13,7 @@ GET /api/admin/allPending anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/allRejected anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/allUsers anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/audit-log anonymous- patient- doctor- receptionist- admin+
+GET /api/admin/dashboard anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorAppointmentCount/{doctorId} anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorCompletedAppointments/{userId} anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorPendingAppointments/{userId} anonymous- patient- doctor- receptionist- admin+

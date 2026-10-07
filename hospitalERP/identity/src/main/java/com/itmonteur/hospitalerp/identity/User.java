@@ -32,8 +32,20 @@ public class User {
 
     private LocalDateTime deactivatedAt;
 
+    // Set when the account is created (docs/ADMIN_DASHBOARD_PLAN.md); null for accounts older than the column
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
+
     public Long getId() {
         return id;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     public void setId(Long id) {

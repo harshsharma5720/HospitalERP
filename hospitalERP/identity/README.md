@@ -10,8 +10,8 @@ It does **not** create patient or staff profiles: it publishes `UserRegisteredEv
 
 | Class | Purpose |
 |---|---|
-| `User`, `Role` | The account entity (`users` table) and the roles `ADMIN`, `DOCTOR`, `PATIENT`, `RECEPTIONIST`. `active` / `deactivatedAt` mark a deactivated account (see [Deactivated accounts](#deactivated-accounts)). |
-| `UserService` | Other modules use this instead of the repository: `findUser`, `getAllUsers`, `updateContactDetails(user, email, phone)` (keeps the login account in sync when a profile's contact data changes), `deactivate(user)` / `reactivate(user)` (only set the flag; the use case is in administration), `deleteUser`, `deleteUserById` (permanent delete). |
+| `User`, `Role` | The account entity (`users` table) and the roles `ADMIN`, `DOCTOR`, `PATIENT`, `RECEPTIONIST`. `active` / `deactivatedAt` mark a deactivated account (see [Deactivated accounts](#deactivated-accounts)); `createdAt` is set by `AuthService.createUser` (empty for accounts older than 2026-10-06). |
+| `UserService` | Other modules use this instead of the repository: `findUser`, `getAllUsers`, `updateContactDetails(user, email, phone)` (keeps the login account in sync when a profile's contact data changes), `deactivate(user)` / `reactivate(user)` (only set the flag; the use case is in administration), `deleteUser`, `deleteUserById` (permanent delete); for the admin dashboard `countActiveAccountsPerRole`, `countNewAccountsPerDay(role, from, to)` (by `createdAt`) and `firstAccountCreationTime` (since when new accounts are counted). |
 | `CurrentUserService` | The logged-in user: `getCurrentUser`, `getCurrentUserId`, `hasRole`, `hasAnyRole`, `isStaff`, `requireSelfOrRole`. |
 | `AuthService` | `register` (self sign-up, always a patient), `createUser(request, role)` (used by administration), `login`, `isOtpRequired`, `parseRole`. |
 | `UserRegisteredEvent` | Published when an account is created. |

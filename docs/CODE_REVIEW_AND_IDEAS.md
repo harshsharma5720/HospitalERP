@@ -251,7 +251,7 @@ The main problems:
 
 ## 7. New Feature Ideas
 
-Grouped by module and roughly ordered by value against effort. ⭐ marks ideas that build directly on what already exists. Which ideas are done, partly done or still open: [section 11](#11-feature-status-updated-2026-10-06).
+Grouped by module and roughly ordered by value against effort. ⭐ marks ideas that build directly on what already exists. Which ideas are done, partly done or still open: [section 11](#11-feature-status-updated-2026-10-07).
 
 ### 7.1 Patient Experience
 - ⭐ **Medical records / visit history.** When a doctor marks an appointment completed, capture a **consultation note**: diagnosis, symptoms, vitals and follow-up date. The patient can see their full history. This turns the app from a booking tool into an EMR.
@@ -439,20 +439,20 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ---
 
-## 11. Feature Status (updated 2026-10-06)
+## 11. Feature Status (updated 2026-10-07)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (merged, PR #5) and the audit log (branch `feature/audit-log`).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6) and the real admin dashboard (branch `feature/admin-dashboard`).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
 - The patient's previous visits shown inside the consultation form; leave approval and rejection.
 - **Account deactivation instead of deletion** (2026-10-01, see below).
 - **Audit log** of who viewed or changed medical records, patient profiles and accounts (2026-10-05, see below).
+- **Admin dashboard with real figures** instead of the invented ones (2026-10-07, see below).
 
 **Partly done**
 - **Front-desk booking:** receptionists can book for an existing patient, but can't register a new walk-in patient on the spot.
 - **Doctor dashboard:** real counts of pending and completed appointments, but no analytics (patients per day, no-show rate).
-- **Admin dashboard:** the charts use **hard-coded numbers** (Mon 300, Tue 420 …), so the admin KPIs are effectively not built.
 - **Cancel and reschedule:** both work, but there's no cut-off rule, so a patient can cancel 5 minutes before the appointment.
 
 ### Not implemented yet
@@ -465,7 +465,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 4 | Automatic MySQL backups (backup container in docker-compose) | operations | ½ day |
 | 5 | Notifications that aren't lost when SMS/email is down (Modulith event registry) | reliability | 1 day |
 | 6 | In-app notification centre (bell icon) | platform | 3 days |
-| 7 | Real admin dashboard KPIs (replacing the fake chart data) | admin | 2 days |
+| 7 | ~~Real admin dashboard KPIs (replacing the fake chart data)~~ ✅ done 2026-10-07 | admin | — |
 | 8 | Doctor analytics (patients per day, no-show rate, busy hours) | doctor | 2 days |
 | 9 | Cancellation / reschedule cut-off rule | patients | 1 day |
 | 10 | Walk-in patient registration at the front desk | front desk | 1–2 days |
@@ -485,7 +485,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** 7 next (the admin dashboard shows made-up numbers), then 5 and 4, then front-desk work (10, 12, 11) or billing (18).
+**Suggested order:** 5 and 4 next (notifications that survive an outage, automatic backups), then front-desk work (10, 12, 11) or billing (18). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
 
 ### Account deactivation (done 2026-10-01)
 
@@ -538,3 +538,25 @@ From idea 7.4 ("audit log") — #2 above. Nothing recorded who opened a consulta
 - Running the migration on the real database ([MYSQL_FLYWAY_UPGRADE.md](MYSQL_FLYWAY_UPGRADE.md)) and a manual click-through.
 - Patients can't see who viewed their records yet ("admins only" was the decision); logins and appointment changes aren't recorded.
 - Other screens that show patient data (e.g. appointment lists with patient names) aren't audited; only profiles and medical records are.
+
+### Admin dashboard (done 2026-10-07)
+
+From idea 7.4 ("real dashboard KPIs") — #7 above. The admin dashboard showed invented numbers ("Sales Value $10,567", "Customers 345k", "Revenue", "Traffic Share", "Page Visits"). Now every figure comes from the system. Decisions, definitions and steps: [ADMIN_DASHBOARD_PLAN.md](ADMIN_DASHBOARD_PLAN.md).
+
+**Backend**
+- `GET /api/admin/dashboard?days=7|30|90` (admins only; the period ends today): today's appointments by status, doctors on leave today, active patients / doctors / receptionists; per day in the period: completed, upcoming, missed (past, never completed), cancelled and new patients; cancellation and missed rates; new patients; the five busiest specializations and doctors.
+- Each module computes its own figures with grouped count queries — appointments (`AppointmentStatistics`), identity (accounts per role, new accounts per day), staff (doctors on leave) — and administration combines them. Old appointment rows with only the `is_completed` flag count as completed, as everywhere else.
+
+**Frontend**
+- Admin → **Dashboard**: 7 / 30 / 90-day buttons, tiles for today and the period, a stacked column chart of appointments per day (legend, tooltip, table view), ranked lists of the busiest specializations and doctors. The fake cards are gone. Colors are validated for color-blind readers in light and dark mode.
+
+**Database change:** Flyway migration `identity/V2026_10_06_1__identity_user_created_at.sql` adds `users.created_at`; existing accounts stay empty, so "new patients" counts from the upgrade on (the dashboard says since when).
+
+**Tests added:**
+- Backend (11 new; 121 passing, 1 skipped without a MySQL `DB_URL`): the count queries with known data (incl. an old completed row, overlapping leaves, deactivated accounts), how the dashboard combines them (figures worked out by hand), two end-to-end tests (creation time, the endpoint), and every new query once on MySQL 8.
+- Frontend (7 new, 35 total): the dashboard page and a real render of the chart.
+
+**Not covered yet:**
+- Running the migration on the real database ([MYSQL_FLYWAY_UPGRADE.md](MYSQL_FLYWAY_UPGRADE.md)) and a click-through with real data.
+- Revenue figures: they need billing (#18).
+- Upcoming load beyond today (e.g. bookings for the next 7 days) and per-doctor utilisation against their schedule are possible follow-ups.

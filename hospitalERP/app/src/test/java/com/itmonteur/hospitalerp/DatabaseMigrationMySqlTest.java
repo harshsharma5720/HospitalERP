@@ -1,5 +1,10 @@
 package com.itmonteur.hospitalerp;
 
+import com.itmonteur.hospitalerp.appointments.AppointmentStatistics;
+import com.itmonteur.hospitalerp.identity.Role;
+import com.itmonteur.hospitalerp.identity.UserService;
+import com.itmonteur.hospitalerp.staff.LeaveRequestService;
+
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +22,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +74,9 @@ class DatabaseMigrationMySqlTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired private AppointmentStatistics appointmentStatistics;
+    @Autowired private UserService userService;
+    @Autowired private LeaveRequestService leaveRequestService;
 
     @Test
     void existingDatabaseIsBaselinedAndCleanedUpWithoutLosingData() {
@@ -76,17 +85,33 @@ class DatabaseMigrationMySqlTest {
                 "SELECT version, type, success FROM flyway_schema_history ORDER BY installed_rank");
         assertThat(history).extracting(row -> row.get("version") + " " + row.get("type"))
                 .containsExactly("1 BASELINE", "2026.09.28.1 SQL", "2026.09.28.2 SQL", "2026.09.30.1 SQL",
-                        "2026.10.05.1 SQL");
+                        "2026.10.05.1 SQL", "2026.10.06.1 SQL");
         assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isIn(true, 1));
 
         assertThat(legacyColumnsIn(jdbc, "hospital")).isEmpty();
         // Existing accounts stay active after the account-status migration
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE active = 1 AND deactivated_at IS NULL", Integer.class))
                 .isEqualTo(2);
+        // Existing accounts have no creation time; only new ones get one (docs/ADMIN_DASHBOARD_PLAN.md)
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE created_at IS NULL", Integer.class)).isEqualTo(2);
         // The audit log starts empty (docs/AUDIT_LOG_PLAN.md)
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_log", Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT name FROM doctor WHERE id = 1", String.class)).isEqualTo("Rao");
         assertThat(jdbc.queryForObject("SELECT patient_name FROM patient WHERE patient_id = 1", String.class)).isEqualTo("Asha");
+    }
+
+    // The admin dashboard's grouped queries also run on MySQL (stricter GROUP BY rules than H2)
+    @Test
+    void dashboardQueriesRunOnMySql() {
+        LocalDate today = LocalDate.now();
+        assertThat(appointmentStatistics.perDay(today.minusDays(6), today)).hasSize(7)
+                .allSatisfy(day -> assertThat(day.total()).isZero());
+        assertThat(appointmentStatistics.busiestSpecializations(today.minusDays(29), today, 5)).isEmpty();
+        assertThat(appointmentStatistics.busiestDoctors(today.minusDays(29), today, 5)).isEmpty();
+        assertThat(userService.countActiveAccountsPerRole()).containsEntry(Role.PATIENT, 1L).containsEntry(Role.DOCTOR, 1L);
+        assertThat(userService.countNewAccountsPerDay(Role.PATIENT, today.minusDays(6), today)).isEmpty();
+        assertThat(userService.firstAccountCreationTime()).isEmpty(); // the existing accounts have no creation time
+        assertThat(leaveRequestService.countDoctorsOnLeave(today)).isZero();
     }
 
     @Test

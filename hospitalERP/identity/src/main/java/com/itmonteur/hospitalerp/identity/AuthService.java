@@ -21,6 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+
 @Service
 public class AuthService {
 
@@ -33,10 +36,12 @@ public class AuthService {
     private final OtpService otpService;
     private final LoginAttemptService loginAttemptService;
     private final ApplicationEventPublisher eventPublisher;
+    private final Clock clock;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JWTService jwtService,
                        AuthenticationManager authenticationManager, OtpService otpService,
-                       LoginAttemptService loginAttemptService, ApplicationEventPublisher eventPublisher) {
+                       LoginAttemptService loginAttemptService, ApplicationEventPublisher eventPublisher,
+                       Clock clock) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -44,6 +49,7 @@ public class AuthService {
         this.otpService = otpService;
         this.loginAttemptService = loginAttemptService;
         this.eventPublisher = eventPublisher;
+        this.clock = clock;
     }
 
     @Value("${app.otp.required:true}")
@@ -90,6 +96,7 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(role);
         user.setPhoneNumber(request.getPhoneNumber());
+        user.setCreatedAt(LocalDateTime.now(clock));
         User savedUser = userRepository.save(user);
         eventPublisher.publishEvent(new UserRegisteredEvent(savedUser));
         logger.info("User {} created with role {}", savedUser.getUsername(), savedUser.getRole());
