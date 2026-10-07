@@ -753,6 +753,95 @@ class FeatureFlowH2Test {
         }
     }
 
+    // Admin dashboard, step B.3: GET /api/admin/dashboard. Other tests share this database, so the test
+    // checks how the figures change when it adds known data.
+    @Test
+    void adminDashboardShowsRealFigures() throws Exception {
+        String admin = login("flowadmin", "flow-admin-123");
+        LocalDate today = LocalDate.now();
+        JsonNode before = dashboard(admin, 7);
+
+        long doctorUserId = json.readTree(call(HttpMethod.POST, "/api/admin/users", admin, """
+                {"username":"drdash","email":"drdash@example.com","password":"doctor-123",
+                 "phoneNumber":"+911111111119","role":"DOCTOR"}""").getBody()).get("id").asLong();
+        String doctor = login("drdash", "doctor-123");
+        LocalDate tomorrow = today.plusDays(1);
+        assertThat(call(HttpMethod.PUT, "/api/doctor/" + doctorUserId + "/schedule", doctor,
+                "[{\"dayOfWeek\":\"" + tomorrow.getDayOfWeek() + "\",\"shift\":\"MORNING\",\"working\":true,"
+                        + "\"startTime\":\"10:00\",\"endTime\":\"12:00\",\"slotMinutes\":30}]").getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        String patient = register("dashpatient");
+        JsonNode slots = json.readTree(call(HttpMethod.GET, "/api/slots/available/" + findDoctorId("drdash")
+                + "?date=" + tomorrow + "&shift=MORNING", patient, null).getBody());
+        long completed = book(patient, slots.get(0).get("id").asLong());
+        long neverCompleted = book(patient, slots.get(1).get("id").asLong());
+        long upcoming = book(patient, slots.get(2).get("id").asLong());
+        long cancelled = book(patient, slots.get(3).get("id").asLong());
+        assertThat(call(HttpMethod.PUT, "/api/consultations/appointment/" + completed, doctor,
+                "{\"diagnosis\":\"Migraine\",\"medicines\":[{\"medicineName\":\"Paracetamol\"}]}").getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.DELETE, "/appointment/CancelAppointment/" + cancelled, patient, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        // Bookings can only be made for the future, so two are moved to yesterday and two to today
+        jdbc.update("UPDATE appointments SET date = ? WHERE appointmentid IN (?, ?)", today.minusDays(1), completed, neverCompleted);
+        jdbc.update("UPDATE appointments SET date = ? WHERE appointmentid IN (?, ?)", today, upcoming, cancelled);
+
+        JsonNode after = dashboard(admin, 7);
+        assertThat(after.at("/period/days").asInt()).isEqualTo(7);
+        assertThat(after.at("/period/from").asText()).isEqualTo(today.minusDays(6).toString());
+        assertThat(after.at("/period/to").asText()).isEqualTo(today.toString());
+        assertThat(after.get("trend")).hasSize(7);
+        assertThat(after.at("/trend/6/date").asText()).isEqualTo(today.toString());
+
+        // Today: one upcoming and one cancelled appointment more, one more active doctor and patient
+        assertThat(change(before, after, "/today/appointments")).isEqualTo(2);
+        assertThat(change(before, after, "/today/upcoming")).isEqualTo(1);
+        assertThat(change(before, after, "/today/cancelled")).isEqualTo(1);
+        assertThat(change(before, after, "/today/completed")).isZero();
+        assertThat(change(before, after, "/today/activeDoctors")).isEqualTo(1);
+        assertThat(change(before, after, "/today/activePatients")).isEqualTo(1);
+        // Yesterday: one completed, one never completed (missed)
+        assertThat(change(before, after, "/trend/5/completed")).isEqualTo(1);
+        assertThat(change(before, after, "/trend/5/missed")).isEqualTo(1);
+        assertThat(change(before, after, "/trend/6/upcoming")).isEqualTo(1);
+        assertThat(change(before, after, "/cancellations/cancelledByPatient")).isEqualTo(1);
+        assertThat(change(before, after, "/cancellations/missed")).isEqualTo(1);
+        assertThat(change(before, after, "/cancellations/appointments")).isEqualTo(4);
+        // dashpatient registered today
+        assertThat(change(before, after, "/newPatients/count")).isEqualTo(1);
+        assertThat(change(before, after, "/trend/6/newPatients")).isEqualTo(1);
+        assertThat(after.at("/newPatients/countedSince").isNull()).isFalse();
+        // drdash: three appointments in the period (the cancelled one doesn't count), one completed
+        long drdashId = findDoctorId("drdash");
+        JsonNode drdash = null;
+        for (JsonNode d : after.get("busiestDoctors")) {
+            if (d.get("doctorId").asLong() == drdashId) {
+                drdash = d;
+            }
+        }
+        assertThat(drdash).as("drdash among the busiest doctors").isNotNull();
+        assertThat(drdash.get("appointments").asLong()).isEqualTo(3);
+        assertThat(drdash.get("completed").asLong()).isEqualTo(1);
+
+        // Other periods, a wrong period, and admins only
+        assertThat(dashboard(admin, 30).get("trend")).hasSize(30);
+        assertThat(dashboard(admin, 90).at("/period/from").asText()).isEqualTo(today.minusDays(89).toString());
+        assertThat(call(HttpMethod.GET, "/api/admin/dashboard?days=10", admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(call(HttpMethod.GET, "/api/admin/dashboard?days=7", patient, null).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    private JsonNode dashboard(String token, int days) throws Exception {
+        ResponseEntity<String> response = call(HttpMethod.GET, "/api/admin/dashboard?days=" + days, token, null);
+        assertThat(response.getStatusCode()).as("dashboard " + days).isEqualTo(HttpStatus.OK);
+        return json.readTree(response.getBody());
+    }
+
+    private static long change(JsonNode before, JsonNode after, String pointer) {
+        return after.at(pointer).asLong() - before.at(pointer).asLong();
+    }
+
     private JsonNode auditPage(String token, String url) throws Exception {
         ResponseEntity<String> response = call(HttpMethod.GET, url, token, null);
         assertThat(response.getStatusCode()).as(url).isEqualTo(HttpStatus.OK);
