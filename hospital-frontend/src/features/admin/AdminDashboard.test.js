@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import AdminDashboard from "./AdminDashboard";
 import * as adminApi from "./api";
 
@@ -37,7 +38,16 @@ const DASHBOARD = {
     { specialist: "NOT_ASSIGNED", appointments: 1 },
   ],
   busiestDoctors: [{ doctorId: 7, doctorName: "Dr Rao", specialist: "CARDIOLOGY", appointments: 4, completed: 3 }],
+  undeliveredNotifications: 2,
 };
+
+// The dashboard links to other admin pages, so it needs a router
+const renderDashboard = () =>
+  render(
+    <MemoryRouter>
+      <AdminDashboard />
+    </MemoryRouter>
+  );
 
 const tile = (label) => screen.getByText(label, { selector: "p" }).closest("div");
 
@@ -45,7 +55,7 @@ beforeEach(() => adminApi.getDashboard.mockResolvedValue({ data: DASHBOARD }));
 afterEach(() => jest.resetAllMocks());
 
 test("shows today's and the period's real figures - no invented numbers", async () => {
-  render(<AdminDashboard />);
+  renderDashboard();
 
   expect(await screen.findByText("Today · 6 Oct 2026")).toBeInTheDocument();
   expect(adminApi.getDashboard).toHaveBeenCalledWith(7);
@@ -71,12 +81,17 @@ test("shows today's and the period's real figures - no invented numbers", async 
   expect(screen.getByText("Dr Rao · Cardiology")).toBeInTheDocument();
   expect(screen.getByText("4 (3 completed)")).toBeInTheDocument();
 
+  // Undelivered notifications, with a way to the page that resends them
+  expect(within(tile("Undelivered notifications")).getByText("2")).toBeInTheDocument();
+  expect(within(tile("Undelivered notifications")).getByRole("link", { name: "View and resend" }))
+    .toHaveAttribute("href", "/admin/notifications");
+
   // The old placeholder cards are gone
   expect(screen.queryByText(/Sales Value|Revenue|Traffic Share|Page Visits/)).not.toBeInTheDocument();
 });
 
 test("the numbers behind the chart are also in a table, newest day first", async () => {
-  render(<AdminDashboard />);
+  renderDashboard();
   await screen.findByText("Today · 6 Oct 2026");
 
   const rows = within(screen.getByRole("table")).getAllByRole("row");
@@ -86,7 +101,7 @@ test("the numbers behind the chart are also in a table, newest day first", async
 });
 
 test("the period buttons switch between 7, 30 and 90 days", async () => {
-  render(<AdminDashboard />);
+  renderDashboard();
   await screen.findByText("Today · 6 Oct 2026");
   expect(screen.getByRole("button", { name: "7 days" })).toHaveAttribute("aria-pressed", "true");
 
@@ -108,7 +123,7 @@ test("a late answer to an earlier click doesn't overwrite the newer period", asy
       ? new Promise((resolve) => { answerFor7 = resolve; })
       : Promise.resolve({ data: { ...DASHBOARD, period: { days: 90, from: "2026-07-09", to: "2026-10-06" } } })
   );
-  render(<AdminDashboard />);
+  renderDashboard();
   fireEvent.click(screen.getByRole("button", { name: "90 days" }));
   expect(await screen.findByText("Last 90 days · 9 Jul 2026 – 6 Oct 2026")).toBeInTheDocument();
 
@@ -123,19 +138,22 @@ test("an empty period says so instead of showing empty lists", async () => {
       busiestSpecializations: [],
       busiestDoctors: [],
       newPatients: { count: 0, countedSince: null },
+      undeliveredNotifications: 0,
     },
   });
-  render(<AdminDashboard />);
+  renderDashboard();
 
   expect(await screen.findAllByText("No appointments in this period.")).toHaveLength(2);
   expect(screen.getByText("Counting starts with the next new account")).toBeInTheDocument();
+  expect(screen.getByText("Every email and SMS went out or is still being tried")).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "View and resend" })).not.toBeInTheDocument();
 });
 
 test("shows the server's message when the dashboard can't be loaded", async () => {
   adminApi.getDashboard.mockRejectedValue({
     response: { status: 400, data: { message: "The period must be 7, 30 or 90 days" } },
   });
-  render(<AdminDashboard />);
+  renderDashboard();
 
   expect(await screen.findByRole("alert")).toHaveTextContent("The period must be 7, 30 or 90 days");
   await waitFor(() => expect(screen.queryByText("Loading dashboard...")).not.toBeInTheDocument());

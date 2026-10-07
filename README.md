@@ -234,7 +234,7 @@ The app will open at **http://localhost:3000**.
 
 | Role | Portal URL | Access |
 |------|------------|--------|
-| **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log |
+| **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log, notifications |
 | **Doctor** | `/doctor/dashboard` | Appointments, leave, profile |
 | **Patient** | `/` (public pages) | Book appointments, manage relatives |
 | **Receptionist** | `/receptionist-appointments` | Manage all appointments |
@@ -265,6 +265,7 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 | Deactivate / reactivate accounts — no login, hidden from booking, upcoming appointments cancelled, **all history kept**; permanent delete only for accounts without appointments ([details](docs/ACCOUNT_DEACTIVATION_PLAN.md)) | Admin | `/admin/manage-users`, `/admin/manage-doctor` |
 | Audit log — who viewed or changed which medical record, patient profile or account, and when; filters by patient, user, action and dates; entries kept forever ([details](docs/AUDIT_LOG_PLAN.md)) | Admin | `/admin/audit-log` |
 | Admin dashboard with real figures — today's appointments, doctors on leave, active accounts; for the last 7 / 30 / 90 days: appointments per day (completed, upcoming, missed, cancelled), cancellation and missed rates, new patients, busiest specializations and doctors ([details](docs/ADMIN_DASHBOARD_PLAN.md)) | Admin | `/admin/dashboard` |
+| Appointment emails / SMS that aren't lost: queued with the booking or cancellation, retried for up to 24 hours (never after the visit); undelivered ones listed with a Resend button and counted on the dashboard ([details](docs/RELIABLE_NOTIFICATIONS_PLAN.md)) | Admin (automatic for everyone) | `/admin/notifications` |
 
 Medical records (consultations, prescriptions) are visible only to the patient, their doctor(s) and admins — receptionists cannot read them.
 

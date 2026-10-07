@@ -28,6 +28,13 @@ export const getDashboard = (days) => axios.get(`${API_BASE_URL}/api/admin/dashb
 // params: patientId, username, action, from, to (yyyy-MM-dd), page (from 0), size (max 100) - all optional
 export const getAuditLog = (params) => axios.get(`${API_BASE_URL}/api/admin/audit-log`, { params });
 
+// ---------- notifications outbox (docs/RELIABLE_NOTIFICATIONS_PLAN.md) ----------
+// params: status (PENDING, SENDING, SENT, SKIPPED, FAILED - all when missing), page, size
+export const getNotifications = (params) => axios.get(`${API_BASE_URL}/api/admin/notifications`, { params });
+
+// Only failed or skipped messages; the server answers 409 otherwise
+export const resendNotification = (id) => axios.post(`${API_BASE_URL}/api/admin/notifications/${id}/resend`);
+
 // ---------- leave requests ----------
 export const getPendingLeaves = () => axios.get(`${API_BASE_URL}/api/admin/allPending`);
 

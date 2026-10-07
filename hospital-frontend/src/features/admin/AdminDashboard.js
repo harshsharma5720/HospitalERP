@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import * as adminApi from "./api";
 import AppointmentTrendChart, { SERIES } from "./AppointmentTrendChart";
@@ -105,7 +106,7 @@ export default function AdminDashboard() {
             <h2 id="dash-today" className="text-xl font-semibold mb-3">
               Today · {formatDay(today.date)}
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
               <StatTile
                 label="Appointments today"
                 value={formatCount(today.appointments)}
@@ -115,6 +116,19 @@ export default function AdminDashboard() {
               <StatTile label="Active patients" value={formatCount(today.activePatients)} />
               <StatTile label="Active doctors" value={formatCount(today.activeDoctors)} />
               <StatTile label="Active receptionists" value={formatCount(today.activeReceptionists)} />
+              <StatTile
+                label="Undelivered notifications"
+                value={formatCount(data.undeliveredNotifications)}
+                note={
+                  data.undeliveredNotifications > 0 ? (
+                    <Link to="/admin/notifications" className="text-blue-700 dark:text-blue-300 underline">
+                      View and resend
+                    </Link>
+                  ) : (
+                    "Every email and SMS went out or is still being tried"
+                  )
+                }
+              />
             </div>
           </section>
 
