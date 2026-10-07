@@ -171,7 +171,83 @@ class NotificationsH2Test {
                 .as("reminded once").hasSize(2);
     }
 
+    // Step C.3: admins see what couldn't be delivered, and can send it again
+    @Test
+    void adminsSeeUndeliveredMessagesAndCanResendThem() throws Exception {
+        String admin = login("notifyadmin", "notify-admin-123");
+        long undeliveredBefore = dashboard(admin).get("undeliveredNotifications").asLong();
+        // An SMS about a visit that is already over: the first attempt fails and there is no time left to retry
+        doThrow(new RuntimeException("Twilio is down")).when(smsService).send(eq("+919800000077"), anyString());
+        inTransaction(() -> publisher.publishEvent(new AppointmentNotificationEvent(
+                AppointmentNotificationEvent.Kind.CANCELLED_BY_DOCTOR_LEAVE,
+                new NotificationService.AppointmentInfo("Late Patient", null, "+919800000077", "Dr Test", null, null,
+                        LocalDate.now().minusDays(1).toString(), "09:00 - 09:10"))));
+        sender.sendDueMessages();
+
+        JsonNode failedPage = adminGet(admin, "/api/admin/notifications?status=FAILED&size=100");
+        JsonNode failed = entryFor(failedPage, "+919800000077");
+        assertThat(failed.get("status").asText()).isEqualTo("FAILED");
+        assertThat(failed.get("channel").asText()).isEqualTo("SMS");
+        assertThat(failed.get("description").asText()).isEqualTo("leave cancellation SMS to patient");
+        assertThat(failed.get("attempts").asInt()).isEqualTo(1);
+        assertThat(failed.get("lastError").asText()).isEqualTo("RuntimeException: Twilio is down");
+        assertThat(failed.has("body")).as("the list doesn't carry message texts").isFalse();
+        assertThat(failedPage.get("totalEntries").asLong()).isGreaterThanOrEqualTo(1);
+        assertThat(dashboard(admin).get("undeliveredNotifications").asLong()).isEqualTo(undeliveredBefore + 1);
+
+        // Twilio works again: the admin resends it - a fresh 24-hour window - and it goes out
+        doNothing().when(smsService).send(eq("+919800000077"), anyString());
+        long id = failed.get("id").asLong();
+        ResponseEntity<String> resent = call(HttpMethod.POST, "/api/admin/notifications/" + id + "/resend", admin, null);
+        assertThat(resent.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode pending = json.readTree(resent.getBody());
+        assertThat(pending.get("status").asText()).isEqualTo("PENDING");
+        assertThat(LocalDateTime.parse(pending.get("giveUpAt").asText()))
+                .isAfter(LocalDateTime.now().plusHours(23)).isBefore(LocalDateTime.now().plusHours(25));
+        sender.sendDueMessages();
+        assertThat(entryFor(adminGet(admin, "/api/admin/notifications?status=SENT&size=100"), "+919800000077")
+                .get("attempts").asInt()).isEqualTo(2);
+        assertThat(dashboard(admin).get("undeliveredNotifications").asLong()).isEqualTo(undeliveredBefore);
+
+        // Only failed or skipped messages can be resent; unknown ids, bad filters and non-admins are refused
+        assertThat(call(HttpMethod.POST, "/api/admin/notifications/" + id + "/resend", admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT);
+        assertThat(call(HttpMethod.POST, "/api/admin/notifications/99999999/resend", admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(call(HttpMethod.GET, "/api/admin/notifications?status=NOPE", admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        String patient = register("notifynosy");
+        assertThat(call(HttpMethod.GET, "/api/admin/notifications", patient, null).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(call(HttpMethod.POST, "/api/admin/notifications/" + id + "/resend", patient, null).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        // All statuses, newest first, with paging
+        JsonNode all = adminGet(admin, "/api/admin/notifications?size=2");
+        assertThat(all.get("size").asInt()).isEqualTo(2);
+        assertThat(all.get("entries")).hasSizeLessThanOrEqualTo(2);
+        assertThat(all.get("totalEntries").asLong()).isGreaterThanOrEqualTo(2);
+    }
+
     // ------------------------------------------------------------------ helpers
+
+    private JsonNode adminGet(String token, String url) throws Exception {
+        ResponseEntity<String> response = call(HttpMethod.GET, url, token, null);
+        assertThat(response.getStatusCode()).as(url).isEqualTo(HttpStatus.OK);
+        return json.readTree(response.getBody());
+    }
+
+    private JsonNode dashboard(String adminToken) throws Exception {
+        return adminGet(adminToken, "/api/admin/dashboard?days=7");
+    }
+
+    private static JsonNode entryFor(JsonNode page, String recipient) {
+        for (JsonNode entry : page.get("entries")) {
+            if (recipient.equals(entry.get("recipient").asText())) {
+                return entry;
+            }
+        }
+        throw new AssertionError("no message to " + recipient + " in " + page);
+    }
 
     private static NotificationService.AppointmentInfo info(String patientName, String patientEmail) {
         return new NotificationService.AppointmentInfo(patientName, patientEmail, null, "Dr Test", null, null,

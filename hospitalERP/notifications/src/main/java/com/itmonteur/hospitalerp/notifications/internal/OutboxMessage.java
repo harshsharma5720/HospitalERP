@@ -110,7 +110,7 @@ public class OutboxMessage {
     }
 
     /** An admin's resend: due at once, with a fresh retry window. */
-    void resend(LocalDateTime now, LocalDateTime newGiveUpAt) {
+    public void resend(LocalDateTime now, LocalDateTime newGiveUpAt) {
         status = OutboxStatus.PENDING;
         nextAttemptAt = now;
         giveUpAt = newGiveUpAt;

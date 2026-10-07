@@ -1,6 +1,7 @@
 package com.itmonteur.hospitalerp.notifications.internal;
 
 import com.itmonteur.hospitalerp.notifications.OutboxStatus;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -12,6 +13,10 @@ import java.util.Collection;
 import java.util.List;
 
 public interface OutboxRepository extends JpaRepository<OutboxMessage, Long> {
+
+    Page<OutboxMessage> findByStatus(OutboxStatus status, Pageable pageable);
+
+    long countByStatus(OutboxStatus status);
 
     /** Due messages: pending ones whose time has come, and claimed ones whose sender died (lease over). */
     @Query("SELECT m.id FROM OutboxMessage m WHERE m.status IN ("

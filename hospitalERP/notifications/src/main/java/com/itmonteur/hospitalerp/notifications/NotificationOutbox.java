@@ -1,11 +1,17 @@
 package com.itmonteur.hospitalerp.notifications;
 
+import com.itmonteur.hospitalerp.common.ConflictException;
+import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
 import com.itmonteur.hospitalerp.notifications.internal.OutboxMessage;
 import com.itmonteur.hospitalerp.notifications.internal.OutboxRepository;
 import com.itmonteur.hospitalerp.notifications.internal.OutboxScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -52,6 +58,50 @@ public class NotificationOutbox {
     public void queueSms(String phoneNumber, String text, String description, LocalDateTime notAfter) {
         queue(OutboxChannel.SMS, phoneNumber, null, text, description, notAfter);
     }
+
+    // ------------------------------------------------------------------ admin (docs/RELIABLE_NOTIFICATIONS_PLAN.md, C.3)
+
+    /** Messages with the given status (all when null), newest first; {@code size} is capped at 100. */
+    @Transactional(readOnly = true)
+    public Page<OutboxMessageDTO> search(OutboxStatus status, int page, int size) {
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100),
+                Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
+        Page<OutboxMessage> result = status == null ? repository.findAll(pageable) : repository.findByStatus(status, pageable);
+        return result.map(NotificationOutbox::toDTO);
+    }
+
+    /**
+     * Sends a failed (or skipped) message again: due at once, retried for another 24 hours, sent right after
+     * this commit. Anything else is a conflict - it is still being sent, or already was.
+     */
+    @Transactional
+    public OutboxMessageDTO resend(Long id) {
+        OutboxMessage message = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", id));
+        if (message.getStatus() != OutboxStatus.FAILED && message.getStatus() != OutboxStatus.SKIPPED) {
+            throw new ConflictException("Only failed or skipped messages can be resent; this one is "
+                    + message.getStatus().name().toLowerCase());
+        }
+        LocalDateTime now = LocalDateTime.now(clock);
+        message.resend(now, now.plus(MAX_RETRY_WINDOW));
+        logger.info("Outbox message {} ({}) queued again by an admin", id, message.getDescription());
+        sendAfterCommit();
+        return toDTO(message);
+    }
+
+    /** Messages that could not be delivered (failed, not resent yet). */
+    @Transactional(readOnly = true)
+    public long countUndelivered() {
+        return repository.countByStatus(OutboxStatus.FAILED);
+    }
+
+    private static OutboxMessageDTO toDTO(OutboxMessage m) {
+        return new OutboxMessageDTO(m.getId(), m.getChannel(), m.getRecipient(), m.getSubject(), m.getDescription(),
+                m.getStatus(), m.getAttempts(), m.getLastError(), m.getCreatedAt(), m.getNextAttemptAt(),
+                m.getGiveUpAt(), m.getSentAt());
+    }
+
+    // ------------------------------------------------------------------ queueing
 
     private void queue(OutboxChannel channel, String recipient, String subject, String body, String description,
                        LocalDateTime notAfter) {
