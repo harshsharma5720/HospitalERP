@@ -9,7 +9,7 @@
 	</parent>
 	<artifactId>hospital-notifications</artifactId>
 	<name>hospital-notifications</name>
-	<description>Delivery channels: email, SMS (Twilio) and message templates. Knows nothing about appointments.</description>
+	<description>Delivery channels: email, SMS (Twilio), message templates and the outbox that retries undelivered messages. Knows nothing about appointments.</description>
 
 	<!-- The modules this one may use (docs/MULTI_MODULE_PLAN.md §2.1). Modules above it are not on its classpath at all;
 	     tools/check_module_deps.py also flags a lower module that is only reachable transitively. -->
@@ -21,6 +21,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+		<!-- The outbox of undelivered messages (docs/RELIABLE_NOTIFICATIONS_PLAN.md) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework</groupId>

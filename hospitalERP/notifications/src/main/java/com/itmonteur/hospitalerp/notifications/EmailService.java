@@ -2,6 +2,7 @@ package com.itmonteur.hospitalerp.notifications;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -11,9 +12,16 @@ import org.springframework.web.util.HtmlUtils;
 public class EmailService {
 
     private final JavaMailSender mailSender;
+    private final String mailHost;
 
-    public EmailService(JavaMailSender mailSender) {
+    public EmailService(JavaMailSender mailSender, @Value("${spring.mail.host:}") String mailHost) {
         this.mailSender = mailSender;
+        this.mailHost = mailHost;
+    }
+
+    /** False when no SMTP host is configured: then nothing can be sent (the outbox marks such mails skipped). */
+    public boolean isEnabled() {
+        return mailHost != null && !mailHost.isBlank();
     }
 
     public void sendBookingEmail(String toEmail, String patientName, String doctorName, String date, String time) throws MessagingException {
@@ -164,6 +172,22 @@ public class EmailService {
 
     // Wraps the body in the common layout (card + signature + footer)
     private void send(String toEmail, String subject, String bodyHtml) throws MessagingException {
+        sendHtml(toEmail, subject, layout(bodyHtml));
+    }
+
+    /** The common layout around a mail body: card, signature, footer. */
+    public static String layout(String bodyHtml) {
+        return "<div style='font-family: Arial, sans-serif; padding: 20px; border-radius: 10px; border:1px solid #ddd;'>"
+                + bodyHtml
+                + "<br/><p>Thank you,</p>"
+                + "<h3 style='color:#1B4F72;'>Hospital ERP Team</h3>"
+                + "<hr style='border-top:1px solid #ccc;'/>"
+                + "<small style='color:#777;'>This is an automated email. Please do not reply.</small>"
+                + "</div>";
+    }
+
+    /** Sends a finished HTML mail (layout included). Does nothing without an address. */
+    public void sendHtml(String toEmail, String subject, String html) throws MessagingException {
         if (toEmail == null || toEmail.isBlank()) {
             return;
         }
@@ -171,13 +195,7 @@ public class EmailService {
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
         helper.setTo(toEmail);
         helper.setSubject(subject);
-        helper.setText("<div style='font-family: Arial, sans-serif; padding: 20px; border-radius: 10px; border:1px solid #ddd;'>"
-                + bodyHtml
-                + "<br/><p>Thank you,</p>"
-                + "<h3 style='color:#1B4F72;'>Hospital ERP Team</h3>"
-                + "<hr style='border-top:1px solid #ccc;'/>"
-                + "<small style='color:#777;'>This is an automated email. Please do not reply.</small>"
-                + "</div>", true);
+        helper.setText(html, true);
         mailSender.send(message);
     }
 
