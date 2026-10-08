@@ -18,6 +18,7 @@ public final class PatientMapper {
         dto.setGender(ptInfo.getGender());
         dto.setUserName(ptInfo.getUserName());
         dto.setProfileImage(ptInfo.getProfileImage());
+        dto.setHasLogin(ptInfo.getUser() != null);
         return dto;
     }
 }

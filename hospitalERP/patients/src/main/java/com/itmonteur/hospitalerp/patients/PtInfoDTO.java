@@ -15,6 +15,8 @@ public class PtInfoDTO {
     private Gender gender;
     private String userName;
     private String profileImage;
+    // false for a walk-in record registered at the front desk (no login account)
+    private boolean hasLogin;
 
     public PtInfoDTO() {
     }
@@ -110,5 +112,13 @@ public class PtInfoDTO {
 
     public void setProfileImage(String profileImage) {
         this.profileImage = profileImage;
+    }
+
+    public boolean isHasLogin() {
+        return hasLogin;
+    }
+
+    public void setHasLogin(boolean hasLogin) {
+        this.hasLogin = hasLogin;
     }
 }

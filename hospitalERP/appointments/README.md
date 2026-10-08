@@ -30,12 +30,15 @@ Booking: create, reschedule and cancel appointments (also for relatives), the li
 | `AppointmentController` | `/appointment` (patient booking, cancel, lists) |
 | `DoctorAppointmentController` | `/api/doctor` (a doctor's appointments, complete, counts) |
 | `ReceptionistAppointmentController` | `/api/receptionist` (front-desk booking and lists) |
+| `FrontDeskController` | `/api/receptionist` — walk-in patients ([docs/WALK_IN_REGISTRATION_PLAN.md](../../docs/WALK_IN_REGISTRATION_PLAN.md)): `GET /patients?phone=` (patients with that number, recorded in the audit log), `GET /doctors/{doctorId}/next-free-slots?limit=5` (1-20, in time order), `POST /walk-in` (book for an existing patient, or register a new walk-in patient and book, in one step) |
 
-Access rules (`appointments.web.AppointmentsSecurityRules`, a `ModuleSecurityRules` bean): the `/appointment` overview lists admins + receptionists, `getDoctorAppointments` doctors, the rest of `/appointment/**` all roles (ownership is checked in `AppointmentService`).
+Access rules (`appointments.web.AppointmentsSecurityRules`, a `ModuleSecurityRules` bean): the `/appointment` overview lists admins + receptionists, `getDoctorAppointments` doctors, the rest of `/appointment/**` all roles (ownership is checked in `AppointmentService`). Everything under `/api/receptionist` is for receptionists and admins (staff's rules).
 
 ## Internal — `appointments.internal`
 
 `AppointmentRepository`, `AppointmentMapper`, the four listeners above, and `AppointmentReminderService` — a scheduled job that sends the day-before reminders.
+
+`FrontDeskService` (with `WalkInBookingRequest`, `WalkInBookingDTO`, `FreeSlotDTO`) — the front desk's walk-in patients. `registerAndBook` takes either `patientId` or `newPatient` (name, phone, gender; date of birth and email optional), plus `slotId`, `age` (0-130; needed when no date of birth is known) and an optional `message`. It is **one transaction**: the new patient is registered (`PtInfoService.registerWalkIn`) and the slot booked through `AppointmentService.createAppointment` — if the booking is refused (slot taken meanwhile → 409, doctor deactivated, ...), no patient record, audit entry or notification is left behind. The usual booking SMS / emails go to the phone (and email, if any) given.
 
 ## Configuration
 
@@ -46,6 +49,6 @@ Access rules (`appointments.web.AppointmentsSecurityRules`, a `ModuleSecurityRul
 
 ## Tests
 
-`AppointmentServiceTest`, `AppointmentReminderServiceTest`; end-to-end booking in `FeatureFlowH2Test`, notifications through the outbox in `NotificationsH2Test` (`app`).
+`AppointmentServiceTest`, `AppointmentReminderServiceTest`; end-to-end booking in `FeatureFlowH2Test`, the front desk's walk-in booking in `WalkInPatientsH2Test`, notifications through the outbox in `NotificationsH2Test` (`app`).
 
 Module diagram: [docs/modules/module-appointments.puml](../../docs/modules/module-appointments.puml).

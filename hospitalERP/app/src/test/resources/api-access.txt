@@ -45,10 +45,12 @@ GET /api/patient/relative/patient/{patientId} anonymous- patient+ doctor- recept
 GET /api/patient/relative/{id} anonymous- patient+ doctor- receptionist- admin+
 GET /api/receptionist/doctorCompletedAppointments/{userId} anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/doctorPendingAppointments/{userId} anonymous- patient- doctor- receptionist+ admin+
+GET /api/receptionist/doctors/{doctorId}/next-free-slots anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/getAll anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/getAppointmentByDoctor/{doctorName} anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/getAppointments anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/getReceptionist/{receptionistId} anonymous- patient- doctor- receptionist+ admin+
+GET /api/receptionist/patients anonymous- patient- doctor- receptionist+ admin+
 GET /api/slots/available/{doctorId} anonymous- patient+ doctor+ receptionist+ admin+
 GET /api/unknown anonymous- patient+ doctor+ receptionist+ admin+
 GET /appointment/allCompletedAppointments anonymous- patient- doctor- receptionist+ admin+
@@ -76,6 +78,7 @@ POST /api/auth/verify-otp anonymous+ patient+ doctor+ receptionist+ admin+
 POST /api/leaves/apply anonymous- patient- doctor+ receptionist+ admin+
 POST /api/patient/relative/add anonymous- patient+ doctor- receptionist- admin+
 POST /api/receptionist/NewAppointment anonymous- patient- doctor- receptionist+ admin+
+POST /api/receptionist/walk-in anonymous- patient- doctor- receptionist+ admin+
 POST /api/slots/generate/{doctorId} anonymous- patient- doctor- receptionist- admin+
 POST /appointment/NewAppointment anonymous- patient+ doctor+ receptionist+ admin+
 PUT /api/admin/approve/{leaveId} anonymous- patient- doctor- receptionist- admin+

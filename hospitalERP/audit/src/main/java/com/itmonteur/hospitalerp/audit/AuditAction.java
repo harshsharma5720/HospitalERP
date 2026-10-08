@@ -14,6 +14,8 @@ public enum AuditAction {
     PATIENT_PROFILE_VIEWED(Target.PATIENT),
     PATIENT_PROFILE_UPDATED(Target.PATIENT),
     PATIENT_LIST_VIEWED(Target.NONE),
+    PATIENTS_SEARCHED(Target.NONE),            // front desk: by phone number
+    WALK_IN_REGISTERED(Target.PATIENT),        // front desk: a patient record without a login
     // Admin account actions (administration)
     USER_CREATED(Target.USER),
     ACCOUNT_DEACTIVATED(Target.USER),

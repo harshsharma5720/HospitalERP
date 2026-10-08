@@ -47,3 +47,16 @@ export const getFrontDeskDoctorPendingAppointments = (userId) =>
 
 export const getFrontDeskDoctorCompletedAppointments = (userId) =>
   axios.get(`${API_BASE_URL}/api/receptionist/doctorCompletedAppointments/${userId}`);
+
+// ---------- front desk: walk-in patients (docs/WALK_IN_REGISTRATION_PLAN.md) ----------
+// Patients with this phone number (at least 10 digits; a family may share one). Recorded in the audit log.
+export const findPatientsByPhone = (phone) =>
+  axios.get(`${API_BASE_URL}/api/receptionist/patients`, { params: { phone } });
+
+// A doctor's next free slots from now on, in time order (limit 1-20)
+export const getNextFreeSlots = (doctorId, limit) =>
+  axios.get(`${API_BASE_URL}/api/receptionist/doctors/${doctorId}/next-free-slots`, { params: { limit } });
+
+// { patientId } or { newPatient: { name, phone, gender, dob, email } }, plus slotId, age, message.
+// One step on the server: if the slot is gone (409), no new patient record is kept either.
+export const bookWalkIn = (booking) => axios.post(`${API_BASE_URL}/api/receptionist/walk-in`, booking);

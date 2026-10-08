@@ -236,10 +236,10 @@ The app will open at **http://localhost:3000**.
 
 | Role | Portal URL | Access |
 |------|------------|--------|
-| **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log, notifications |
+| **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log, notifications, walk-in booking |
 | **Doctor** | `/doctor/dashboard` | Appointments, leave, profile |
 | **Patient** | `/` (public pages) | Book appointments, manage relatives |
-| **Receptionist** | `/receptionist-appointments` | Manage all appointments |
+| **Receptionist** | `/receptionist-appointments`, `/walk-in` | Manage all appointments, book walk-in patients |
 
 ---
 
@@ -268,6 +268,7 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 | Audit log — who viewed or changed which medical record, patient profile or account, and when; filters by patient, user, action and dates; entries kept forever ([details](docs/AUDIT_LOG_PLAN.md)) | Admin | `/admin/audit-log` |
 | Admin dashboard with real figures — today's appointments, doctors on leave, active accounts; for the last 7 / 30 / 90 days: appointments per day (completed, upcoming, missed, cancelled), cancellation and missed rates, new patients, busiest specializations and doctors ([details](docs/ADMIN_DASHBOARD_PLAN.md)) | Admin | `/admin/dashboard` |
 | Appointment emails / SMS that aren't lost: queued with the booking or cancellation, retried for up to 24 hours (never after the visit); undelivered ones listed with a Resend button and counted on the dashboard ([details](docs/RELIABLE_NOTIFICATIONS_PLAN.md)) | Admin (automatic for everyone) | `/admin/notifications` |
+| Walk-in patients at the front desk — look the phone number up (a family may share one), register a patient without a login (name, phone, gender) or pick the one found, book the doctor's earliest free time, all in one step; SMS confirmation ([details](docs/WALK_IN_REGISTRATION_PLAN.md)) | Receptionist, Admin | `/walk-in`, `/admin/walk-in` |
 
 Medical records (consultations, prescriptions) are visible only to the patient, their doctor(s) and admins — receptionists cannot read them.
 
@@ -286,6 +287,7 @@ The database schema is owned by the migration scripts in `hospitalERP/app/src/ma
 | `audit/V2026_10_05_1__audit_log.sql` | Creates the empty, append-only `audit_log` table ([audit log](docs/AUDIT_LOG_PLAN.md)). |
 | `identity/V2026_10_06_1__identity_user_created_at.sql` | Adds `users.created_at`, set for every new account; older accounts stay empty ([admin dashboard](docs/ADMIN_DASHBOARD_PLAN.md)). |
 | `notifications/V2026_10_07_1__notifications_outbox.sql` | Creates the empty `notification_outbox` table: appointment emails / SMS waiting to be sent or retried ([reliable notifications](docs/RELIABLE_NOTIFICATIONS_PLAN.md)). |
+| `patients/V2026_10_08_1__patients_walk_in.sql` | Makes `patient.email` optional and adds `patient.created_at`, for walk-in patients registered at the front desk without a login ([walk-in registration](docs/WALK_IN_REGISTRATION_PLAN.md)). |
 
 **Changing the schema:** add a new file to the owning module's folder, e.g. `db/migration/appointments/V2026_10_05_1__appointments_add_room.sql`, with the next date-based version. Never edit a migration that has already run anywhere — Flyway checks their checksums and refuses to start. Hibernate then validates the entities against the result, so an entity change without a migration stops the app with a clear "Schema-validation" message.
 

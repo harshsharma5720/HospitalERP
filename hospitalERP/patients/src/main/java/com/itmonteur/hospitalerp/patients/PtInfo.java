@@ -3,6 +3,7 @@ package com.itmonteur.hospitalerp.patients;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import com.itmonteur.hospitalerp.common.Gender;
@@ -15,7 +16,8 @@ public class PtInfo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long patientId;
     private String patientName;
-    @Column(unique = true , nullable = false)
+    // Optional: a walk-in record registered at the front desk may have no email (docs/WALK_IN_REGISTRATION_PLAN.md)
+    @Column(unique = true)
     private String email;
     private String patientAddress;
     @Column(unique = false, nullable = true)
@@ -29,9 +31,13 @@ public class PtInfo {
     private String profileImage;
     @OneToMany(mappedBy = "ptInfo", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PtRelative> relatives = new ArrayList<>();
+    // null for a walk-in record: a patient without a login account
     @OneToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User user;
+    // When the record was created; null for records older than the column
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
 
     public PtInfo() {
     }
@@ -139,6 +145,14 @@ public class PtInfo {
 
     public String getProfileImage() {
         return profileImage;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     public void setProfileImage(String profileImage) {

@@ -439,9 +439,9 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ---
 
-## 11. Feature Status (updated 2026-10-07)
+## 11. Feature Status (updated 2026-10-08)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8) and automatic backups (branch `feature/mysql-backups`).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9) and walk-in registration (branch `feature/walk-in-registration`).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
@@ -451,9 +451,9 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 - **Admin dashboard with real figures** instead of the invented ones (2026-10-07, see below).
 - **Appointment emails / SMS that aren't lost** when the mail server or Twilio is down (2026-10-07, see below).
 - **Automatic nightly backups** of the database and the uploaded images, for Docker and Windows (2026-10-08, see below).
+- **Walk-in registration at the front desk:** found by phone or registered without a login, and booked in one step (2026-10-08, see below).
 
 **Partly done**
-- **Front-desk booking:** receptionists can book for an existing patient, but can't register a new walk-in patient on the spot.
 - **Doctor dashboard:** real counts of pending and completed appointments, but no analytics (patients per day, no-show rate).
 - **Cancel and reschedule:** both work, but there's no cut-off rule, so a patient can cancel 5 minutes before the appointment.
 
@@ -470,7 +470,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 7 | ~~Real admin dashboard KPIs (replacing the fake chart data)~~ ✅ done 2026-10-07 | admin | — |
 | 8 | Doctor analytics (patients per day, no-show rate, busy hours) | doctor | 2 days |
 | 9 | Cancellation / reschedule cut-off rule | patients | 1 day |
-| 10 | Walk-in patient registration at the front desk | front desk | 1–2 days |
+| 10 | ~~Walk-in patient registration at the front desk~~ ✅ done 2026-10-08 | front desk | — |
 | 11 | Today's queue: check-in, token numbers, live "now serving" screen | front desk | 4–5 days |
 | 12 | Patient search (phone / name / ID) and pagination on all lists | front desk / platform | 2–3 days |
 | 13 | Waitlist, notified when a slot frees up | patients | 3–4 days |
@@ -487,7 +487,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** front-desk work next (10 walk-in registration, 12 patient search and paging, 11 today's queue) or billing (18). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
+**Suggested order:** more front-desk work (12 patient search and paging — the walk-in phone search is a start; 11 today's queue) or billing (18). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
 
 ### Account deactivation (done 2026-10-01)
 
@@ -603,3 +603,22 @@ From idea #4 above. Nothing backed up the database or the uploaded images; a dea
 **Not covered yet:**
 - The first real run on the other laptop (a checklist in [BACKUPS.md](BACKUPS.md)).
 - Copies off the machine are manual (the guide says how to encrypt them); no automatic off-site upload.
+
+### Walk-in registration (done 2026-10-08)
+
+From idea #10 above. A patient who walked in could only be booked after signing up in the app themselves (email, password, OTP), and receptionists had no booking screen at all. Decisions, design and steps: [WALK_IN_REGISTRATION_PLAN.md](WALK_IN_REGISTRATION_PLAN.md).
+
+**What it does**
+- A **Walk-in page** for receptionists (`/walk-in`, **Walk-in** in the navigation) and admins (`/admin/walk-in`): phone number → the patients with that number (families often share one) → book for one of them, or register a new patient (name, phone, gender; date of birth and email optional) → doctor → their next free times, the earliest preselected → **Book**. One step on the server: if the time was taken meanwhile, no patient record is left behind and the page shows the times still free.
+- Walk-in patients are **patient records without a login**. Their visits, consultations and prescriptions are kept like everyone else's, and the usual booking SMS goes to the phone given.
+- The phone search compares the last 10 digits, so "+91 98765 43210" and "9876543210" are the same number.
+- Searches and registrations are in the audit log; the admin dashboard counts walk-in records among the active and new patients.
+- Endpoints (receptionists and admins): `GET /api/receptionist/patients?phone=`, `GET /api/receptionist/doctors/{doctorId}/next-free-slots`, `POST /api/receptionist/walk-in`.
+- Database: `patient.email` becomes optional and `patient.created_at` is added (Flyway `patients/V2026_10_08_1__patients_walk_in.sql`; see the [MySQL runbook](MYSQL_FLYWAY_UPGRADE.md)).
+
+**Tests:** query and service tests, the MySQL migration test, end-to-end HTTP tests (a new patient, a family sharing a number, a time taken meanwhile → nothing left behind, wrong requests, access), the slot order, the dashboard counts, and 6 frontend tests for the page.
+
+**Not covered yet:**
+- A click-through against the real database.
+- A walk-in patient who later signs up in the app gets a second patient record; the two are not linked.
+- Numbers typed without a country code are stored as typed. Twilio expects the international form (+91…), so SMS to such numbers may fail; they show up under Admin → Notifications.

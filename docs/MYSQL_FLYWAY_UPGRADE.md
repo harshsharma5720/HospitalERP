@@ -18,7 +18,8 @@ On the first start of the new code:
    - one that **adds** `users.active` (existing accounts: active) and `users.deactivated_at` (`identity/V2026_09_30_1__identity_account_status.sql`, from the account-deactivation feature, in `main` since PR #5).
    - one that **creates** the empty `audit_log` table (`audit/V2026_10_05_1__audit_log.sql`, from the audit-log feature, in `main` since PR #6).
    - one that **adds** `users.created_at` (existing accounts: empty) (`identity/V2026_10_06_1__identity_user_created_at.sql`, from the admin-dashboard feature, in `main` since PR #7).
-   - one that **creates** the empty `notification_outbox` table (`notifications/V2026_10_07_1__notifications_outbox.sql`, from the reliable-notifications feature — only once `feature/reliable-notifications` is merged).
+   - one that **creates** the empty `notification_outbox` table (`notifications/V2026_10_07_1__notifications_outbox.sql`, from the reliable-notifications feature, in `main` since PR #8).
+   - one that makes `patient.email` **optional** and **adds** `patient.created_at` (existing patients keep their email; no creation time) (`patients/V2026_10_08_1__patients_walk_in.sql`, from the walk-in feature — only once `feature/walk-in-registration` is merged).
    All other data stays.
 3. Hibernate then **validates** (`ddl-auto=validate`): every entity's table and column must exist with a compatible type. If not, the app stops with `Schema-validation: …`.
 
@@ -133,9 +134,10 @@ mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/reso
 mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/audit/V2026_10_05_1__audit_log.sql"
 mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/identity/V2026_10_06_1__identity_user_created_at.sql"
 mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/notifications/V2026_10_07_1__notifications_outbox.sql"
+mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/patients/V2026_10_08_1__patients_walk_in.sql"
 ```
 
-(Run every `.sql` file that exists under `db/migration/` in version order — the last line only once the reliable-notifications feature is merged, i.e. if that file exists in your checkout.)
+(Run every `.sql` file that exists under `db/migration/` in version order — the last line only once the walk-in feature is merged, i.e. if that file exists in your checkout.)
 
 (Run these from the repository root; use forward slashes in the `source` paths.)
 
@@ -170,7 +172,7 @@ ORDER BY 1, 2, 3;
 |---|---|---|
 | Exactly 5 rows "only in hospital_erp": `doctor.password`, `doctor.role`, `patient.role`, `patient_relative.role`, `receptionist.role` | Perfect — these are the columns the migrations drop | Continue |
 | Other "only in hospital_erp" rows | Leftover columns from older versions (e.g. `receptionist.password`) | Harmless for the app (validation ignores extra columns). Note them; we can drop them later with a migration |
-| "missing in hospital_erp": `users.active`, `users.deactivated_at`, the 10 columns of `audit_log`, `users.created_at` and (once reliable notifications are merged) the 13 columns of `notification_outbox` | Expected — migrations add them during the upgrade | Continue |
+| "missing in hospital_erp": `users.active`, `users.deactivated_at`, the 10 columns of `audit_log`, `users.created_at`, the 13 columns of `notification_outbox` and (once the walk-in feature is merged) `patient.created_at` | Expected — migrations add them during the upgrade | Continue |
 | Any other "missing in hospital_erp" row | The database is older than the code | Do 5.1 again (catch-up run on `49635d8`). If it stays, **stop** and send the list |
 | Any "different type" row (e.g. `varchar(255)` now, `enum(...)` target) | Column created by an older Hibernate version | **Stop.** Send the rows; the fix is a small migration (`ALTER TABLE … MODIFY COLUMN …`) added before the upgrade |
 
@@ -201,7 +203,7 @@ Command-line arguments override `.env`, so `.env` stays pointed at the real data
 **Expected log lines, in this order:**
 
 ```
-Successfully validated 7 migrations
+Successfully validated 8 migrations
 Successfully baselined schema with version: 1
 Migrating schema `hospital_erp_copy` to version "2026.09.28.1 - staff drop unused columns"
 Migrating schema `hospital_erp_copy` to version "2026.09.28.2 - patients drop unused columns"
@@ -209,17 +211,18 @@ Migrating schema `hospital_erp_copy` to version "2026.09.30.1 - identity account
 Migrating schema `hospital_erp_copy` to version "2026.10.05.1 - audit log"
 Migrating schema `hospital_erp_copy` to version "2026.10.06.1 - identity user created at"
 Migrating schema `hospital_erp_copy` to version "2026.10.07.1 - notifications outbox"
-Successfully applied 6 migrations to schema `hospital_erp_copy`, now at version v2026.10.07.1
+Migrating schema `hospital_erp_copy` to version "2026.10.08.1 - patients walk in"
+Successfully applied 7 migrations to schema `hospital_erp_copy`, now at version v2026.10.08.1
 Started HospitalErpApplication in … seconds
 ```
 
-(Until `feature/reliable-notifications` is merged, `main` has one migration less: 6 validated, 5 applied, no "notifications outbox" line, now at v2026.10.06.1.)
+(Until `feature/walk-in-registration` is merged, `main` has one migration less: 7 validated, 6 applied, no "patients walk in" line, now at v2026.10.07.1.)
 
 **Check the copy** (`mysql -u root -p hospital_erp_copy`):
 
 ```sql
 SELECT installed_rank, version, description, type, success FROM flyway_schema_history ORDER BY installed_rank;
--- expect: 1 BASELINE, 2026.09.28.1 SQL, 2026.09.28.2 SQL, 2026.09.30.1 SQL, 2026.10.05.1 SQL, 2026.10.06.1 SQL, 2026.10.07.1 SQL (once merged), all success = 1
+-- expect: 1 BASELINE, 2026.09.28.1 SQL, 2026.09.28.2 SQL, 2026.09.30.1 SQL, 2026.10.05.1 SQL, 2026.10.06.1 SQL, 2026.10.07.1 SQL, 2026.10.08.1 SQL (once merged), all success = 1
 
 SELECT table_name, column_name FROM information_schema.columns
 WHERE table_schema = DATABASE()
@@ -311,7 +314,7 @@ Keep the backup files for a few weeks, then delete them (they contain patient da
 ## 10. After success
 
 1. Keep using `main` (`git checkout main`, `git pull`). The upgraded database needs nothing more.
-2. **Later migrations need no runbook:** when a branch with a new migration is merged (e.g. `feature/reliable-notifications`), Flyway applies it on the next start and Hibernate validates the result. A backup (section 4) before that start is still a good habit.
+2. **Later migrations need no runbook:** when a branch with a new migration is merged (e.g. `feature/walk-in-registration`), Flyway applies it on the next start and Hibernate validates the result. A backup (section 4) before that start is still a good habit.
 3. Any other developer database gets the same treatment (sections 4–7), or starts empty (Flyway then builds it from `V1__baseline.sql`).
 4. Update the progress log in [MULTI_MODULE_PLAN.md](MULTI_MODULE_PLAN.md) (step 4.1: "your MySQL still to upgrade" → done).
 5. **Set up the nightly backups** of this database: [BACKUPS.md](BACKUPS.md), section "Windows" (once the backups feature is merged).
@@ -364,11 +367,11 @@ Remove-Item C:\db-backups\hospital_erp_before_flyway.sql   # patient data
 | Item | Value |
 |---|---|
 | Migration folder | `hospitalERP/app/src/main/resources/db/migration/` |
-| Migrations | `V1__baseline.sql` (full schema, only for empty databases), `staff/V2026_09_28_1__staff_drop_unused_columns.sql`, `patients/V2026_09_28_2__patients_drop_unused_columns.sql`, `identity/V2026_09_30_1__identity_account_status.sql` (adds `users.active`, `users.deactivated_at`), `audit/V2026_10_05_1__audit_log.sql` (creates the empty `audit_log` table), `identity/V2026_10_06_1__identity_user_created_at.sql` (adds `users.created_at`), `notifications/V2026_10_07_1__notifications_outbox.sql` (creates the empty `notification_outbox` table) |
+| Migrations | `V1__baseline.sql` (full schema, only for empty databases), `staff/V2026_09_28_1__staff_drop_unused_columns.sql`, `patients/V2026_09_28_2__patients_drop_unused_columns.sql`, `identity/V2026_09_30_1__identity_account_status.sql` (adds `users.active`, `users.deactivated_at`), `audit/V2026_10_05_1__audit_log.sql` (creates the empty `audit_log` table), `identity/V2026_10_06_1__identity_user_created_at.sql` (adds `users.created_at`), `notifications/V2026_10_07_1__notifications_outbox.sql` (creates the empty `notification_outbox` table), `patients/V2026_10_08_1__patients_walk_in.sql` (`patient.email` optional, adds `patient.created_at`) |
 | Last `main` before Flyway (for 5.1 and a rollback) | `49635d8` (2026-09-25, merge of PR #2; `ddl-auto=update`) |
 | Settings (`app/src/main/resources/application.properties`) | `spring.jpa.hibernate.ddl-auto=validate`, `spring.flyway.baseline-on-migrate=true`, `spring.flyway.baseline-version=1` |
 | Tables (15) | appointments, appointments_seq, audit_log, consultations, doctor, doctor_schedules, doctor_seq, leave_request, notification_outbox, patient, patient_relative, prescription_items, receptionist, slots, users (+ `flyway_schema_history` after the upgrade) |
 | Columns dropped | doctor.password, doctor.role, patient.role, patient_relative.role, receptionist.role |
 | `.env` keys used here | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `REMINDERS_ENABLED` |
 | Automated proof | `DatabaseMigrationMySqlTest` (needs Docker): upgrade of a pre-Flyway database with data + fresh install give the identical schema |
-| Last tested | 2026-10-07 on MySQL 8.0 (Docker) with all 7 migrations, Flyway 11.7.2, Spring Boot 3.5.5 |
+| Last tested | 2026-10-08 on MySQL 8.0 (Docker) with all 8 migrations, Flyway 11.7.2, Spring Boot 3.5.5 |

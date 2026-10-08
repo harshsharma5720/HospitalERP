@@ -1,0 +1,51 @@
+# Walk-in registration at the front desk — plan
+
+**Branch:** `feature/walk-in-registration` (from `main` = 4c68cd9)
+**Why:** a patient who walks in can't be booked unless they first sign up in the app themselves (email, password, OTP). The backend can book for an existing patient, but there is no front-desk booking screen at all — receptionists can only look at appointments.
+**Idea list:** [CODE_REVIEW_AND_IDEAS.md](CODE_REVIEW_AND_IDEAS.md#not-implemented-yet) — "not implemented yet" #10.
+**Status:** ✅ done (2026-10-08) — see [Result](#result).
+
+## Decisions (2026-10-08)
+
+| Question | Decision |
+|---|---|
+| What is created | A **patient record without a login**: name, phone, gender, age (email and date of birth optional). Booked by the front desk; visits and medical records are kept like everyone else's; counted on the admin dashboard. No generated passwords. They can still sign up in the app on their own later. |
+| Same phone number | **Show the matches and let the receptionist choose** — book for one of them, or create a new record anyway (families often share a number). |
+| Booking | **One form:** find by phone or enter a new patient, pick a doctor; the earliest free slot from now on (today, otherwise the next days) is preselected and can be changed; one click registers and books. |
+
+## Design
+
+- **patients:** `patient.email` becomes optional and `patient.created_at` is added (Flyway); every new profile gets a creation time. `PtInfoService` gets `registerWalkIn(...)` and `findByPhone(phone)` (matches on the last 10 digits, so `+91 98765 43210` and `9876543210` are the same number). Both are recorded in the audit log (new actions: walk-in registered, patients searched by phone).
+- **appointments** (front-desk endpoints, under `/api/receptionist/` — receptionists and admins): search patients by phone; the next free slots of a doctor; and **register-and-book in one transaction** — if the slot is gone, no patient record is left behind either. The usual booking rules, notifications (SMS to the phone given) and audit entries apply.
+- **Admin dashboard:** active patients and new patients include the walk-in records (records without a login).
+- **Frontend:** a **Walk-in** page for receptionists (and admins): phone → matches or a new-patient form → doctor → slot → Book → confirmation.
+
+## Steps
+
+| Step | Work | Checked by |
+|---|---|---|
+| W.1 | **Patient records without a login:** migration, entity, `registerWalkIn`, `findByPhone`, audit actions, dashboard counts. | Query / service tests; MySQL migration test; dashboard test |
+| W.2 | **Front-desk API:** search by phone, next free slots, register-and-book (new or existing patient) in one transaction. | End-to-end tests (new patient, shared phone, slot already taken → nothing left behind, notifications, audit); endpoint and access snapshots updated on purpose |
+| W.3 | **Frontend:** the Walk-in page and a navigation link; audit log labels for the new actions. | Frontend tests + build |
+| W.4 | **Docs:** module READMEs, README, MySQL runbook (migration), idea list status. | — |
+
+## Progress log
+
+| Step | Status | Date | Notes |
+|---|---|---|---|
+| W.0 Plan + decisions | ✅ done | 2026-10-08 | This file. |
+| W.1 Patient records without a login | ✅ done | 2026-10-08 | Flyway `patients/V2026_10_08_1__patients_walk_in.sql`: `patient.email` optional (the unique key stays — several records without email are fine), `patient.created_at` added. `PtInfo`: email optional, `createdAt` (set for new walk-ins from the `Clock` and for new accounts from the account's creation time). `PtInfoService.registerWalkIn(WalkInPatient)`: name (≤ 100), phone (spaces / dashes / brackets removed, then `+` and 10–14 digits), gender required; date of birth (not in the future) and email (checked, blank = none) optional; audit `WALK_IN_REGISTERED`. `findByPhone`: at least 10 digits; a cheap first filter on the last 4 digits, then the last 10 digits compared exactly, so "+91 90000 11111", "(900) 001-1111" and "9000011111" are the same number; audit `PATIENTS_SEARCHED` ("by phone ...1111, 3 found" — not the full number). `PtInfoDTO.hasLogin`. Dashboard: active patients = active patient accounts + walk-in records; new patients per day = new accounts + new walk-ins; "counted since" = the earlier start. New `WalkInPatientsH2Test` (shares FeatureFlowH2Test's context): a record without login / email, stored phone, creation time, audit; refused details (name, phone length, a letter O, gender, future birth date, email); search across number formats and a family (two walk-ins + an app account with the same number; `hasLogin`), short numbers refused, audit details. `DashboardServiceTest` covers the walk-in counts. `DatabaseMigrationMySqlTest`: 8 migrations, `email` nullable, existing patients keep their email and get no creation time. MySQL runbook, README migrations table, patients and administration READMEs. Checker OK, 136 backend tests (1 skipped). |
+| W.2 Front-desk API | ✅ done | 2026-10-08 | New `FrontDeskController` (appointments, under `/api/receptionist`, so receptionists + admins): `GET /patients?phone=` → `PtInfoService.findByPhone`; `GET /doctors/{doctorId}/next-free-slots?limit=5` (1-20) → new `SlotService.nextFreeSlots` (today's remaining slots, then the next days of the 30-day booking window, both shifts merged in time order; none for a deactivated doctor, days on leave skipped); `POST /walk-in` → `FrontDeskService.registerAndBook`: `patientId` *or* `newPatient`, `slotId`, `age` (0-130; needed when no date of birth is known, otherwise taken from it), optional `message`. **One transaction:** register (if new) + `AppointmentService.createAppointment` — a refused booking (slot taken → 409, ...) leaves no patient record, no audit entry and no SMS. Response `{patientId, newPatient, appointment}`. Tests in `WalkInPatientsH2Test`: register + book the first free slot (order across shifts / days / weeks, default 5, appointment details, slot gone afterwards, found by phone next time, booking SMS to the phone given, audit by the receptionist); a family sharing a number (both found; age needed without a date of birth, taken from it otherwise; no new records); slot taken meanwhile → 409 and nothing left behind; wrong requests (phone, no age, age 131, no slot, both / neither patient, unknown patient → 404); patients and doctors get 403, admins can use it; short phone / limit 0 / 21 → 400, unknown doctor → 404, deactivated doctor → no slots. `SlotServiceNextFreeSlotsTest` (time order from an unordered repository, limit, deactivated doctor). Mutation checks: without the transaction the "nothing left behind" test fails; without the sort the order test fails. Endpoint and access snapshots: +3 lines each (receptionist + admin). Appointments and scheduling READMEs. Checker OK, 142 backend tests (1 skipped). |
+| W.3 Frontend | ✅ done | 2026-10-08 | New `features/appointments/WalkInBooking.js`: phone number → **Find** → the patients with that number (name, gender, age, email, "App account" / "Front-desk record") with **Book for …**, or **Someone else — new patient**; no match opens the new-patient form (name, gender; date of birth and email optional; the phone searched). **Visit:** active doctors only; their next 6 free times ("Today 16:20", "Tomorrow 09:00", "Sun 11 Oct 09:00"), the earliest chosen, **More times** for up to 20; age (filled from the date of birth when known, required otherwise), reason for the visit → **Book** / **Register and book** → confirmation (patient, doctor, date and time, "new patient record created", SMS to the number) → **Next patient**. A time taken meanwhile (409): the server's message and the times still free, reloaded. Routes: `/walk-in` (receptionists, with the site navigation — new **Walk-in** link) and `/admin/walk-in` (admin portal, new **Walk-in Booking** sidebar entry). `features/appointments/api.js`: `findPatientsByPhone`, `getNextFreeSlots`, `bookWalkIn`. Audit log: labels for "Searched patients by phone" and "Registered walk-in patient". `shared/Navbar.js`: the repeated link style moved into one `linkClass` (its comments were inside the class string). Tests: `WalkInBooking.test.js` (6: new patient end to end, a family with age from / without date of birth, time taken meanwhile, the server's message for a short number and the name / gender check, More times and no free times, date labels), `Navbar.test.js` (Walk-in link for receptionists only). Mutation checks: without the reload after a 409, or with deactivated doctors listed, a test fails. Checked in light and dark mode (headless Edge screenshots; unselected borders toned down for dark mode). 46 frontend tests; build compiles without warnings. |
+| W.4 Docs | ✅ done | 2026-10-08 | README: features table (walk-in booking) and the receptionist / admin rows of the portal table; the migrations table and the MySQL runbook were updated in W.1, the patients, administration, appointments and scheduling READMEs in W.1 / W.2. Idea list: #10 done, "Front-desk booking" removed from "partly done", a section on what was built and what isn't covered. This plan closed. |
+
+## Result
+
+A patient who walks in is **booked at the front desk in one step**: the phone number is looked up (a family sharing a number is listed together), a newcomer gets a patient record without a login, the doctor's earliest free time is preselected, and the usual SMS confirms it. If the time is taken meanwhile, nothing is left behind. Searches and registrations are in the audit log, and the admin dashboard counts walk-in patients.
+
+**When merging:** the migration `patients/V2026_10_08_1__patients_walk_in.sql` runs on the next start (Flyway). For the real database, follow the [MySQL runbook](MYSQL_FLYWAY_UPGRADE.md) (copy first). Then click through once: **Walk-in** → a new number → register and book; the same number again → the patient is listed.
+
+**Possible follow-ups:**
+- Link a walk-in record to the app account the patient creates later (same phone, confirmed by OTP), instead of keeping two records.
+- A default country code (e.g. +91) for numbers typed without one, so their SMS can be delivered.
+- Search by name or patient ID as well (idea #12).
