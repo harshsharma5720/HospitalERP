@@ -7,6 +7,7 @@ import com.itmonteur.hospitalerp.appointments.SpecializationCount;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.identity.UserService;
+import com.itmonteur.hospitalerp.notifications.NotificationOutbox;
 import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import com.itmonteur.hospitalerp.staff.Specialist;
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,8 @@ class DashboardServiceTest {
     private final AppointmentStatistics statistics = mock(AppointmentStatistics.class);
     private final UserService userService = mock(UserService.class);
     private final LeaveRequestService leaveRequestService = mock(LeaveRequestService.class);
-    private final DashboardService service = new DashboardService(statistics, userService, leaveRequestService,
+    private final NotificationOutbox notificationOutbox = mock(NotificationOutbox.class);
+    private final DashboardService service = new DashboardService(statistics, userService, leaveRequestService, notificationOutbox,
             Clock.fixed(TODAY.atTime(15, 0).atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()));
 
     /** Seven days ending today, zeros except the given ones. */
@@ -64,6 +66,7 @@ class DashboardServiceTest {
         List<DoctorAppointmentCount> doctors = List.of(new DoctorAppointmentCount(7L, "Dr Rao", Specialist.CARDIOLOGY, 4, 3));
         when(statistics.busiestSpecializations(from, TODAY, 5)).thenReturn(specializations);
         when(statistics.busiestDoctors(from, TODAY, 5)).thenReturn(doctors);
+        when(notificationOutbox.countUndelivered()).thenReturn(2L);
 
         DashboardDTO dashboard = service.dashboard(7);
 
@@ -79,6 +82,7 @@ class DashboardServiceTest {
         assertThat(dashboard.newPatients()).isEqualTo(new DashboardDTO.NewPatients(3, LocalDateTime.of(2026, 10, 6, 9, 0)));
         assertThat(dashboard.busiestSpecializations()).isSameAs(specializations);
         assertThat(dashboard.busiestDoctors()).isSameAs(doctors);
+        assertThat(dashboard.undeliveredNotifications()).isEqualTo(2);
     }
 
     @Test
@@ -99,7 +103,7 @@ class DashboardServiceTest {
     void onlySevenThirtyOrNinetyDays() {
         assertThatThrownBy(() -> service.dashboard(10)).isInstanceOf(BadRequestException.class);
         assertThatThrownBy(() -> service.dashboard(0)).isInstanceOf(BadRequestException.class);
-        verifyNoInteractions(statistics, userService, leaveRequestService);
+        verifyNoInteractions(statistics, userService, leaveRequestService, notificationOutbox);
 
         LocalDate from = TODAY.minusDays(89);
         List<DailyAppointmentCounts> quarter = new ArrayList<>();

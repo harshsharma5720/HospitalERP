@@ -10,10 +10,12 @@ import java.util.List;
 /**
  * What GET /api/admin/dashboard returns (docs/ADMIN_DASHBOARD_PLAN.md). Appointments count on their appointment
  * date; rates are percentages with one decimal (0 when there is nothing to divide by).
+ * {@code undeliveredNotifications}: appointment emails / SMS that failed for good and weren't resent
+ * (docs/RELIABLE_NOTIFICATIONS_PLAN.md) - not limited to the period.
  */
 public record DashboardDTO(Period period, Today today, List<Day> trend, Cancellations cancellations,
                            NewPatients newPatients, List<SpecializationCount> busiestSpecializations,
-                           List<DoctorAppointmentCount> busiestDoctors) {
+                           List<DoctorAppointmentCount> busiestDoctors, long undeliveredNotifications) {
 
     /** The last {@code days} days, ending today. */
     public record Period(int days, LocalDate from, LocalDate to) {

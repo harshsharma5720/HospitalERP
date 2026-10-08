@@ -38,7 +38,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 2. Fresh install: all migrations on an empty database give exactly the same schema.
  */
 @Testcontainers(disabledWithoutDocker = true)
-@SpringBootTest(properties = "REMINDERS_ENABLED=false")
+// No background jobs: this context stays cached after its MySQL container is gone
+@SpringBootTest(properties = {"REMINDERS_ENABLED=false", "app.notifications.sender.enabled=false"})
 class DatabaseMigrationMySqlTest {
 
     private static final String[] LEGACY_COLUMNS = {
@@ -85,7 +86,7 @@ class DatabaseMigrationMySqlTest {
                 "SELECT version, type, success FROM flyway_schema_history ORDER BY installed_rank");
         assertThat(history).extracting(row -> row.get("version") + " " + row.get("type"))
                 .containsExactly("1 BASELINE", "2026.09.28.1 SQL", "2026.09.28.2 SQL", "2026.09.30.1 SQL",
-                        "2026.10.05.1 SQL", "2026.10.06.1 SQL");
+                        "2026.10.05.1 SQL", "2026.10.06.1 SQL", "2026.10.07.1 SQL");
         assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isIn(true, 1));
 
         assertThat(legacyColumnsIn(jdbc, "hospital")).isEmpty();
@@ -94,6 +95,8 @@ class DatabaseMigrationMySqlTest {
                 .isEqualTo(2);
         // Existing accounts have no creation time; only new ones get one (docs/ADMIN_DASHBOARD_PLAN.md)
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE created_at IS NULL", Integer.class)).isEqualTo(2);
+        // The notification outbox starts empty (docs/RELIABLE_NOTIFICATIONS_PLAN.md)
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM notification_outbox", Integer.class)).isZero();
         // The audit log starts empty (docs/AUDIT_LOG_PLAN.md)
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_log", Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT name FROM doctor WHERE id = 1", String.class)).isEqualTo("Rao");

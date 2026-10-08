@@ -7,6 +7,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+/**
+ * SMS delivery over Twilio. Appointment texts are written by {@link AppointmentMessages} and sent through the
+ * outbox ({@link #send}); OTP and password-reset codes are sent directly - the user is waiting for them.
+ */
 @Service
 public class SmsService {
 
@@ -43,60 +47,6 @@ public class SmsService {
         send(phoneNumber, "Your Hospital ERP OTP is: " + otp
                 + "\nThis OTP is valid for " + validMinutes + " minutes."
                 + "\nDo not share it with anyone.");
-    }
-
-    public void sendAppointmentSms(String phoneNumber, String patientName, String doctorName, String date, String time) {
-        send(phoneNumber, "Dear " + patientName + ",\n"
-                + "Your appointment has been successfully scheduled.\n"
-                + "Doctor: " + doctorName + "\n"
-                + "Date: " + date + "\n"
-                + "Time: " + time + "\n"
-                + "Please reach on time.\n"
-                + "- Hospital ERP");
-    }
-
-    public void sendDoctorSms(String phoneNumber, String patientName, String doctorName, String date, String time) {
-        send(phoneNumber, "New appointment scheduled.\n"
-                + "Patient: " + patientName + "\n"
-                + "Date: " + date + "\n"
-                + "Time: " + time + "\n"
-                + "Please check the schedule.\n"
-                + "- Hospital ERP");
-    }
-
-    public void sendAppointmentCancelSms(String phoneNumber, String patientName, String doctorName, String date, String time) {
-        send(phoneNumber, "Dear " + patientName + ",\n"
-                + "Your appointment has been cancelled.\n"
-                + "Doctor: " + doctorName + "\n"
-                + "Date: " + date + "\n"
-                + "Time: " + time + "\n"
-                + "If this was a mistake, please rebook.\n"
-                + "- Hospital ERP");
-    }
-
-    public void sendDoctorCancelSms(String phoneNumber, String patientName, String doctorName, String date, String time) {
-        send(phoneNumber, "Appointment Cancelled.\n"
-                + "Patient: " + patientName + "\n"
-                + "Date: " + date + "\n"
-                + "Time: " + time + "\n"
-                + "Please update your schedule.\n"
-                + "- Hospital ERP");
-    }
-
-    public void sendDoctorLeaveCancelSms(String phoneNumber, String patientName, String doctorName, String date) {
-        send(phoneNumber, "Dear " + patientName + ",\n"
-                + "Your appointment with Dr. " + doctorName + " on " + date + " is cancelled due to doctor's leave.\n"
-                + "Please reschedule your appointment by selecting another date.\n"
-                + "- Hospital ERP");
-    }
-
-    public void sendReminderSms(String phoneNumber, String patientName, String doctorName, String date, String time) {
-        send(phoneNumber, "Dear " + patientName + ",\n"
-                + "Reminder: your appointment with Dr. " + doctorName + " is tomorrow.\n"
-                + "Date: " + date + "\n"
-                + "Time: " + time + "\n"
-                + "Please reach 10 minutes early.\n"
-                + "- Hospital ERP");
     }
 
     public void sendPasswordResetSms(String phoneNumber, String otp, int validMinutes) {

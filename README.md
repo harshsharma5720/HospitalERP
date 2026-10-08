@@ -234,7 +234,7 @@ The app will open at **http://localhost:3000**.
 
 | Role | Portal URL | Access |
 |------|------------|--------|
-| **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log |
+| **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log, notifications |
 | **Doctor** | `/doctor/dashboard` | Appointments, leave, profile |
 | **Patient** | `/` (public pages) | Book appointments, manage relatives |
 | **Receptionist** | `/receptionist-appointments` | Manage all appointments |
@@ -265,6 +265,7 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 | Deactivate / reactivate accounts — no login, hidden from booking, upcoming appointments cancelled, **all history kept**; permanent delete only for accounts without appointments ([details](docs/ACCOUNT_DEACTIVATION_PLAN.md)) | Admin | `/admin/manage-users`, `/admin/manage-doctor` |
 | Audit log — who viewed or changed which medical record, patient profile or account, and when; filters by patient, user, action and dates; entries kept forever ([details](docs/AUDIT_LOG_PLAN.md)) | Admin | `/admin/audit-log` |
 | Admin dashboard with real figures — today's appointments, doctors on leave, active accounts; for the last 7 / 30 / 90 days: appointments per day (completed, upcoming, missed, cancelled), cancellation and missed rates, new patients, busiest specializations and doctors ([details](docs/ADMIN_DASHBOARD_PLAN.md)) | Admin | `/admin/dashboard` |
+| Appointment emails / SMS that aren't lost: queued with the booking or cancellation, retried for up to 24 hours (never after the visit); undelivered ones listed with a Resend button and counted on the dashboard ([details](docs/RELIABLE_NOTIFICATIONS_PLAN.md)) | Admin (automatic for everyone) | `/admin/notifications` |
 
 Medical records (consultations, prescriptions) are visible only to the patient, their doctor(s) and admins — receptionists cannot read them.
 
@@ -282,6 +283,7 @@ The database schema is owned by the migration scripts in `hospitalERP/app/src/ma
 | `identity/V2026_09_30_1__identity_account_status.sql` | Adds `users.active` and `users.deactivated_at` (accounts are deactivated, not deleted). |
 | `audit/V2026_10_05_1__audit_log.sql` | Creates the empty, append-only `audit_log` table ([audit log](docs/AUDIT_LOG_PLAN.md)). |
 | `identity/V2026_10_06_1__identity_user_created_at.sql` | Adds `users.created_at`, set for every new account; older accounts stay empty ([admin dashboard](docs/ADMIN_DASHBOARD_PLAN.md)). |
+| `notifications/V2026_10_07_1__notifications_outbox.sql` | Creates the empty `notification_outbox` table: appointment emails / SMS waiting to be sent or retried ([reliable notifications](docs/RELIABLE_NOTIFICATIONS_PLAN.md)). |
 
 **Changing the schema:** add a new file to the owning module's folder, e.g. `db/migration/appointments/V2026_10_05_1__appointments_add_room.sql`, with the next date-based version. Never edit a migration that has already run anywhere — Flyway checks their checksums and refuses to start. Hibernate then validates the entities against the result, so an entity change without a migration stops the app with a clear "Schema-validation" message.
 

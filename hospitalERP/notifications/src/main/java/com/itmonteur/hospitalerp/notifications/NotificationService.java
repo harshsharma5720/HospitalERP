@@ -1,81 +1,88 @@
 package com.itmonteur.hospitalerp.notifications;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
- * Sends appointment emails and SMS in the background.
- * Each channel is attempted independently and failures are only logged, so a slow or
- * failing mail server / Twilio account never breaks booking, cancelling or leave approval.
- * Methods take plain values (not entities) because they run outside the caller's transaction.
+ * Appointment emails and SMS to patient and doctor (docs/RELIABLE_NOTIFICATIONS_PLAN.md). Each message is queued
+ * in the {@link NotificationOutbox} within the caller's transaction - so it exists exactly when the booking or
+ * cancellation was committed - and sent right after the commit; a failed send is retried until the appointment.
+ * A message without an address or phone number is left out. Methods take plain values, not entities.
  */
 @Service
+@Transactional
 public class NotificationService {
 
-    private static final Logger logger = LoggerFactory.getLogger(NotificationService.class);
+    private static final Pattern TIME = Pattern.compile("(\\d{1,2}:\\d{2})");
 
-    private final EmailService emailService;
-    private final SmsService smsService;
+    private final NotificationOutbox outbox;
 
-    public NotificationService(EmailService emailService, SmsService smsService) {
-        this.emailService = emailService;
-        this.smsService = smsService;
+    public NotificationService(NotificationOutbox outbox) {
+        this.outbox = outbox;
     }
 
+    /** {@code date} as yyyy-MM-dd; {@code time} as "09:00 - 09:10" (the start counts). */
     public record AppointmentInfo(String patientName, String patientEmail, String patientPhone,
                                   String doctorName, String doctorEmail, String doctorPhone,
                                   String date, String time) {}
 
-    @Async
     public void appointmentBooked(AppointmentInfo info) {
-        attempt("booking email to patient", () -> emailService.sendBookingEmail(
-                info.patientEmail(), info.patientName(), info.doctorName(), info.date(), info.time()));
-        attempt("booking SMS to patient", () -> smsService.sendAppointmentSms(
-                info.patientPhone(), info.patientName(), info.doctorName(), info.date(), info.time()));
-        attempt("booking email to doctor", () -> emailService.sendDoctorNotificationEmail(
-                info.doctorEmail(), info.patientName(), info.doctorName(), info.date(), info.time()));
-        attempt("booking SMS to doctor", () -> smsService.sendDoctorSms(
-                info.doctorPhone(), info.patientName(), info.doctorName(), info.date(), info.time()));
+        LocalDateTime notAfter = appointmentStart(info);
+        email(info.patientEmail(), AppointmentMessages.bookingEmailToPatient(info), "booking email to patient", notAfter);
+        outbox.queueSms(info.patientPhone(), AppointmentMessages.bookingSmsToPatient(info), "booking SMS to patient", notAfter);
+        email(info.doctorEmail(), AppointmentMessages.bookingEmailToDoctor(info), "booking email to doctor", notAfter);
+        outbox.queueSms(info.doctorPhone(), AppointmentMessages.bookingSmsToDoctor(info), "booking SMS to doctor", notAfter);
     }
 
-    @Async
     public void appointmentCancelled(AppointmentInfo info) {
-        attempt("cancellation email to patient", () -> emailService.sendDeleteEmail(
-                info.patientEmail(), info.patientName(), info.doctorName(), info.date(), info.time()));
-        attempt("cancellation SMS to patient", () -> smsService.sendAppointmentCancelSms(
-                info.patientPhone(), info.patientName(), info.doctorName(), info.date(), info.time()));
-        attempt("cancellation SMS to doctor", () -> smsService.sendDoctorCancelSms(
-                info.doctorPhone(), info.patientName(), info.doctorName(), info.date(), info.time()));
+        LocalDateTime notAfter = appointmentStart(info);
+        email(info.patientEmail(), AppointmentMessages.cancellationEmailToPatient(info), "cancellation email to patient", notAfter);
+        outbox.queueSms(info.patientPhone(), AppointmentMessages.cancellationSmsToPatient(info), "cancellation SMS to patient", notAfter);
+        outbox.queueSms(info.doctorPhone(), AppointmentMessages.cancellationSmsToDoctor(info), "cancellation SMS to doctor", notAfter);
     }
 
-    @Async
     public void appointmentCancelledByDoctorLeave(AppointmentInfo info) {
-        attempt("leave cancellation SMS", () -> smsService.sendDoctorLeaveCancelSms(
-                info.patientPhone(), info.patientName(), info.doctorName(), info.date()));
-        attempt("leave cancellation email", () -> emailService.sendDoctorLeaveCancelEmail(
-                info.patientEmail(), info.patientName(), info.doctorName(), info.date()));
+        LocalDateTime notAfter = appointmentStart(info);
+        outbox.queueSms(info.patientPhone(), AppointmentMessages.leaveCancellationSmsToPatient(info), "leave cancellation SMS to patient", notAfter);
+        email(info.patientEmail(), AppointmentMessages.leaveCancellationEmailToPatient(info), "leave cancellation email to patient", notAfter);
     }
 
-    @Async
     public void appointmentReminder(AppointmentInfo info) {
-        attempt("reminder email", () -> emailService.sendReminderEmail(
-                info.patientEmail(), info.patientName(), info.doctorName(), info.date(), info.time()));
-        attempt("reminder SMS", () -> smsService.sendReminderSms(
-                info.patientPhone(), info.patientName(), info.doctorName(), info.date(), info.time()));
+        LocalDateTime notAfter = appointmentStart(info);
+        email(info.patientEmail(), AppointmentMessages.reminderEmailToPatient(info), "reminder email to patient", notAfter);
+        outbox.queueSms(info.patientPhone(), AppointmentMessages.reminderSmsToPatient(info), "reminder SMS to patient", notAfter);
     }
 
-    @FunctionalInterface
-    private interface Action {
-        void run() throws Exception;
+    private void email(String to, AppointmentMessages.Email email, String description, LocalDateTime notAfter) {
+        outbox.queueEmail(to, email.subject(), email.html(), description, notAfter);
     }
 
-    private void attempt(String description, Action action) {
+    /**
+     * When the appointment starts - retries stop there. Without a time, the end of that day; without a readable
+     * date, null (the outbox's 24-hour limit applies).
+     */
+    static LocalDateTime appointmentStart(AppointmentInfo info) {
+        LocalDate date;
         try {
-            action.run();
-        } catch (Exception e) {
-            logger.warn("Failed to send {}: {}", description, e.getMessage());
+            date = LocalDate.parse(String.valueOf(info.date()).trim());
+        } catch (DateTimeParseException e) {
+            return null;
         }
+        Matcher time = TIME.matcher(info.time() == null ? "" : info.time());
+        if (time.find()) {
+            try {
+                return date.atTime(LocalTime.parse(time.group(1).length() == 4 ? "0" + time.group(1) : time.group(1)));
+            } catch (DateTimeParseException ignored) {
+                // fall through to the end of the day
+            }
+        }
+        return date.plusDays(1).atStartOfDay();
     }
 }

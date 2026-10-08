@@ -16,6 +16,7 @@ GET /api/admin/dashboard
 GET /api/admin/doctorAppointmentCount/{doctorId}
 GET /api/admin/doctorCompletedAppointments/{userId}
 GET /api/admin/doctorPendingAppointments/{userId}
+GET /api/admin/notifications
 GET /api/admin/{id}
 GET /api/auth/otp-required
 GET /api/consultations/appointment/{appointmentId}
@@ -58,6 +59,7 @@ GET /appointment/getPatientAppointments
 GET /appointment/patientCompletedAppointments/{userId}
 GET /appointment/patientPendingAppointments/{userId}
 POST /api/admin/doctor
+POST /api/admin/notifications/{id}/resend
 POST /api/admin/patient
 POST /api/admin/receptionist
 POST /api/admin/users

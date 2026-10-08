@@ -5,6 +5,7 @@ import com.itmonteur.hospitalerp.appointments.DailyAppointmentCounts;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.identity.UserService;
+import com.itmonteur.hospitalerp.notifications.NotificationOutbox;
 import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import org.springframework.stereotype.Service;
 
@@ -27,13 +28,15 @@ public class DashboardService {
     private final AppointmentStatistics appointmentStatistics;
     private final UserService userService;
     private final LeaveRequestService leaveRequestService;
+    private final NotificationOutbox notificationOutbox;
     private final Clock clock;
 
     public DashboardService(AppointmentStatistics appointmentStatistics, UserService userService,
-                            LeaveRequestService leaveRequestService, Clock clock) {
+                            LeaveRequestService leaveRequestService, NotificationOutbox notificationOutbox, Clock clock) {
         this.appointmentStatistics = appointmentStatistics;
         this.userService = userService;
         this.leaveRequestService = leaveRequestService;
+        this.notificationOutbox = notificationOutbox;
         this.clock = clock;
     }
 
@@ -55,7 +58,7 @@ public class DashboardService {
         return new DashboardDTO(new DashboardDTO.Period(days, from, today), today(today, perDay), trend,
                 cancellations(perDay, trend), newPatients(trend),
                 appointmentStatistics.busiestSpecializations(from, today, TOP),
-                appointmentStatistics.busiestDoctors(from, today, TOP));
+                appointmentStatistics.busiestDoctors(from, today, TOP), notificationOutbox.countUndelivered());
     }
 
     private DashboardDTO.Today today(LocalDate today, List<DailyAppointmentCounts> perDay) {

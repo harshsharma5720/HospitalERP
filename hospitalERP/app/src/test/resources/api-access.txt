@@ -17,6 +17,7 @@ GET /api/admin/dashboard anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorAppointmentCount/{doctorId} anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorCompletedAppointments/{userId} anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorPendingAppointments/{userId} anonymous- patient- doctor- receptionist- admin+
+GET /api/admin/notifications anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/{id} anonymous- patient- doctor- receptionist- admin+
 GET /api/auth/otp-required anonymous+ patient+ doctor+ receptionist+ admin+
 GET /api/consultations/appointment/{appointmentId} anonymous- patient+ doctor+ receptionist- admin+
@@ -62,6 +63,7 @@ GET /appointment/patientPendingAppointments/{userId} anonymous- patient+ doctor+
 GET /error anonymous+ patient+ doctor+ receptionist+ admin+
 GET /uploads/profileImages/photo.png anonymous+ patient+ doctor+ receptionist+ admin+
 POST /api/admin/doctor anonymous- patient- doctor- receptionist- admin+
+POST /api/admin/notifications/{id}/resend anonymous- patient- doctor- receptionist- admin+
 POST /api/admin/patient anonymous- patient- doctor- receptionist- admin+
 POST /api/admin/receptionist anonymous- patient- doctor- receptionist- admin+
 POST /api/admin/users anonymous- patient- doctor- receptionist- admin+
