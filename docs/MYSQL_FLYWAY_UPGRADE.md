@@ -314,6 +314,7 @@ Keep the backup files for a few weeks, then delete them (they contain patient da
 2. **Later migrations need no runbook:** when a branch with a new migration is merged (e.g. `feature/reliable-notifications`), Flyway applies it on the next start and Hibernate validates the result. A backup (section 4) before that start is still a good habit.
 3. Any other developer database gets the same treatment (sections 4–7), or starts empty (Flyway then builds it from `V1__baseline.sql`).
 4. Update the progress log in [MULTI_MODULE_PLAN.md](MULTI_MODULE_PLAN.md) (step 4.1: "your MySQL still to upgrade" → done).
+5. **Set up the nightly backups** of this database: [BACKUPS.md](BACKUPS.md), section "Windows" (once the backups feature is merged).
 
 ---
 

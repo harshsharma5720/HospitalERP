@@ -441,7 +441,7 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ## 11. Feature Status (updated 2026-10-07)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7) and reliable notifications (branch `feature/reliable-notifications`).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8) and automatic backups (branch `feature/mysql-backups`).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
@@ -450,6 +450,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 - **Audit log** of who viewed or changed medical records, patient profiles and accounts (2026-10-05, see below).
 - **Admin dashboard with real figures** instead of the invented ones (2026-10-07, see below).
 - **Appointment emails / SMS that aren't lost** when the mail server or Twilio is down (2026-10-07, see below).
+- **Automatic nightly backups** of the database and the uploaded images, for Docker and Windows (2026-10-08, see below).
 
 **Partly done**
 - **Front-desk booking:** receptionists can book for an existing patient, but can't register a new walk-in patient on the spot.
@@ -463,7 +464,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 1 | ~~Deactivate accounts instead of deleting them~~ ✅ done 2026-10-01 | compliance | — |
 | 2 | ~~Audit log of who viewed or changed medical records~~ ✅ done 2026-10-05 | compliance | — |
 | 3 | Safer login tokens (short access token + refresh token in an `httpOnly` cookie) | security | 2–3 days |
-| 4 | Automatic MySQL backups (backup container in docker-compose) | operations | ½ day |
+| 4 | ~~Automatic MySQL backups (backup container in docker-compose)~~ ✅ done 2026-10-08 (Docker and Windows) | operations | — |
 | 5 | ~~Notifications that aren't lost when SMS/email is down~~ ✅ done 2026-10-07 (an outbox instead of the Modulith event registry) | reliability | — |
 | 6 | In-app notification centre (bell icon) | platform | 3 days |
 | 7 | ~~Real admin dashboard KPIs (replacing the fake chart data)~~ ✅ done 2026-10-07 | admin | — |
@@ -486,7 +487,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** 4 next (automatic backups, ½ day), then front-desk work (10, 12, 11) or billing (18). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
+**Suggested order:** front-desk work next (10 walk-in registration, 12 patient search and paging, 11 today's queue) or billing (18). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
 
 ### Account deactivation (done 2026-10-01)
 
@@ -586,3 +587,19 @@ From idea #5 above. Appointment emails and SMS were sent once in a background th
 - Running the migration on the real database ([MYSQL_FLYWAY_UPGRADE.md](MYSQL_FLYWAY_UPGRADE.md)) and a test with the real SMTP server and Twilio account.
 - Several app instances would share the outbox safely (claims), but this was only tested with one.
 - Other messages (e.g. leave decisions to doctors) could use the outbox later.
+
+### Automatic backups (done 2026-10-08)
+
+From idea #4 above. Nothing backed up the database or the uploaded images; a dead disk, a wrong `docker compose down -v` or a bad upgrade would have lost every record. Decisions, design and steps: [MYSQL_BACKUPS_PLAN.md](MYSQL_BACKUPS_PLAN.md); how to use it: [BACKUPS.md](BACKUPS.md).
+
+**What it does**
+- Every night at 02:00 the database (mysqldump) and the uploaded images are saved into one folder per backup, with checksums and a summary. A backup only counts when it is checked (readable archives, a complete dump); `LAST_RUN.txt` says OK or FAILED with the reason. The 7 newest are kept plus the newest of each of the last 4 weeks.
+- **Docker:** a `backup` service in `docker-compose.yml` (the `mysql:8.0` image, so `mysqldump` matches the server) writes to `backups/` (git-ignored); time, time zone and counts in `.env`.
+- **Windows (the real database on the other laptop):** `tools/backup/backup-windows.ps1` with a MySQL login stored once by `mysql_config_editor` (no password in any file), run nightly by a scheduled task (`install-backup-task.ps1`) that catches up if the laptop was off. Same format as Docker.
+- **Restore** in both set-ups: checksums first, then the database is re-created and the images replaced; only with an explicit `--yes` / `-Yes`.
+
+**Tests:** `docker/backup/test-backup.sh` against a throw-away MySQL 8 (backup → damage → restore → data back, refusals, a failing backup, retention on 60 fake backups), a real run of the compose service, and `tools/backup/test/test-backup-windows.ps1` with stand-ins for mysqldump / mysql (backup, failures, ISO weeks, retention, restore, task installer). They found and fixed two Windows bugs (PowerShell 5.1 parameter defaults, CRLF checksums).
+
+**Not covered yet:**
+- The first real run on the other laptop (a checklist in [BACKUPS.md](BACKUPS.md)).
+- Copies off the machine are manual (the guide says how to encrypt them); no automatic off-site upload.
