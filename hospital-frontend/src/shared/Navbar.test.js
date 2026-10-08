@@ -28,16 +28,19 @@ test("everyone sees the site links; logged-out users get no profile button", () 
 test("doctors get their appointments link", () => {
   renderAs("ROLE_DOCTOR");
   expect(screen.getByText("My Appointments").closest("a")).toHaveAttribute("href", "/doctor-appointments");
+  expect(screen.queryByText("Walk-in")).not.toBeInTheDocument();
   expect(screen.getByText("Profile")).toBeInTheDocument();
 });
 
-test("receptionists get the front-desk appointments link", () => {
+test("receptionists get the front-desk appointments and walk-in links", () => {
   renderAs("ROLE_RECEPTIONIST");
   expect(screen.getByText("My Appointments").closest("a")).toHaveAttribute("href", "/receptionist-appointments");
+  expect(screen.getByText("Walk-in").closest("a")).toHaveAttribute("href", "/walk-in");
 });
 
 test("admins get no appointments link", () => {
   renderAs("ROLE_ADMIN");
   expect(screen.queryByText("My Appointments")).not.toBeInTheDocument();
+  expect(screen.queryByText("Walk-in")).not.toBeInTheDocument(); // admins: in the admin portal's sidebar
   expect(screen.getByText("Profile")).toBeInTheDocument();
 });

@@ -11,6 +11,8 @@ export const ACTION_LABELS = {
   PATIENT_PROFILE_VIEWED: "Viewed patient profile",
   PATIENT_PROFILE_UPDATED: "Updated patient profile",
   PATIENT_LIST_VIEWED: "Viewed patient list",
+  PATIENTS_SEARCHED: "Searched patients by phone",
+  WALK_IN_REGISTERED: "Registered walk-in patient",
   USER_CREATED: "Created user",
   ACCOUNT_DEACTIVATED: "Deactivated account",
   ACCOUNT_REACTIVATED: "Reactivated account",

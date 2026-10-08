@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import { Home, Activity, User, Phone, Info, UserCircle } from "lucide-react";
+import { Home, Activity, User, Phone, Info, UserCircle, UserPlus } from "lucide-react";
 import ProfilePage from "./ProfilePage";
 import DarkThemeToggle from "./DarkThemeToggle";
 import { getRoleFromToken } from "./utils/jwtUtils";
 
+// Light mode: white when hovered or active; dark mode: cyan
+const linkClass = ({ isActive }) =>
+  "flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200 " +
+  "hover:bg-white hover:text-teal-700 " +
+  "dark:hover:bg-gradient-to-br dark:hover:from-[#50d4f2] dark:hover:to-[#3bc2df] dark:hover:text-black" +
+  (isActive ? " bg-white text-teal-700 font-semibold shadow-sm dark:bg-[#50d4f2] dark:text-black" : "");
 
 export default function Navbar() {
   const [showProfile, setShowProfile] = useState(false);
@@ -69,90 +75,28 @@ export default function Navbar() {
       {/* Left: Nav links */}
       <div className="flex gap-10">
         {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            end
-            className={({ isActive }) =>
-              `flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200
-
-              /* LIGHT MODE */
-              hover:bg-white hover:text-teal-700
-
-              /* DARK MODE */
-              dark:hover:bg-gradient-to-br
-              dark:hover:from-[#50d4f2]
-              dark:hover:to-[#3bc2df] dark:hover:text-black
-
-              ${
-                isActive
-                  ? `
-                    bg-white text-teal-700 font-semibold shadow-sm
-                    dark:bg-[#50d4f2] dark:text-black
-                    `
-                  : ""
-              }`
-            }
-          >
+          <NavLink key={item.path} to={item.path} end className={linkClass}>
             {item.icon}
             <span>{item.name}</span>
           </NavLink>
         ))}
         {role === "ROLE_DOCTOR" && (
-          <NavLink
-             to={`/doctor-appointments`}
-                className={({ isActive }) =>
-                              `flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200
-
-                              /* LIGHT MODE */
-                              hover:bg-white hover:text-teal-700
-
-                              /* DARK MODE */
-                              dark:hover:bg-gradient-to-br
-                              dark:hover:from-[#50d4f2]
-                              dark:hover:to-[#3bc2df] dark:hover:text-black
-
-                              ${
-                                isActive
-                                  ? `
-                                    bg-white text-teal-700 font-semibold shadow-sm
-                                    dark:bg-[#50d4f2] dark:text-black
-                                    `
-                                  : ""
-                              }`
-                }
-             >
-               <Activity size={20} />
-               <span>My Appointments</span>
+          <NavLink to="/doctor-appointments" className={linkClass}>
+            <Activity size={20} />
+            <span>My Appointments</span>
           </NavLink>
         )}
         {role === "ROLE_RECEPTIONIST" && (
-          <NavLink
-            to={`/receptionist-appointments`}
-               className={({ isActive }) =>
-                                      `flex items-center gap-2 px-3 py-1 rounded-md transition-all duration-200
-
-                                      /* LIGHT MODE */
-                                      hover:bg-white hover:text-teal-700
-
-                                      /* DARK MODE */
-                                      dark:hover:bg-gradient-to-br
-                                      dark:hover:from-[#50d4f2]
-                                      dark:hover:to-[#3bc2df] dark:hover:text-black
-
-                                      ${
-                                        isActive
-                                          ? `
-                                            bg-white text-teal-700 font-semibold shadow-sm
-                                            dark:bg-[#50d4f2] dark:text-black
-                                            `
-                                          : ""
-                                      }`
-                        }
-          >
-               <Activity size={20} />
-               <span>My Appointments</span>
-          </NavLink>
+          <>
+            <NavLink to="/receptionist-appointments" className={linkClass}>
+              <Activity size={20} />
+              <span>My Appointments</span>
+            </NavLink>
+            <NavLink to="/walk-in" className={linkClass}>
+              <UserPlus size={20} />
+              <span>Walk-in</span>
+            </NavLink>
+          </>
         )}
       </div>
 

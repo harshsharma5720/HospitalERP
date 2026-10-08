@@ -18,6 +18,7 @@ import DoctorDetailsPage from "../features/doctors/DoctorDetailsPage";
 import AddRelativePage from "../features/patients/AddRelativePage";
 import RelativesList from "../features/patients/RelativesList";
 import ReceptionistAppointmentDashboard from "../features/appointments/ReceptionistAppointmentDashboard";
+import WalkInPage from "../features/appointments/WalkInPage";
 
 /* ADMIN / DOCTOR */
 import AdminLayout from "../features/admin/AdminLayout";
@@ -71,6 +72,10 @@ function App() {
               <ReceptionistAppointmentDashboard />
             </ProtectedRoute>
           }
+        />
+        <Route
+          path="/walk-in"
+          element={<ProtectedRoute roles={["ROLE_RECEPTIONIST", "ROLE_ADMIN"]}><WalkInPage /></ProtectedRoute>}
         />
 
         {/* ===================== ADMIN ===================== */}
