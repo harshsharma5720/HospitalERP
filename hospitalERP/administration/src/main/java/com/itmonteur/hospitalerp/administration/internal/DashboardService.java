@@ -6,11 +6,14 @@ import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.identity.UserService;
 import com.itmonteur.hospitalerp.notifications.NotificationOutbox;
+import com.itmonteur.hospitalerp.patients.PtInfoService;
 import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,14 +32,17 @@ public class DashboardService {
     private final UserService userService;
     private final LeaveRequestService leaveRequestService;
     private final NotificationOutbox notificationOutbox;
+    private final PtInfoService ptInfoService;
     private final Clock clock;
 
     public DashboardService(AppointmentStatistics appointmentStatistics, UserService userService,
-                            LeaveRequestService leaveRequestService, NotificationOutbox notificationOutbox, Clock clock) {
+                            LeaveRequestService leaveRequestService, NotificationOutbox notificationOutbox,
+                            PtInfoService ptInfoService, Clock clock) {
         this.appointmentStatistics = appointmentStatistics;
         this.userService = userService;
         this.leaveRequestService = leaveRequestService;
         this.notificationOutbox = notificationOutbox;
+        this.ptInfoService = ptInfoService;
         this.clock = clock;
     }
 
@@ -47,7 +53,9 @@ public class DashboardService {
         LocalDate today = LocalDate.now(clock);
         LocalDate from = today.minusDays(days - 1L);
         List<DailyAppointmentCounts> perDay = appointmentStatistics.perDay(from, today);
-        Map<LocalDate, Long> newPatientsPerDay = userService.countNewAccountsPerDay(Role.PATIENT, from, today);
+        // New patients: patient accounts plus walk-in records registered at the front desk
+        Map<LocalDate, Long> newPatientsPerDay = new HashMap<>(userService.countNewAccountsPerDay(Role.PATIENT, from, today));
+        ptInfoService.countNewWalkInsPerDay(from, today).forEach((day, count) -> newPatientsPerDay.merge(day, count, Long::sum));
 
         List<DashboardDTO.Day> trend = perDay.stream().map(day -> {
             boolean past = day.date().isBefore(today);
@@ -66,7 +74,7 @@ public class DashboardService {
         Map<Role, Long> active = userService.countActiveAccountsPerRole();
         return new DashboardDTO.Today(today, counts.total(), counts.completed(), counts.open(),
                 counts.cancelledByPatient() + counts.cancelledByDoctor(), leaveRequestService.countDoctorsOnLeave(today),
-                active.getOrDefault(Role.PATIENT, 0L), active.getOrDefault(Role.DOCTOR, 0L),
+                active.getOrDefault(Role.PATIENT, 0L) + ptInfoService.countWalkInPatients(), active.getOrDefault(Role.DOCTOR, 0L),
                 active.getOrDefault(Role.RECEPTIONIST, 0L));
     }
 
@@ -84,7 +92,14 @@ public class DashboardService {
 
     private DashboardDTO.NewPatients newPatients(List<DashboardDTO.Day> trend) {
         return new DashboardDTO.NewPatients(trend.stream().mapToLong(DashboardDTO.Day::newPatients).sum(),
-                userService.firstAccountCreationTime().orElse(null));
+                earliest(userService.firstAccountCreationTime().orElse(null), ptInfoService.firstWalkInCreationTime().orElse(null)));
+    }
+
+    private static LocalDateTime earliest(LocalDateTime a, LocalDateTime b) {
+        if (a == null) {
+            return b;
+        }
+        return b == null || a.isBefore(b) ? a : b;
     }
 
     /** part ÷ whole as a percentage with one decimal; 0 when whole is 0. */

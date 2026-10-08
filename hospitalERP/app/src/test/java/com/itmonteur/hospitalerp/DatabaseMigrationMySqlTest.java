@@ -86,7 +86,7 @@ class DatabaseMigrationMySqlTest {
                 "SELECT version, type, success FROM flyway_schema_history ORDER BY installed_rank");
         assertThat(history).extracting(row -> row.get("version") + " " + row.get("type"))
                 .containsExactly("1 BASELINE", "2026.09.28.1 SQL", "2026.09.28.2 SQL", "2026.09.30.1 SQL",
-                        "2026.10.05.1 SQL", "2026.10.06.1 SQL", "2026.10.07.1 SQL");
+                        "2026.10.05.1 SQL", "2026.10.06.1 SQL", "2026.10.07.1 SQL", "2026.10.08.1 SQL");
         assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isIn(true, 1));
 
         assertThat(legacyColumnsIn(jdbc, "hospital")).isEmpty();
@@ -95,6 +95,12 @@ class DatabaseMigrationMySqlTest {
                 .isEqualTo(2);
         // Existing accounts have no creation time; only new ones get one (docs/ADMIN_DASHBOARD_PLAN.md)
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE created_at IS NULL", Integer.class)).isEqualTo(2);
+        // Walk-in records may have no email; existing patients keep theirs and get no creation time
+        // (docs/WALK_IN_REGISTRATION_PLAN.md)
+        assertThat(jdbc.queryForObject("SELECT is_nullable FROM information_schema.columns WHERE table_schema = DATABASE() "
+                + "AND table_name = 'patient' AND column_name = 'email'", String.class)).isEqualTo("YES");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM patient WHERE email = 'asha@example.com' AND created_at IS NULL",
+                Integer.class)).isEqualTo(1);
         // The notification outbox starts empty (docs/RELIABLE_NOTIFICATIONS_PLAN.md)
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM notification_outbox", Integer.class)).isZero();
         // The audit log starts empty (docs/AUDIT_LOG_PLAN.md)

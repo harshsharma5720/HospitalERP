@@ -37,6 +37,7 @@ public class PatientProfileCreator {
         patient.setPatientAadharNo(null);
         patient.setGender(Gender.OTHER);
         patient.setDob(null); // asked for on the profile page instead of a fake date
+        patient.setCreatedAt(user.getCreatedAt());
         ptInfoRepository.save(patient);
     }
 }

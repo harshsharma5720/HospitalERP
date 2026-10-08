@@ -8,6 +8,7 @@ import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.identity.UserService;
 import com.itmonteur.hospitalerp.notifications.NotificationOutbox;
+import com.itmonteur.hospitalerp.patients.PtInfoService;
 import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import com.itmonteur.hospitalerp.staff.Specialist;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,9 @@ class DashboardServiceTest {
     private final UserService userService = mock(UserService.class);
     private final LeaveRequestService leaveRequestService = mock(LeaveRequestService.class);
     private final NotificationOutbox notificationOutbox = mock(NotificationOutbox.class);
+    private final PtInfoService ptInfoService = mock(PtInfoService.class);
     private final DashboardService service = new DashboardService(statistics, userService, leaveRequestService, notificationOutbox,
+            ptInfoService,
             Clock.fixed(TODAY.atTime(15, 0).atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()));
 
     /** Seven days ending today, zeros except the given ones. */
@@ -67,6 +70,10 @@ class DashboardServiceTest {
         when(statistics.busiestSpecializations(from, TODAY, 5)).thenReturn(specializations);
         when(statistics.busiestDoctors(from, TODAY, 5)).thenReturn(doctors);
         when(notificationOutbox.countUndelivered()).thenReturn(2L);
+        // Walk-in records registered at the front desk count as patients too
+        when(ptInfoService.countWalkInPatients()).thenReturn(3L);
+        when(ptInfoService.countNewWalkInsPerDay(from, TODAY)).thenReturn(Map.of(TODAY, 2L));
+        when(ptInfoService.firstWalkInCreationTime()).thenReturn(Optional.of(LocalDateTime.of(2026, 10, 5, 12, 0)));
 
         DashboardDTO dashboard = service.dashboard(7);
 
@@ -75,11 +82,12 @@ class DashboardServiceTest {
         // Past days: open appointments were missed; today: they are upcoming
         assertThat(dashboard.trend().get(4)).isEqualTo(new DashboardDTO.Day(twoDaysAgo, 2, 0, 1, 1, 0));
         assertThat(dashboard.trend().get(5)).isEqualTo(new DashboardDTO.Day(yesterday, 1, 0, 0, 1, 2));
-        assertThat(dashboard.trend().get(6)).isEqualTo(new DashboardDTO.Day(TODAY, 1, 3, 0, 1, 1));
-        assertThat(dashboard.today()).isEqualTo(new DashboardDTO.Today(TODAY, 5, 1, 3, 1, 1, 40, 5, 2));
+        assertThat(dashboard.trend().get(6)).isEqualTo(new DashboardDTO.Day(TODAY, 1, 3, 0, 1, 1 + 2));
+        assertThat(dashboard.today()).isEqualTo(new DashboardDTO.Today(TODAY, 5, 1, 3, 1, 1, 40 + 3, 5, 2));
         // 11 appointments, 3 cancelled (2 by patients) = 27.3 %; past and not cancelled: 2+1 + 1 = 4, 1 missed = 25 %
         assertThat(dashboard.cancellations()).isEqualTo(new DashboardDTO.Cancellations(11, 3, 2, 1, 27.3, 1, 25.0));
-        assertThat(dashboard.newPatients()).isEqualTo(new DashboardDTO.NewPatients(3, LocalDateTime.of(2026, 10, 6, 9, 0)));
+        // 3 new accounts + 2 walk-ins; counted since the earlier of the two first creation times
+        assertThat(dashboard.newPatients()).isEqualTo(new DashboardDTO.NewPatients(3 + 2, LocalDateTime.of(2026, 10, 5, 12, 0)));
         assertThat(dashboard.busiestSpecializations()).isSameAs(specializations);
         assertThat(dashboard.busiestDoctors()).isSameAs(doctors);
         assertThat(dashboard.undeliveredNotifications()).isEqualTo(2);
@@ -103,7 +111,7 @@ class DashboardServiceTest {
     void onlySevenThirtyOrNinetyDays() {
         assertThatThrownBy(() -> service.dashboard(10)).isInstanceOf(BadRequestException.class);
         assertThatThrownBy(() -> service.dashboard(0)).isInstanceOf(BadRequestException.class);
-        verifyNoInteractions(statistics, userService, leaveRequestService, notificationOutbox);
+        verifyNoInteractions(statistics, userService, leaveRequestService, notificationOutbox, ptInfoService);
 
         LocalDate from = TODAY.minusDays(89);
         List<DailyAppointmentCounts> quarter = new ArrayList<>();
