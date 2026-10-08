@@ -6,6 +6,7 @@
 #
 # On the first start Flyway creates all tables in the empty database. Data and uploaded
 # profile images live in named volumes and survive "docker compose down" (add -v to wipe them).
+# Every night the "backup" service saves both into ./backups (docs/BACKUPS.md).
 name: hospitalerp
 
 services:
@@ -78,6 +79,34 @@ services:
         condition: service_healthy
     ports:
       - "${FRONTEND_PORT:-3000}:80"
+    restart: unless-stopped
+
+  # Nightly backup of the database and the uploaded images into ./backups (docs/BACKUPS.md):
+  # the 7 newest are kept plus the newest of each of the last 4 weeks; LAST_RUN.txt says if the last one worked.
+  #   docker compose exec backup bash /scripts/entrypoint.sh backup                one backup now
+  #   docker compose exec backup bash /scripts/entrypoint.sh list                  backups + last result
+  #   docker compose stop backend
+  #   docker compose exec backup bash /scripts/entrypoint.sh restore <name> --yes  then: docker compose start backend
+  backup:
+    image: mysql:8.0 # for its mysqldump, which matches the server
+    entrypoint: ["bash", "/scripts/entrypoint.sh"]
+    command: ["schedule"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_NAME: hospital_erp
+      DB_USER: root
+      MYSQL_PWD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in .env}
+      BACKUP_TIME: ${BACKUP_TIME:-02:00}
+      TZ: ${BACKUP_TZ:-Asia/Kolkata}
+      KEEP_DAILY: ${BACKUP_KEEP_DAILY:-7}
+      KEEP_WEEKLY: ${BACKUP_KEEP_WEEKLY:-4}
+    volumes:
+      - ./docker/backup:/scripts:ro
+      - ${BACKUP_DIR:-./backups}:/backups
+      - uploads:/uploads
     restart: unless-stopped
 
 volumes:
