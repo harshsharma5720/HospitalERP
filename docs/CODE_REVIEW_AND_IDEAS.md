@@ -441,7 +441,7 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ## 11. Feature Status (updated 2026-10-07)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6) and the real admin dashboard (branch `feature/admin-dashboard`).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7) and reliable notifications (branch `feature/reliable-notifications`).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
@@ -449,6 +449,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 - **Account deactivation instead of deletion** (2026-10-01, see below).
 - **Audit log** of who viewed or changed medical records, patient profiles and accounts (2026-10-05, see below).
 - **Admin dashboard with real figures** instead of the invented ones (2026-10-07, see below).
+- **Appointment emails / SMS that aren't lost** when the mail server or Twilio is down (2026-10-07, see below).
 
 **Partly done**
 - **Front-desk booking:** receptionists can book for an existing patient, but can't register a new walk-in patient on the spot.
@@ -463,7 +464,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 2 | ~~Audit log of who viewed or changed medical records~~ ✅ done 2026-10-05 | compliance | — |
 | 3 | Safer login tokens (short access token + refresh token in an `httpOnly` cookie) | security | 2–3 days |
 | 4 | Automatic MySQL backups (backup container in docker-compose) | operations | ½ day |
-| 5 | Notifications that aren't lost when SMS/email is down (Modulith event registry) | reliability | 1 day |
+| 5 | ~~Notifications that aren't lost when SMS/email is down~~ ✅ done 2026-10-07 (an outbox instead of the Modulith event registry) | reliability | — |
 | 6 | In-app notification centre (bell icon) | platform | 3 days |
 | 7 | ~~Real admin dashboard KPIs (replacing the fake chart data)~~ ✅ done 2026-10-07 | admin | — |
 | 8 | Doctor analytics (patients per day, no-show rate, busy hours) | doctor | 2 days |
@@ -485,7 +486,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** 5 and 4 next (notifications that survive an outage, automatic backups), then front-desk work (10, 12, 11) or billing (18). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
+**Suggested order:** 4 next (automatic backups, ½ day), then front-desk work (10, 12, 11) or billing (18). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
 
 ### Account deactivation (done 2026-10-01)
 
@@ -560,3 +561,28 @@ From idea 7.4 ("real dashboard KPIs") — #7 above. The admin dashboard showed i
 - Running the migration on the real database ([MYSQL_FLYWAY_UPGRADE.md](MYSQL_FLYWAY_UPGRADE.md)) and a click-through with real data.
 - Revenue figures: they need billing (#18).
 - Upcoming load beyond today (e.g. bookings for the next 7 days) and per-doctor utilisation against their schedule are possible follow-ups.
+
+### Reliable notifications (done 2026-10-07)
+
+From idea #5 above. Appointment emails and SMS were sent once in a background thread: if the mail server or Twilio was down — or the app restarted at the wrong moment — the message was lost, and the day-before reminder was even marked as sent. Decisions, design and steps: [RELIABLE_NOTIFICATIONS_PLAN.md](RELIABLE_NOTIFICATIONS_PLAN.md).
+
+**Backend**
+- An **outbox** in the notifications module: every appointment email / SMS (booking 4, cancellation 3, cancellation by a doctor's leave 2, reminder 2) is stored as its own row **in the same transaction** as the booking, cancellation or reminder — a rolled-back change leaves none, and the reminder flag is saved together with its messages.
+- A sender delivers them right after the commit and every minute: a failure is retried after 1, 5, 15, 30, 60 minutes, then hourly, for at most 24 hours and never after the appointment; then the message is **failed**. Each message is claimed before sending, so it is never sent twice; a channel that isn't configured makes it **skipped**, not retried. Chosen over Spring Modulith's event registry, which would replay a whole event and resend the messages that had already gone out.
+- `GET /api/admin/notifications` (status filter, paging, no message texts) and `POST /api/admin/notifications/{id}/resend` (failed or skipped only; a fresh 24-hour window); the admin dashboard counts the undelivered ones.
+- Delivered and skipped messages are deleted after 30 days, failed ones after 90 (they contain names, phone numbers and appointment times).
+- Login codes and password-reset codes stay direct: they expire within minutes and the user is waiting for them.
+
+**Frontend**
+- Admin → **Notifications**: failed messages first, the error and attempts, **Resend**; a dashboard tile "Undelivered notifications" with a link.
+
+**Database change:** Flyway migration `notifications/V2026_10_07_1__notifications_outbox.sql` creates the empty `notification_outbox` table.
+
+**Tests added:**
+- Backend (12 more; 133 passing, 1 skipped without a MySQL `DB_URL`): the outbox with a clock moved by hand (delivery, the exact retry times, giving up, skipped channels, two senders racing, a dead sender, clean-up), appointment notifications end to end (a booking queues four messages that go out after the commit, a mail server that is down, rollback, the reminder flag), the admin list / resend / dashboard count; the migration on MySQL 8.
+- Frontend (5 new, 40 total): the Notifications page; the dashboard tile.
+
+**Not covered yet:**
+- Running the migration on the real database ([MYSQL_FLYWAY_UPGRADE.md](MYSQL_FLYWAY_UPGRADE.md)) and a test with the real SMTP server and Twilio account.
+- Several app instances would share the outbox safely (claims), but this was only tested with one.
+- Other messages (e.g. leave decisions to doctors) could use the outbox later.
