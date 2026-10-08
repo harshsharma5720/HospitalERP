@@ -1,0 +1,51 @@
+# Automatic MySQL backups — plan
+
+**Branch:** `feature/mysql-backups` (from `main` = c67e5dd)
+**Why:** nothing backs up the database or the uploaded profile images. A broken disk, a wrong `docker compose down -v` or a bad upgrade would lose every patient record. The only backup today is the manual one in the [MySQL runbook](MYSQL_FLYWAY_UPGRADE.md).
+**Idea list:** [CODE_REVIEW_AND_IDEAS.md](CODE_REVIEW_AND_IDEAS.md#not-implemented-yet) — "not implemented yet" #4.
+**Status:** ✅ done (2026-10-08) — see [Result](#result). How to use it: [BACKUPS.md](BACKUPS.md).
+
+## Decisions (2026-10-08)
+
+| Question | Decision |
+|---|---|
+| Where | **Docker and Windows:** a backup container in `docker-compose`, and a PowerShell script with a Windows Task Scheduler entry for the normal MySQL installation on the other laptop (where the real data is). |
+| Schedule and retention | **Nightly at 02:00**; keep the **7 newest** backups and the newest backup of each of the **last 4 weeks** (about 11). |
+| Contents | **Database + uploaded images:** the MySQL dump and the uploads folder, so a restore brings everything back. |
+| Protection | **Compressed** (gzip / zip) in a backups folder on the same machine — as protected as the database itself. The guide says to encrypt any copy taken off the machine. |
+
+## How it works
+
+- **One backup = one folder** named after its time, e.g. `2026-10-08_020000/` (to the second, so two manual backups never collide), with `hospital_erp.sql.gz` (the dump), the uploads archive, `SHA256SUMS` (checked before a restore) and a readable `manifest.txt`. It is written under a temporary name and only renamed when complete, so a half-written backup never looks like a good one.
+- **Checked before it counts:** the archive must be readable and the dump must end with MySQL's "Dump completed" line.
+- **`LAST_RUN.txt`** in the backups folder says whether the last run worked (OK / FAILED, time, message) — the first place to look.
+- **Old backups are removed** after each successful run (never after a failed one): the 7 newest stay, plus the newest of each of the last 4 weeks.
+- **Restore** is a separate command that must be confirmed (`--yes`); the guide says to stop the app first.
+- **Not in git:** the backups folder is git-ignored — the files contain patient data.
+
+## Steps
+
+| Step | Work | Checked by |
+|---|---|---|
+| E.1 | **Backup and restore scripts** for Docker (bash, run in a `mysql:8.0` container): backup, verify, manifest, `LAST_RUN.txt`, retention; restore. | A test script that runs them against throw-away MySQL containers: backup → damage the data → restore → data back; retention on 60 days of fake backups; a failing backup leaves nothing half-written |
+| E.2 | **`backup` service in `docker-compose.yml`:** nightly schedule (time zone from `.env`), `./backups` folder, uploads volume; `.env.docker.example`, `.gitignore`. | `docker compose config`; a run of the service against the compose MySQL |
+| E.3 | **Windows:** `backup-windows.ps1` (mysqldump with a stored login, gzip, zip of the uploads, the same checks and retention) and `install-backup-task.ps1` (Task Scheduler, 02:00, runs later if the laptop was off). | Tests with synthetic data and a stand-in for mysqldump (no MySQL installed on this laptop); a real run is a step in the guide |
+| E.4 | **Docs:** a backup and restore guide (`docs/BACKUPS.md`), README, MySQL runbook link, idea list status. | — |
+
+## Progress log
+
+| Step | Status | Date | Notes |
+|---|---|---|---|
+| E.0 Plan + decisions | ✅ done | 2026-10-08 | This file. |
+| E.1 Backup and restore scripts | ✅ done | 2026-10-08 | `docker/backup/` (bash, run in the `mysql:8.0` image — its `mysqldump` 8.0 matches the server; `tar`, `gzip`, `sha256sum`, GNU `date` and the time-zone data are there): `backup.sh` (mysqldump `--single-transaction` of `hospital_erp` → gzip, uploads → tar.gz, checks: archives readable, dump ends with "-- Dump completed"; `SHA256SUMS` + `manifest.txt`; written as `.in-progress-…` and renamed only when complete; `LAST_RUN.txt` OK / FAILED with the reason; then `prune.sh`), `prune.sh` (7 newest + newest of each of the 4 most recent ISO weeks; only `yyyy-MM-dd_HHmmss` folders), `restore.sh` (`<name> --yes`; checks the checksums, drops and re-creates the database, loads the dump, replaces the uploads), `entrypoint.sh` (`schedule` — nightly at `BACKUP_TIME`, waking every 5 minutes so a computer that slept still backs up soon after; `backup`; `restore`; `list`). Password only via `MYSQL_PWD`. Folder names to the second (not `HHmm`), so two manual backups never collide. `.gitattributes` keeps LF line endings. `test-backup.sh` runs them against a throw-away MySQL 8 container: a backup (all files, OK, nothing half-written); damaged data (deleted / changed rows incl. non-English names, a deleted and an extra image) → restore → all back; restore refused without `--yes` and for an unknown name; a wrong password → FAILED with "Access denied", no new or half-written folder; retention on 60 nightly fake backups → exactly the 7 newest + 27 Sep + 20 Sep, other folders untouched. All checks pass; the test leaves no containers behind. |
+| E.2 Backup service in docker-compose | ✅ done | 2026-10-08 | `docker-compose.yml`: service `backup` (image `mysql:8.0`, entrypoint `docker/backup/entrypoint.sh`, mode `schedule`; starts after MySQL is healthy; `restart: unless-stopped`) with the scripts read-only, `${BACKUP_DIR:-./backups}` → `/backups`, the backend's `uploads` volume → `/uploads`; root password via `MYSQL_PWD`; usage comments for backup now / list / restore. `.env.docker.example`: `BACKUP_DIR`, `BACKUP_TIME` (02:00), `BACKUP_TZ` (Asia/Kolkata — its own name, so a `TZ` in the shell can't move the backup time), `BACKUP_KEEP_DAILY` / `_WEEKLY`. `.gitignore`: `/backups/` (checked: git ignores the folder). Checked with `docker compose config` and a real run in a separate compose project (own name, test passwords, backups in a scratch folder): the service logs "every night at 02:00 (IST)"; a backup started by hand lands in the host folder with the test row in the dump and the uploads archive, times in IST; a restore through compose brings a changed row back; the test project, its volumes and files were removed afterwards. |
+| E.3 Windows scripts | ✅ done | 2026-10-08 | `tools/backup/` (Windows PowerShell 5.1, ASCII): `backup-windows.ps1` (mysqldump with `--login-path=hospitalerp-backup` — stored once with `mysql_config_editor`, so no password in any file; dump → gzip with .NET, uploads → `uploads.tar.gz` with Windows' own `tar.exe`; same checks, `SHA256SUMS`, `manifest.txt`, `.in-progress-…` → rename, `LAST_RUN.txt`, plus `backup.log`; same retention; `-PruneOnly`; default folder `C:\db-backups\hospital-erp`, uploads `hospitalERP\uploads`), `restore-windows.ps1` (`-Name … -Yes`; checksums first, then drop / create / load via `mysql -e source`, uploads replaced; temporary dump removed), `install-backup-task.ps1` (Task Scheduler: daily at 02:00 as the current user, **runs later if the laptop was off**, on battery too, max 2 h; `-DryRun`, `-Remove`; no admin rights), `BackupCommon.ps1` (shared helpers, incl. the ISO week by hand — .NET Framework has none). **Same backup format as Docker**: checked by letting the Docker image's `sha256sum --check`, `gzip` and `tar` read a Windows-made backup. `test/test-backup-windows.ps1` with stand-ins for mysqldump / mysql (no MySQL on this laptop): backup (files, no raw dump left, readable dump with "Dump completed", checksums, LF endings, the image in the archive, OK, log); mysqldump error / incomplete dump / missing mysqldump → FAILED with the reason, nothing half-written; ISO weeks incl. year boundaries (same as `date +%G-%V`); retention on 60 fake backups → the same 9 as Docker; restore refused without `-Yes` / unknown name / damaged archive, otherwise database re-created then the backed-up dump loaded, images replaced; installer dry run and a wrong time refused. The tests found two real bugs, both fixed: `$PSScriptRoot` is empty in PowerShell 5.1 parameter defaults (backup and restore crashed without `-UploadsDir`), and CRLF in `SHA256SUMS` (Linux `sha256sum` couldn't read Windows backups). Not tested: a real Windows MySQL and the real Task Scheduler registration — the first run on the other laptop is a step in the guide. |
+| E.4 Docs | ✅ done | 2026-10-08 | New guide **[BACKUPS.md](BACKUPS.md)** for whoever runs the system: in short (Docker vs Windows), what a backup folder holds, Docker commands (check, backup now, restore), Windows one-time set-up (store the login, first run by hand, register the task, check next morning) and restore, copies off the machine (encrypted, never by email / chat), a monthly practice restore into a test database (commands for both), what to do for each `FAILED` reason, a backup before an upgrade. README: `backup` in the Docker services table, a Docker bullet, a new "Backups" section, Further Reading. MySQL runbook section 10: set up the nightly backups. `CODE_REVIEW_AND_IDEAS.md`: #4 done, summary, suggested order (front desk or billing next). |
+
+## Result
+
+The database and the uploaded images are **backed up every night**, checked, and kept for 7 days plus one per week for 4 weeks — in Docker by a `backup` service, on Windows by a scheduled PowerShell script — in the same format, with a confirmed restore. `LAST_RUN.txt` shows at a glance whether last night worked. All backup tests pass (Docker scripts against a real MySQL 8, the compose service for real, the Windows scripts with stand-ins); no application code or migration changed.
+
+**To do on the other laptop:** the one-time Windows set-up in [BACKUPS.md](BACKUPS.md) (store the login, first backup by hand, register the task), then a practice restore into a test database.
+
+**Possible follow-ups:** an automatic encrypted copy off the machine (e.g. to a USB drive or a cloud bucket); a warning on the admin dashboard when `LAST_RUN.txt` says FAILED.

@@ -1,0 +1,2 @@
+# These scripts run in a Linux container: keep LF line endings even on a Windows checkout
+*.sh text eol=lf

@@ -1,2 +1,5 @@
 # Docker Compose settings with passwords and secrets (template: .env.docker.example)
 .env
+
+# Backups made by the docker-compose "backup" service: they contain patient data, never commit them
+/backups/
