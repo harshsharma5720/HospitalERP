@@ -236,10 +236,10 @@ The app will open at **http://localhost:3000**.
 
 | Role | Portal URL | Access |
 |------|------------|--------|
-| **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log, notifications |
+| **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log, notifications, walk-in booking |
 | **Doctor** | `/doctor/dashboard` | Appointments, leave, profile |
 | **Patient** | `/` (public pages) | Book appointments, manage relatives |
-| **Receptionist** | `/receptionist-appointments` | Manage all appointments |
+| **Receptionist** | `/receptionist-appointments`, `/walk-in` | Manage all appointments, book walk-in patients |
 
 ---
 
@@ -268,6 +268,7 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 | Audit log — who viewed or changed which medical record, patient profile or account, and when; filters by patient, user, action and dates; entries kept forever ([details](docs/AUDIT_LOG_PLAN.md)) | Admin | `/admin/audit-log` |
 | Admin dashboard with real figures — today's appointments, doctors on leave, active accounts; for the last 7 / 30 / 90 days: appointments per day (completed, upcoming, missed, cancelled), cancellation and missed rates, new patients, busiest specializations and doctors ([details](docs/ADMIN_DASHBOARD_PLAN.md)) | Admin | `/admin/dashboard` |
 | Appointment emails / SMS that aren't lost: queued with the booking or cancellation, retried for up to 24 hours (never after the visit); undelivered ones listed with a Resend button and counted on the dashboard ([details](docs/RELIABLE_NOTIFICATIONS_PLAN.md)) | Admin (automatic for everyone) | `/admin/notifications` |
+| Walk-in patients at the front desk — look the phone number up (a family may share one), register a patient without a login (name, phone, gender) or pick the one found, book the doctor's earliest free time, all in one step; SMS confirmation ([details](docs/WALK_IN_REGISTRATION_PLAN.md)) | Receptionist, Admin | `/walk-in`, `/admin/walk-in` |
 
 Medical records (consultations, prescriptions) are visible only to the patient, their doctor(s) and admins — receptionists cannot read them.
 
