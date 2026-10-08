@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -140,6 +141,28 @@ public class SlotService {
             slots.removeIf(slot -> slot.getStartTime().isBefore(now));
         }
         return slots;
+    }
+
+    /**
+     * The doctor's next free slots from now on, in time order: today's remaining ones, then the next days of the
+     * booking window, at most {@code limit}. Empty for a deactivated doctor; days on leave are skipped. For the front
+     * desk (docs/WALK_IN_REGISTRATION_PLAN.md).
+     */
+    public List<Slot> nextFreeSlots(Long doctorId, int limit) {
+        if (!findDoctor(doctorId).isAccountActive()) {
+            return List.of();
+        }
+        List<Slot> found = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        for (int day = 0; day < BOOKING_WINDOW_DAYS && found.size() < limit; day++) {
+            List<Slot> free = new ArrayList<>();
+            for (Shift shift : Shift.values()) {
+                free.addAll(getAvailableSlots(doctorId, today.plusDays(day), shift));
+            }
+            free.sort(Comparator.comparing(Slot::getStartTime));
+            found.addAll(free);
+        }
+        return found.size() > limit ? List.copyOf(found.subList(0, limit)) : found;
     }
 
     /** Locks the slot row and marks it booked. Must be called inside a transaction. */

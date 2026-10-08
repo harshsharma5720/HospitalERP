@@ -44,10 +44,12 @@ GET /api/patient/relative/patient/{patientId}
 GET /api/patient/relative/{id}
 GET /api/receptionist/doctorCompletedAppointments/{userId}
 GET /api/receptionist/doctorPendingAppointments/{userId}
+GET /api/receptionist/doctors/{doctorId}/next-free-slots
 GET /api/receptionist/getAll auth=hasRole('ADMIN')
 GET /api/receptionist/getAppointmentByDoctor/{doctorName}
 GET /api/receptionist/getAppointments
 GET /api/receptionist/getReceptionist/{receptionistId}
+GET /api/receptionist/patients
 GET /api/slots/available/{doctorId}
 GET /appointment/allCompletedAppointments
 GET /appointment/allPendingAppointments
@@ -72,6 +74,7 @@ POST /api/auth/verify-otp
 POST /api/leaves/apply
 POST /api/patient/relative/add
 POST /api/receptionist/NewAppointment
+POST /api/receptionist/walk-in
 POST /api/slots/generate/{doctorId}
 POST /appointment/NewAppointment
 PUT /api/admin/approve/{leaveId}
