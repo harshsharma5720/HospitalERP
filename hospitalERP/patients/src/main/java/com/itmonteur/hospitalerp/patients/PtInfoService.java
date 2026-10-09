@@ -6,6 +6,7 @@ import com.itmonteur.hospitalerp.audit.AuditLog;
 import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.identity.User;
 import com.itmonteur.hospitalerp.common.BadRequestException;
+import com.itmonteur.hospitalerp.common.PageResult;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
 import com.itmonteur.hospitalerp.patients.internal.PtInfoRepository;
 import com.itmonteur.hospitalerp.common.FileStorageService;
@@ -13,6 +14,9 @@ import com.itmonteur.hospitalerp.identity.CurrentUserService;
 import com.itmonteur.hospitalerp.identity.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,12 +25,15 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 // Patient profile. "ptId" parameters are the patient's *user* id (as issued in the JWT).
@@ -45,6 +52,14 @@ public class PtInfoService {
 
     private static final Pattern PHONE = Pattern.compile("\\+?\\d{10,14}");
     private static final Pattern EMAIL = Pattern.compile("[^@\\s]+@[^@\\s]+\\.[^@\\s]+");
+
+    // Patient search (docs/PATIENT_SEARCH_PLAN.md)
+    public static final int MAX_PAGE_SIZE = 100;
+    private static final Pattern PATIENT_ID = Pattern.compile("#?\\s*(\\d{1,9})");
+    private static final Pattern PHONE_LIKE = Pattern.compile("[+\\d\\s().-]*\\d[+\\d\\s().-]*");
+    private static final Sort BY_NAME = Sort.by("patientName", "patientId");
+    private static final Comparator<PtInfo> NAME_ORDER = Comparator.comparing(PtInfo::getPatientName,
+            Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER)).thenComparing(PtInfo::getPatientId);
 
     public PtInfoService(PtInfoRepository ptInfoRepository, UserService userService,
                          CurrentUserService currentUserService, FileStorageService fileStorageService,
@@ -203,18 +218,80 @@ public class PtInfoService {
      */
     @Transactional(readOnly = true)
     public List<PtInfoDTO> findByPhone(String phone) {
+        List<PtInfoDTO> matches = patientsWithPhone(phone).stream().map(PatientMapper::toDTO).toList();
+        auditPhoneSearch(phone, matches.size());
+        return matches;
+    }
+
+    /**
+     * The front desk's patient search, one box (docs/PATIENT_SEARCH_PLAN.md): "#41" or a number of up to 9 digits is
+     * a patient ID; something phone-like matches like {@link #findByPhone}; anything else is part of a name (case does
+     * not matter, typed wildcards are plain characters); empty lists everyone. Sorted by name, one page (from 0) of
+     * at most {@value #MAX_PAGE_SIZE}. Recorded in the audit log.
+     */
+    @Transactional(readOnly = true)
+    public PageResult<PtInfoDTO> searchPatients(String query, int page, int size) {
+        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
+            throw new BadRequestException("Ask for page 0 or later, with 1 to " + MAX_PAGE_SIZE + " patients per page");
+        }
+        String box = query == null ? "" : query.trim().replaceAll("\\s+", " ");
+        if (box.isEmpty()) {
+            Page<PtInfo> found = ptInfoRepository.findAll(PageRequest.of(page, size, BY_NAME));
+            auditLog.record(AuditAction.PATIENT_LIST_VIEWED, null, null, "page " + (page + 1) + " of "
+                    + found.getTotalPages() + ", " + found.getTotalElements() + " patients");
+            return toPage(found);
+        }
+        Matcher patientId = PATIENT_ID.matcher(box);
+        if (patientId.matches()) {
+            long id = Long.parseLong(patientId.group(1));
+            List<PtInfo> found = ptInfoRepository.findById(id).map(List::of).orElse(List.of());
+            auditLog.record(AuditAction.PATIENTS_SEARCHED, found.isEmpty() ? null : id, null,
+                    "by patient ID " + id + ", " + found.size() + " found");
+            return pageOf(found, page, size);
+        }
+        if (PHONE_LIKE.matcher(box).matches()) {
+            List<PtInfo> found = patientsWithPhone(box).stream().sorted(NAME_ORDER).toList();
+            auditPhoneSearch(box, found.size());
+            return pageOf(found, page, size);
+        }
+        String pattern = "%" + box.toLowerCase(Locale.ROOT).replaceAll("([!%_])", "!$1") + "%";
+        Page<PtInfo> found = ptInfoRepository.searchByName(pattern, PageRequest.of(page, size, BY_NAME));
+        auditLog.record(AuditAction.PATIENTS_SEARCHED, null, null,
+                "by name \"" + abbreviate(box) + "\", " + found.getTotalElements() + " found");
+        return toPage(found);
+    }
+
+    private List<PtInfo> patientsWithPhone(String phone) {
         String digits = digitsOf(phone);
         if (digits.length() < 10) {
             throw new BadRequestException("Please enter at least 10 digits of the phone number");
         }
         String last10 = digits.substring(digits.length() - 10);
-        List<PtInfoDTO> matches = ptInfoRepository.findByContactNoEndingWith(last10.substring(6)).stream()
+        return ptInfoRepository.findByContactNoEndingWith(last10.substring(6)).stream()
                 .filter(p -> digitsOf(p.getContactNo()).endsWith(last10))
-                .map(PatientMapper::toDTO)
                 .toList();
+    }
+
+    // "by phone ...1111, 3 found" - not the full number
+    private void auditPhoneSearch(String phone, int found) {
+        String digits = digitsOf(phone);
         auditLog.record(AuditAction.PATIENTS_SEARCHED, null, null,
-                "by phone ..." + last10.substring(6) + ", " + matches.size() + " found");
-        return matches;
+                "by phone ..." + digits.substring(digits.length() - 4) + ", " + found + " found");
+    }
+
+    private static PageResult<PtInfoDTO> toPage(Page<PtInfo> found) {
+        return PageResult.of(found.getContent().stream().map(PatientMapper::toDTO).toList(),
+                found.getNumber(), found.getSize(), found.getTotalElements());
+    }
+
+    // A short list already in memory (by ID, by phone), cut into the page asked for
+    private static PageResult<PtInfoDTO> pageOf(List<PtInfo> all, int page, int size) {
+        List<PtInfoDTO> entries = all.stream().skip((long) page * size).limit(size).map(PatientMapper::toDTO).toList();
+        return PageResult.of(entries, page, size, all.size());
+    }
+
+    private static String abbreviate(String text) {
+        return text.length() <= 50 ? text : text.substring(0, 50) + "...";
     }
 
     /** Walk-in records (patients without a login) - for the admin dashboard. */

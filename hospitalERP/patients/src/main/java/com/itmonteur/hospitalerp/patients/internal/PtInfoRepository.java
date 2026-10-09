@@ -1,5 +1,7 @@
 package com.itmonteur.hospitalerp.patients.internal;
 import com.itmonteur.hospitalerp.patients.PtInfo;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,6 +20,11 @@ public interface PtInfoRepository extends JpaRepository<PtInfo, Long> {
 
     // Front desk (docs/WALK_IN_REGISTRATION_PLAN.md): a cheap first filter; PtInfoService compares the digits exactly
     List<PtInfo> findByContactNoEndingWith(String suffix);
+
+    // Patient search by part of the name (docs/PATIENT_SEARCH_PLAN.md). The pattern is lower case, with
+    // '!' escaping the wildcards the user typed (not a backslash: MySQL would read it as a string escape).
+    @Query("SELECT p FROM PtInfo p WHERE LOWER(p.patientName) LIKE :pattern ESCAPE '!'")
+    Page<PtInfo> searchByName(@Param("pattern") String pattern, Pageable pageable);
 
     // Walk-in records (no login account), for the admin dashboard
     long countByUserIsNull();

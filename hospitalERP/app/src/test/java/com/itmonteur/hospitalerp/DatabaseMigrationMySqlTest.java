@@ -3,6 +3,8 @@ package com.itmonteur.hospitalerp;
 import com.itmonteur.hospitalerp.appointments.AppointmentStatistics;
 import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.identity.UserService;
+import com.itmonteur.hospitalerp.patients.PtInfo;
+import com.itmonteur.hospitalerp.patients.internal.PtInfoRepository;
 import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 
 import org.flywaydb.core.Flyway;
@@ -10,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
@@ -78,6 +82,7 @@ class DatabaseMigrationMySqlTest {
     @Autowired private AppointmentStatistics appointmentStatistics;
     @Autowired private UserService userService;
     @Autowired private LeaveRequestService leaveRequestService;
+    @Autowired private PtInfoRepository ptInfoRepository;
 
     @Test
     void existingDatabaseIsBaselinedAndCleanedUpWithoutLosingData() {
@@ -121,6 +126,16 @@ class DatabaseMigrationMySqlTest {
         assertThat(userService.countNewAccountsPerDay(Role.PATIENT, today.minusDays(6), today)).isEmpty();
         assertThat(userService.firstAccountCreationTime()).isEmpty(); // the existing accounts have no creation time
         assertThat(leaveRequestService.countDoctorsOnLeave(today)).isZero();
+    }
+
+    // The patient name search (LIKE ... ESCAPE '!') also runs on MySQL (docs/PATIENT_SEARCH_PLAN.md). Through the
+    // repository, so no audit entry is written (another test expects an empty audit log).
+    @Test
+    void patientNameSearchRunsOnMySql() {
+        PageRequest byName = PageRequest.of(0, 20, Sort.by("patientName", "patientId"));
+        assertThat(ptInfoRepository.searchByName("%ash%", byName).getContent())
+                .extracting(PtInfo::getPatientName).containsExactly("Asha");
+        assertThat(ptInfoRepository.searchByName("%a!%%", byName).getTotalElements()).isZero();
     }
 
     @Test
