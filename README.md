@@ -236,10 +236,10 @@ The app will open at **http://localhost:3000**.
 
 | Role | Portal URL | Access |
 |------|------------|--------|
-| **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log, notifications, walk-in booking |
+| **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log, notifications, and the front desk's pages (appointments, walk-in booking, patients) |
 | **Doctor** | `/doctor/dashboard` | Appointments, leave, profile |
 | **Patient** | `/` (public pages) | Book appointments, manage relatives |
-| **Receptionist** | `/receptionist-appointments`, `/walk-in` | Manage all appointments, book walk-in patients |
+| **Receptionist** | `/receptionist-appointments`, `/walk-in`, `/patients` | Appointment list with filters, walk-in booking, patient search |
 
 ---
 
@@ -269,6 +269,8 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 | Admin dashboard with real figures — today's appointments, doctors on leave, active accounts; for the last 7 / 30 / 90 days: appointments per day (completed, upcoming, missed, cancelled), cancellation and missed rates, new patients, busiest specializations and doctors ([details](docs/ADMIN_DASHBOARD_PLAN.md)) | Admin | `/admin/dashboard` |
 | Appointment emails / SMS that aren't lost: queued with the booking or cancellation, retried for up to 24 hours (never after the visit); undelivered ones listed with a Resend button and counted on the dashboard ([details](docs/RELIABLE_NOTIFICATIONS_PLAN.md)) | Admin (automatic for everyone) | `/admin/notifications` |
 | Walk-in patients at the front desk — look the phone number up (a family may share one), register a patient without a login (name, phone, gender) or pick the one found, book the doctor's earliest free time, all in one step; SMS confirmation ([details](docs/WALK_IN_REGISTRATION_PLAN.md)) | Receptionist, Admin | `/walk-in`, `/admin/walk-in` |
+| Patient search — one box for part of a name, a phone number or a patient ID, 20 per page; a patient's page with details, upcoming and past appointments and a Book button; every search and view in the audit log ([details](docs/PATIENT_SEARCH_PLAN.md)) | Receptionist, Admin | `/patients`, `/admin/patients` |
+| Front-desk appointment list — today by default; dates, doctor, status and patient filters; 20 per page, each patient linked to their page ([details](docs/PATIENT_SEARCH_PLAN.md)) | Receptionist, Admin | `/receptionist-appointments`, `/admin/appointments` |
 
 Medical records (consultations, prescriptions) are visible only to the patient, their doctor(s) and admins — receptionists cannot read them.
 

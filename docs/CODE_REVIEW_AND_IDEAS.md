@@ -439,9 +439,9 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ---
 
-## 11. Feature Status (updated 2026-10-08)
+## 11. Feature Status (updated 2026-10-11)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9) and walk-in registration (branch `feature/walk-in-registration`).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10) and patient search with paged front-desk lists (branch `feature/patient-search`).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
@@ -452,8 +452,10 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 - **Appointment emails / SMS that aren't lost** when the mail server or Twilio is down (2026-10-07, see below).
 - **Automatic nightly backups** of the database and the uploaded images, for Docker and Windows (2026-10-08, see below).
 - **Walk-in registration at the front desk:** found by phone or registered without a login, and booked in one step (2026-10-08, see below).
+- **Patient search and paged front-desk lists:** one search box (name, phone or patient ID), a patient's page, and the front-desk appointment list with filters (2026-10-11, see below).
 
 **Partly done**
+- **Paged lists:** patients and the front-desk appointments are paged; the admin users list and the doctor portal's lists still load everything.
 - **Doctor dashboard:** real counts of pending and completed appointments, but no analytics (patients per day, no-show rate).
 - **Cancel and reschedule:** both work, but there's no cut-off rule, so a patient can cancel 5 minutes before the appointment.
 
@@ -472,7 +474,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 9 | Cancellation / reschedule cut-off rule | patients | 1 day |
 | 10 | ~~Walk-in patient registration at the front desk~~ ✅ done 2026-10-08 | front desk | — |
 | 11 | Today's queue: check-in, token numbers, live "now serving" screen | front desk | 4–5 days |
-| 12 | Patient search (phone / name / ID) and pagination on all lists | front desk / platform | 2–3 days |
+| 12 | ~~Patient search (phone / name / ID) and pagination on all lists~~ ✅ done 2026-10-11 (patients and front-desk appointments; the admin users list and the doctor portal's lists not yet) | front desk / platform | — |
 | 13 | Waitlist, notified when a slot frees up | patients | 3–4 days |
 | 14 | Family view (each relative's appointments and prescriptions) | patients | 2 days |
 | 15 | Lab report upload, served only to authorised users | clinical | 3 days |
@@ -487,7 +489,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** more front-desk work (12 patient search and paging — the walk-in phone search is a start; 11 today's queue) or billing (18). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
+**Suggested order:** today's queue (11 — it can build on the front-desk appointment list) or billing (18). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
 
 ### Account deactivation (done 2026-10-01)
 
@@ -622,3 +624,22 @@ From idea #10 above. A patient who walked in could only be booked after signing 
 - A click-through against the real database.
 - A walk-in patient who later signs up in the app gets a second patient record; the two are not linked.
 - Numbers typed without a country code are stored as typed. Twilio expects the international form (+91…), so SMS to such numbers may fail; they show up under Admin → Notifications.
+
+### Patient search and paged front-desk lists (done 2026-10-11)
+
+From idea #12 above. The front desk could only find a patient by phone, there was no patient list, the admin sidebar's "Manage Patients" button led nowhere, and the receptionist dashboard loaded every appointment at once. Decisions, design and steps: [PATIENT_SEARCH_PLAN.md](PATIENT_SEARCH_PLAN.md).
+
+**What it does**
+- **Patients** (`/patients` for receptionists, `/admin/patients` for admins): one search box — `#41` or a short number is a patient ID, a phone number matches on its last 10 digits, anything else is part of the name (any case; `%` and `_` typed are plain characters), empty lists everyone; sorted by name, 20 per page. Every search, and every browse of the whole list, is in the audit log.
+- **A patient's page:** details (the Aadhaar number masked to its last 4 digits), upcoming appointments, every appointment newest first (a past appointment never completed shows as "Missed"), and **Book an appointment** → Walk-in booking with the patient chosen.
+- **Front-desk appointment list** (`/receptionist-appointments`, `/admin/appointments`) instead of the old dashboard: today by default; dates, doctor, status (upcoming, completed — including old rows marked only by the `is_completed` flag — or cancelled) and patient filters; 20 per page; each patient linked to their page.
+- Searches and filters are kept in the address, so coming back from a patient shows the same list.
+- Endpoints (receptionists and admins): `GET /api/receptionist/patients/search`, `GET /api/receptionist/patients/{patientId}`, `GET /api/receptionist/appointments`. The old list endpoints stay.
+- No database change.
+
+**Tests:** the search rules and audit entries (unit), the name query on H2 and MySQL 8, end-to-end HTTP tests (search forms, paging, every filter, both orders, a visit whose slot row is gone, wrong filters, access), and frontend tests for the three pages; mutation checks for each.
+
+**Not covered yet:**
+- A click-through against the real database.
+- The admin users list and the doctor portal's appointment lists are not paged yet.
+- No index on `appointments.date`; the date filter is fine for now but would need one with a lot of data.
