@@ -6,7 +6,7 @@ import { toLocalISODate } from "../../shared/utils/dateUtils";
 import useAreaBase from "../../shared/useAreaBase";
 import { getAllDoctors } from "../doctors/api";
 import { getFrontDeskPatient } from "../patients/api";
-import { dayLabel, formatDate, formatTime } from "./appointmentFormat";
+import { dayLabel, doctorLabel, formatDate, formatTime } from "./appointmentFormat";
 import * as appointmentsApi from "./api";
 
 // Walk-in patients at the front desk (docs/WALK_IN_REGISTRATION_PLAN.md): look the phone number up, book for one
@@ -23,13 +23,6 @@ const INPUT =
   "w-full p-2 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2]";
 const CARD = "bg-white dark:bg-[#1e293b] shadow-md rounded-lg p-5 mb-5";
 const QUIET_BORDER = "border-gray-300 dark:border-gray-600";
-
-const doctorLabel = (doctor) => {
-  const name = `Dr. ${doctor.name || doctor.userName}`;
-  if (!doctor.specialist || doctor.specialist === "NOT_ASSIGNED") return name;
-  const specialist = doctor.specialist.toLowerCase().replace(/_/g, " ");
-  return `${name} — ${specialist.charAt(0).toUpperCase()}${specialist.slice(1)}`;
-};
 
 const EMPTY_NEW_PATIENT = { name: "", gender: "", dob: "", email: "" };
 

@@ -17,7 +17,7 @@ import AppointmentDetails from "../features/appointments/AppointmentDetails";
 import DoctorDetailsPage from "../features/doctors/DoctorDetailsPage";
 import AddRelativePage from "../features/patients/AddRelativePage";
 import RelativesList from "../features/patients/RelativesList";
-import ReceptionistAppointmentDashboard from "../features/appointments/ReceptionistAppointmentDashboard";
+import FrontDeskAppointments from "../features/appointments/FrontDeskAppointments";
 import WalkInBooking from "../features/appointments/WalkInBooking";
 import PatientSearch from "../features/patients/PatientSearch";
 import FrontDeskPatient from "../features/patients/FrontDeskPatient";
@@ -71,11 +71,7 @@ function App() {
         {/* ===================== RECEPTIONIST ===================== */}
         <Route
           path="/receptionist-appointments"
-          element={
-            <ProtectedRoute roles={["ROLE_RECEPTIONIST", "ROLE_ADMIN"]}>
-              <ReceptionistAppointmentDashboard />
-            </ProtectedRoute>
-          }
+          element={<ProtectedRoute roles={FRONT_DESK}><SitePage><FrontDeskAppointments /></SitePage></ProtectedRoute>}
         />
         <Route
           path="/walk-in"

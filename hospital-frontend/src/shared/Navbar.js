@@ -90,7 +90,7 @@ export default function Navbar() {
           <>
             <NavLink to="/receptionist-appointments" className={linkClass}>
               <Activity size={20} />
-              <span>My Appointments</span>
+              <span>Appointments</span>
             </NavLink>
             <NavLink to="/walk-in" className={linkClass}>
               <UserPlus size={20} />

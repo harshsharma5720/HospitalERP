@@ -39,15 +39,6 @@ export const completeAppointment = (appointmentId) =>
 // ---------- front desk (receptionist) ----------
 export const getFrontDeskAppointments = () => axios.get(`${API_BASE_URL}/api/receptionist/getAppointments`);
 
-export const getFrontDeskAppointmentsByDoctorName = (doctorName) =>
-  axios.get(`${API_BASE_URL}/api/receptionist/getAppointmentByDoctor/${doctorName}`);
-
-export const getFrontDeskDoctorPendingAppointments = (userId) =>
-  axios.get(`${API_BASE_URL}/api/receptionist/doctorPendingAppointments/${userId}`);
-
-export const getFrontDeskDoctorCompletedAppointments = (userId) =>
-  axios.get(`${API_BASE_URL}/api/receptionist/doctorCompletedAppointments/${userId}`);
-
 // One page of appointments (docs/PATIENT_SEARCH_PLAN.md). params, all optional: from, to (yyyy-MM-dd, both included),
 // doctorId, status (upcoming, completed, cancelled, all), patient (part of the name), patientId,
 // order (asc: oldest first, desc: newest first), page (from 0), size (max 100).

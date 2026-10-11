@@ -12,6 +12,9 @@ function AdminSidebar() {
       <button onClick={() => navigate("/admin/dashboard")} className="py-2 px-3 bg-[#14365a] rounded-lg hover:bg-opacity-80 transition">
         Dashboard
       </button>
+      <button onClick={() => navigate("/admin/appointments")} className="py-2 px-3 bg-[#14365a] rounded-lg hover:bg-opacity-80 transition">
+        Appointments
+      </button>
       <button onClick={() => navigate("/admin/walk-in")} className="py-2 px-3 bg-[#14365a] rounded-lg hover:bg-opacity-80 transition">
         Walk-in Booking
       </button>

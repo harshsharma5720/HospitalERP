@@ -108,6 +108,23 @@ test("in the admin portal the links stay there; back goes to the list it came fr
   expect(screen.getByRole("link", { name: "← Patients" })).toHaveAttribute("href", "/admin/patients?q=das&page=1");
 });
 
+test("opened from the appointment list, back goes there", async () => {
+  render(
+    <MemoryRouter
+      initialEntries={[{ pathname: "/patients/7", state: { from: "/receptionist-appointments?from=&to=", fromLabel: "Appointments" } }]}
+    >
+      <Routes>
+        <Route path="/patients/:patientId" element={<FrontDeskPatient />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  expect(await screen.findByRole("link", { name: "← Appointments" })).toHaveAttribute(
+    "href",
+    "/receptionist-appointments?from=&to="
+  );
+});
+
 test("an unknown patient: the server's message", async () => {
   patientsApi.getFrontDeskPatient.mockRejectedValue({
     response: { status: 404, data: { message: "Patient not found with id : '9'" } },

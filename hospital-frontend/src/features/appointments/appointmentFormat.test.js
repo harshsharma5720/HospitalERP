@@ -1,4 +1,4 @@
-import { dayLabel, formatDate, formatTime, timeRange, visitStatus } from "./appointmentFormat";
+import { dayLabel, doctorLabel, formatDate, formatTime, timeRange, visitStatus } from "./appointmentFormat";
 
 test("dates read as today, tomorrow, or weekday day month", () => {
   const monday = new Date(2026, 9, 5); // Mon 5 Oct 2026
@@ -22,4 +22,9 @@ test("a past appointment that was never completed is missed", () => {
   expect(visitStatus({ status: "CONFIRMED", date: "2026-10-10" }, today).label).toBe("Missed");
   expect(visitStatus({ status: "COMPLETED", date: "2026-10-10" }, today).label).toBe("Completed");
   expect(visitStatus({ status: "CANCELLED_BY_DOCTOR", date: "2026-10-10" }, today).label).toBe("Cancelled by doctor");
+});
+
+test("doctors by name and speciality", () => {
+  expect(doctorLabel({ name: "Anita Rao", specialist: "CARDIOLOGY" })).toBe("Dr. Anita Rao — Cardiology");
+  expect(doctorLabel({ name: null, userName: "drnew", specialist: "NOT_ASSIGNED" })).toBe("Dr. drnew");
 });

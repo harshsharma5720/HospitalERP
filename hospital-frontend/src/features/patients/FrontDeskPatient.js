@@ -54,13 +54,15 @@ export default function FrontDeskPatient() {
       .catch(() => setHistory(null));
   }, [patientId, historyPage]);
 
+  // Back to the list the patient was opened from (Patients or Appointments)
   const backTo = location.state?.from || `${base}/patients`;
+  const backLabel = `← ${location.state?.fromLabel ?? "Patients"}`;
 
   if (error) {
     return (
       <div className="p-6">
         <Link to={backTo} className="text-sm text-blue-700 dark:text-[#50d4f2] hover:underline">
-          ← Patients
+          {backLabel}
         </Link>
         <p role="alert" className="text-red-600 mt-4">
           {error}
@@ -86,7 +88,7 @@ export default function FrontDeskPatient() {
   return (
     <div className="p-6 max-w-4xl">
       <Link to={backTo} className="text-sm text-blue-700 dark:text-[#50d4f2] hover:underline">
-        ← Patients
+        {backLabel}
       </Link>
 
       <div className="flex flex-wrap items-center justify-between gap-3 mt-2 mb-5">
