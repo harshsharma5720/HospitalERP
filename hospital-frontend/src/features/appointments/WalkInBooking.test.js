@@ -223,3 +223,17 @@ test("the patient handed over by the patient's page is not loaded again", async 
   expect(await screen.findByRole("button", { name: "Book for Mira Das" })).toHaveAttribute("aria-pressed", "true");
   expect(getFrontDeskPatient).not.toHaveBeenCalled();
 });
+
+test("a walk-in booked for today is checked in: the confirmation shows the token", async () => {
+  getFrontDeskPatient.mockResolvedValue({ data: ARJUN });
+  appointmentsApi.bookWalkIn.mockResolvedValue(
+    booked({ patientId: 7, newPatient: false, appointment: { ...APPOINTMENT, patientName: "Arjun Das", tokenNumber: 5 } })
+  );
+  renderPage("/walk-in?patientId=7");
+  await screen.findByRole("button", { name: "Book for Arjun Das" });
+  await chooseDoctor();
+
+  fireEvent.click(screen.getByRole("button", { name: "Book" }));
+
+  expect(await screen.findByText("Checked in for today: token 5")).toBeInTheDocument();
+});

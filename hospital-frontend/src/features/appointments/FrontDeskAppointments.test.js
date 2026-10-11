@@ -1,7 +1,7 @@
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import FrontDeskAppointments from "./FrontDeskAppointments";
-import { getFrontDeskAppointmentPage } from "./api";
+import { checkInAppointment, getFrontDeskAppointmentPage, undoCheckIn } from "./api";
 import { getAllDoctors } from "../doctors/api";
 import { addDays, toLocalISODate } from "../../shared/utils/dateUtils";
 
@@ -10,6 +10,7 @@ jest.mock("../doctors/api");
 
 const TODAY = toLocalISODate();
 const YESTERDAY = toLocalISODate(addDays(new Date(), -1));
+const TOMORROW = toLocalISODate(addDays(new Date(), 1));
 
 const DOCTORS = [
   { id: 3, name: "Anita Rao", specialist: "CARDIOLOGY", active: true },
@@ -27,7 +28,7 @@ const pageOf = (entries, { totalPages = 1, totalEntries = entries.length } = {})
 // Shows the address, so the tests can check what the page keeps in it
 function Address() {
   const location = useLocation();
-  return <output data-testid="address">{location.pathname + location.search}</output>;
+  return <div data-testid="address">{location.pathname + location.search}</div>;
 }
 
 const renderAt = (entry) =>
@@ -131,4 +132,76 @@ test("the server's message for wrong filters, and when nothing matches", async (
   fireEvent.click(screen.getByRole("button", { name: "Today" }));
   expect(await screen.findByText("No appointments for these filters.")).toBeInTheDocument();
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+
+// ---------------------------------------------------------------- today's queue (docs/TODAYS_QUEUE_PLAN.md)
+
+const rowOf = (name) => screen.getByRole("link", { name }).closest("tr");
+
+test("today's patients are checked in as they arrive, and a mistake can be undone", async () => {
+  getFrontDeskAppointmentPage.mockResolvedValue(
+    pageOf([
+      visit(1, "SCHEDULED"),
+      visit(2, "SCHEDULED", {
+        patientName: "Kiran Rao", ptInfoId: 42, checkedInAt: `${TODAY}T09:40:00`, tokenNumber: 2,
+        calledAt: `${TODAY}T10:05:00`,
+      }),
+      visit(3, "COMPLETED", { patientName: "Meera Nair", ptInfoId: 43 }),
+      visit(4, "SCHEDULED", { patientName: "Arjun Das", ptInfoId: 44, date: TOMORROW }),
+    ])
+  );
+  checkInAppointment.mockResolvedValue({
+    data: visit(1, "SCHEDULED", { checkedInAt: `${TODAY}T09:55:00`, tokenNumber: 5 }),
+  });
+  undoCheckIn.mockResolvedValue({ data: visit(1, "SCHEDULED") });
+  renderAt("/receptionist-appointments");
+
+  await screen.findByRole("link", { name: "Asha Rao" });
+  expect(rowOf("Kiran Rao")).toHaveTextContent("With the doctor · token 2");
+  expect(within(rowOf("Meera Nair")).queryByRole("button")).toBeNull(); // done
+  expect(within(rowOf("Arjun Das")).queryByRole("button")).toBeNull(); // another day
+
+  fireEvent.click(within(rowOf("Asha Rao")).getByRole("button", { name: "Check in Asha Rao" }));
+  await waitFor(() => expect(checkInAppointment).toHaveBeenCalledWith(1));
+  expect(await within(rowOf("Asha Rao")).findByText("Waiting · token 5")).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("Asha Rao is checked in: token 5.");
+
+  fireEvent.click(within(rowOf("Asha Rao")).getByRole("button", { name: "Undo the check-in of Asha Rao" }));
+  await waitFor(() => expect(undoCheckIn).toHaveBeenCalledWith(1));
+  expect(await within(rowOf("Asha Rao")).findByRole("button", { name: "Check in Asha Rao" })).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("Check-in of Asha Rao undone.");
+});
+
+test("the server's message when a check-in is refused", async () => {
+  checkInAppointment.mockRejectedValue({
+    response: { status: 409, data: { message: "The doctor has already called this patient in" } },
+  });
+  renderAt("/receptionist-appointments");
+
+  fireEvent.click(await screen.findByRole("button", { name: "Check in Asha Rao" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("The doctor has already called this patient in");
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+});
+
+test("the list refreshes itself every few seconds, quietly", async () => {
+  jest.useFakeTimers();
+  try {
+    renderAt("/receptionist-appointments");
+    await screen.findByRole("link", { name: "Asha Rao" });
+    expect(getFrontDeskAppointmentPage).toHaveBeenCalledTimes(1);
+    getFrontDeskAppointmentPage.mockResolvedValue(
+      pageOf([visit(1, "SCHEDULED", { checkedInAt: `${TODAY}T09:55:00`, tokenNumber: 5, calledAt: `${TODAY}T10:10:00` })])
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(15000);
+    });
+
+    expect(await screen.findByText("With the doctor · token 5")).toBeInTheDocument();
+    expect(getFrontDeskAppointmentPage).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
+  } finally {
+    jest.useRealTimers();
+  }
 });

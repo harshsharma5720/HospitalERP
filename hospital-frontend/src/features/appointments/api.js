@@ -46,6 +46,15 @@ export const getFrontDeskAppointments = () => axios.get(`${API_BASE_URL}/api/rec
 export const getFrontDeskAppointmentPage = (params) =>
   axios.get(`${API_BASE_URL}/api/receptionist/appointments`, { params });
 
+// Today's queue (docs/TODAYS_QUEUE_PLAN.md): the patient has arrived - today's appointment gets its token.
+// Checking in twice keeps the first token. Answers the appointment.
+export const checkInAppointment = (appointmentId) =>
+  axios.post(`${API_BASE_URL}/api/receptionist/appointments/${appointmentId}/check-in`);
+
+// Undo a check-in made by mistake; 409 once the doctor has called the patient in
+export const undoCheckIn = (appointmentId) =>
+  axios.delete(`${API_BASE_URL}/api/receptionist/appointments/${appointmentId}/check-in`);
+
 // ---------- front desk: walk-in patients (docs/WALK_IN_REGISTRATION_PLAN.md) ----------
 // Patients with this phone number (at least 10 digits; a family may share one). Recorded in the audit log.
 export const findPatientsByPhone = (phone) =>
