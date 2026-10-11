@@ -1,41 +1,28 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import { calculateAgeFromDOB } from "../../shared/utils/calculateAgeFromDOB";
-import { addDays, toLocalISODate } from "../../shared/utils/dateUtils";
+import { toLocalISODate } from "../../shared/utils/dateUtils";
+import useAreaBase from "../../shared/useAreaBase";
 import { getAllDoctors } from "../doctors/api";
+import { getFrontDeskPatient } from "../patients/api";
+import { dayLabel, formatDate, formatTime } from "./appointmentFormat";
 import * as appointmentsApi from "./api";
 
 // Walk-in patients at the front desk (docs/WALK_IN_REGISTRATION_PLAN.md): look the phone number up, book for one
 // of the patients found or register a new one, pick a doctor and one of their next free slots (the earliest is
-// preselected), book. Used by receptionists (/walk-in) and admins (/admin/walk-in).
+// preselected), book. Used by receptionists (/walk-in) and admins (/admin/walk-in). Opened from a patient's page
+// (?patientId=41, docs/PATIENT_SEARCH_PLAN.md) that patient is already chosen.
 
 const SLOTS_SHOWN = 6;
 const MORE_SLOTS = 20;
 
 const GENDER_LABELS = { FEMALE: "Female", MALE: "Male", OTHER: "Other" };
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const INPUT =
   "w-full p-2 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2]";
 const CARD = "bg-white dark:bg-[#1e293b] shadow-md rounded-lg p-5 mb-5";
 const QUIET_BORDER = "border-gray-300 dark:border-gray-600";
-
-// "2026-10-09" -> "Fri 9 Oct" (+ " 2026" with the year)
-export const formatDate = (isoDate, withYear = false) => {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  const weekday = DAYS[new Date(year, month - 1, day).getDay()];
-  return `${weekday} ${day} ${MONTHS[month - 1]}${withYear ? ` ${year}` : ""}`;
-};
-
-// "Today", "Tomorrow" or "Fri 9 Oct"
-export const dayLabel = (isoDate, today = new Date()) => {
-  if (isoDate === toLocalISODate(today)) return "Today";
-  if (isoDate === toLocalISODate(addDays(today, 1))) return "Tomorrow";
-  return formatDate(isoDate);
-};
-
-const time = (t) => String(t).slice(0, 5); // "10:00:00" -> "10:00"
 
 const doctorLabel = (doctor) => {
   const name = `Dr. ${doctor.name || doctor.userName}`;
@@ -47,6 +34,11 @@ const doctorLabel = (doctor) => {
 const EMPTY_NEW_PATIENT = { name: "", gender: "", dob: "", email: "" };
 
 export default function WalkInBooking() {
+  const base = useAreaBase();
+  const location = useLocation();
+  const [params, setParams] = useSearchParams();
+  const preselectedId = params.get("patientId");
+  const preselected = location.state?.patient; // passed by the patient page, saves loading it again
   const [doctors, setDoctors] = useState([]);
   const [phone, setPhone] = useState("");
   const [searchedPhone, setSearchedPhone] = useState("");
@@ -69,6 +61,25 @@ export default function WalkInBooking() {
       .then((response) => setDoctors(response.data.filter((doctor) => doctor.active !== false)))
       .catch((err) => setError(getErrorMessage(err, "Could not load the doctors.")));
   }, []);
+
+  // Opened for one patient: as if their number had been looked up and they had been chosen
+  useEffect(() => {
+    if (!preselectedId) return;
+    const load =
+      preselected && String(preselected.patientId) === preselectedId
+        ? Promise.resolve({ data: preselected })
+        : getFrontDeskPatient(preselectedId);
+    load
+      .then(({ data }) => {
+        setPhone(data.contactNo ?? "");
+        setSearchedPhone(data.contactNo ?? "");
+        setMatches([data]);
+        setPatient(data);
+        setNewPatient(EMPTY_NEW_PATIENT);
+        setAge(data.dob ? String(calculateAgeFromDOB(data.dob)) : "");
+      })
+      .catch((err) => setError(getErrorMessage(err, "Could not load the patient.")));
+  }, [preselectedId, preselected]);
 
   const loadSlots = useCallback(async (forDoctor, limit) => {
     setSlots(null);
@@ -170,6 +181,7 @@ export default function WalkInBooking() {
   };
 
   const nextPatient = () => {
+    if (preselectedId) setParams({}, { replace: true });
     setPhone("");
     setSearchedPhone("");
     setMatches(null);
@@ -196,12 +208,18 @@ export default function WalkInBooking() {
             <strong>{confirmation.doctor ? doctorLabel(confirmation.doctor) : `Dr. ${appointment.doctorName}`}</strong>
           </p>
           <p className="mb-1">
-            {formatDate(appointment.date, true)}, {time(appointment.startTime)}–{time(appointment.endTime)}
+            {formatDate(appointment.date, true)}, {formatTime(appointment.startTime)}–{formatTime(appointment.endTime)}
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-300">
             {confirmation.newPatient ? "New patient record created. " : ""}
             An SMS confirmation is sent to {confirmation.phone}.
           </p>
+          <Link
+            to={`${base}/patients/${confirmation.patientId}`}
+            className="inline-block mt-2 text-sm text-blue-700 dark:text-[#50d4f2] hover:underline"
+          >
+            Open the patient's page
+          </Link>
         </div>
         <button type="button" onClick={nextPatient} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
           Next patient
@@ -373,7 +391,7 @@ export default function WalkInBooking() {
                       onChange={() => setSlotId(slot.slotId)}
                       className="sr-only"
                     />
-                    {dayLabel(slot.date)} {time(slot.startTime)}
+                    {dayLabel(slot.date)} {formatTime(slot.startTime)}
                   </label>
                 ))}
                 {slotLimit === SLOTS_SHOWN && slots.length === SLOTS_SHOWN && (

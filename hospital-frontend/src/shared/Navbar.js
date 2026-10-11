@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import { Home, Activity, User, Phone, Info, UserCircle, UserPlus } from "lucide-react";
+import { Home, Activity, User, Phone, Info, UserCircle, UserPlus, Users } from "lucide-react";
 import ProfilePage from "./ProfilePage";
 import DarkThemeToggle from "./DarkThemeToggle";
 import { getRoleFromToken } from "./utils/jwtUtils";
@@ -95,6 +95,10 @@ export default function Navbar() {
             <NavLink to="/walk-in" className={linkClass}>
               <UserPlus size={20} />
               <span>Walk-in</span>
+            </NavLink>
+            <NavLink to="/patients" className={linkClass}>
+              <Users size={20} />
+              <span>Patients</span>
             </NavLink>
           </>
         )}

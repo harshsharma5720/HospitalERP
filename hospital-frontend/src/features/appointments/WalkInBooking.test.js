@@ -1,12 +1,24 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import WalkInBooking, { dayLabel, formatDate } from "./WalkInBooking";
+import { MemoryRouter } from "react-router-dom";
+import WalkInBooking from "./WalkInBooking";
+import { formatDate } from "./appointmentFormat";
 import * as appointmentsApi from "./api";
 import { getAllDoctors } from "../doctors/api";
+import { getFrontDeskPatient } from "../patients/api";
 import { addDays, toLocalISODate } from "../../shared/utils/dateUtils";
 import { calculateAgeFromDOB } from "../../shared/utils/calculateAgeFromDOB";
 
 jest.mock("./api");
 jest.mock("../doctors/api");
+jest.mock("../patients/api");
+
+// At /walk-in, or as opened from a patient's page
+const renderPage = (entry = "/walk-in") =>
+  render(
+    <MemoryRouter initialEntries={[entry]}>
+      <WalkInBooking />
+    </MemoryRouter>
+  );
 
 const TOMORROW = toLocalISODate(addDays(new Date(), 1));
 const LATER = toLocalISODate(addDays(new Date(), 3));
@@ -59,7 +71,7 @@ const chooseDoctor = async (firstTime = "Tomorrow 10:00") => {
 };
 
 test("a new number: registers the patient and books the earliest free time", async () => {
-  render(<WalkInBooking />);
+  renderPage();
   await findPhone("+91 90000 11120");
 
   expect(await screen.findByText(/No patient with this number yet/)).toBeInTheDocument();
@@ -98,7 +110,7 @@ test("a shared number lists the family; booking for the one chosen needs an age 
   appointmentsApi.bookWalkIn.mockResolvedValue(
     booked({ patientId: 8, newPatient: false, appointment: { ...APPOINTMENT, patientName: "Mira Das" } })
   );
-  render(<WalkInBooking />);
+  renderPage();
   await findPhone("9000011121");
 
   const arjunAge = calculateAgeFromDOB("1990-01-15");
@@ -137,7 +149,7 @@ test("a time taken meanwhile: says so and offers the times still free", async ()
   appointmentsApi.bookWalkIn.mockRejectedValue({
     response: { status: 409, data: { message: "This slot is no longer available. Please choose another one." } },
   });
-  render(<WalkInBooking />);
+  renderPage();
   await findPhone("9000011121");
   fireEvent.click(await screen.findByRole("button", { name: "Book for Mira Das" }));
   await chooseDoctor();
@@ -157,7 +169,7 @@ test("the server's message for a wrong number; a new patient needs a name and ge
   appointmentsApi.findPatientsByPhone.mockRejectedValueOnce({
     response: { status: 400, data: { message: "Please enter at least 10 digits of the phone number" } },
   });
-  render(<WalkInBooking />);
+  renderPage();
   await findPhone("12345");
   expect(await screen.findByRole("alert")).toHaveTextContent("Please enter at least 10 digits of the phone number");
   expect(screen.queryByText("Patient")).not.toBeInTheDocument();
@@ -173,7 +185,7 @@ test("the server's message for a wrong number; a new patient needs a name and ge
 test("More times asks for up to 20; a doctor without free times says so", async () => {
   const six = [0, 1, 2, 3, 4, 5].map((i) => slot(200 + i, LATER, `1${i}:00:00`, `1${i}:30:00`));
   appointmentsApi.getNextFreeSlots.mockResolvedValueOnce({ data: six }).mockResolvedValueOnce({ data: [] });
-  render(<WalkInBooking />);
+  renderPage();
   await findPhone("9000011122");
   await chooseDoctor(`${formatDate(LATER)} 10:00`);
 
@@ -183,10 +195,31 @@ test("More times asks for up to 20; a doctor without free times says so", async 
   expect(appointmentsApi.getNextFreeSlots).toHaveBeenLastCalledWith("3", 20);
 });
 
-test("dates read as today, tomorrow, or weekday day month", () => {
-  const monday = new Date(2026, 9, 5); // Mon 5 Oct 2026
-  expect(dayLabel("2026-10-05", monday)).toBe("Today");
-  expect(dayLabel("2026-10-06", monday)).toBe("Tomorrow");
-  expect(dayLabel("2026-10-09", monday)).toBe("Fri 9 Oct");
-  expect(formatDate("2026-10-09", true)).toBe("Fri 9 Oct 2026");
+test("opened from a patient's page: that patient is already chosen", async () => {
+  getFrontDeskPatient.mockResolvedValue({ data: ARJUN });
+  renderPage("/walk-in?patientId=7");
+
+  expect(await screen.findByRole("button", { name: "Book for Arjun Das" })).toHaveAttribute("aria-pressed", "true");
+  expect(getFrontDeskPatient).toHaveBeenCalledWith("7");
+  expect(screen.getByLabelText("Phone number")).toHaveValue("+919000011121");
+  expect(screen.getByLabelText("Age")).toHaveValue(calculateAgeFromDOB("1990-01-15"));
+  expect(appointmentsApi.findPatientsByPhone).not.toHaveBeenCalled();
+
+  await chooseDoctor();
+  fireEvent.click(screen.getByRole("button", { name: "Book" }));
+  await waitFor(() =>
+    expect(appointmentsApi.bookWalkIn).toHaveBeenCalledWith(expect.objectContaining({ patientId: 7, slotId: 101 }))
+  );
+  expect(await screen.findByRole("link", { name: "Open the patient's page" })).toHaveAttribute("href", "/patients/41");
+});
+
+test("the patient handed over by the patient's page is not loaded again", async () => {
+  render(
+    <MemoryRouter initialEntries={[{ pathname: "/admin/walk-in", search: "?patientId=8", state: { patient: MIRA } }]}>
+      <WalkInBooking />
+    </MemoryRouter>
+  );
+
+  expect(await screen.findByRole("button", { name: "Book for Mira Das" })).toHaveAttribute("aria-pressed", "true");
+  expect(getFrontDeskPatient).not.toHaveBeenCalled();
 });
