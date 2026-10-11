@@ -14,6 +14,8 @@ Keep it small. Anything with business meaning belongs in a business module.
 | `ApiResponse` | JSON error body (`message`, `success`) returned by `GlobalExceptionHandler`. |
 | `Gender` | Enum used by patients, relatives and receptionists, on appointments and on the prescription PDF. |
 | `FileStorageService` | `storeProfileImage(...)`: stores JPEG/PNG/WEBP up to 2 MB under a random name in the upload folder. |
+| `PageResult<T>` | One page of a list as the API returns it: `entries`, `page` (from 0), `size`, `totalEntries`, `totalPages`; `PageResult.of(entries, page, size, totalEntries)` works out the page count. |
+| `LikePattern` | `containsIgnoringCase(text)`: a SQL `LIKE` pattern for "contains, any case" in which `%` and `_` typed by the user are plain characters; use it as `LOWER(column) LIKE :pattern ESCAPE '!'` (`ESCAPE` = `'!'`, not a backslash, which MySQL reads as a string escape). |
 
 ## Events
 

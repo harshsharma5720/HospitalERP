@@ -1,13 +1,17 @@
 package com.itmonteur.hospitalerp.appointments.internal;
 
+import com.itmonteur.hospitalerp.appointments.Appointment;
 import com.itmonteur.hospitalerp.appointments.AppointmentDTO;
 import com.itmonteur.hospitalerp.appointments.AppointmentService;
 import com.itmonteur.hospitalerp.common.BadRequestException;
+import com.itmonteur.hospitalerp.common.PageResult;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
 import com.itmonteur.hospitalerp.patients.PtInfo;
 import com.itmonteur.hospitalerp.patients.PtInfoDTO;
 import com.itmonteur.hospitalerp.patients.PtInfoService;
 import com.itmonteur.hospitalerp.scheduling.SlotService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,23 +19,51 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Walk-in patients at the front desk (docs/WALK_IN_REGISTRATION_PLAN.md): find patients by phone, a doctor's next
- * free slots, and register-and-book in one transaction - if the slot is gone, no patient record is left behind.
+ * The front desk. Walk-in patients (docs/WALK_IN_REGISTRATION_PLAN.md): find patients by phone, a doctor's next free
+ * slots, and register-and-book in one transaction - if the slot is gone, no patient record is left behind. Patient
+ * search and the appointment list (docs/PATIENT_SEARCH_PLAN.md): one search box, one patient's details, the filtered
+ * appointment list - each a page at a time.
  */
 @Service
 public class FrontDeskService {
 
     public static final int MAX_FREE_SLOTS = 20;
+    public static final int MAX_PAGE_SIZE = 100;
     private static final int MAX_AGE = 130;
 
     private final PtInfoService ptInfoService;
     private final AppointmentService appointmentService;
     private final SlotService slotService;
+    private final AppointmentRepository appointmentRepository;
 
-    public FrontDeskService(PtInfoService ptInfoService, AppointmentService appointmentService, SlotService slotService) {
+    public FrontDeskService(PtInfoService ptInfoService, AppointmentService appointmentService, SlotService slotService,
+                            AppointmentRepository appointmentRepository) {
         this.ptInfoService = ptInfoService;
         this.appointmentService = appointmentService;
         this.slotService = slotService;
+        this.appointmentRepository = appointmentRepository;
+    }
+
+    /** The one search box: a name, a phone number or a patient ID; empty lists everyone (audited). */
+    public PageResult<PtInfoDTO> searchPatients(String query, int page, int size) {
+        return ptInfoService.searchPatients(query, page, size);
+    }
+
+    /** One patient's details (audited as a profile view). */
+    public PtInfoDTO patient(long patientId) {
+        return ptInfoService.getPatient(patientId);
+    }
+
+    /** The appointment list: every filter optional, by date and time, one page (from 0) of at most 100. */
+    @Transactional(readOnly = true)
+    public PageResult<AppointmentDTO> listAppointments(AppointmentListQuery query, int page, int size) {
+        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
+            throw new BadRequestException("Ask for page 0 or later, with 1 to " + MAX_PAGE_SIZE + " appointments per page");
+        }
+        Page<Appointment> found = appointmentRepository.findAll(AppointmentFilters.matching(query),
+                PageRequest.of(page, size, AppointmentFilters.order(query.order())));
+        return PageResult.of(found.getContent().stream().map(AppointmentMapper::toDTO).toList(),
+                page, size, found.getTotalElements());
     }
 
     /** Patients with this phone number (recorded in the audit log). */

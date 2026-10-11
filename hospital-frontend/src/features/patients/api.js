@@ -18,3 +18,12 @@ export const addRelative = (relative) => axios.post(`${API_BASE_URL}/api/patient
 export const updateRelative = (id, relative) => axios.put(`${API_BASE_URL}/api/patient/relative/update/${id}`, relative);
 
 export const deleteRelative = (id) => axios.delete(`${API_BASE_URL}/api/patient/relative/delete/${id}`);
+
+// ---------- front desk: patient search (docs/PATIENT_SEARCH_PLAN.md) ----------
+// q: part of a name, a phone number or a patient ID ("#41"); empty lists everyone. page counts from 0.
+// Answers { entries, page, size, totalEntries, totalPages }. Recorded in the audit log.
+export const searchPatients = (q, page, size) =>
+  axios.get(`${API_BASE_URL}/api/receptionist/patients/search`, { params: { q, page, size } });
+
+// One patient's details, by patient id (recorded as a profile view)
+export const getFrontDeskPatient = (patientId) => axios.get(`${API_BASE_URL}/api/receptionist/patients/${patientId}`);

@@ -11,6 +11,9 @@ import AdminDoctorAppointments from "./AdminDoctorAppointments";
 import AuditLog from "./AuditLog";
 import Notifications from "./Notifications";
 import WalkInBooking from "../appointments/WalkInBooking";
+import FrontDeskAppointments from "../appointments/FrontDeskAppointments";
+import PatientSearch from "../patients/PatientSearch";
+import FrontDeskPatient from "../patients/FrontDeskPatient";
 
 export default function AdminLayout({ children }) {
   return (
@@ -32,6 +35,9 @@ export default function AdminLayout({ children }) {
                       <Route path="audit-log" element={<AuditLog />} />
                       <Route path="notifications" element={<Notifications />} />
                       <Route path="walk-in" element={<WalkInBooking />} />
+                      <Route path="appointments" element={<FrontDeskAppointments />} />
+                      <Route path="patients" element={<PatientSearch />} />
+                      <Route path="patients/:patientId" element={<FrontDeskPatient />} />
                       <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Routes>
         </div>

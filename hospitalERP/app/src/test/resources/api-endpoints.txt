@@ -42,6 +42,7 @@ GET /api/patient/getAllBySpecialization
 GET /api/patient/getAllDoctors
 GET /api/patient/relative/patient/{patientId}
 GET /api/patient/relative/{id}
+GET /api/receptionist/appointments
 GET /api/receptionist/doctorCompletedAppointments/{userId}
 GET /api/receptionist/doctorPendingAppointments/{userId}
 GET /api/receptionist/doctors/{doctorId}/next-free-slots
@@ -50,6 +51,8 @@ GET /api/receptionist/getAppointmentByDoctor/{doctorName}
 GET /api/receptionist/getAppointments
 GET /api/receptionist/getReceptionist/{receptionistId}
 GET /api/receptionist/patients
+GET /api/receptionist/patients/search
+GET /api/receptionist/patients/{patientId}
 GET /api/slots/available/{doctorId}
 GET /appointment/allCompletedAppointments
 GET /appointment/allPendingAppointments

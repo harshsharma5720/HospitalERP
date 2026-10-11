@@ -17,8 +17,11 @@ import AppointmentDetails from "../features/appointments/AppointmentDetails";
 import DoctorDetailsPage from "../features/doctors/DoctorDetailsPage";
 import AddRelativePage from "../features/patients/AddRelativePage";
 import RelativesList from "../features/patients/RelativesList";
-import ReceptionistAppointmentDashboard from "../features/appointments/ReceptionistAppointmentDashboard";
-import WalkInPage from "../features/appointments/WalkInPage";
+import FrontDeskAppointments from "../features/appointments/FrontDeskAppointments";
+import WalkInBooking from "../features/appointments/WalkInBooking";
+import PatientSearch from "../features/patients/PatientSearch";
+import FrontDeskPatient from "../features/patients/FrontDeskPatient";
+import SitePage from "../shared/SitePage";
 
 /* ADMIN / DOCTOR */
 import AdminLayout from "../features/admin/AdminLayout";
@@ -29,6 +32,7 @@ import ProtectedRoute from "./ProtectedRoute";
 import useAuthStore, { homePathForRole } from "../features/auth/useAuthStore";
 
 const PATIENT = ["ROLE_PATIENT"];
+const FRONT_DESK = ["ROLE_RECEPTIONIST", "ROLE_ADMIN"];
 
 function App() {
   // Re-renders automatically on login/logout (no page reload needed)
@@ -67,15 +71,19 @@ function App() {
         {/* ===================== RECEPTIONIST ===================== */}
         <Route
           path="/receptionist-appointments"
-          element={
-            <ProtectedRoute roles={["ROLE_RECEPTIONIST", "ROLE_ADMIN"]}>
-              <ReceptionistAppointmentDashboard />
-            </ProtectedRoute>
-          }
+          element={<ProtectedRoute roles={FRONT_DESK}><SitePage><FrontDeskAppointments /></SitePage></ProtectedRoute>}
         />
         <Route
           path="/walk-in"
-          element={<ProtectedRoute roles={["ROLE_RECEPTIONIST", "ROLE_ADMIN"]}><WalkInPage /></ProtectedRoute>}
+          element={<ProtectedRoute roles={FRONT_DESK}><SitePage><WalkInBooking /></SitePage></ProtectedRoute>}
+        />
+        <Route
+          path="/patients"
+          element={<ProtectedRoute roles={FRONT_DESK}><SitePage><PatientSearch /></SitePage></ProtectedRoute>}
+        />
+        <Route
+          path="/patients/:patientId"
+          element={<ProtectedRoute roles={FRONT_DESK}><SitePage><FrontDeskPatient /></SitePage></ProtectedRoute>}
         />
 
         {/* ===================== ADMIN ===================== */}
