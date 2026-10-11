@@ -8,6 +8,7 @@ import DoctorDashboard from "./DoctorDashboard";
 import DoctorAppointments from "./DoctorAppointments";
 import LeaveManagementPage from "./LeaveManagementPage";
 import DoctorSchedulePage from "./DoctorSchedulePage";
+import TodaysQueue from "./TodaysQueue";
 import { getDoctor } from "../api";
 
 export default function DoctorLayout() {
@@ -46,6 +47,7 @@ export default function DoctorLayout() {
           <Routes>
             <Route path="/" element={<Navigate to="dashboard" />} />
             <Route path="dashboard" element={<DoctorDashboard />} />
+            <Route path="queue" element={<TodaysQueue />} />
             <Route path="doctor-appointments" element={<DoctorAppointments />} />
             <Route path="leave-management" element={<LeaveManagementPage />} />
             <Route path="profile" element={<MyDoctorProfile />} />

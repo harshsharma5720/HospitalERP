@@ -6,6 +6,7 @@ import {
   FileText,
   LayoutDashboard,
   Clock,
+  ListOrdered,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../../app/config";
@@ -64,6 +65,12 @@ export default function DoctorRightSidebar({ doctor }) {
             icon={<User size={18} />}
             label="My Profile"
             onClick={() => navigate("/doctor/profile")}
+          />
+
+          <SidebarButton
+            icon={<ListOrdered size={18} />}
+            label="Today's queue"
+            onClick={() => navigate("/doctor/queue")}
           />
 
           <SidebarButton

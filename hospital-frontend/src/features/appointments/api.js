@@ -36,6 +36,20 @@ export const getDoctorCompletedAppointments = (userId) =>
 export const completeAppointment = (appointmentId) =>
   axios.put(`${API_BASE_URL}/api/doctor/complete/${appointmentId}`);
 
+// ---------- doctor: today's queue (docs/TODAYS_QUEUE_PLAN.md) ----------
+// { date, withDoctor, waiting (by time), notArrived, done } - lists of appointments, each with tokenNumber,
+// checkedInAt, calledAt
+export const getMyQueue = () => axios.get(`${API_BASE_URL}/api/doctor/queue`);
+
+// The first waiting patient by appointment time; 409 when nobody is waiting
+export const callNextPatient = () => axios.post(`${API_BASE_URL}/api/doctor/queue/next`);
+
+export const callPatient = (appointmentId) => axios.post(`${API_BASE_URL}/api/doctor/queue/${appointmentId}/call`);
+
+// Called in but not there: back to waiting, with the same token
+export const patientNotHere = (appointmentId) =>
+  axios.post(`${API_BASE_URL}/api/doctor/queue/${appointmentId}/not-here`);
+
 // ---------- front desk (receptionist) ----------
 export const getFrontDeskAppointments = () => axios.get(`${API_BASE_URL}/api/receptionist/getAppointments`);
 
