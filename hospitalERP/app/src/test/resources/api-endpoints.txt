@@ -30,6 +30,7 @@ GET /api/doctor/get/{id}
 GET /api/doctor/getAll
 GET /api/doctor/getAllBySpecialization
 GET /api/doctor/getDoctor/{id}
+GET /api/doctor/queue
 GET /api/doctor/{userId}/schedule
 GET /api/leaves/all auth=hasRole('ADMIN')
 GET /api/leaves/approved/{userId}
@@ -43,6 +44,7 @@ GET /api/patient/getAllBySpecialization
 GET /api/patient/getAllDoctors
 GET /api/patient/relative/patient/{patientId}
 GET /api/patient/relative/{id}
+GET /api/queue/screen
 GET /api/receptionist/appointments
 GET /api/receptionist/doctorCompletedAppointments/{userId}
 GET /api/receptionist/doctorPendingAppointments/{userId}
@@ -75,6 +77,9 @@ POST /api/auth/register
 POST /api/auth/reset-password
 POST /api/auth/send-otp
 POST /api/auth/verify-otp
+POST /api/doctor/queue/next
+POST /api/doctor/queue/{appointmentId}/call
+POST /api/doctor/queue/{appointmentId}/not-here
 POST /api/leaves/apply
 POST /api/patient/relative/add
 POST /api/receptionist/NewAppointment

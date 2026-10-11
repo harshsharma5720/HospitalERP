@@ -20,7 +20,8 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Today's queue (docs/TODAYS_QUEUE_PLAN.md): check-in and tokens (step Q.1). Same configuration as FeatureFlowH2Test,
+ * Today's queue (docs/TODAYS_QUEUE_PLAN.md): check-in and tokens (step Q.1), the doctor's queue and the waiting-room
+ * screen (step Q.2). Same configuration as FeatureFlowH2Test,
  * so both share one application context; the phone numbers +91 90000 444xx are used by no other test. Bookings are
  * made for tomorrow and then moved to today in the database, so the tests don't depend on the time of day.
  */
@@ -174,5 +175,127 @@ class QueueH2Test {
         JsonNode appointment = json.readTree(moved.getBody());
         assertThat(appointment.get("tokenNumber").isNull()).isTrue();
         assertThat(appointment.get("checkedInAt").isNull()).isTrue();
+    }
+
+    // ------------------------------------------------------------------ the doctor's queue and the screen (step Q.2)
+
+    private JsonNode queue(String doctor) throws Exception {
+        return api.get(doctor, "/api/doctor/queue");
+    }
+
+    private static List<Long> ids(JsonNode appointments) {
+        List<Long> ids = new ArrayList<>();
+        appointments.forEach(a -> ids.add(a.get("appointmentID").asLong()));
+        return ids;
+    }
+
+    private ResponseEntity<String> doctorAction(String doctor, String path) {
+        return api.call(HttpMethod.POST, "/api/doctor/queue" + path, doctor, null);
+    }
+
+    @Test
+    void theDoctorCallsTheirPatientsInTheOrderOfTheirTimes() throws Exception {
+        String desk = api.staff("deskqueue5", "RECEPTIONIST");
+        long doctorId = api.doctorWithSchedule("drqueue5").id();
+        String doctor = api.login("drqueue5", "doctor-123");
+        List<Long> visits = visitsToday(desk, doctorId, "Queuecall"); // 10:00, 16:00, 16:30
+        checkedIn(desk, visits.get(2));
+        checkedIn(desk, visits.get(0));
+
+        JsonNode today = queue(doctor);
+        assertThat(today.get("date").asText()).isEqualTo(LocalDate.now().toString());
+        assertThat(ids(today.get("waiting"))).as("by time, not arrival").containsExactly(visits.get(0), visits.get(2));
+        assertThat(ids(today.get("notArrived"))).containsExactly(visits.get(1));
+        assertThat(today.get("withDoctor")).isEmpty();
+        assertThat(today.get("done")).isEmpty();
+
+        // Call next: the 10:00 patient
+        ResponseEntity<String> called = doctorAction(doctor, "/next");
+        assertThat(called.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(json.readTree(called.getBody()).get("appointmentID").asLong()).isEqualTo(visits.get(0));
+        assertThat(json.readTree(called.getBody()).get("calledAt").isNull()).isFalse();
+        assertThat(ids(queue(doctor).get("withDoctor"))).containsExactly(visits.get(0));
+        assertThat(ids(queue(doctor).get("waiting"))).containsExactly(visits.get(2));
+
+        // The visit is completed as before; then the next one
+        assertThat(api.call(HttpMethod.PUT, "/api/doctor/complete/" + visits.get(0), doctor, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        assertThat(ids(queue(doctor).get("done"))).containsExactly(visits.get(0));
+        assertThat(queue(doctor).get("withDoctor")).isEmpty();
+        assertThat(json.readTree(doctorAction(doctor, "/next").getBody()).get("appointmentID").asLong())
+                .isEqualTo(visits.get(2));
+
+        // Nobody else has arrived
+        ResponseEntity<String> nobody = doctorAction(doctor, "/next");
+        assertThat(nobody.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(nobody.getBody()).contains("Nobody is waiting");
+
+        // Not here: back to waiting, with the same token; then called by name
+        JsonNode back = json.readTree(doctorAction(doctor, "/" + visits.get(2) + "/not-here").getBody());
+        assertThat(back.get("calledAt").isNull()).isTrue();
+        assertThat(back.get("tokenNumber").asInt()).isEqualTo(3);
+        assertThat(ids(queue(doctor).get("waiting"))).containsExactly(visits.get(2));
+        assertThat(doctorAction(doctor, "/" + visits.get(2) + "/call").getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(ids(queue(doctor).get("withDoctor"))).containsExactly(visits.get(2));
+    }
+
+    @Test
+    void onlyDoctorsAndOnlyTheirOwnCheckedInPatients() throws Exception {
+        String desk = api.staff("deskqueue6", "RECEPTIONIST");
+        long doctorId = api.doctorWithSchedule("drqueue6").id();
+        api.doctorWithSchedule("drqueue6b");
+        String doctor = api.login("drqueue6", "doctor-123");
+        String otherDoctor = api.login("drqueue6b", "doctor-123");
+        List<Long> visits = visitsToday(desk, doctorId, "Queueown");
+        checkedIn(desk, visits.get(0));
+
+        assertThat(doctorAction(otherDoctor, "/" + visits.get(0) + "/call").getStatusCode()).as("someone else's patient")
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(queue(otherDoctor).get("waiting")).as("an empty queue of their own").isEmpty();
+        assertThat(doctorAction(doctor, "/" + visits.get(1) + "/call").getStatusCode()).as("not arrived")
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(doctorAction(doctor, "/" + visits.get(0) + "/not-here").getStatusCode()).as("not called")
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(doctorAction(doctor, "/987654/call").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        // The queue is the doctor's own: not for the front desk, not for admins (who have no queue)
+        for (String token : List.of(desk, api.admin(), api.registerPatient("queuepeek2"))) {
+            assertThat(api.call(HttpMethod.GET, "/api/doctor/queue", token, null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(doctorAction(token, "/next").getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        }
+    }
+
+    @Test
+    void theWaitingRoomScreenShowsTokensOnlyAndNeedsNoLogin() throws Exception {
+        String desk = api.staff("deskqueue7", "RECEPTIONIST");
+        long doctorId = api.doctorWithSchedule("drqueue7").id();
+        api.doctorWithSchedule("drqueue7b"); // nobody checked in: not on the screen
+        String doctor = api.login("drqueue7", "doctor-123");
+        List<Long> visits = visitsToday(desk, doctorId, "Queuescreen");
+        checkedIn(desk, visits.get(0));
+        checkedIn(desk, visits.get(1));
+        checkedIn(desk, visits.get(2));
+        doctorAction(doctor, "/next"); // token 1
+        doctorAction(doctor, "/next"); // token 2: now being served
+
+        ResponseEntity<String> screen = api.call(HttpMethod.GET, "/api/queue/screen", null, null);
+
+        assertThat(screen.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(screen.getBody()).as("no patient names").doesNotContain("Queuescreen");
+        JsonNode body = json.readTree(screen.getBody());
+        assertThat(body.get("date").asText()).isEqualTo(LocalDate.now().toString());
+        JsonNode mine = null;
+        List<String> names = new ArrayList<>();
+        for (JsonNode d : body.get("doctors")) {
+            names.add(d.get("doctorName").asText());
+            if ("drqueue7".equals(d.get("doctorName").asText())) {
+                mine = d;
+            }
+        }
+        assertThat(names).doesNotContain("drqueue7b");
+        assertThat(mine).as("the doctor's user name while the profile has no name").isNotNull();
+        assertThat(mine.get("nowServing").asInt()).as("the last one called in").isEqualTo(2);
+        assertThat(mine.get("next")).extracting(JsonNode::asInt).containsExactly(3);
+        assertThat(mine.fieldNames()).toIterable().containsExactlyInAnyOrder("doctorName", "specialist", "nowServing", "next");
     }
 }
