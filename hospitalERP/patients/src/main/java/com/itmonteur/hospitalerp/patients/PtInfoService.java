@@ -6,6 +6,7 @@ import com.itmonteur.hospitalerp.audit.AuditLog;
 import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.identity.User;
 import com.itmonteur.hospitalerp.common.BadRequestException;
+import com.itmonteur.hospitalerp.common.LikePattern;
 import com.itmonteur.hospitalerp.common.PageResult;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
 import com.itmonteur.hospitalerp.patients.internal.PtInfoRepository;
@@ -29,7 +30,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -157,6 +157,15 @@ public class PtInfoService {
         return changed.isEmpty() ? "no change" : "changed: " + String.join(", ", changed);
     }
 
+    /** One patient by patient id, for the front desk (access is checked on its URL); recorded as a profile view. */
+    @Transactional(readOnly = true)
+    public PtInfoDTO getPatient(long patientId) {
+        PtInfo patient = ptInfoRepository.findById(patientId)
+                .orElseThrow(() -> new ResourceNotFoundException("Patient", "id", patientId));
+        auditLog.record(AuditAction.PATIENT_PROFILE_VIEWED, patient.getPatientId(), patient.getPatientId(), null);
+        return PatientMapper.toDTO(patient);
+    }
+
     private PtInfo patientByUserId(long userId) {
         return ptInfoRepository.findByUser_Id(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Patient", "userId", userId));
@@ -254,8 +263,8 @@ public class PtInfoService {
             auditPhoneSearch(box, found.size());
             return pageOf(found, page, size);
         }
-        String pattern = "%" + box.toLowerCase(Locale.ROOT).replaceAll("([!%_])", "!$1") + "%";
-        Page<PtInfo> found = ptInfoRepository.searchByName(pattern, PageRequest.of(page, size, BY_NAME));
+        Page<PtInfo> found = ptInfoRepository.searchByName(LikePattern.containsIgnoringCase(box),
+                PageRequest.of(page, size, BY_NAME));
         auditLog.record(AuditAction.PATIENTS_SEARCHED, null, null,
                 "by name \"" + abbreviate(box) + "\", " + found.getTotalElements() + " found");
         return toPage(found);

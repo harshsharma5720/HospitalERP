@@ -12,19 +12,16 @@ import com.itmonteur.hospitalerp.patients.PtInfo;
 import com.itmonteur.hospitalerp.patients.PtInfoDTO;
 import com.itmonteur.hospitalerp.patients.PtInfoService;
 import com.itmonteur.hospitalerp.patients.WalkInPatient;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
@@ -57,6 +54,12 @@ class WalkInPatientsH2Test {
     @Autowired private TestRestTemplate rest;
     @Autowired private ObjectMapper json;
     @Autowired private JdbcTemplate jdbc;
+    private TestApi api;
+
+    @BeforeEach
+    void setUpApi() {
+        api = new TestApi(rest, json);
+    }
 
     @Test
     void aWalkInIsAPatientRecordWithoutALogin() {
@@ -101,7 +104,7 @@ class WalkInPatientsH2Test {
         patients.registerWalkIn(new WalkInPatient("Kiran Rao", "(900) 001-1111", Gender.MALE, null, null)); // same number
         patients.registerWalkIn(new WalkInPatient("Someone Else", "+919000011119", Gender.OTHER, null, null));
         // A patient who signed up in the app with that number
-        assertThat(call(HttpMethod.POST, "/api/admin/patient", login("flowadmin", "flow-admin-123"), """
+        assertThat(api.call(HttpMethod.POST, "/api/admin/patient", api.admin(), """
                 {"username":"apprao","email":"apprao@example.com","password":"patient-123","phoneNumber":"+919000011111"}""")
                 .getStatusCode()).isEqualTo(HttpStatus.OK);
 
@@ -123,8 +126,8 @@ class WalkInPatientsH2Test {
 
     @Test
     void theFrontDeskRegistersAWalkInAndBooksTheNextFreeSlot() throws Exception {
-        String desk = staffToken("deskmeena", "RECEPTIONIST");
-        long doctorId = doctorWithSchedule("drwalkin").id();
+        String desk = api.staff("deskmeena", "RECEPTIONIST");
+        long doctorId = api.doctorWithSchedule("drwalkin").id();
         LocalDate day1 = LocalDate.now().plusDays(1);
         LocalDate day2 = LocalDate.now().plusDays(2);
 
@@ -137,7 +140,7 @@ class WalkInPatientsH2Test {
         assertThat(search(desk, "+91 90000 11120")).as("nobody with this number yet").isEmpty();
 
         // One request registers the patient and books the first free slot
-        ResponseEntity<String> booked = call(HttpMethod.POST, WALK_IN, desk, """
+        ResponseEntity<String> booked = api.call(HttpMethod.POST, WALK_IN, desk, """
                 {"newPatient":{"name":"Lakshmi Iyer","phone":"+91 90000 11120","gender":"FEMALE"},
                  "age":52,"slotId":%d,"message":"Fever since yesterday"}""".formatted(next.get(0).get("slotId").asLong()));
 
@@ -169,8 +172,8 @@ class WalkInPatientsH2Test {
 
     @Test
     void aSharedNumberShowsTheFamilyAndBooksForTheOneChosen() throws Exception {
-        String desk = staffToken("deskravi", "RECEPTIONIST");
-        long doctorId = doctorWithSchedule("drfamily").id();
+        String desk = api.staff("deskravi", "RECEPTIONIST");
+        long doctorId = api.doctorWithSchedule("drfamily").id();
         PtInfo father = patients.registerWalkIn(new WalkInPatient("Arjun Das", "+919000011121", Gender.MALE,
                 LocalDate.of(1990, 1, 15), null));
         PtInfo daughter = patients.registerWalkIn(new WalkInPatient("Mira Das", "9000011121", Gender.FEMALE, null, null));
@@ -180,7 +183,7 @@ class WalkInPatientsH2Test {
 
         // No date of birth on file: the age is needed
         String forDaughter = "\"patientId\":" + daughter.getPatientId() + ",\"slotId\":" + slots.get(0).get("slotId").asLong();
-        ResponseEntity<String> withoutAge = call(HttpMethod.POST, WALK_IN, desk, "{" + forDaughter + "}");
+        ResponseEntity<String> withoutAge = api.call(HttpMethod.POST, WALK_IN, desk, "{" + forDaughter + "}");
         assertThat(withoutAge.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(withoutAge.getBody()).contains("age");
         JsonNode forHer = walkIn(desk, "{" + forDaughter + ",\"age\":8}");
@@ -201,14 +204,14 @@ class WalkInPatientsH2Test {
 
     @Test
     void aSlotTakenMeanwhileLeavesNoPatientRecordBehind() throws Exception {
-        String desk = staffToken("deskasha", "RECEPTIONIST");
-        JsonNode slots = nextFreeSlots(desk, doctorWithSchedule("drbusy").id(), "?limit=2");
+        String desk = api.staff("deskasha", "RECEPTIONIST");
+        JsonNode slots = nextFreeSlots(desk, api.doctorWithSchedule("drbusy").id(), "?limit=2");
         long slotId = slots.get(0).get("slotId").asLong();
         PtInfo first = patients.registerWalkIn(new WalkInPatient("First Comer", "9000011123", Gender.MALE, null, null));
         walkIn(desk, "{\"patientId\":" + first.getPatientId() + ",\"slotId\":" + slotId + ",\"age\":40}");
         long registeredBefore = auditCount(AuditAction.WALK_IN_REGISTERED);
 
-        ResponseEntity<String> late = call(HttpMethod.POST, WALK_IN, desk, """
+        ResponseEntity<String> late = api.call(HttpMethod.POST, WALK_IN, desk, """
                 {"newPatient":{"name":"Late Comer","phone":"9000011122","gender":"MALE"},"age":30,"slotId":%d}"""
                 .formatted(slotId));
 
@@ -239,78 +242,40 @@ class WalkInPatientsH2Test {
 
     @Test
     void onlyTheFrontDeskAndAdminsUseItAndWrongRequestsAreRefused() throws Exception {
-        String admin = login("flowadmin", "flow-admin-123");
-        TestDoctor doctor = doctorWithSchedule("droffwalk");
-        String doctorToken = login("droffwalk", "doctor-123");
-        String patient = registerPatient("walkinpeek");
+        String admin = api.admin();
+        TestApi.Doctor doctor = api.doctorWithSchedule("droffwalk");
+        String doctorToken = api.login("droffwalk", "doctor-123");
+        String patient = api.registerPatient("walkinpeek");
         String slotsUrl = "/api/receptionist/doctors/" + doctor.id() + "/next-free-slots";
 
         for (String token : List.of(patient, doctorToken)) {
-            assertThat(call(HttpMethod.GET, "/api/receptionist/patients?phone=9000011120", token, null).getStatusCode())
+            assertThat(api.call(HttpMethod.GET, "/api/receptionist/patients?phone=9000011120", token, null).getStatusCode())
                     .isEqualTo(HttpStatus.FORBIDDEN);
-            assertThat(call(HttpMethod.GET, slotsUrl, token, null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(api.call(HttpMethod.GET, slotsUrl, token, null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
             assertThat(walkInStatus(token, "{\"patientId\":1,\"age\":30,\"slotId\":1}")).isEqualTo(HttpStatus.FORBIDDEN);
         }
         // Admins can do what the front desk does
-        assertThat(call(HttpMethod.GET, "/api/receptionist/patients?phone=9000011120", admin, null).getStatusCode())
+        assertThat(api.call(HttpMethod.GET, "/api/receptionist/patients?phone=9000011120", admin, null).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
         assertThat(nextFreeSlots(admin, doctor.id(), "?limit=1")).hasSize(1);
 
-        assertThat(call(HttpMethod.GET, "/api/receptionist/patients?phone=11120", admin, null).getStatusCode())
+        assertThat(api.call(HttpMethod.GET, "/api/receptionist/patients?phone=11120", admin, null).getStatusCode())
                 .as("too short").isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(call(HttpMethod.GET, slotsUrl + "?limit=0", admin, null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(call(HttpMethod.GET, slotsUrl + "?limit=21", admin, null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(call(HttpMethod.GET, "/api/receptionist/doctors/987654/next-free-slots", admin, null).getStatusCode())
+        assertThat(api.call(HttpMethod.GET, slotsUrl + "?limit=0", admin, null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(api.call(HttpMethod.GET, slotsUrl + "?limit=21", admin, null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(api.call(HttpMethod.GET, "/api/receptionist/doctors/987654/next-free-slots", admin, null).getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND);
 
         // A deactivated doctor has no free slots
-        assertThat(call(HttpMethod.PUT, "/api/admin/users/" + doctor.userId() + "/deactivate", admin, null)
+        assertThat(api.call(HttpMethod.PUT, "/api/admin/users/" + doctor.userId() + "/deactivate", admin, null)
                 .getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(nextFreeSlots(admin, doctor.id(), "")).isEmpty();
     }
 
     // ------------------------------------------------------------------ helpers
 
-    private record TestDoctor(long userId, long id) {}
-
-    /** A new doctor working tomorrow 10:00-10:30 and 16:00-17:00 and the day after 09:00-09:30, in 30-minute slots. */
-    private TestDoctor doctorWithSchedule(String username) throws Exception {
-        ResponseEntity<String> created = call(HttpMethod.POST, "/api/admin/users", login("flowadmin", "flow-admin-123"),
-                "{\"username\":\"" + username + "\",\"email\":\"" + username + "@example.com\",\"password\":\"doctor-123\","
-                        + "\"phoneNumber\":\"+911111112001\",\"role\":\"DOCTOR\"}");
-        assertThat(created.getStatusCode()).isEqualTo(HttpStatus.OK);
-        long userId = json.readTree(created.getBody()).get("id").asLong();
-        DayOfWeek day1 = LocalDate.now().plusDays(1).getDayOfWeek();
-        DayOfWeek day2 = day1.plus(1);
-        List<String> entries = new ArrayList<>();
-        for (DayOfWeek day : DayOfWeek.values()) {
-            entries.add(scheduleEntry(day, "MORNING", day == day1 ? "10:00-10:30" : day == day2 ? "09:00-09:30" : null));
-            entries.add(scheduleEntry(day, "EVENING", day == day1 ? "16:00-17:00" : null));
-        }
-        assertThat(call(HttpMethod.PUT, "/api/doctor/" + userId + "/schedule", login(username, "doctor-123"),
-                "[" + String.join(",", entries) + "]").getStatusCode()).isEqualTo(HttpStatus.OK);
-        for (JsonNode d : json.readTree(call(HttpMethod.GET, "/api/doctor/getAll", null, null).getBody())) {
-            if (username.equals(d.get("userName").asText())) {
-                return new TestDoctor(userId, d.get("id").asLong());
-            }
-        }
-        throw new AssertionError("doctor not found");
-    }
-
-    private static String scheduleEntry(DayOfWeek day, String shift, String hours) {
-        String start = "{\"dayOfWeek\":\"" + day + "\",\"shift\":\"" + shift + "\",";
-        if (hours == null) {
-            return start + "\"working\":false}";
-        }
-        String[] times = hours.split("-");
-        return start + "\"working\":true,\"startTime\":\"" + times[0] + "\",\"endTime\":\"" + times[1] + "\",\"slotMinutes\":30}";
-    }
-
     private JsonNode nextFreeSlots(String token, long doctorId, String query) throws Exception {
-        ResponseEntity<String> res = call(HttpMethod.GET, "/api/receptionist/doctors/" + doctorId + "/next-free-slots" + query,
-                token, null);
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        return json.readTree(res.getBody());
+        return api.get(token, "/api/receptionist/doctors/" + doctorId + "/next-free-slots" + query);
     }
 
     // "2026-10-09 10:00 MORNING"
@@ -322,9 +287,7 @@ class WalkInPatientsH2Test {
     }
 
     private JsonNode search(String token, String phone) throws Exception {
-        ResponseEntity<String> res = call(HttpMethod.GET, "/api/receptionist/patients?phone=" + phone, token, null);
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        return json.readTree(res.getBody());
+        return api.get(token, "/api/receptionist/patients?phone=" + phone);
     }
 
     private static List<String> names(JsonNode patientList) {
@@ -334,13 +297,13 @@ class WalkInPatientsH2Test {
     }
 
     private JsonNode walkIn(String token, String body) throws Exception {
-        ResponseEntity<String> res = call(HttpMethod.POST, WALK_IN, token, body);
+        ResponseEntity<String> res = api.call(HttpMethod.POST, WALK_IN, token, body);
         assertThat(res.getStatusCode()).as(res.getBody()).isEqualTo(HttpStatus.OK);
         return json.readTree(res.getBody());
     }
 
     private HttpStatus walkInStatus(String token, String body) {
-        return HttpStatus.valueOf(call(HttpMethod.POST, WALK_IN, token, body).getStatusCode().value());
+        return HttpStatus.valueOf(api.call(HttpMethod.POST, WALK_IN, token, body).getStatusCode().value());
     }
 
     private long auditCount(AuditAction action) {
@@ -350,37 +313,5 @@ class WalkInPatientsH2Test {
     private int outboxCount(String recipient, String description) {
         return jdbc.queryForObject("SELECT COUNT(*) FROM notification_outbox WHERE recipient = ? AND description = ?",
                 Integer.class, recipient, description);
-    }
-
-    private String staffToken(String username, String role) {
-        assertThat(call(HttpMethod.POST, "/api/admin/users", login("flowadmin", "flow-admin-123"),
-                "{\"username\":\"" + username + "\",\"email\":\"" + username + "@example.com\",\"password\":\"staff-123\","
-                        + "\"phoneNumber\":\"+911111112002\",\"role\":\"" + role + "\"}").getStatusCode())
-                .isEqualTo(HttpStatus.OK);
-        return login(username, "staff-123");
-    }
-
-    private String registerPatient(String username) {
-        ResponseEntity<String> res = call(HttpMethod.POST, "/api/auth/register", null,
-                "{\"username\":\"" + username + "\",\"email\":\"" + username + "@example.com\","
-                        + "\"password\":\"secret-123\",\"phoneNumber\":\"+919876543210\"}");
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        return res.getBody().replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
-    }
-
-    private String login(String username, String password) {
-        ResponseEntity<String> res = call(HttpMethod.POST, "/api/auth/login", null,
-                "{\"username\":\"" + username + "\",\"password\":\"" + password + "\"}");
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        return res.getBody().replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
-    }
-
-    private ResponseEntity<String> call(HttpMethod method, String url, String token, String body) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        if (token != null) {
-            headers.setBearerAuth(token);
-        }
-        return rest.exchange(url, method, new HttpEntity<>(body, headers), String.class);
     }
 }

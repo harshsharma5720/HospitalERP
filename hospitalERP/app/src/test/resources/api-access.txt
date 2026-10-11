@@ -43,6 +43,7 @@ GET /api/patient/getAllBySpecialization anonymous+ patient+ doctor+ receptionist
 GET /api/patient/getAllDoctors anonymous+ patient+ doctor+ receptionist+ admin+
 GET /api/patient/relative/patient/{patientId} anonymous- patient+ doctor- receptionist- admin+
 GET /api/patient/relative/{id} anonymous- patient+ doctor- receptionist- admin+
+GET /api/receptionist/appointments anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/doctorCompletedAppointments/{userId} anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/doctorPendingAppointments/{userId} anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/doctors/{doctorId}/next-free-slots anonymous- patient- doctor- receptionist+ admin+
@@ -51,6 +52,8 @@ GET /api/receptionist/getAppointmentByDoctor/{doctorName} anonymous- patient- do
 GET /api/receptionist/getAppointments anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/getReceptionist/{receptionistId} anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/patients anonymous- patient- doctor- receptionist+ admin+
+GET /api/receptionist/patients/search anonymous- patient- doctor- receptionist+ admin+
+GET /api/receptionist/patients/{patientId} anonymous- patient- doctor- receptionist+ admin+
 GET /api/slots/available/{doctorId} anonymous- patient+ doctor+ receptionist+ admin+
 GET /api/unknown anonymous- patient+ doctor+ receptionist+ admin+
 GET /appointment/allCompletedAppointments anonymous- patient- doctor- receptionist+ admin+
