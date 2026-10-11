@@ -165,6 +165,18 @@ public class SlotService {
         return found.size() > limit ? List.copyOf(found.subList(0, limit)) : found;
     }
 
+    /**
+     * The slot's place in its doctor's day, from 1: every slot of both shifts in time order - the queue's token
+     * (docs/TODAYS_QUEUE_PLAN.md). The whole day's slots are made sure to exist first.
+     */
+    public int positionInDay(Slot slot) {
+        Doctor doctor = slot.getDoctor();
+        for (Shift shift : Shift.values()) {
+            generateSlots(doctor.getId(), slot.getDate(), shift);
+        }
+        return 1 + (int) slotRepository.countByDoctorAndDateAndStartTimeBefore(doctor, slot.getDate(), slot.getStartTime());
+    }
+
     /** Locks the slot row and marks it booked. Must be called inside a transaction. */
     public Slot lockAndBook(Long slotId) {
         Slot slot = slotRepository.findByIdForUpdate(slotId)

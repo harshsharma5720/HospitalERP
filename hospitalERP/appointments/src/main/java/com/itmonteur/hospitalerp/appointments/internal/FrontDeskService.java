@@ -15,6 +15,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -35,13 +36,17 @@ public class FrontDeskService {
     private final AppointmentService appointmentService;
     private final SlotService slotService;
     private final AppointmentRepository appointmentRepository;
+    private final QueueService queueService;
+    private final Clock clock;
 
     public FrontDeskService(PtInfoService ptInfoService, AppointmentService appointmentService, SlotService slotService,
-                            AppointmentRepository appointmentRepository) {
+                            AppointmentRepository appointmentRepository, QueueService queueService, Clock clock) {
         this.ptInfoService = ptInfoService;
         this.appointmentService = appointmentService;
         this.slotService = slotService;
         this.appointmentRepository = appointmentRepository;
+        this.queueService = queueService;
+        this.clock = clock;
     }
 
     /** The one search box: a name, a phone number or a patient ID; empty lists everyone (audited). */
@@ -108,6 +113,10 @@ public class FrontDeskService {
         booking.setAge(request.age() != null ? request.age() : 0); // 0: from the date of birth
         booking.setMessage(request.message() == null || request.message().isBlank() ? null : request.message().trim());
         AppointmentDTO appointment = appointmentService.createAppointment(booking);
+        if (LocalDate.now(clock).equals(appointment.getDate())) {
+            // At the desk already: in today's queue straight away (docs/TODAYS_QUEUE_PLAN.md)
+            appointment = queueService.checkIn(appointment.getAppointmentID());
+        }
         return new WalkInBookingDTO(patient.getPatientId(), existing == null, appointment);
     }
 }

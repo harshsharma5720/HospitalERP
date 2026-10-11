@@ -1,0 +1,43 @@
+# Today's queue: check-in, tokens and the waiting-room screen — plan
+
+**Branch:** `feature/todays-queue` (from `main` = 1a5d144)
+**Why:** the hospital knows who is *booked*, but not who has *arrived*, who is waiting or who is with the doctor. Patients in the waiting room don't know when it's their turn, and doctors have no "next patient" list — only all their pending appointments.
+**Idea list:** [CODE_REVIEW_AND_IDEAS.md](CODE_REVIEW_AND_IDEAS.md#not-implemented-yet) — "not implemented yet" #11.
+
+## Decisions (2026-10-11)
+
+| Question | Decision |
+|---|---|
+| Who calls the next patient | **The doctor** ("Call next" in their portal). The front desk checks patients in. |
+| Order | **By appointment time:** checked-in patients are seen in the order of their booked times. The token is the appointment's **place in the doctor's day** (the 5th slot of the day → 5), so the numbers on the screen only go up, even when someone doesn't come. |
+| Waiting-room screen | **Tokens only, no login:** a full-screen page for a TV — per doctor, the token being served and the next few. No names. |
+| Walk-ins booked for today | **Checked in automatically** (they are at the desk), so they get their token straight away. |
+
+## Design
+
+- **States of today's appointment:** *booked* (not arrived) → **waiting** (checked in, has a token) → **with the doctor** (called) → **done** (the consultation is saved, as today). Cancelled appointments leave the queue. A patient who never comes stays *booked* and shows as "Missed" after the day (as now) — nobody has to mark it.
+- **Data** (Flyway, appointments module): `appointments.checked_in_at`, `token_number`, `called_at` — all empty for existing rows. Rescheduling an appointment clears them.
+- **Token:** worked out at check-in and kept: 1 + the number of the doctor's slots that day (both shifts) that start earlier. Kept, so later changes don't renumber anyone. If a schedule change during the day removed slots and the number is already taken that day, the next free number is used instead (no two patients of a doctor share a token).
+- **Check-in** (front desk, `/api/receptionist/appointments/{id}/check-in`: POST checks in, DELETE undoes a mistake while not yet called): today's active appointments only; checking in twice keeps the first token.
+- **Doctor** (`/api/doctor/queue`): today's queue — who is with them, who is waiting (by time), who hasn't arrived — **Call next** (the first waiting by time), **Call** a particular waiting patient (e.g. urgent), **Not here** (back to waiting). The consultation form completes the visit as before.
+- **Screen** (`GET /api/queue/screen`, no login): per doctor with a queue today — name, the token being served (the last one called) and the next 5 waiting tokens. Nothing else.
+- **Live updates:** the doctor's queue, the front-desk list and the screen refresh every few seconds (simple polling; no WebSocket / SSE needed for a handful of screens).
+- **Frontend:** check-in (and the token) in the front-desk appointment list and in the walk-in confirmation; a **Today's queue** page in the doctor portal; the **waiting-room screen** (`/queue-screen`).
+
+## Steps
+
+| Step | Work | Checked by |
+|---|---|---|
+| Q.1 | **Check-in:** migration, entity / DTO fields, token rules, check-in and undo for the front desk, walk-ins for today checked in automatically, rescheduling clears the queue state. | End-to-end tests (tokens follow the booked time not the arrival, twice / undo / not today / cancelled, reschedule); walk-in unit test; MySQL migration test; snapshots |
+| Q.2 | **Doctor queue and screen API:** today's queue, call next / call / not here; the public screen endpoint (tokens only). | End-to-end tests (order, only their own patients, screen content has no names, no login needed); snapshots |
+| Q.3 | **Frontend, front desk:** check-in and tokens in the appointment list, token in the walk-in confirmation, refresh. | Frontend tests + build; screenshots |
+| Q.4 | **Frontend, doctor:** Today's queue page with Call next / Call / Not here, refresh. | Frontend tests + build; screenshots |
+| Q.5 | **Frontend, waiting-room screen.** | Frontend tests + build; screenshots |
+| Q.6 | **Docs:** module READMEs, README, MySQL runbook (migration), idea list status. | — |
+
+## Progress log
+
+| Step | Status | Date | Notes |
+|---|---|---|---|
+| Q.0 Plan + decisions | ✅ done | 2026-10-11 | This file. |
+| Q.1 Check-in | ✅ done | 2026-10-11 | Flyway `appointments/V2026_10_11_1__appointments_queue.sql` (the appointments module's first migration): `appointments.checked_in_at`, `token_number`, `called_at`, all empty for existing rows. `Appointment` / `AppointmentDTO` fields (+ `clearQueueState`), mapper. `SlotService.positionInDay(slot)` (both shifts' slots made sure to exist, then 1 + the doctor's slots that day starting earlier; `SlotRepository.countByDoctorAndDateAndStartTimeBefore`). New `QueueService`: `checkIn` — today's active appointments only (400 otherwise, 404 unknown), token = the position, unless that number is already given out that day (`AppointmentRepository.findTokensGivenOut`) → the highest + 1; the check-in time is kept to the second (the clock's extra digits would make the first answer differ from later reads); twice keeps the first token and time. `undoCheckIn` — 409 once called in. `POST` / `DELETE /api/receptionist/appointments/{id}/check-in` (receptionists + admins). Walk-ins booked for today are checked in in the same transaction (`FrontDeskService`, now with the `Clock`). Rescheduling clears the queue state. Tests: new `QueueH2Test` (4, shares FeatureFlowH2Test's context; bookings made for tomorrow and moved to today in the database, so the time of day doesn't matter): the 16:30 patient arriving first still gets token 3 and the 10:00 one token 1, twice keeps token and time, the front-desk list shows tokens and who hasn't arrived, undo and again → same token, admins too; a number already given out → the next free one; not today / cancelled → 400, unknown → 404, undo after being called → 409, patients and doctors → 403; rescheduling clears token and check-in. New `FrontDeskServiceTest` (2: a walk-in for today is checked in, one for tomorrow isn't). `DatabaseMigrationMySqlTest`: 9 migrations, an existing appointment (now seeded in the old database) has no queue state. Mutation checks: tokens in arrival order, no duplicate safeguard, or rescheduling keeping the queue state — each makes a test fail. Endpoint and access snapshots: +2 lines each. MySQL runbook (9 migrations), README migrations table, appointments and scheduling READMEs. Checker OK, 161 backend tests (1 skipped). |

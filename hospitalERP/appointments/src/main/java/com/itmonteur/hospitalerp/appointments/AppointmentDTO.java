@@ -4,6 +4,7 @@ import com.itmonteur.hospitalerp.common.Gender;
 import com.itmonteur.hospitalerp.scheduling.Shift;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 public class AppointmentDTO {
@@ -23,6 +24,9 @@ public class AppointmentDTO {
     private Long relativeId;       // Optional, set when booking for a relative
     private Long slotId;
     private AppointmentStatus status;
+    private LocalDateTime checkedInAt; // Read-only: today's queue - arrival, token, called in (docs/TODAYS_QUEUE_PLAN.md)
+    private Integer tokenNumber;
+    private LocalDateTime calledAt;
 
     public AppointmentDTO() {}
 
@@ -91,4 +95,13 @@ public class AppointmentDTO {
 
     public AppointmentStatus getStatus() { return status; }
     public void setStatus(AppointmentStatus status) { this.status = status; }
+
+    public LocalDateTime getCheckedInAt() { return checkedInAt; }
+    public void setCheckedInAt(LocalDateTime checkedInAt) { this.checkedInAt = checkedInAt; }
+
+    public Integer getTokenNumber() { return tokenNumber; }
+    public void setTokenNumber(Integer tokenNumber) { this.tokenNumber = tokenNumber; }
+
+    public LocalDateTime getCalledAt() { return calledAt; }
+    public void setCalledAt(LocalDateTime calledAt) { this.calledAt = calledAt; }
 }
