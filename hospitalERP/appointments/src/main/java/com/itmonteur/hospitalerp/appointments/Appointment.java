@@ -3,6 +3,7 @@ package com.itmonteur.hospitalerp.appointments;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import com.itmonteur.hospitalerp.common.Gender;
 import com.itmonteur.hospitalerp.patients.PtInfo;
@@ -54,6 +55,12 @@ public class Appointment {
     private boolean isCompleted = false;
     // Set once the day-before reminder has been sent (nullable so existing rows need no migration)
     private Boolean reminderSent;
+
+    // Today's queue (docs/TODAYS_QUEUE_PLAN.md): arrival at the front desk, the token kept from then on, and when
+    // the doctor called the patient in. Cleared when the appointment is rescheduled.
+    private LocalDateTime checkedInAt;
+    private Integer tokenNumber;
+    private LocalDateTime calledAt;
 
     // --- Constructors ---
     public Appointment() {}
@@ -116,6 +123,22 @@ public class Appointment {
     }
 
     public boolean isReminderSent() { return Boolean.TRUE.equals(reminderSent); }
+
+    public LocalDateTime getCheckedInAt() { return checkedInAt; }
+    public void setCheckedInAt(LocalDateTime checkedInAt) { this.checkedInAt = checkedInAt; }
+
+    public Integer getTokenNumber() { return tokenNumber; }
+    public void setTokenNumber(Integer tokenNumber) { this.tokenNumber = tokenNumber; }
+
+    public LocalDateTime getCalledAt() { return calledAt; }
+    public void setCalledAt(LocalDateTime calledAt) { this.calledAt = calledAt; }
+
+    /** Back to "booked": not arrived, no token, not called. */
+    public void clearQueueState() {
+        checkedInAt = null;
+        tokenNumber = null;
+        calledAt = null;
+    }
     public void setReminderSent(boolean reminderSent) { this.reminderSent = reminderSent; }
 
     public PtRelative getRelative() { return relative; }

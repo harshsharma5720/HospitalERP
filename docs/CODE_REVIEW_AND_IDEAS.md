@@ -439,9 +439,9 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ---
 
-## 11. Feature Status (updated 2026-10-11)
+## 11. Feature Status (updated 2026-10-12)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10) and patient search with paged front-desk lists (branch `feature/patient-search`).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11) and today's queue (branch `feature/todays-queue`).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
@@ -453,6 +453,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 - **Automatic nightly backups** of the database and the uploaded images, for Docker and Windows (2026-10-08, see below).
 - **Walk-in registration at the front desk:** found by phone or registered without a login, and booked in one step (2026-10-08, see below).
 - **Patient search and paged front-desk lists:** one search box (name, phone or patient ID), a patient's page, and the front-desk appointment list with filters (2026-10-11, see below).
+- **Today's queue:** check-in and tokens at the front desk, the doctor's queue with Call next, and a waiting-room screen (2026-10-12, see below).
 
 **Partly done**
 - **Paged lists:** patients and the front-desk appointments are paged; the admin users list and the doctor portal's lists still load everything.
@@ -473,7 +474,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 8 | Doctor analytics (patients per day, no-show rate, busy hours) | doctor | 2 days |
 | 9 | Cancellation / reschedule cut-off rule | patients | 1 day |
 | 10 | ~~Walk-in patient registration at the front desk~~ ✅ done 2026-10-08 | front desk | — |
-| 11 | Today's queue: check-in, token numbers, live "now serving" screen | front desk | 4–5 days |
+| 11 | ~~Today's queue: check-in, token numbers, live "now serving" screen~~ ✅ done 2026-10-12 | front desk | — |
 | 12 | ~~Patient search (phone / name / ID) and pagination on all lists~~ ✅ done 2026-10-11 (patients and front-desk appointments; the admin users list and the doctor portal's lists not yet) | front desk / platform | — |
 | 13 | Waitlist, notified when a slot frees up | patients | 3–4 days |
 | 14 | Family view (each relative's appointments and prescriptions) | patients | 2 days |
@@ -489,7 +490,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** today's queue (11 — it can build on the front-desk appointment list) or billing (18). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
+**Suggested order:** billing (18), or the smaller ones first: the cancellation cut-off rule (9) and doctor analytics (8 — the queue now records when patients arrive and are called in). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
 
 ### Account deactivation (done 2026-10-01)
 
@@ -643,3 +644,22 @@ From idea #12 above. The front desk could only find a patient by phone, there wa
 - A click-through against the real database.
 - The admin users list and the doctor portal's appointment lists are not paged yet.
 - No index on `appointments.date`; the date filter is fine for now but would need one with a lot of data.
+
+### Today's queue (done 2026-10-12)
+
+From idea #11 above. The hospital knew who was booked, but not who had arrived, who was waiting or who was with the doctor; patients in the waiting room didn't know when it was their turn. Decisions, design and steps: [TODAYS_QUEUE_PLAN.md](TODAYS_QUEUE_PLAN.md).
+
+**What it does**
+- **Check-in** at the front desk (the **Queue** column of the appointment list): today's booked patients are checked in as they arrive and get a **token** — their appointment's place in the doctor's day, by booked time, kept from then on (if a schedule change during the day makes a number clash, the next free number is used). A mistake can be undone until the doctor calls the patient in. Walk-ins booked for today are checked in straight away; rescheduling clears the check-in.
+- **The doctor's Today's queue** (`/doctor/queue`): with you, waiting (by appointment time, with tokens), not arrived, done; **Call next**, **Call** a particular patient, **Not here** (back to waiting); the consultation form completes the visit.
+- **Waiting-room screen** (`/queue-screen`, no login, for a TV): per doctor, the token being served and the next ones — tokens only, no names. A changed token is highlighted.
+- All three refresh themselves every few seconds (simple polling).
+- Endpoints: `POST`/`DELETE /api/receptionist/appointments/{id}/check-in`; `GET /api/doctor/queue`, `POST /api/doctor/queue/next`, `/{id}/call`, `/{id}/not-here` (doctors only, their own patients); `GET /api/queue/screen` (public).
+- Database: `appointments.checked_in_at`, `token_number`, `called_at` (Flyway `appointments/V2026_10_11_1__appointments_queue.sql`; see the [MySQL runbook](MYSQL_FLYWAY_UPGRADE.md)).
+
+**Tests:** end-to-end HTTP tests (tokens by booked time not arrival, twice / undo / refused cases, the duplicate safeguard, reschedule; call order, own patients only, the screen without names and without login), the MySQL migration test, a walk-in unit test, and frontend tests for the three pages and the public route; mutation checks for each. They found that queue times kept to the second couldn't order two calls within one second — times are now kept to the microsecond.
+
+**Not covered yet:**
+- A click-through against the real database, and the screen on a real TV.
+- No sound when a token is called (the screen highlights it; a chime would need the TV's browser to allow audio).
+- A patient who never arrives isn't marked: they show as "Missed" once the day is over.

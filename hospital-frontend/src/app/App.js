@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import React from "react";
 
 /* PUBLIC / PATIENT */
@@ -18,6 +18,7 @@ import DoctorDetailsPage from "../features/doctors/DoctorDetailsPage";
 import AddRelativePage from "../features/patients/AddRelativePage";
 import RelativesList from "../features/patients/RelativesList";
 import FrontDeskAppointments from "../features/appointments/FrontDeskAppointments";
+import QueueScreen from "../features/appointments/QueueScreen";
 import WalkInBooking from "../features/appointments/WalkInBooking";
 import PatientSearch from "../features/patients/PatientSearch";
 import FrontDeskPatient from "../features/patients/FrontDeskPatient";
@@ -33,6 +34,11 @@ import useAuthStore, { homePathForRole } from "../features/auth/useAuthStore";
 
 const PATIENT = ["ROLE_PATIENT"];
 const FRONT_DESK = ["ROLE_RECEPTIONIST", "ROLE_ADMIN"];
+
+// The public footer - not under the waiting-room screen, which fills a TV
+function PublicFooter() {
+  return useLocation().pathname === "/queue-screen" ? null : <Footer />;
+}
 
 function App() {
   // Re-renders automatically on login/logout (no page reload needed)
@@ -52,6 +58,8 @@ function App() {
         <Route path="/treatments" element={<Treatments />} />
         <Route path="/about" element={<AboutUs />} />
         <Route path="/doctor-profile/:doctorId" element={<DoctorDetailsPage />} />
+        {/* The waiting-room screen: tokens only, no login (docs/TODAYS_QUEUE_PLAN.md) */}
+        <Route path="/queue-screen" element={<QueueScreen />} />
 
         {/* ===================== PATIENT ===================== */}
         <Route path="/appointments" element={<ProtectedRoute roles={PATIENT}><AppointmentPage /></ProtectedRoute>} />
@@ -107,7 +115,7 @@ function App() {
       </Routes>
 
       {/* Footer only for public */}
-      {!role && <Footer />}
+      {!role && <PublicFooter />}
 
     </Router>
   );

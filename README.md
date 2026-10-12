@@ -237,9 +237,9 @@ The app will open at **http://localhost:3000**.
 | Role | Portal URL | Access |
 |------|------------|--------|
 | **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log, notifications, and the front desk's pages (appointments, walk-in booking, patients) |
-| **Doctor** | `/doctor/dashboard` | Appointments, leave, profile |
+| **Doctor** | `/doctor/dashboard` | Today's queue (`/doctor/queue`), appointments, leave, profile |
 | **Patient** | `/` (public pages) | Book appointments, manage relatives |
-| **Receptionist** | `/receptionist-appointments`, `/walk-in`, `/patients` | Appointment list with filters, walk-in booking, patient search |
+| **Receptionist** | `/receptionist-appointments`, `/walk-in`, `/patients` | Appointment list with filters and check-in, walk-in booking, patient search |
 
 ---
 
@@ -271,6 +271,9 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 | Walk-in patients at the front desk — look the phone number up (a family may share one), register a patient without a login (name, phone, gender) or pick the one found, book the doctor's earliest free time, all in one step; SMS confirmation ([details](docs/WALK_IN_REGISTRATION_PLAN.md)) | Receptionist, Admin | `/walk-in`, `/admin/walk-in` |
 | Patient search — one box for part of a name, a phone number or a patient ID, 20 per page; a patient's page with details, upcoming and past appointments and a Book button; every search and view in the audit log ([details](docs/PATIENT_SEARCH_PLAN.md)) | Receptionist, Admin | `/patients`, `/admin/patients` |
 | Front-desk appointment list — today by default; dates, doctor, status and patient filters; 20 per page, each patient linked to their page ([details](docs/PATIENT_SEARCH_PLAN.md)) | Receptionist, Admin | `/receptionist-appointments`, `/admin/appointments` |
+| Check-in and tokens — the front desk checks today's patients in as they arrive; each gets a token, their place in the doctor's day by booked time; walk-ins booked for today are checked in straight away ([details](docs/TODAYS_QUEUE_PLAN.md)) | Receptionist, Admin | `/receptionist-appointments` (Queue column), `/walk-in` |
+| Today's queue for the doctor — with you, waiting by time with tokens, not arrived, done; Call next / Call / Not here; the consultation form completes the visit ([details](docs/TODAYS_QUEUE_PLAN.md)) | Doctor | `/doctor/queue` |
+| Waiting-room screen for a TV — per doctor, the token being served and the next ones; tokens only, no names, no login ([details](docs/TODAYS_QUEUE_PLAN.md)) | Everyone | `/queue-screen` |
 
 Medical records (consultations, prescriptions) are visible only to the patient, their doctor(s) and admins — receptionists cannot read them.
 
@@ -290,6 +293,7 @@ The database schema is owned by the migration scripts in `hospitalERP/app/src/ma
 | `identity/V2026_10_06_1__identity_user_created_at.sql` | Adds `users.created_at`, set for every new account; older accounts stay empty ([admin dashboard](docs/ADMIN_DASHBOARD_PLAN.md)). |
 | `notifications/V2026_10_07_1__notifications_outbox.sql` | Creates the empty `notification_outbox` table: appointment emails / SMS waiting to be sent or retried ([reliable notifications](docs/RELIABLE_NOTIFICATIONS_PLAN.md)). |
 | `patients/V2026_10_08_1__patients_walk_in.sql` | Makes `patient.email` optional and adds `patient.created_at`, for walk-in patients registered at the front desk without a login ([walk-in registration](docs/WALK_IN_REGISTRATION_PLAN.md)). |
+| `appointments/V2026_10_11_1__appointments_queue.sql` | Adds `appointments.checked_in_at`, `token_number` and `called_at` (all empty for existing appointments), for today's queue: check-in at the front desk, tokens, the doctor calling the next patient ([today's queue](docs/TODAYS_QUEUE_PLAN.md)). |
 
 **Changing the schema:** add a new file to the owning module's folder, e.g. `db/migration/appointments/V2026_10_05_1__appointments_add_room.sql`, with the next date-based version. Never edit a migration that has already run anywhere — Flyway checks their checksums and refuses to start. Hibernate then validates the entities against the result, so an entity change without a migration stops the app with a clear "Schema-validation" message.
 

@@ -43,6 +43,9 @@ public final class AppointmentMapper {
         if (appointment.getRelative() != null) {
             dto.setRelativeId(appointment.getRelative().getId());
         }
+        dto.setCheckedInAt(appointment.getCheckedInAt());
+        dto.setTokenNumber(appointment.getTokenNumber());
+        dto.setCalledAt(appointment.getCalledAt());
         return dto;
     }
 }

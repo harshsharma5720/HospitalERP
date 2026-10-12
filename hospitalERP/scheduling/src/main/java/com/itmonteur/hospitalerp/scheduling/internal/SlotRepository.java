@@ -12,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +23,9 @@ public interface SlotRepository extends JpaRepository<Slot,Long> {
     List<Slot> findByDoctorAndDateAndShiftAndAvailableTrue(Doctor doctor, LocalDate date, Shift shift);
 
     List<Slot> findByDoctorAndDateAndShift(Doctor doctor, LocalDate date, Shift shift);
+
+    // A slot's place in its doctor's day (docs/TODAYS_QUEUE_PLAN.md)
+    long countByDoctorAndDateAndStartTimeBefore(Doctor doctor, LocalDate date, LocalTime startTime);
     List<Slot> findByDoctor_IdAndDateBetween(Long doctorId, LocalDate start, LocalDate end);
 
     // Row lock (SELECT ... FOR UPDATE) so two concurrent bookings cannot take the same slot

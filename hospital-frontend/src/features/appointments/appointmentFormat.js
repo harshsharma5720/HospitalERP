@@ -26,12 +26,18 @@ export const formatTime = (time) => (time ? String(time).slice(0, 5) : "");
 export const timeRange = (appointment) =>
   appointment.startTime ? `${formatTime(appointment.startTime)}–${formatTime(appointment.endTime)}` : "—";
 
+// "CARDIOLOGY" -> "Cardiology"; "" when none is set
+export const specialityLabel = (specialist) => {
+  if (!specialist || specialist === "NOT_ASSIGNED") return "";
+  const words = specialist.toLowerCase().replace(/_/g, " ");
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+};
+
 // "Dr. Anita Rao — Cardiology" (the user name when the profile has no name yet; no speciality when none is set)
 export const doctorLabel = (doctor) => {
   const name = `Dr. ${doctor.name || doctor.userName}`;
-  if (!doctor.specialist || doctor.specialist === "NOT_ASSIGNED") return name;
-  const specialist = doctor.specialist.toLowerCase().replace(/_/g, " ");
-  return `${name} — ${specialist.charAt(0).toUpperCase()}${specialist.slice(1)}`;
+  const speciality = specialityLabel(doctor.specialist);
+  return speciality ? `${name} — ${speciality}` : name;
 };
 
 const STATUS_LABELS = {

@@ -36,6 +36,18 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long>,
 
     List<Appointment> findByPtInfo_PatientId(Long patientId);
 
+    // Today's queue (docs/TODAYS_QUEUE_PLAN.md): a doctor's day; everyone checked in on a day (the waiting-room screen)
+    List<Appointment> findByDoctor_IdAndDate(Long doctorId, LocalDate date);
+
+    @Query("SELECT a FROM Appointment a WHERE a.date = :date AND a.checkedInAt IS NOT NULL")
+    List<Appointment> findCheckedInOn(@Param("date") LocalDate date);
+
+    // The tokens a doctor has given out on a day, except this appointment's
+    @Query("SELECT a.tokenNumber FROM Appointment a WHERE a.doctor.id = :doctorId AND a.date = :date"
+            + " AND a.tokenNumber IS NOT NULL AND a.appointmentID <> :except")
+    List<Integer> findTokensGivenOut(@Param("doctorId") Long doctorId, @Param("date") LocalDate date,
+                                     @Param("except") long except);
+
     @Query("SELECT a FROM Appointment a WHERE a.doctor = :doctor AND a.shift = :shift")
     List<Appointment> findByDoctorAndShift(@Param("doctor") Doctor doctor,
                                            @Param("shift") Shift shift);

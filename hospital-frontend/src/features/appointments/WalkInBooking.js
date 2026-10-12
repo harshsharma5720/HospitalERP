@@ -207,6 +207,9 @@ export default function WalkInBooking() {
             {confirmation.newPatient ? "New patient record created. " : ""}
             An SMS confirmation is sent to {confirmation.phone}.
           </p>
+          {appointment.tokenNumber && (
+            <p className="mt-2 text-lg font-semibold">Checked in for today: token {appointment.tokenNumber}</p>
+          )}
           <Link
             to={`${base}/patients/${confirmation.patientId}`}
             className="inline-block mt-2 text-sm text-blue-700 dark:text-[#50d4f2] hover:underline"

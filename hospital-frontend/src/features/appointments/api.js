@@ -36,6 +36,24 @@ export const getDoctorCompletedAppointments = (userId) =>
 export const completeAppointment = (appointmentId) =>
   axios.put(`${API_BASE_URL}/api/doctor/complete/${appointmentId}`);
 
+// ---------- doctor: today's queue (docs/TODAYS_QUEUE_PLAN.md) ----------
+// { date, withDoctor, waiting (by time), notArrived, done } - lists of appointments, each with tokenNumber,
+// checkedInAt, calledAt
+export const getMyQueue = () => axios.get(`${API_BASE_URL}/api/doctor/queue`);
+
+// The first waiting patient by appointment time; 409 when nobody is waiting
+export const callNextPatient = () => axios.post(`${API_BASE_URL}/api/doctor/queue/next`);
+
+export const callPatient = (appointmentId) => axios.post(`${API_BASE_URL}/api/doctor/queue/${appointmentId}/call`);
+
+// Called in but not there: back to waiting, with the same token
+export const patientNotHere = (appointmentId) =>
+  axios.post(`${API_BASE_URL}/api/doctor/queue/${appointmentId}/not-here`);
+
+// ---------- the waiting-room screen (no login) ----------
+// { date, doctors: [{ doctorName, specialist, nowServing, next: [tokens] }] } - tokens only, no patient data
+export const getQueueScreen = () => axios.get(`${API_BASE_URL}/api/queue/screen`);
+
 // ---------- front desk (receptionist) ----------
 export const getFrontDeskAppointments = () => axios.get(`${API_BASE_URL}/api/receptionist/getAppointments`);
 
@@ -45,6 +63,15 @@ export const getFrontDeskAppointments = () => axios.get(`${API_BASE_URL}/api/rec
 // Answers { entries, page, size, totalEntries, totalPages }.
 export const getFrontDeskAppointmentPage = (params) =>
   axios.get(`${API_BASE_URL}/api/receptionist/appointments`, { params });
+
+// Today's queue (docs/TODAYS_QUEUE_PLAN.md): the patient has arrived - today's appointment gets its token.
+// Checking in twice keeps the first token. Answers the appointment.
+export const checkInAppointment = (appointmentId) =>
+  axios.post(`${API_BASE_URL}/api/receptionist/appointments/${appointmentId}/check-in`);
+
+// Undo a check-in made by mistake; 409 once the doctor has called the patient in
+export const undoCheckIn = (appointmentId) =>
+  axios.delete(`${API_BASE_URL}/api/receptionist/appointments/${appointmentId}/check-in`);
 
 // ---------- front desk: walk-in patients (docs/WALK_IN_REGISTRATION_PLAN.md) ----------
 // Patients with this phone number (at least 10 digits; a family may share one). Recorded in the audit log.

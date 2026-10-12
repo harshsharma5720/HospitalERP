@@ -74,6 +74,9 @@ class DatabaseMigrationMySqlTest {
                     + "VALUES (1, 1, 'Rao', 'rao@example.com', '+911111111111', 'CARDIOLOGY', 'old-hash', 'DOCTOR')");
             statement.execute("INSERT INTO patient (patient_id, user_id, patient_name, email, role) "
                     + "VALUES (1, 2, 'Asha', 'asha@example.com', 'PATIENT')");
+            // An old visit, long before the dashboard's periods
+            statement.execute("INSERT INTO appointments (appointmentid, age, date, is_completed, patient_name, gender, shift, "
+                    + "status, doctor_id, patient_id) VALUES (1, 34, '2025-01-15', 1, 'Asha', 'FEMALE', 'MORNING', 'COMPLETED', 1, 1)");
         }
     }
 
@@ -91,7 +94,8 @@ class DatabaseMigrationMySqlTest {
                 "SELECT version, type, success FROM flyway_schema_history ORDER BY installed_rank");
         assertThat(history).extracting(row -> row.get("version") + " " + row.get("type"))
                 .containsExactly("1 BASELINE", "2026.09.28.1 SQL", "2026.09.28.2 SQL", "2026.09.30.1 SQL",
-                        "2026.10.05.1 SQL", "2026.10.06.1 SQL", "2026.10.07.1 SQL", "2026.10.08.1 SQL");
+                        "2026.10.05.1 SQL", "2026.10.06.1 SQL", "2026.10.07.1 SQL", "2026.10.08.1 SQL",
+                        "2026.10.11.1 SQL");
         assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isIn(true, 1));
 
         assertThat(legacyColumnsIn(jdbc, "hospital")).isEmpty();
@@ -106,6 +110,9 @@ class DatabaseMigrationMySqlTest {
                 + "AND table_name = 'patient' AND column_name = 'email'", String.class)).isEqualTo("YES");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM patient WHERE email = 'asha@example.com' AND created_at IS NULL",
                 Integer.class)).isEqualTo(1);
+        // Today's queue (docs/TODAYS_QUEUE_PLAN.md): existing appointments are not checked in
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM appointments WHERE appointmentid = 1 AND checked_in_at IS NULL"
+                + " AND token_number IS NULL AND called_at IS NULL", Integer.class)).isEqualTo(1);
         // The notification outbox starts empty (docs/RELIABLE_NOTIFICATIONS_PLAN.md)
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM notification_outbox", Integer.class)).isZero();
         // The audit log starts empty (docs/AUDIT_LOG_PLAN.md)

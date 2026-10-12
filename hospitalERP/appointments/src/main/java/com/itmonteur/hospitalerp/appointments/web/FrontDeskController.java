@@ -4,6 +4,7 @@ import com.itmonteur.hospitalerp.appointments.AppointmentDTO;
 import com.itmonteur.hospitalerp.appointments.internal.AppointmentListQuery;
 import com.itmonteur.hospitalerp.appointments.internal.FreeSlotDTO;
 import com.itmonteur.hospitalerp.appointments.internal.FrontDeskService;
+import com.itmonteur.hospitalerp.appointments.internal.QueueService;
 import com.itmonteur.hospitalerp.appointments.internal.WalkInBookingDTO;
 import com.itmonteur.hospitalerp.appointments.internal.WalkInBookingRequest;
 import com.itmonteur.hospitalerp.common.PageResult;
@@ -24,9 +25,11 @@ import java.util.List;
 public class FrontDeskController {
 
     private final FrontDeskService frontDeskService;
+    private final QueueService queueService;
 
-    public FrontDeskController(FrontDeskService frontDeskService) {
+    public FrontDeskController(FrontDeskService frontDeskService, QueueService queueService) {
         this.frontDeskService = frontDeskService;
+        this.queueService = queueService;
     }
 
     // Patients with this phone number - several for a family sharing one
@@ -63,6 +66,18 @@ public class FrontDeskController {
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(frontDeskService.listAppointments(
                 new AppointmentListQuery(from, to, doctorId, status, patient, patientId, order), page, size));
+    }
+
+    // Today's queue (docs/TODAYS_QUEUE_PLAN.md): the patient has arrived - today's appointment gets its token
+    @PostMapping("/appointments/{appointmentId}/check-in")
+    public ResponseEntity<AppointmentDTO> checkIn(@PathVariable long appointmentId) {
+        return ResponseEntity.ok(queueService.checkIn(appointmentId));
+    }
+
+    // Undo a check-in made by mistake (not once the doctor has called the patient in)
+    @DeleteMapping("/appointments/{appointmentId}/check-in")
+    public ResponseEntity<AppointmentDTO> undoCheckIn(@PathVariable long appointmentId) {
+        return ResponseEntity.ok(queueService.undoCheckIn(appointmentId));
     }
 
     // A doctor's next free slots from now on, in time order

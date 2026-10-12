@@ -5,13 +5,16 @@ import { toLocalISODate } from "../../shared/utils/dateUtils";
 import useAreaBase from "../../shared/useAreaBase";
 import { getAllDoctors } from "../doctors/api";
 import { dayLabel, doctorLabel, formatDate, timeRange, visitStatus } from "./appointmentFormat";
-import { getFrontDeskAppointmentPage } from "./api";
+import { checkInAppointment, getFrontDeskAppointmentPage, undoCheckIn } from "./api";
 
 // The front desk's appointment list (docs/PATIENT_SEARCH_PLAN.md): today by default; dates, doctor, status and
 // patient filters; 20 per page, by date and time. The filters live in the address, so coming back from a patient
 // shows the same list. Receptionists: /receptionist-appointments, admins: /admin/appointments.
+// Today's queue (docs/TODAYS_QUEUE_PLAN.md): Check in today's patients as they arrive (they get their token); the
+// list refreshes itself, so it shows who the doctors have called in.
 
 const PAGE_SIZE = 20;
+const REFRESH_MS = 15000;
 const STATUS_OPTIONS = [
   ["all", "All"],
   ["upcoming", "Upcoming"],
@@ -25,6 +28,40 @@ const QUIET_BUTTON = "border dark:border-gray-600 rounded";
 // "Today", "Tomorrow", "Fri 9 Oct" this year, "Tue 8 Oct 2025" other years
 const dateLabel = (isoDate) =>
   isoDate.startsWith(String(new Date().getFullYear())) ? dayLabel(isoDate) : formatDate(isoDate, true);
+
+// Today's still-booked appointments: Check in, or where the patient is in the queue
+function QueueCell({ appointment, today, busy, onCheckIn, onUndo }) {
+  const booked = appointment.status === "SCHEDULED" || appointment.status === "CONFIRMED";
+  if (appointment.date !== today || !booked) return "—";
+  if (appointment.calledAt) return `With the doctor · token ${appointment.tokenNumber}`;
+  if (appointment.checkedInAt) {
+    return (
+      <span className="flex items-center gap-2">
+        Waiting · token {appointment.tokenNumber}
+        <button
+          type="button"
+          onClick={onUndo}
+          disabled={busy}
+          aria-label={`Undo the check-in of ${appointment.patientName}`}
+          className="text-xs underline text-gray-600 dark:text-gray-300 disabled:opacity-50"
+        >
+          Undo
+        </button>
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onCheckIn}
+      disabled={busy}
+      aria-label={`Check in ${appointment.patientName}`}
+      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs disabled:opacity-50"
+    >
+      Check in
+    </button>
+  );
+}
 
 export default function FrontDeskAppointments() {
   const base = useAreaBase();
@@ -44,6 +81,8 @@ export default function FrontDeskAppointments() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busyId, setBusyId] = useState(null);
 
   useEffect(() => setDraft({ from, to, doctorId, status, patient }), [from, to, doctorId, status, patient]);
 
@@ -53,28 +92,61 @@ export default function FrontDeskAppointments() {
       .catch(() => setDoctors([]));
   }, []);
 
+  // Loads the page, then quietly again every few seconds (no "Loading...", a failed refresh keeps the list)
   useEffect(() => {
     let current = true;
-    setLoading(true);
-    setError("");
     const request = { page, size: PAGE_SIZE };
     if (from) request.from = from;
     if (to) request.to = to;
     if (doctorId) request.doctorId = doctorId;
     if (status !== "all") request.status = status;
     if (patient) request.patient = patient;
-    getFrontDeskAppointmentPage(request)
-      .then((response) => current && setResult(response.data))
-      .catch((err) => {
-        if (!current) return;
-        setResult(null);
-        setError(getErrorMessage(err, "Could not load the appointments."));
-      })
-      .finally(() => current && setLoading(false));
+    const load = (quietly) => {
+      if (!quietly) {
+        setLoading(true);
+        setError("");
+      }
+      getFrontDeskAppointmentPage(request)
+        .then((response) => current && setResult(response.data))
+        .catch((err) => {
+          if (!current || quietly) return;
+          setResult(null);
+          setError(getErrorMessage(err, "Could not load the appointments."));
+        })
+        .finally(() => current && !quietly && setLoading(false));
+    };
+    load(false);
+    const timer = setInterval(() => load(true), REFRESH_MS);
     return () => {
       current = false;
+      clearInterval(timer);
     };
   }, [from, to, doctorId, status, patient, page]);
+
+  const replaceRow = (updated) =>
+    setResult((loaded) => ({
+      ...loaded,
+      entries: loaded.entries.map((a) => (a.appointmentID === updated.appointmentID ? updated : a)),
+    }));
+
+  const queueAction = async (appointment, action) => {
+    setError("");
+    setNotice("");
+    setBusyId(appointment.appointmentID);
+    try {
+      const response = await action(appointment.appointmentID);
+      replaceRow(response.data);
+      setNotice(
+        response.data.tokenNumber
+          ? `${appointment.patientName} is checked in: token ${response.data.tokenNumber}.`
+          : `Check-in of ${appointment.patientName} undone.`
+      );
+    } catch (err) {
+      setError(getErrorMessage(err, "Could not change the check-in."));
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   // The dates are always written, so cleared dates ("any date") are kept too
   const show = (filters, pageNumber = 0) => {
@@ -157,6 +229,11 @@ export default function FrontDeskAppointments() {
         </button>
       </form>
 
+      {notice && (
+        <p role="status" className="text-green-700 dark:text-green-400 mb-4">
+          {notice}
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-red-600 mb-4">
           {error}
@@ -172,6 +249,7 @@ export default function FrontDeskAppointments() {
               <th className="p-3 text-left">Patient</th>
               <th className="p-3 text-left">Doctor</th>
               <th className="p-3 text-left">Status</th>
+              <th className="p-3 text-left">Queue</th>
               <th className="p-3 text-left">Reason</th>
             </tr>
           </thead>
@@ -199,6 +277,15 @@ export default function FrontDeskAppointments() {
                   <td className="p-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${style}`}>{label}</span>
                   </td>
+                  <td className="p-3 whitespace-nowrap">
+                    <QueueCell
+                      appointment={appointment}
+                      today={today}
+                      busy={busyId === appointment.appointmentID}
+                      onCheckIn={() => queueAction(appointment, checkInAppointment)}
+                      onUndo={() => queueAction(appointment, undoCheckIn)}
+                    />
+                  </td>
                   <td className="p-3 max-w-xs truncate" title={appointment.message ?? ""}>
                     {appointment.message || "—"}
                   </td>
@@ -207,7 +294,7 @@ export default function FrontDeskAppointments() {
             })}
             {!loading && !error && entries.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-gray-500">
+                <td colSpan={7} className="p-6 text-center text-gray-500">
                   No appointments for these filters.
                 </td>
               </tr>

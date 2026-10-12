@@ -195,6 +195,7 @@ public class AppointmentService {
             appointment.setShift(newSlot.getShift());
             appointment.setDate(newSlot.getDate());
             appointment.setReminderSent(false); // remind again for the new date
+            appointment.clearQueueState(); // another time: checked in again on that day
             logger.info("Appointment {} rescheduled to slot {}", appointmentID, newSlot.getId());
         }
         return AppointmentMapper.toDTO(appointmentRepository.save(appointment));
