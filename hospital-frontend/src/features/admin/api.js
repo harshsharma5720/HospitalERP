@@ -35,6 +35,14 @@ export const getNotifications = (params) => axios.get(`${API_BASE_URL}/api/admin
 // Only failed or skipped messages; the server answers 409 otherwise
 export const resendNotification = (id) => axios.post(`${API_BASE_URL}/api/admin/notifications/${id}/resend`);
 
+// ---------- consultation fees (docs/BILLING_PLAN.md) ----------
+// { defaultFee, doctors: [{ doctorId, doctorName, specialist, active, consultationFee (null: not set) }] }
+export const getFees = () => axios.get(`${API_BASE_URL}/api/admin/fees`);
+
+// 0 to 100000 rupees, at most 2 decimals
+export const setFee = (doctorId, consultationFee) =>
+  axios.put(`${API_BASE_URL}/api/admin/fees/${doctorId}`, { consultationFee });
+
 // ---------- leave requests ----------
 export const getPendingLeaves = () => axios.get(`${API_BASE_URL}/api/admin/allPending`);
 
