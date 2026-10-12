@@ -20,6 +20,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 /**
  * Queues emails and SMS for reliable delivery (docs/RELIABLE_NOTIFICATIONS_PLAN.md). A message is stored in the
@@ -82,7 +83,7 @@ public class NotificationOutbox {
             throw new ConflictException("Only failed or skipped messages can be resent; this one is "
                     + message.getStatus().name().toLowerCase());
         }
-        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime now = now();
         message.resend(now, now.plus(MAX_RETRY_WINDOW));
         logger.info("Outbox message {} ({}) queued again by an admin", id, message.getDescription());
         sendAfterCommit();
@@ -109,13 +110,19 @@ public class NotificationOutbox {
             logger.debug("No recipient - {} not queued", description);
             return;
         }
-        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime now = now();
         LocalDateTime giveUpAt = now.plus(MAX_RETRY_WINDOW);
         if (notAfter != null && notAfter.isBefore(giveUpAt)) {
             giveUpAt = notAfter;
         }
         repository.save(new OutboxMessage(channel, recipient.trim(), subject, body, description, now, giveUpAt));
         sendAfterCommit();
+    }
+
+    // To the microsecond, as the database keeps it: the stored time is the time used here, so a message is due at once
+    // even when the sender looks within the same clock tick (the database would round a finer time, maybe upwards)
+    private LocalDateTime now() {
+        return LocalDateTime.now(clock).truncatedTo(ChronoUnit.MICROS);
     }
 
     private void sendAfterCommit() {

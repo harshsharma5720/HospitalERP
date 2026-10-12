@@ -14,6 +14,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -123,7 +124,8 @@ public class OutboxSender {
         return null;
     }
 
+    // To the microsecond, as the database keeps it (see NotificationOutbox)
     private LocalDateTime now() {
-        return LocalDateTime.now(clock);
+        return LocalDateTime.now(clock).truncatedTo(ChronoUnit.MICROS);
     }
 }

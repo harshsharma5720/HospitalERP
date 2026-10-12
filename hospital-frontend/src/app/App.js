@@ -19,6 +19,8 @@ import AddRelativePage from "../features/patients/AddRelativePage";
 import RelativesList from "../features/patients/RelativesList";
 import FrontDeskAppointments from "../features/appointments/FrontDeskAppointments";
 import QueueScreen from "../features/appointments/QueueScreen";
+import BillsPage from "../features/billing/BillsPage";
+import BillPage from "../features/billing/BillPage";
 import WalkInBooking from "../features/appointments/WalkInBooking";
 import PatientSearch from "../features/patients/PatientSearch";
 import FrontDeskPatient from "../features/patients/FrontDeskPatient";
@@ -92,6 +94,18 @@ function App() {
         <Route
           path="/patients/:patientId"
           element={<ProtectedRoute roles={FRONT_DESK}><SitePage><FrontDeskPatient /></SitePage></ProtectedRoute>}
+        />
+        <Route
+          path="/bills"
+          element={<ProtectedRoute roles={FRONT_DESK}><SitePage><BillsPage /></SitePage></ProtectedRoute>}
+        />
+        <Route
+          path="/bills/:billId"
+          element={<ProtectedRoute roles={FRONT_DESK}><SitePage><BillPage /></SitePage></ProtectedRoute>}
+        />
+        <Route
+          path="/bills/visit/:appointmentId"
+          element={<ProtectedRoute roles={FRONT_DESK}><SitePage><BillPage /></SitePage></ProtectedRoute>}
         />
 
         {/* ===================== ADMIN ===================== */}

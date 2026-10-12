@@ -41,6 +41,8 @@ No REST endpoints.
 
 Outbox settings (`application.properties` keys, defaults fit production): `app.notifications.sender.enabled` (default `true`; tests switch the background sender off), `app.notifications.send-interval-ms` (default `60000`), `app.notifications.cleanup-cron` (default `0 30 3 * * *`).
 
+Outbox times (`NotificationOutbox`, `OutboxSender`) are kept to the microsecond, as the database keeps them: a finer time would be rounded by the database — possibly into the future — and a message could miss a send made within the same clock tick.
+
 ## Tests
 
 No unit tests of its own; in `app`: `NotificationOutboxTest` (queueing in the caller's transaction, delivery, the retry schedule, giving up, skipped channels, claims and a dead sender, clean-up) and `NotificationsH2Test` (a booking queues four messages that are sent after the commit; a failed mail is retried and delivered; a rolled-back change queues nothing; the reminder flag is set only together with its queued messages).

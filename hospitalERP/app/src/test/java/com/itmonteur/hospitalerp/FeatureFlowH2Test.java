@@ -2,6 +2,8 @@ package com.itmonteur.hospitalerp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.itmonteur.hospitalerp.appointments.AppointmentStatistics;
+import com.itmonteur.hospitalerp.appointments.DoctorAppointmentCount;
 import com.itmonteur.hospitalerp.audit.AuditAction;
 import com.itmonteur.hospitalerp.audit.AuditEntryDTO;
 import com.itmonteur.hospitalerp.audit.AuditFilter;
@@ -40,6 +42,7 @@ class FeatureFlowH2Test {
     @Autowired private ObjectMapper json;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private AuditLog auditLog;
+    @Autowired private AppointmentStatistics appointmentStatistics;
 
     @Test
     void scheduleBookingConsultationAndPrescription() throws Exception {
@@ -811,17 +814,15 @@ class FeatureFlowH2Test {
         assertThat(change(before, after, "/newPatients/count")).isEqualTo(1);
         assertThat(change(before, after, "/trend/6/newPatients")).isEqualTo(1);
         assertThat(after.at("/newPatients/countedSince").isNull()).isFalse();
-        // drdash: three appointments in the period (the cancelled one doesn't count), one completed
+        // drdash: three appointments in the period (the cancelled one doesn't count), one completed. The dashboard
+        // shows the busiest 5; other tests in this shared database have doctors as busy, so the counts are read
+        // from the same query without the cut
+        assertThat(after.get("busiestDoctors")).hasSizeLessThanOrEqualTo(5);
         long drdashId = findDoctorId("drdash");
-        JsonNode drdash = null;
-        for (JsonNode d : after.get("busiestDoctors")) {
-            if (d.get("doctorId").asLong() == drdashId) {
-                drdash = d;
-            }
-        }
-        assertThat(drdash).as("drdash among the busiest doctors").isNotNull();
-        assertThat(drdash.get("appointments").asLong()).isEqualTo(3);
-        assertThat(drdash.get("completed").asLong()).isEqualTo(1);
+        DoctorAppointmentCount drdash = appointmentStatistics.busiestDoctors(today.minusDays(6), today, 1000).stream()
+                .filter(d -> d.doctorId() == drdashId).findFirst().orElseThrow();
+        assertThat(drdash.appointments()).isEqualTo(3);
+        assertThat(drdash.completed()).isEqualTo(1);
 
         // Other periods, a wrong period, and admins only
         assertThat(dashboard(admin, 30).get("trend")).hasSize(30);

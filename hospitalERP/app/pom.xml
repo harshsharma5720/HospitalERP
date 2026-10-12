@@ -56,6 +56,10 @@
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
+			<artifactId>hospital-billing</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>hospital-administration</artifactId>
 		</dependency>
 		<dependency>

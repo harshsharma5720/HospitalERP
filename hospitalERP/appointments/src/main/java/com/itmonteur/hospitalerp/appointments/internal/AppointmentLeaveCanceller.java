@@ -3,6 +3,7 @@ package com.itmonteur.hospitalerp.appointments.internal;
 import com.itmonteur.hospitalerp.appointments.Appointment;
 import com.itmonteur.hospitalerp.appointments.AppointmentStatus;
 import com.itmonteur.hospitalerp.staff.DoctorLeaveApprovedEvent;
+import com.itmonteur.hospitalerp.appointments.AppointmentCancelledEvent;
 import com.itmonteur.hospitalerp.appointments.AppointmentNotificationEvent;
 import com.itmonteur.hospitalerp.appointments.AppointmentService;
 import org.slf4j.Logger;
@@ -47,6 +48,7 @@ public class AppointmentLeaveCanceller {
             eventPublisher.publishEvent(new AppointmentNotificationEvent(
                     AppointmentNotificationEvent.Kind.CANCELLED_BY_DOCTOR_LEAVE,
                     AppointmentService.notificationInfo(appointment)));
+            eventPublisher.publishEvent(new AppointmentCancelledEvent(appointment.getAppointmentID()));
             cancelled++;
         }
         logger.info("Doctor {} leave {}..{}: cancelled {} appointments",

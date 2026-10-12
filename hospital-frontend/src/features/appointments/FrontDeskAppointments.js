@@ -29,13 +29,27 @@ const QUIET_BUTTON = "border dark:border-gray-600 rounded";
 const dateLabel = (isoDate) =>
   isoDate.startsWith(String(new Date().getFullYear())) ? dayLabel(isoDate) : formatDate(isoDate, true);
 
-// Today's still-booked appointments: Check in, or where the patient is in the queue
-function QueueCell({ appointment, today, busy, onCheckIn, onUndo }) {
+// Today's still-booked appointments: Check in, or where the patient is in the queue. A checked-in visit has a bill
+// (docs/BILLING_PLAN.md), linked here.
+function QueueCell({ appointment, today, busy, onCheckIn, onUndo, billPath, back }) {
   const booked = appointment.status === "SCHEDULED" || appointment.status === "CONFIRMED";
-  if (appointment.date !== today || !booked) return "—";
-  if (appointment.calledAt) return `With the doctor · token ${appointment.tokenNumber}`;
-  if (appointment.checkedInAt) {
-    return (
+  const billLink = appointment.checkedInAt ? (
+    <Link
+      to={billPath}
+      state={{ from: back, fromLabel: "Appointments" }}
+      aria-label={`Bill of ${appointment.patientName}`}
+      className="text-xs underline text-blue-700 dark:text-[#50d4f2]"
+    >
+      Bill
+    </Link>
+  ) : null;
+  let state;
+  if (appointment.date !== today || !booked) {
+    state = billLink ? null : "—";
+  } else if (appointment.calledAt) {
+    state = `With the doctor · token ${appointment.tokenNumber}`;
+  } else if (appointment.checkedInAt) {
+    state = (
       <span className="flex items-center gap-2">
         Waiting · token {appointment.tokenNumber}
         <button
@@ -49,17 +63,24 @@ function QueueCell({ appointment, today, busy, onCheckIn, onUndo }) {
         </button>
       </span>
     );
+  } else {
+    state = (
+      <button
+        type="button"
+        onClick={onCheckIn}
+        disabled={busy}
+        aria-label={`Check in ${appointment.patientName}`}
+        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs disabled:opacity-50"
+      >
+        Check in
+      </button>
+    );
   }
   return (
-    <button
-      type="button"
-      onClick={onCheckIn}
-      disabled={busy}
-      aria-label={`Check in ${appointment.patientName}`}
-      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs disabled:opacity-50"
-    >
-      Check in
-    </button>
+    <span className="flex items-center gap-3">
+      {state}
+      {billLink}
+    </span>
   );
 }
 
@@ -284,6 +305,8 @@ export default function FrontDeskAppointments() {
                       busy={busyId === appointment.appointmentID}
                       onCheckIn={() => queueAction(appointment, checkInAppointment)}
                       onUndo={() => queueAction(appointment, undoCheckIn)}
+                      billPath={`${base}/bills/visit/${appointment.appointmentID}`}
+                      back={back}
                     />
                   </td>
                   <td className="p-3 max-w-xs truncate" title={appointment.message ?? ""}>

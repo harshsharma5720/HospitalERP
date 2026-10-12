@@ -56,6 +56,7 @@ services:
       HOSPITAL_NAME: ${HOSPITAL_NAME:-Hospital ERP}
       HOSPITAL_ADDRESS: ${HOSPITAL_ADDRESS:-}
       HOSPITAL_PHONE: ${HOSPITAL_PHONE:-}
+      BILLING_DEFAULT_FEE: ${BILLING_DEFAULT_FEE:-0}
     volumes:
       - uploads:/app/uploads
     ports:

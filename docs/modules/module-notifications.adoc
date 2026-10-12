@@ -6,6 +6,7 @@
 |_Services_
 
 * `c.i.h.n.EmailService`
+* `c.i.h.n.NotificationOutbox`
 * `c.i.h.n.NotificationService`
 * `c.i.h.n.SmsService`
 |===

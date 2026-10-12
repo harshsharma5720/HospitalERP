@@ -162,6 +162,9 @@ REMINDERS_CRON=0 0 * * * *
 HOSPITAL_NAME=Shreya Hospital
 HOSPITAL_ADDRESS=12 MG Road, Pune
 HOSPITAL_PHONE=+91 20 5555 1234
+
+# Consultation fee in rupees for doctors without their own (set per doctor under Admin → Fees) — optional
+BILLING_DEFAULT_FEE=0
 ```
 
 > **Note:** Twilio and email settings are optional. Without Twilio, SMS is skipped (a warning is logged) and you should set `OTP_REQUIRED=false`, otherwise nobody can sign up. Without SMTP, emails are skipped.
@@ -236,10 +239,10 @@ The app will open at **http://localhost:3000**.
 
 | Role | Portal URL | Access |
 |------|------------|--------|
-| **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log, notifications, and the front desk's pages (appointments, walk-in booking, patients) |
+| **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log, notifications, consultation fees, and the front desk's pages (appointments, walk-in booking, patients, bills) |
 | **Doctor** | `/doctor/dashboard` | Today's queue (`/doctor/queue`), appointments, leave, profile |
 | **Patient** | `/` (public pages) | Book appointments, manage relatives |
-| **Receptionist** | `/receptionist-appointments`, `/walk-in`, `/patients` | Appointment list with filters and check-in, walk-in booking, patient search |
+| **Receptionist** | `/receptionist-appointments`, `/walk-in`, `/patients`, `/bills` | Appointment list with filters and check-in, walk-in booking, patient search, bills and payments |
 
 ---
 
@@ -274,6 +277,8 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 | Check-in and tokens — the front desk checks today's patients in as they arrive; each gets a token, their place in the doctor's day by booked time; walk-ins booked for today are checked in straight away ([details](docs/TODAYS_QUEUE_PLAN.md)) | Receptionist, Admin | `/receptionist-appointments` (Queue column), `/walk-in` |
 | Today's queue for the doctor — with you, waiting by time with tokens, not arrived, done; Call next / Call / Not here; the consultation form completes the visit ([details](docs/TODAYS_QUEUE_PLAN.md)) | Doctor | `/doctor/queue` |
 | Waiting-room screen for a TV — per doctor, the token being served and the next ones; tokens only, no names, no login ([details](docs/TODAYS_QUEUE_PLAN.md)) | Everyone | `/queue-screen` |
+| Consultation fees — one per doctor; doctors without one use `BILLING_DEFAULT_FEE` ([details](docs/BILLING_PLAN.md)) | Admin | `/admin/fees` |
+| Bills at the front desk — a bill per visit, made at check-in with the doctor's fee; extra items and a discount; payment by cash, card or UPI; PDF receipt; a paid visit that is cancelled (e.g. by the doctor's leave) is marked "refund due" and the refund recorded ([details](docs/BILLING_PLAN.md)) | Receptionist, Admin | `/bills`, `/admin/bills`, **Bill** in the appointment list |
 
 Medical records (consultations, prescriptions) are visible only to the patient, their doctor(s) and admins — receptionists cannot read them.
 
@@ -294,6 +299,7 @@ The database schema is owned by the migration scripts in `hospitalERP/app/src/ma
 | `notifications/V2026_10_07_1__notifications_outbox.sql` | Creates the empty `notification_outbox` table: appointment emails / SMS waiting to be sent or retried ([reliable notifications](docs/RELIABLE_NOTIFICATIONS_PLAN.md)). |
 | `patients/V2026_10_08_1__patients_walk_in.sql` | Makes `patient.email` optional and adds `patient.created_at`, for walk-in patients registered at the front desk without a login ([walk-in registration](docs/WALK_IN_REGISTRATION_PLAN.md)). |
 | `appointments/V2026_10_11_1__appointments_queue.sql` | Adds `appointments.checked_in_at`, `token_number` and `called_at` (all empty for existing appointments), for today's queue: check-in at the front desk, tokens, the doctor calling the next patient ([today's queue](docs/TODAYS_QUEUE_PLAN.md)). |
+| `billing/V2026_10_12_1__billing.sql` | Creates the empty `doctor_fees`, `bills` and `bill_items` tables ([billing](docs/BILLING_PLAN.md)). |
 
 **Changing the schema:** add a new file to the owning module's folder, e.g. `db/migration/appointments/V2026_10_05_1__appointments_add_room.sql`, with the next date-based version. Never edit a migration that has already run anywhere — Flyway checks their checksums and refuses to start. Hibernate then validates the entities against the result, so an entity change without a migration stops the app with a clear "Schema-validation" message.
 
@@ -426,6 +432,7 @@ The backend is a modular monolith: one application and one database, split into 
 | [`scheduling`](hospitalERP/scheduling/README.md) | Doctor weekly schedules and slots | common, identity, staff |
 | [`appointments`](hospitalERP/appointments/README.md) | Booking, reschedule, cancel, day-before reminders | common, identity, notifications, patients, staff, scheduling |
 | [`clinical`](hospitalERP/clinical/README.md) | Consultations, prescriptions, prescription PDF, medical history | common, identity, audit, patients, staff, appointments |
+| [`billing`](hospitalERP/billing/README.md) | Consultation fees per doctor, a bill per visit, payments, refunds and receipts at the front desk | common, identity, patients, staff, appointments |
 | [`administration`](hospitalERP/administration/README.md) | Admin use cases across modules: create users, leave decisions, account deactivation / reactivation (and the guarded permanent delete) | all of the above |
 | `app` | Main class, `SecurityConfig`, `application.properties`, end-to-end tests | all modules |
 

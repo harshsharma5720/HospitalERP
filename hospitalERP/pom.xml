@@ -39,6 +39,7 @@
 		<module>scheduling</module>
 		<module>appointments</module>
 		<module>clinical</module>
+		<module>billing</module>
 		<module>administration</module>
 		<module>app</module>
 	</modules>
@@ -117,12 +118,17 @@
 			</dependency>
 			<dependency>
 				<groupId>${project.groupId}</groupId>
+				<artifactId>hospital-billing</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
 				<artifactId>hospital-administration</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 
 			<!-- Third-party libraries not managed by Spring Boot; each is used by one module only -->
-			<!-- PDF generation for e-prescriptions (clinical) -->
+			<!-- PDF generation: e-prescriptions (clinical), receipts (billing) -->
 			<dependency>
 				<groupId>com.github.librepdf</groupId>
 				<artifactId>openpdf</artifactId>

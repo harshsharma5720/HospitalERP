@@ -5,6 +5,7 @@ DELETE /api/leaves/{id} anonymous- patient- doctor+ receptionist+ admin+
 DELETE /api/patient/deleteAccount/{ptId} anonymous- patient+ doctor- receptionist- admin+
 DELETE /api/patient/relative/delete/{id} anonymous- patient+ doctor- receptionist- admin+
 DELETE /api/receptionist/appointments/{appointmentId}/check-in anonymous- patient- doctor- receptionist+ admin+
+DELETE /api/receptionist/bills/{billId}/items/{itemId} anonymous- patient- doctor- receptionist+ admin+
 DELETE /api/receptionist/delete/{receptionistId} anonymous- patient- doctor- receptionist+ admin+
 DELETE /api/receptionist/deleteAppointment/{appointmentId} anonymous- patient- doctor- receptionist+ admin+
 DELETE /appointment/CancelAppointment/{appointmentId} anonymous- patient+ doctor+ receptionist+ admin+
@@ -18,6 +19,7 @@ GET /api/admin/dashboard anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorAppointmentCount/{doctorId} anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorCompletedAppointments/{userId} anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorPendingAppointments/{userId} anonymous- patient- doctor- receptionist- admin+
+GET /api/admin/fees anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/notifications anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/{id} anonymous- patient- doctor- receptionist- admin+
 GET /api/auth/otp-required anonymous+ patient+ doctor+ receptionist+ admin+
@@ -47,6 +49,10 @@ GET /api/patient/relative/patient/{patientId} anonymous- patient+ doctor- recept
 GET /api/patient/relative/{id} anonymous- patient+ doctor- receptionist- admin+
 GET /api/queue/screen anonymous+ patient+ doctor+ receptionist+ admin+
 GET /api/receptionist/appointments anonymous- patient- doctor- receptionist+ admin+
+GET /api/receptionist/bills anonymous- patient- doctor- receptionist+ admin+
+GET /api/receptionist/bills/by-appointment/{appointmentId} anonymous- patient- doctor- receptionist+ admin+
+GET /api/receptionist/bills/{billId} anonymous- patient- doctor- receptionist+ admin+
+GET /api/receptionist/bills/{billId}/receipt.pdf anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/doctorCompletedAppointments/{userId} anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/doctorPendingAppointments/{userId} anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/doctors/{doctorId}/next-free-slots anonymous- patient- doctor- receptionist+ admin+
@@ -88,10 +94,14 @@ POST /api/leaves/apply anonymous- patient- doctor+ receptionist+ admin+
 POST /api/patient/relative/add anonymous- patient+ doctor- receptionist- admin+
 POST /api/receptionist/NewAppointment anonymous- patient- doctor- receptionist+ admin+
 POST /api/receptionist/appointments/{appointmentId}/check-in anonymous- patient- doctor- receptionist+ admin+
+POST /api/receptionist/bills/{billId}/items anonymous- patient- doctor- receptionist+ admin+
+POST /api/receptionist/bills/{billId}/pay anonymous- patient- doctor- receptionist+ admin+
+POST /api/receptionist/bills/{billId}/refund anonymous- patient- doctor- receptionist+ admin+
 POST /api/receptionist/walk-in anonymous- patient- doctor- receptionist+ admin+
 POST /api/slots/generate/{doctorId} anonymous- patient- doctor- receptionist- admin+
 POST /appointment/NewAppointment anonymous- patient+ doctor+ receptionist+ admin+
 PUT /api/admin/approve/{leaveId} anonymous- patient- doctor- receptionist- admin+
+PUT /api/admin/fees/{doctorId} anonymous- patient- doctor- receptionist- admin+
 PUT /api/admin/reject/{leaveId} anonymous- patient- doctor- receptionist- admin+
 PUT /api/admin/users/{userId}/deactivate anonymous- patient- doctor- receptionist- admin+
 PUT /api/admin/users/{userId}/reactivate anonymous- patient- doctor- receptionist- admin+
@@ -103,5 +113,6 @@ PUT /api/leaves/{id} anonymous- patient- doctor+ receptionist+ admin+
 PUT /api/leaves/{id}/status anonymous- patient- doctor+ receptionist+ admin+
 PUT /api/patient/relative/update/{id} anonymous- patient+ doctor- receptionist- admin+
 PUT /api/patient/updateAccount/{ptId} anonymous- patient+ doctor- receptionist- admin+
+PUT /api/receptionist/bills/{billId}/discount anonymous- patient- doctor- receptionist+ admin+
 PUT /api/receptionist/{id} anonymous- patient- doctor- receptionist+ admin+
 PUT /appointment/update/{appointmentId} anonymous- patient+ doctor+ receptionist+ admin+

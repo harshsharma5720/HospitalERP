@@ -36,6 +36,12 @@ function AdminSidebar() {
       <button onClick={() => navigate("/admin/departments")} className="py-2 px-3 bg-[#14365a] rounded-lg hover:bg-opacity-80 transition">
         Departments
       </button>
+      <button onClick={() => navigate("/admin/bills")} className="py-2 px-3 bg-[#14365a] rounded-lg hover:bg-opacity-80 transition">
+        Bills
+      </button>
+      <button onClick={() => navigate("/admin/fees")} className="py-2 px-3 bg-[#14365a] rounded-lg hover:bg-opacity-80 transition">
+        Fees
+      </button>
       <button onClick={() => navigate("/admin/audit-log")} className="py-2 px-3 bg-[#14365a] rounded-lg hover:bg-opacity-80 transition">
         Audit Log
       </button>
