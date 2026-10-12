@@ -402,7 +402,7 @@ Grouped by module and roughly ordered by value against effort. ⭐ marks ideas t
   - REST URL cleanup and merging duplicate endpoints (kept for frontend compatibility).
   - Package rename.
   - Duplicate React components and very long files.
-  - 🟨 Toasts instead of `alert()`: done in the staff portals and on the home page ([UI refresh](UI_REFRESH_PLAN.md)); the patient pages and login / register still use `alert()`.
+  - ✅ Toasts instead of `alert()`: everywhere ([UI refresh](UI_REFRESH_PLAN.md), [patient area refresh](PATIENT_AREA_REFRESH_PLAN.md)).
   - Accessibility.
   - Swagger, CI, Docker, Vite, ESLint/Prettier.
 
@@ -698,8 +698,24 @@ The web pages looked dated: neon dark colours, three different layouts for the a
 **Tests:** 193 frontend tests (was 113), new ones for the components, the layouts, the doctor and admin pages and the home page; mutation checks for each step; screenshots of every page in light and dark, and phone layouts. The dashboard chart's colours were re-validated on the new dark surface.
 
 **Not covered yet:**
-- The patient pages and login / register keep their old look (they have the new header and footer).
-- `Shreyahospital.jpg`, still used on three patient pages, carries a stock-photo watermark and should be replaced.
+- ~~The patient pages and login / register~~ — done, see below.
 - A real enquiry inbox for the Contact page.
+- A click-through against the running app.
+
+### Patient area refresh (done 2026-10-12)
+
+The patient's own pages and the login pages still had the old look: an animated overlay after booking, 26 `alert()` pop-ups and a watermarked stock photo as background. They also hid bugs: registering was impossible when phone verification was switched off, the relatives list hung when opened directly, the login page had a button that did nothing, and the receptionist's profile opened outside the staff portal. Decisions, design and steps: [PATIENT_AREA_REFRESH_PLAN.md](PATIENT_AREA_REFRESH_PLAN.md).
+
+**What it does**
+- **Login, register, forgot password** on one calm layout; registering works with or without phone verification.
+- **Booking step by step**: who it's for (the patient or a family member), the doctor, the day and a free time, the reason, with a summary; a confirmation card at the end. Rescheduling uses the same page.
+- **My appointments**: upcoming visits to move or cancel (with a confirm dialog), past ones with the doctor's notes, the prescription and Book again.
+- **My account**: the patient's details edited in place, family members (add, edit, remove) and the next visit. The receptionist's profile is inside the staff portal now.
+
+**Tests:** 226 frontend tests (was 193), new ones for every page above; mutation checks for each step (one put the old register bug back and was caught); screenshots in light and dark mode and on a phone. On the way the screenshots caught a booking page wider than a phone and a crowded header for logged-in patients — both fixed.
+
+**Not covered yet:**
+- Patients can't see their bills or download receipts in the app yet.
+- `lottie-react` and 18 images in `public/` are no longer used (listed in the plan) — remove them with a lockfile update.
 - A click-through against the running app.
 

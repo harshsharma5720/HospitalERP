@@ -10,8 +10,6 @@ jest.mock("../features/appointments/api");
 jest.mock("../features/patients/api");
 jest.mock("../features/doctors/api");
 jest.mock("../shared/profileApi", () => ({ ...jest.requireActual("../shared/profileApi"), getReceptionist: jest.fn() }));
-// The animations need a canvas, which the test browser has not got
-jest.mock("lottie-react", () => () => null);
 
 afterEach(() => {
   window.history.pushState({}, "", "/");
