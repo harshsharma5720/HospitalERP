@@ -1,26 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { CheckCircle2 } from "lucide-react";
 import { getErrorMessage } from "../../shared/utils/apiError";
+import { Button, Field, Input, Notice, useToast } from "../../shared/ui";
 import useAuthStore from "./useAuthStore";
+import AuthLayout from "./AuthLayout";
 import * as authApi from "./api";
 
+// A patient's own account. When the server asks for it (OTP_REQUIRED) the phone number is verified with a code
+// first; staff accounts are made by an admin.
 export default function RegisterPage() {
   const navigate = useNavigate();
-
-  const [formData, setFormData] = useState({
-    email: "",
-    username: "",
-    phone: "",
-    otp: "",
-    password: "",
-    confirmPassword: "",
-  });
+  const toast = useToast();
   const login = useAuthStore((s) => s.login);
 
+  const [formData, setFormData] = useState({ email: "", username: "", phone: "", otp: "", password: "", confirmPassword: "" });
   const [error, setError] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [saving, setSaving] = useState(false);
   // The server decides whether phone verification is mandatory (OTP_REQUIRED)
   const [otpRequired, setOtpRequired] = useState(true);
 
@@ -31,312 +30,155 @@ export default function RegisterPage() {
       .catch(() => setOtpRequired(true));
   }, []);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  // A new number must be verified again
+  const changePhone = (e) => {
+    setFormData({ ...formData, phone: e.target.value, otp: "" });
+    setOtpSent(false);
+    setOtpVerified(false);
   };
 
-  // Send OTP
   const handleSendOtp = async () => {
-    if (!formData.phone) {
-      alert("Please enter your phone number first");
+    if (!formData.phone.trim()) {
+      setError("Please enter your phone number first.");
       return;
     }
+    setError("");
+    setSending(true);
     try {
-      setLoading(true);
-      const res = await authApi.sendOtp(formData.phone);
-      alert(res.data.message || "OTP sent successfully!");
+      const res = await authApi.sendOtp(formData.phone.trim());
+      toast.success(res.data.message || "Code sent.");
       setOtpSent(true);
     } catch (err) {
-      alert(getErrorMessage(err, "Failed to send OTP. Try again."));
+      setError(getErrorMessage(err, "Failed to send the code. Try again."));
     } finally {
-      setLoading(false);
+      setSending(false);
     }
   };
 
-  // Verify OTP
   const handleVerifyOtp = async () => {
+    setError("");
     try {
-      const res = await authApi.verifyOtp(formData.phone, formData.otp);
+      const res = await authApi.verifyOtp(formData.phone.trim(), formData.otp.trim());
       if (res.data.success) {
-        alert("OTP Verified!");
         setOtpVerified(true);
+        toast.success("Phone number verified.");
       } else {
-        alert("Invalid OTP!");
+        setError("That code isn't right. Check it, or send a new one.");
       }
     } catch (err) {
-      alert(getErrorMessage(err, "OTP verification failed!"));
+      setError(getErrorMessage(err, "The code could not be verified."));
     }
   };
 
-  // Register user
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match!");
       return;
     }
-
     if (otpRequired && !otpVerified) {
       setError("Please verify your phone number before registering!");
       return;
     }
-
+    setSaving(true);
     try {
       const response = await authApi.register({
         email: formData.email,
-        username: formData.username,
-        phoneNumber: formData.phone,
+        username: formData.username.trim(),
+        phoneNumber: formData.phone.trim(),
         password: formData.password,
       });
-
       const token = response.data.token;
       if (token) {
         // The register endpoint returns a token, so the new patient is logged in right away
         login(token);
-        alert(`Welcome ${formData.username}! Registration successful.`);
+        toast.success(`Welcome, ${formData.username.trim()}! Your account is ready.`);
         navigate("/");
       } else {
-        alert("Registration successful! Please log in.");
+        toast.success("Account created. Please log in.");
         navigate("/login");
       }
     } catch (err) {
       setError(getErrorMessage(err, "Registration failed. Please try again."));
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
-    <div
-      className="
-        min-h-screen bg-cover bg-center flex items-center justify-center relative
-        dark:bg-[#0a1330] dark:text-[#50d4f2]
-      "
-      style={{ backgroundImage: "url('/background.jpeg')" }}
+    <AuthLayout
+      title="Create your account"
+      description="Book appointments for yourself and your family, and keep your visits in one place."
+      footer={
+        <>
+          Already have an account?{" "}
+          <Link to="/login" className="font-medium text-primary-ink hover:underline">
+            Log in
+          </Link>
+        </>
+      }
     >
-      <div className="absolute inset-0 bg-black bg-opacity-60 dark:bg-[#050b1f]/70"></div>
-
-      <button
-        onClick={() => navigate("/")}
-        className="
-          absolute top-6 left-6
-          bg-gradient-to-br from-[#1E63DB] to-[#27496d]
-          dark:from-[#50d4f2] dark:to-[#3bc2df]
-          text-white dark:text-black px-5 py-2 rounded-lg font-semibold shadow-lg
-          hover:opacity-90 transition
-        "
-      >
-        Home
-      </button>
-
-      <div
-        className="
-          relative z-10 animate-scaleUp flex flex-col md:flex-row w-[90%] md:w-[70%] lg:w-[70%]
-          rounded-3xl overflow-hidden shadow-2xl border border-white/20
-          bg-white/10 backdrop-blur-xl
-          dark:bg-[#111a3b]/70 dark:border-[#16224a]
-        "
-      >
-        {/* LEFT FORM SECTION */}
-        <div
-          className="
-            md:w-1/2 w-full bg-white/10 dark:bg-[#0f172a]/70
-            backdrop-blur-sm p-10 flex flex-col justify-center
-            text-white dark:text-[#50d4f2]
-          "
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <Notice tone="danger">{error}</Notice>
+        <Field label="Email" htmlFor="register-email">
+          <Input id="register-email" name="email" type="email" value={formData.email} onChange={handleChange} autoComplete="email" required />
+        </Field>
+        <Field label="Username" htmlFor="register-username" hint="You log in with it.">
+          <Input id="register-username" name="username" value={formData.username} onChange={handleChange} autoComplete="username" required />
+        </Field>
+        <Field
+          label="Phone number"
+          htmlFor="register-phone"
+          hint={otpRequired && !otpVerified ? "We send a code to check it." : null}
         >
-          <h2 className="text-3xl font-extrabold mb-4 text-center">
-             Create {" "}
-               <span
-                  className="
-                    bg-gradient-to-r from-blue-600 to-cyan-400
-                    bg-clip-text text-transparent
-                  "
-               >
-                 Account
-               </span>
-          </h2>
-
-          {error && <p className="text-red-400 font-semibold mb-4 text-center">{error}</p>}
-
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            {/* Email */}
-            <input
-              type="email"
-              name="email"
-              placeholder="Email Address"
-              value={formData.email}
-              onChange={handleChange}
-              className="
-                w-full px-4 py-3 rounded-lg
-                bg-white/70 text-gray-900 placeholder-gray-500
-                dark:bg-[#0f172a] dark:text-[#50d4f2] dark:placeholder-gray-400
-                focus:outline-none focus:ring-2 focus:ring-[#1e3d59] dark:focus:ring-[#50d4f2]
-              "
-              required
-            />
-
-            {/* Username */}
-            <input
-              type="text"
-              name="username"
-              placeholder="Username"
-              value={formData.username}
-              onChange={handleChange}
-              className="
-                w-full px-4 py-3 rounded-lg
-                bg-white/70 text-gray-900 placeholder-gray-500
-                dark:bg-[#0f172a] dark:text-[#50d4f2] dark:placeholder-gray-400
-                focus:outline-none focus:ring-2 focus:ring-[#1e3d59] dark:focus:ring-[#50d4f2]
-              "
-              required
-            />
-
-            {/* Phone + OTP */}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                name="phone"
-                placeholder="Phone Number"
-                value={formData.phone}
-                onChange={handleChange}
-                className="
-                  flex-1 px-4 py-3 rounded-lg
-                  bg-white/70 text-gray-900 placeholder-gray-500
-                  dark:bg-[#0f172a] dark:text-[#50d4f2] dark:placeholder-gray-400
-                  focus:outline-none focus:ring-2 focus:ring-[#1e3d59] dark:focus:ring-[#50d4f2]
-                "
-                required
-              />
-              {otpRequired && (
-              <button
-                type="button"
-                onClick={handleSendOtp}
-                disabled={loading}
-                className="
-                  bg-gradient-to-br from-[#1E63DB] to-[#27496d]
-                  dark:from-[#50d4f2] dark:to-[#3bc2df]
-                  text-white dark:text-black px-4 rounded-lg
-                  hover:opacity-90 transition
-                "
-              >
-                {loading ? "Sending..." : "Send OTP"}
-              </button>
-              )}
-            </div>
-
-            {otpRequired && otpSent && (
-              <div className="flex flex-col gap-2">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    name="otp"
-                    placeholder="Enter OTP"
-                    value={formData.otp}
-                    onChange={handleChange}
-                    className="
-                      flex-1 px-4 py-3 rounded-lg
-                      bg-white/70 text-gray-900 placeholder-gray-500
-                      dark:bg-[#0f172a] dark:text-[#50d4f2] dark:placeholder-gray-400
-                      focus:outline-none focus:ring-2 focus:ring-[#1e3d59] dark:focus:ring-[#50d4f2]
-                    "
-                  />
-                  <button
-                    type="button"
-                    onClick={handleVerifyOtp}
-                    className="bg-green-600 text-white px-4 rounded-lg hover:opacity-90"
-                  >
-                    Verify
-                  </button>
-                </div>
-
-                <div className="text-center mt-1">
-                  {otpVerified ? (
-                    <span className="text-green-400 font-semibold">✅ Phone Verified</span>
-                  ) : (
-                    <span className="text-red-400 font-semibold">❌ Not Verified</span>
-                  )}
-                </div>
-              </div>
+          <div className="flex gap-2">
+            <Input id="register-phone" name="phone" type="tel" value={formData.phone} onChange={changePhone} autoComplete="tel" required />
+            {otpRequired && !otpVerified && (
+              <Button variant="secondary" onClick={handleSendOtp} disabled={sending}>
+                {sending ? "Sending..." : otpSent ? "Send again" : "Send code"}
+              </Button>
             )}
-
-            {/* Password */}
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              value={formData.password}
-              onChange={handleChange}
-              className="
-                w-full px-4 py-3 rounded-lg
-                bg-white/70 text-gray-900 placeholder-gray-500
-                dark:bg-[#0f172a] dark:text-[#50d4f2] dark:placeholder-gray-400
-                focus:outline-none focus:ring-2 focus:ring-[#1e3d59] dark:focus:ring-[#50d4f2]
-              "
-              required
-            />
-
-            <input
-              type="password"
+          </div>
+        </Field>
+        {otpRequired && otpSent && !otpVerified && (
+          <Field label="Code" htmlFor="register-otp">
+            <div className="flex gap-2">
+              <Input id="register-otp" name="otp" inputMode="numeric" value={formData.otp} onChange={handleChange} autoComplete="one-time-code" />
+              <Button variant="secondary" onClick={handleVerifyOtp} disabled={!formData.otp.trim()}>
+                Verify
+              </Button>
+            </div>
+          </Field>
+        )}
+        {otpRequired && otpVerified && (
+          <p className="flex items-center gap-2 text-sm font-medium text-success-ink">
+            <CheckCircle2 size={16} aria-hidden="true" />
+            Phone number verified
+          </p>
+        )}
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Password" htmlFor="register-password">
+            <Input id="register-password" name="password" type="password" value={formData.password} onChange={handleChange} autoComplete="new-password" required />
+          </Field>
+          <Field label="Confirm password" htmlFor="register-confirm">
+            <Input
+              id="register-confirm"
               name="confirmPassword"
-              placeholder="Confirm Password"
+              type="password"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className="
-                w-full px-4 py-3 rounded-lg
-                bg-white/70 text-gray-900 placeholder-gray-500
-                dark:bg-[#0f172a] dark:text-[#50d4f2] dark:placeholder-gray-400
-                focus:outline-none focus:ring-2 focus:ring-[#1e3d59] dark:focus:ring-[#50d4f2]
-              "
+              autoComplete="new-password"
               required
             />
-
-            {/* Register */}
-            <button
-              type="submit"
-              className={`
-                w-full py-3 rounded-lg font-semibold text-white dark:text-black
-                transition-all shadow-lg
-                ${
-                  otpVerified
-                    ? "bg-gradient-to-br from-[#1E63DB] to-[#27496d] dark:from-[#50d4f2] dark:to-[#3bc2df]"
-                    : "bg-gray-400 cursor-not-allowed"
-                }
-              `}
-              disabled={!otpVerified}
-            >
-              Register
-            </button>
-          </form>
-
-          <div className="text-center mt-5 text-sm text-gray-200 dark:text-[#8ddff8]">
-            Already have an account?{" "}
-            <a href="/login" className="text-[#1e3d59] dark:text-[#50d4f2] font-bold hover:underline">
-              Sign in
-            </a>
-          </div>
+          </Field>
         </div>
-
-        {/* RIGHT SIDE */}
-        <div
-          className="
-            md:w-1/2 w-full flex flex-col justify-center items-center text-white text-center p-10
-            bg-gradient-to-br from-[#1E63DB] to-[#27496d]
-            dark:from-[#0f172a] dark:to-[#111a3b]
-          "
-        >
-          <h1 className="text-5xl font-extrabold mb-3 drop-shadow-md">
-            WELCOME
-          </h1>
-          <p className="text-sm text-gray-200 dark:text-[#8ddff8]">
-            Join our trusted health community
-          </p>
-          <div className="mt-6 w-24 h-1 bg-white dark:bg-[#50d4f2] rounded-full"></div>
-        </div>
-      </div>
-    </div>
+        <Button type="submit" size="lg" className="w-full" disabled={saving || (otpRequired && !otpVerified)}>
+          {saving ? "Creating account..." : "Create account"}
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

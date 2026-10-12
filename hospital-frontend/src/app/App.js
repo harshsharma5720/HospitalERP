@@ -40,9 +40,12 @@ import { ToastProvider, ConfirmProvider } from "../shared/ui";
 const PATIENT = ["ROLE_PATIENT"];
 const FRONT_DESK = ["ROLE_RECEPTIONIST", "ROLE_ADMIN"];
 
-// The public footer - not under the waiting-room screen, which fills a TV
+// The public footer - not under the waiting-room screen, which fills a TV, nor under the login pages, which have
+// their own frame
+const WITHOUT_FOOTER = ["/queue-screen", "/login", "/register", "/forgot-password"];
+
 function PublicFooter() {
-  return useLocation().pathname === "/queue-screen" ? null : <Footer />;
+  return WITHOUT_FOOTER.includes(useLocation().pathname) ? null : <Footer />;
 }
 
 function App() {
