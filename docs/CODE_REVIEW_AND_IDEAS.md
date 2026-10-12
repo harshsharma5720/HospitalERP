@@ -441,7 +441,7 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ## 11. Feature Status (updated 2026-10-12)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11) and today's queue (branch `feature/todays-queue`).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12) and billing (branch `feature/billing`).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
@@ -454,6 +454,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 - **Walk-in registration at the front desk:** found by phone or registered without a login, and booked in one step (2026-10-08, see below).
 - **Patient search and paged front-desk lists:** one search box (name, phone or patient ID), a patient's page, and the front-desk appointment list with filters (2026-10-11, see below).
 - **Today's queue:** check-in and tokens at the front desk, the doctor's queue with Call next, and a waiting-room screen (2026-10-12, see below).
+- **Billing at the front desk:** fees per doctor, a bill per visit made at check-in, payments and refunds at the desk, PDF receipts (2026-10-12, see below). Online payment is still open.
 
 **Partly done**
 - **Paged lists:** patients and the front-desk appointments are paged; the admin users list and the doctor portal's lists still load everything.
@@ -481,7 +482,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 15 | Lab report upload, served only to authorised users | clinical | 3 days |
 | 16 | Doctor ratings and feedback (the stars on the doctor page are only decoration) | patients | 2 days |
 | 17 | Departments table instead of the fixed specialist list | admin | 2 days |
-| 18 | Billing: invoices, Razorpay payment, PDF receipt, refunds on doctor leave | ERP | 1–2 weeks |
+| 18 | Billing: invoices, ~~PDF receipt, refunds on doctor leave~~ ✅ first version done 2026-10-12 (bills, payment at the desk, receipts, refunds); still open: **online payment (Razorpay)** | ERP | 3–5 days for Razorpay |
 | 19 | Pharmacy / inventory, lab management, in-patient wards, HR and payroll, supply chain | ERP | weeks each |
 | 20 | Hindi language option | platform | 3–4 days |
 | 21 | Telemedicine (video consultation link) | platform | 3–5 days |
@@ -490,7 +491,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** billing (18), or the smaller ones first: the cancellation cut-off rule (9) and doctor analytics (8 — the queue now records when patients arrive and are called in). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
+**Suggested order:** the smaller ones: the cancellation cut-off rule (9) and doctor analytics (8 — the queue now records when patients arrive and are called in, billing what visits earned); then online payment (18) or safer login tokens (3). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
 
 ### Account deactivation (done 2026-10-01)
 
@@ -663,3 +664,22 @@ From idea #11 above. The hospital knew who was booked, but not who had arrived, 
 - A click-through against the real database, and the screen on a real TV.
 - No sound when a token is called (the screen highlights it; a chime would need the TV's browser to allow audio).
 - A patient who never arrives isn't marked: they show as "Missed" once the day is over.
+
+### Billing at the front desk (done 2026-10-12)
+
+From idea #18 above (first version: payment at the desk; online payment later). The hospital recorded visits but not what they cost or whether they were paid. Decisions, design and steps: [BILLING_PLAN.md](BILLING_PLAN.md).
+
+**What it does**
+- **Fees** (`/admin/fees`): one consultation fee per doctor; doctors without one use `BILLING_DEFAULT_FEE`.
+- **A bill per visit, made at check-in** (walk-ins for today too) with the doctor's fee as its first line. Billing is a **new module**: appointments announces check-ins, patients leaving the queue and cancellations as events, and billing follows — it knows appointments, appointments doesn't know billing.
+- **Bills page and bill page** (`/bills`, `/admin/bills`; **Bill** in the appointment list): today's bills by default, filters by date, status and patient or bill number; extra items and a discount while unpaid; **payment by cash, card or UPI** (with an optional reference), recorded with who took it and when; **PDF receipt** with the hospital's letterhead.
+- **Cancelled visits:** an unpaid bill is cancelled; a paid one becomes **refund due** (also when a doctor's approved leave cancels the visit), and the refund is recorded at the desk and shown on the receipt. A patient who leaves the queue (check-in undone, or rescheduled) gets the unpaid bill cancelled; it reopens at the next check-in; a paid bill covers the visit when it happens.
+- Database: `doctor_fees`, `bills`, `bill_items` (Flyway `billing/V2026_10_12_1__billing.sql`; see the [MySQL runbook](MYSQL_FLYWAY_UPGRADE.md)).
+
+**Tests:** end-to-end HTTP tests (fees; bills made, cancelled, reopened and marked for refund by the queue, the front desk and a doctor's leave; items, discount, payment, refund, receipt, the list's filters, access), the receipt PDF read back as text, the MySQL migration test, and frontend tests for the three pages; mutation checks for each. On the way they found two timing bugs (two queue calls within one clock tick; an outbox message rounded into the future) and a dashboard test that depended on other tests' data — all fixed.
+
+**Not covered yet:**
+- **Online payment (Razorpay)** — the rest of idea #18.
+- A click-through against the real database.
+- No daily cash summary yet (what was taken by cash / card / UPI per day), and patients don't see their bills in the app.
+- Old doctor records without a login can still be deleted with their appointments; their bills would stay, without the visit (such doctors can't run a queue, so they have none).

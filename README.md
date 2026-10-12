@@ -239,10 +239,10 @@ The app will open at **http://localhost:3000**.
 
 | Role | Portal URL | Access |
 |------|------------|--------|
-| **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log, notifications, and the front desk's pages (appointments, walk-in booking, patients) |
+| **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log, notifications, consultation fees, and the front desk's pages (appointments, walk-in booking, patients, bills) |
 | **Doctor** | `/doctor/dashboard` | Today's queue (`/doctor/queue`), appointments, leave, profile |
 | **Patient** | `/` (public pages) | Book appointments, manage relatives |
-| **Receptionist** | `/receptionist-appointments`, `/walk-in`, `/patients` | Appointment list with filters and check-in, walk-in booking, patient search |
+| **Receptionist** | `/receptionist-appointments`, `/walk-in`, `/patients`, `/bills` | Appointment list with filters and check-in, walk-in booking, patient search, bills and payments |
 
 ---
 
@@ -277,6 +277,8 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 | Check-in and tokens — the front desk checks today's patients in as they arrive; each gets a token, their place in the doctor's day by booked time; walk-ins booked for today are checked in straight away ([details](docs/TODAYS_QUEUE_PLAN.md)) | Receptionist, Admin | `/receptionist-appointments` (Queue column), `/walk-in` |
 | Today's queue for the doctor — with you, waiting by time with tokens, not arrived, done; Call next / Call / Not here; the consultation form completes the visit ([details](docs/TODAYS_QUEUE_PLAN.md)) | Doctor | `/doctor/queue` |
 | Waiting-room screen for a TV — per doctor, the token being served and the next ones; tokens only, no names, no login ([details](docs/TODAYS_QUEUE_PLAN.md)) | Everyone | `/queue-screen` |
+| Consultation fees — one per doctor; doctors without one use `BILLING_DEFAULT_FEE` ([details](docs/BILLING_PLAN.md)) | Admin | `/admin/fees` |
+| Bills at the front desk — a bill per visit, made at check-in with the doctor's fee; extra items and a discount; payment by cash, card or UPI; PDF receipt; a paid visit that is cancelled (e.g. by the doctor's leave) is marked "refund due" and the refund recorded ([details](docs/BILLING_PLAN.md)) | Receptionist, Admin | `/bills`, `/admin/bills`, **Bill** in the appointment list |
 
 Medical records (consultations, prescriptions) are visible only to the patient, their doctor(s) and admins — receptionists cannot read them.
 
