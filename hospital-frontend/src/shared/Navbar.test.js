@@ -22,28 +22,21 @@ test("everyone sees the site links; logged-out users get no profile button", () 
     expect(screen.getByText(name)).toBeInTheDocument();
   }
   expect(screen.queryByText("Profile")).not.toBeInTheDocument();
-  expect(screen.queryByText("My Appointments")).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Staff portal" })).not.toBeInTheDocument();
 });
 
-test("doctors get their appointments link", () => {
-  renderAs("ROLE_DOCTOR");
-  expect(screen.getByText("My Appointments").closest("a")).toHaveAttribute("href", "/doctor-appointments");
-  expect(screen.queryByText("Walk-in")).not.toBeInTheDocument();
+test.each([
+  ["ROLE_DOCTOR", "/doctor/dashboard"],
+  ["ROLE_RECEPTIONIST", "/receptionist-appointments"],
+  ["ROLE_ADMIN", "/admin/dashboard"],
+])("%s gets a link back to the staff portal (%s) and the profile button", (role, home) => {
+  renderAs(role);
+  expect(screen.getByRole("link", { name: "Staff portal" })).toHaveAttribute("href", home);
   expect(screen.getByText("Profile")).toBeInTheDocument();
 });
 
-test("receptionists get the front-desk appointments, walk-in, patients and bills links", () => {
-  renderAs("ROLE_RECEPTIONIST");
-  expect(screen.getByText("Appointments").closest("a")).toHaveAttribute("href", "/receptionist-appointments");
-  expect(screen.queryByText("My Appointments")).not.toBeInTheDocument();
-  expect(screen.getByText("Walk-in").closest("a")).toHaveAttribute("href", "/walk-in");
-  expect(screen.getByText("Patients").closest("a")).toHaveAttribute("href", "/patients");
-  expect(screen.getByText("Bills").closest("a")).toHaveAttribute("href", "/bills");
-});
-
-test("admins get no appointments link", () => {
-  renderAs("ROLE_ADMIN");
-  expect(screen.queryByText("My Appointments")).not.toBeInTheDocument();
-  expect(screen.queryByText("Walk-in")).not.toBeInTheDocument(); // admins: in the admin portal's sidebar
+test("patients get no staff portal link", () => {
+  renderAs("ROLE_PATIENT");
+  expect(screen.queryByRole("link", { name: "Staff portal" })).not.toBeInTheDocument();
   expect(screen.getByText("Profile")).toBeInTheDocument();
 });

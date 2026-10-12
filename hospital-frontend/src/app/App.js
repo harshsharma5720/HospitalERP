@@ -24,7 +24,7 @@ import BillPage from "../features/billing/BillPage";
 import WalkInBooking from "../features/appointments/WalkInBooking";
 import PatientSearch from "../features/patients/PatientSearch";
 import FrontDeskPatient from "../features/patients/FrontDeskPatient";
-import SitePage from "../shared/SitePage";
+import StaffLayout from "../shared/layout/StaffLayout";
 
 /* ADMIN / DOCTOR */
 import AdminLayout from "../features/admin/AdminLayout";
@@ -83,35 +83,17 @@ function App() {
               }
             />
 
-            {/* ===================== RECEPTIONIST ===================== */}
-            <Route
-              path="/receptionist-appointments"
-              element={<ProtectedRoute roles={FRONT_DESK}><SitePage><FrontDeskAppointments /></SitePage></ProtectedRoute>}
-            />
-            <Route
-              path="/walk-in"
-              element={<ProtectedRoute roles={FRONT_DESK}><SitePage><WalkInBooking /></SitePage></ProtectedRoute>}
-            />
-            <Route
-              path="/patients"
-              element={<ProtectedRoute roles={FRONT_DESK}><SitePage><PatientSearch /></SitePage></ProtectedRoute>}
-            />
-            <Route
-              path="/patients/:patientId"
-              element={<ProtectedRoute roles={FRONT_DESK}><SitePage><FrontDeskPatient /></SitePage></ProtectedRoute>}
-            />
-            <Route
-              path="/bills"
-              element={<ProtectedRoute roles={FRONT_DESK}><SitePage><BillsPage /></SitePage></ProtectedRoute>}
-            />
-            <Route
-              path="/bills/:billId"
-              element={<ProtectedRoute roles={FRONT_DESK}><SitePage><BillPage /></SitePage></ProtectedRoute>}
-            />
-            <Route
-              path="/bills/visit/:appointmentId"
-              element={<ProtectedRoute roles={FRONT_DESK}><SitePage><BillPage /></SitePage></ProtectedRoute>}
-            />
+            {/* ===================== FRONT DESK ===================== */}
+            {/* Receptionists' pages in the staff layout; admins have the same pages under /admin */}
+            <Route element={<ProtectedRoute roles={FRONT_DESK}><StaffLayout /></ProtectedRoute>}>
+              <Route path="/receptionist-appointments" element={<FrontDeskAppointments />} />
+              <Route path="/walk-in" element={<WalkInBooking />} />
+              <Route path="/patients" element={<PatientSearch />} />
+              <Route path="/patients/:patientId" element={<FrontDeskPatient />} />
+              <Route path="/bills" element={<BillsPage />} />
+              <Route path="/bills/:billId" element={<BillPage />} />
+              <Route path="/bills/visit/:appointmentId" element={<BillPage />} />
+            </Route>
 
             {/* ===================== ADMIN ===================== */}
             <Route

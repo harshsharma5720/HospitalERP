@@ -1,12 +1,15 @@
 import { create } from "zustand";
+import { applyDarkMode, savedDarkMode } from "./theme";
 
 const useAppStore = create((set) => ({
-  darkMode: false,
+  darkMode: savedDarkMode(),
 
   toggleDarkMode: () =>
-    set((state) => ({
-      darkMode: !state.darkMode,
-    })),
+    set((state) => {
+      const darkMode = !state.darkMode;
+      applyDarkMode(darkMode);
+      return { darkMode };
+    }),
 }));
 
 export default useAppStore;

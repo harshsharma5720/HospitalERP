@@ -1,7 +1,6 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import AdminSidebar from "./AdminSidebar";
-import TopNavbar from "../../shared/TopNavbar";
+import StaffLayout from "../../shared/layout/StaffLayout";
 import AdminDashboard from "./AdminDashboard";
 import LeaveApproval from "./LeaveApproval";
 import ManageUsers from "./ManageUsers";
@@ -18,37 +17,29 @@ import FrontDeskAppointments from "../appointments/FrontDeskAppointments";
 import PatientSearch from "../patients/PatientSearch";
 import FrontDeskPatient from "../patients/FrontDeskPatient";
 
-export default function AdminLayout({ children }) {
+// The admin portal: its pages in the staff layout (menu: shared/layout/staffMenus.js)
+export default function AdminLayout() {
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-[#0f172a]">
-      {/* LEFT SIDEBAR */}
-      <AdminSidebar />
-
-      {/* RIGHT CONTENT AREA */}
-      <div className="flex flex-col flex-1">
-        <TopNavbar variant="portal" />
-        <div className="p-6">
-          <Routes>
-                      <Route path="dashboard" element={<AdminDashboard />} />
-                      <Route path="leave-approval" element={<LeaveApproval />} />
-                      <Route path="manage-users" element={<ManageUsers />} />
-                      <Route path="register-user" element={<RegisterUser />} />
-                      <Route path="manage-doctor" element={<ManageDoctor />} />
-                      <Route path="doctor/:userId/appointments" element={<AdminDoctorAppointments />} />
-                      <Route path="audit-log" element={<AuditLog />} />
-                      <Route path="notifications" element={<Notifications />} />
-                      <Route path="fees" element={<Fees />} />
-                      <Route path="bills" element={<BillsPage />} />
-                      <Route path="bills/:billId" element={<BillPage />} />
-                      <Route path="bills/visit/:appointmentId" element={<BillPage />} />
-                      <Route path="walk-in" element={<WalkInBooking />} />
-                      <Route path="appointments" element={<FrontDeskAppointments />} />
-                      <Route path="patients" element={<PatientSearch />} />
-                      <Route path="patients/:patientId" element={<FrontDeskPatient />} />
-                      <Route path="*" element={<Navigate to="dashboard" replace />} />
-          </Routes>
-        </div>
-      </div>
-    </div>
+    <StaffLayout>
+      <Routes>
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="leave-approval" element={<LeaveApproval />} />
+        <Route path="manage-users" element={<ManageUsers />} />
+        <Route path="register-user" element={<RegisterUser />} />
+        <Route path="manage-doctor" element={<ManageDoctor />} />
+        <Route path="doctor/:userId/appointments" element={<AdminDoctorAppointments />} />
+        <Route path="audit-log" element={<AuditLog />} />
+        <Route path="notifications" element={<Notifications />} />
+        <Route path="fees" element={<Fees />} />
+        <Route path="bills" element={<BillsPage />} />
+        <Route path="bills/:billId" element={<BillPage />} />
+        <Route path="bills/visit/:appointmentId" element={<BillPage />} />
+        <Route path="walk-in" element={<WalkInBooking />} />
+        <Route path="appointments" element={<FrontDeskAppointments />} />
+        <Route path="patients" element={<PatientSearch />} />
+        <Route path="patients/:patientId" element={<FrontDeskPatient />} />
+        <Route path="*" element={<Navigate to="dashboard" replace />} />
+      </Routes>
+    </StaffLayout>
   );
 }

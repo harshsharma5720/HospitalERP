@@ -1,44 +1,14 @@
-import React, { useEffect } from "react";
+import React from "react";
 import useAppStore from "./useAppStore";
 
-
+// The light / dark switch of the public site (the staff portals have their own in StaffLayout)
 export default function DarkThemeToggle() {
-  const { darkMode } = useAppStore();
-
-  // Load theme on first render
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-
-    const isDark = savedTheme === "dark";
-    useAppStore.setState({ darkMode: isDark });
-
-    if (isDark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, []);
-
-  // Toggle theme & update Zustand + localStorage + HTML class
-  const handleClick = () => {
-    useAppStore.setState((state) => {
-      const newMode = !state.darkMode;
-
-      if (newMode) {
-        document.documentElement.classList.add("dark");
-        localStorage.setItem("theme", "dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-        localStorage.setItem("theme", "light");
-      }
-
-      return { darkMode: newMode };
-    });
-  };
+  const darkMode = useAppStore((s) => s.darkMode);
+  const toggleDarkMode = useAppStore((s) => s.toggleDarkMode);
 
   return (
     <button
-      onClick={handleClick}
+      onClick={toggleDarkMode}
       className="
         gap-2 px-3 py-1 rounded-md transition-all duration-200 shadow-md
         bg-white dark:bg-gray-700

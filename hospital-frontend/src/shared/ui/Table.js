@@ -16,7 +16,7 @@ export function Table({ className = "", children, ...props }) {
 export function Th({ align = "left", className = "", children, ...props }) {
   return (
     <th
-      className={`bg-surface-2 border-b border-line px-4 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted ${
+      className={`bg-surface-2 border-b border-line px-4 py-3 text-xs font-semibold uppercase tracking-wide text-ink-muted whitespace-nowrap ${
         align === "right" ? "text-right" : "text-left"
       } ${className}`}
       {...props}

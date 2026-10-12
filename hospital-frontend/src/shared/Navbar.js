@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import { Home, Activity, User, Phone, Info, UserCircle, UserPlus, Users, Receipt } from "lucide-react";
+import { Home, Activity, User, Phone, Info, UserCircle, LayoutDashboard } from "lucide-react";
 import ProfilePage from "./ProfilePage";
 import DarkThemeToggle from "./DarkThemeToggle";
 import { getRoleFromToken } from "./utils/jwtUtils";
+import { homePathForRole } from "../features/auth/useAuthStore";
+
+const STAFF = ["ROLE_ADMIN", "ROLE_DOCTOR", "ROLE_RECEPTIONIST"];
 
 // Light mode: white when hovered or active; dark mode: cyan
 const linkClass = ({ isActive }) =>
@@ -30,9 +33,7 @@ export default function Navbar() {
     if (token) {
       setIsLoggedIn(true);
 
-      const decodedRole = getRoleFromToken(token);
-      console.log("Role from token:", decodedRole);
-      setRole(decodedRole);
+      setRole(getRoleFromToken(token));
     } else {
       setIsLoggedIn(false);
       setRole(null);
@@ -80,31 +81,12 @@ export default function Navbar() {
             <span>{item.name}</span>
           </NavLink>
         ))}
-        {role === "ROLE_DOCTOR" && (
-          <NavLink to="/doctor-appointments" className={linkClass}>
-            <Activity size={20} />
-            <span>My Appointments</span>
+        {/* Staff on the public site: the way back to their portal (shared/layout/StaffLayout) */}
+        {STAFF.includes(role) && (
+          <NavLink to={homePathForRole(role)} className={linkClass}>
+            <LayoutDashboard size={20} />
+            <span>Staff portal</span>
           </NavLink>
-        )}
-        {role === "ROLE_RECEPTIONIST" && (
-          <>
-            <NavLink to="/receptionist-appointments" className={linkClass}>
-              <Activity size={20} />
-              <span>Appointments</span>
-            </NavLink>
-            <NavLink to="/walk-in" className={linkClass}>
-              <UserPlus size={20} />
-              <span>Walk-in</span>
-            </NavLink>
-            <NavLink to="/patients" className={linkClass}>
-              <Users size={20} />
-              <span>Patients</span>
-            </NavLink>
-            <NavLink to="/bills" className={linkClass}>
-              <Receipt size={20} />
-              <span>Bills</span>
-            </NavLink>
-          </>
         )}
       </div>
 

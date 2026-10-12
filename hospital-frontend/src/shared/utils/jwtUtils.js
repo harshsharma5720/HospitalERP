@@ -30,6 +30,15 @@ export const getUserIdFromToken = (token) => {
   }
 };
 
+// The login name (the token's subject)
+export const getUsernameFromToken = (token) => {
+  try {
+    return decodePayload(token).sub ?? null;
+  } catch (err) {
+    return null;
+  }
+};
+
 export const isTokenExpired = (token) => {
   try {
     return Date.now() > decodePayload(token).exp * 1000;
