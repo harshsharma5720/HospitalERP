@@ -5,8 +5,6 @@ import { getAllDoctors } from "../doctors/api";
 import useAuthStore from "../auth/useAuthStore";
 
 jest.mock("../doctors/api");
-// The header's profile panel is not opened here
-jest.mock("../../shared/ProfilePage", () => () => null);
 
 const DOCTORS = [
   { id: 1, name: "Anita Rao", specialist: "CARDIOLOGY", active: true },

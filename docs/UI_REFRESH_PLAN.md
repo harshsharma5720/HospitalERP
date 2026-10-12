@@ -54,8 +54,8 @@
 
 ## Follow-ups
 
-- **The patient area and login / register**: booking, my appointments, relatives, the patient's profile and login / register keep their old page bodies (they have the new header and footer) and still use `alert()`. The public pages are done (U.6, U.8, U.9).
-- **`Shreyahospital.jpg` carries a stock-photo watermark** (Getty Images) and is still used on the booking page, the appointment details and the relatives list (no longer on About) — replace it with the hospital's own photo.
+- ~~The patient area and login / register~~ — done in the next piece of work: [PATIENT_AREA_REFRESH_PLAN.md](PATIENT_AREA_REFRESH_PLAN.md).
+- **`Shreyahospital.jpg` carries a stock-photo watermark** (Getty Images) — no page uses it any more and the file was deleted in the patient area refresh.
 - **The hospital's details** (`src/shared/hospitalInfo.js`) come from the old top bar (Sahibabad, Ghaziabad; +91 92895 20303). The old footer showed a Dubai address and another hospital's email, so it no longer shows an email at all — add the right one there if wanted. Social media links likewise: none until the hospital has real profiles.
 - **A real enquiry inbox** for the Contact page (the old form sent nothing and was removed): a later feature.
 - A click-through against the running app (all checks so far were automated tests and screenshots of rendered pages).

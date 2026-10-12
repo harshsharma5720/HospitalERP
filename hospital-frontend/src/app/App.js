@@ -12,11 +12,11 @@ import DoctorPage from "../features/doctors/DoctorPage";
 import ContactUsPage from "../features/public/ContactUsPage";
 import Treatments from "../features/public/Treatments";
 import AboutUs from "../features/public/AboutUs";
-import EditProfilePage from "../features/patients/EditProfileModal";
+import MyAccount from "../features/patients/MyAccount";
 import AppointmentDetails from "../features/appointments/AppointmentDetails";
 import DoctorDetailsPage from "../features/doctors/DoctorDetailsPage";
 import AddRelativePage from "../features/patients/AddRelativePage";
-import RelativesList from "../features/patients/RelativesList";
+import ReceptionistProfile from "../features/receptionist/ReceptionistProfile";
 import FrontDeskAppointments from "../features/appointments/FrontDeskAppointments";
 import QueueScreen from "../features/appointments/QueueScreen";
 import BillsPage from "../features/billing/BillsPage";
@@ -40,9 +40,20 @@ import { ToastProvider, ConfirmProvider } from "../shared/ui";
 const PATIENT = ["ROLE_PATIENT"];
 const FRONT_DESK = ["ROLE_RECEPTIONIST", "ROLE_ADMIN"];
 
-// The public footer - not under the waiting-room screen, which fills a TV
+// The public footer - not under the waiting-room screen, which fills a TV, nor under the login pages, which have
+// their own frame
+const WITHOUT_FOOTER = ["/queue-screen", "/login", "/register", "/forgot-password"];
+
 function PublicFooter() {
-  return useLocation().pathname === "/queue-screen" ? null : <Footer />;
+  return WITHOUT_FOOTER.includes(useLocation().pathname) ? null : <Footer />;
+}
+
+// The logged-in user's own account: a patient's here; staff have theirs in their portal
+function OwnAccount() {
+  const role = useAuthStore((s) => s.role);
+  if (role === "ROLE_DOCTOR") return <Navigate to="/doctor/profile" replace />;
+  if (role === "ROLE_RECEPTIONIST") return <Navigate to="/my-profile" replace />;
+  return <MyAccount />;
 }
 
 function App() {
@@ -73,12 +84,13 @@ function App() {
             <Route path="/appointment-details" element={<ProtectedRoute roles={PATIENT}><AppointmentDetails /></ProtectedRoute>} />
             <Route path="/add-relative" element={<ProtectedRoute roles={PATIENT}><AddRelativePage /></ProtectedRoute>} />
             <Route path="/edit-relative" element={<ProtectedRoute roles={PATIENT}><AddRelativePage /></ProtectedRoute>} />
-            <Route path="/relatives" element={<ProtectedRoute roles={PATIENT}><RelativesList /></ProtectedRoute>} />
+            {/* Family members are on My account now */}
+            <Route path="/relatives" element={<ProtectedRoute roles={PATIENT}><Navigate to="/edit-profile" replace /></ProtectedRoute>} />
             <Route
               path="/edit-profile"
               element={
                 <ProtectedRoute roles={["ROLE_PATIENT", "ROLE_DOCTOR", "ROLE_RECEPTIONIST"]}>
-                  <EditProfilePage />
+                  <OwnAccount />
                 </ProtectedRoute>
               }
             />
@@ -93,6 +105,7 @@ function App() {
               <Route path="/bills" element={<BillsPage />} />
               <Route path="/bills/:billId" element={<BillPage />} />
               <Route path="/bills/visit/:appointmentId" element={<BillPage />} />
+              <Route path="/my-profile" element={<ProtectedRoute roles={["ROLE_RECEPTIONIST"]}><ReceptionistProfile /></ProtectedRoute>} />
             </Route>
 
             {/* ===================== ADMIN ===================== */}

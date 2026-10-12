@@ -4,12 +4,11 @@ import { HeartPulse, LayoutDashboard, LogOut, Menu, Phone, UserCircle, X } from 
 import useAuthStore, { homePathForRole } from "../../features/auth/useAuthStore";
 import { getUsernameFromToken } from "../utils/jwtUtils";
 import { HOSPITAL, phoneHref } from "../hospitalInfo";
-import ProfilePage from "../ProfilePage";
 import { Button, ThemeButton } from "../ui";
 
 // The header of the public site and the patient pages (docs/UI_REFRESH_PLAN.md, U.6): the hospital, the site's
 // pages, the phone number, the light / dark switch and the visitor's way in - Log in / Register, or for a logged-in
-// user their profile, their appointments (patients) or the staff portal (staff), and Log out. On a phone the
+// patient their appointments and their account, for staff the way back to their portal, and Log out. On a phone the
 // links fold into a menu.
 const LINKS = [
   { to: "/", label: "Home", end: true },
@@ -21,7 +20,7 @@ const LINKS = [
 const STAFF = ["ROLE_ADMIN", "ROLE_DOCTOR", "ROLE_RECEPTIONIST"];
 
 const linkClass = ({ isActive }) =>
-  `rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+  `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
     isActive ? "text-primary-ink" : "text-ink-muted hover:text-ink hover:bg-surface-2"
   }`;
 
@@ -31,7 +30,6 @@ export default function PublicHeader() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
 
   useEffect(() => setMenuOpen(false), [pathname]);
 
@@ -50,14 +48,16 @@ export default function PublicHeader() {
         </Button>
       )}
       {role === "ROLE_PATIENT" && (
-        <Button as={Link} to="/appointment-details" variant="secondary" size="sm">
-          My appointments
-        </Button>
+        <>
+          <Button as={Link} to="/appointment-details" variant="secondary" size="sm">
+            My appointments
+          </Button>
+          <Button as={Link} to="/edit-profile" variant="ghost" size="sm">
+            <UserCircle size={16} aria-hidden="true" />
+            My account
+          </Button>
+        </>
       )}
-      <Button variant="ghost" size="sm" onClick={() => setShowProfile(true)}>
-        <UserCircle size={16} aria-hidden="true" />
-        Profile
-      </Button>
       <Button variant="ghost" size="sm" onClick={logout} aria-label={`Log out ${getUsernameFromToken(token) ?? ""}`.trim()}>
         <LogOut size={16} aria-hidden="true" />
         Log out
@@ -98,7 +98,9 @@ export default function PublicHeader() {
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
           <a
             href={phoneHref}
-            className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink hover:bg-surface-2 xl:flex"
+            className={`hidden items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-ink hover:bg-surface-2 ${
+              signedIn ? "2xl:flex" : "xl:flex"
+            }`}
           >
             <Phone size={16} aria-hidden="true" className="text-primary-ink" />
             {HOSPITAL.phone}
@@ -130,7 +132,6 @@ export default function PublicHeader() {
         </div>
       )}
 
-      {showProfile && <ProfilePage onClose={() => setShowProfile(false)} />}
     </header>
   );
 }

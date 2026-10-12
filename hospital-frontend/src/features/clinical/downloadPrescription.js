@@ -2,8 +2,8 @@ import { getErrorMessage } from "../../shared/utils/apiError";
 import { getPrescriptionPdf } from "./api";
 
 // Downloads the prescription PDF (needs the auth header, so a plain <a href> won't work). onError gets the message
-// when it fails: the staff portals pass a toast; the patient pages still use the browser's alert.
-export const downloadPrescription = async (appointmentId, onError = (message) => window.alert(message)) => {
+// when it fails (the pages pass a toast).
+export const downloadPrescription = async (appointmentId, onError) => {
   try {
     const res = await getPrescriptionPdf(appointmentId);
     const url = URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));

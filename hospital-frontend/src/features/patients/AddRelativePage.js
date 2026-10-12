@@ -1,17 +1,23 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import PublicHeader from "../../shared/layout/PublicHeader";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import { toLocalISODate } from "../../shared/utils/dateUtils";
-import { useLocation } from "react-router-dom";
+import { PublicPage } from "../../shared/layout/PublicSections";
+import { Button, Card, Field, Input, Select, useToast } from "../../shared/ui";
 import * as patientsApi from "./api";
 
-// Used for both "/add-relative" and "/edit-relative" (state.relative = relative to edit)
+// Adding a family member ("/add-relative") or changing one ("/edit-relative", state.relative). Afterwards back to
+// where the patient came from (state.from, e.g. the booking page), otherwise to My account.
+
+const RELATIONSHIPS = ["FATHER", "MOTHER", "WIFE", "HUSBAND", "SON", "DAUGHTER", "BROTHER", "SISTER", "GRANDFATHER", "GRANDMOTHER", "OTHER"];
+const pretty = (value) => value.charAt(0) + value.slice(1).toLowerCase();
+
 export default function AddRelativePage() {
   const navigate = useNavigate();
-
   const location = useLocation();
+  const toast = useToast();
   const editing = location.state?.relative || null;
+  const back = location.state?.from || "/edit-profile";
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: editing?.name || "",
@@ -21,146 +27,90 @@ export default function AddRelativePage() {
     patientAadharNo: editing?.patientAadharNo ? String(editing.patientAadharNo) : "",
   });
 
-
-  const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const change = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     // The backend links the relative to the logged-in patient, so no patientId is sent
-    const payload = {
-      ...form,
-      patientAadharNo: form.patientAadharNo ? Number(form.patientAadharNo) : null,
-    };
-
+    const payload = { ...form, name: form.name.trim(), patientAadharNo: form.patientAadharNo ? Number(form.patientAadharNo) : null };
+    setSaving(true);
     try {
-      setSaving(true);
       if (editing) {
         await patientsApi.updateRelative(editing.id, payload);
-        alert("Relative updated successfully!");
+        toast.success(`${payload.name}'s details are saved.`);
       } else {
         await patientsApi.addRelative(payload);
-        alert("Relative added successfully!");
+        toast.success(`${payload.name} added. You can now book for them.`);
       }
-      navigate("/edit-profile"); // redirect back
+      navigate(back);
     } catch (err) {
-      alert(getErrorMessage(err, editing ? "Failed to update relative." : "Failed to add relative."));
+      toast.error(getErrorMessage(err, editing ? "Failed to update the family member." : "Failed to add the family member."));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-[#0a1124]">
-      <PublicHeader />
+    <PublicPage>
+      <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
+        <Link to={back} className="text-sm text-primary-ink hover:underline">
+          ← Back
+        </Link>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight">{editing ? `Edit ${editing.name}` : "Add a family member"}</h1>
+        <p className="mt-2 text-ink-muted">
+          {editing ? "Change their details." : "Then you can book appointments for them from your account."}
+        </p>
 
-      <div className="max-w-3xl mx-auto bg-white dark:bg-[#111a3b] mt-10 p-8 rounded-xl shadow-lg">
-        <h2 className="text-2xl font-bold mb-6 text-center dark:text-[#50d4f2]">
-          {editing ? "Edit Relative" : "Add New Relative"}
-        </h2>
-
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-5">
-
-          <div>
-            <label className="font-semibold dark:text-gray-300">Full Name</label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              required
-              className="p-2 w-full border rounded bg-gray-100 dark:bg-[#1e293b] dark:text-white"
-            />
-          </div>
-
-          <div>
-            <label className="font-semibold dark:text-gray-300">Gender</label>
-            <select
-              name="gender"
-              value={form.gender}
-              onChange={handleChange}
-              required
-              className="p-2 w-full border rounded bg-gray-100 dark:bg-[#1e293b] dark:text-white"
-            >
-              <option value="">Select Gender</option>
-              <option value="MALE">Male</option>
-              <option value="FEMALE">Female</option>
-              <option value="OTHER">Other</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="font-semibold dark:text-gray-300">Date of Birth</label>
-            <input
-              type="date"
-              name="dob"
-              value={form.dob}
-              max={toLocalISODate()}
-              onChange={handleChange}
-              required
-              className="p-2 w-full border rounded bg-gray-100 dark:bg-[#1e293b] dark:text-white"
-            />
-          </div>
-
-          <div>
-            <label className="font-semibold dark:text-gray-300">Relationship</label>
-            <select
-              name="relationship"
-              value={form.relationship}
-              onChange={handleChange}
-              required
-              className="p-2 w-full border rounded bg-gray-100 dark:bg-[#1e293b] dark:text-white"
-            >
-              <option value="">Select Relationship</option>
-              <option value="FATHER">Father</option>
-              <option value="MOTHER">Mother</option>
-              <option value="WIFE">Wife</option>
-              <option value="HUSBAND">Husband</option>
-              <option value="SON">Son</option>
-              <option value="DAUGHTER">Daughter</option>
-              <option value="BROTHER">Brother</option>
-              <option value="SISTER">Sister</option>
-              <option value="GRANDFATHER">Grandfather</option>
-              <option value="GRANDMOTHER">Grandmother</option>
-              <option value="OTHER">Other</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="font-semibold dark:text-gray-300">Aadhar No</label>
-            <input
-              type="text"
-              name="patientAadharNo"
-              inputMode="numeric"
-              pattern="[0-9]{12}"
-              title="Aadhaar number must be 12 digits"
-              placeholder="12-digit Aadhaar number (optional)"
-              value={form.patientAadharNo}
-              onChange={handleChange}
-              className="p-2 w-full border rounded bg-gray-100 dark:bg-[#1e293b] dark:text-white"
-            />
-          </div>
-
-          <div className="flex justify-between mt-6">
-            <button
-              type="button"
-              onClick={() => navigate("/edit-profile")}
-              className="px-5 py-2 rounded-lg bg-gray-400 text-white hover:bg-gray-600"
-            >
-              Cancel
-            </button>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
-            >
-              {saving ? "Saving..." : editing ? "Save Changes" : "Add Relative"}
-            </button>
-          </div>
-
-        </form>
+        <Card className="mt-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <Field label="Full name" htmlFor="relative-name">
+              <Input id="relative-name" name="name" value={form.name} onChange={change} required />
+            </Field>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field label="Relationship" htmlFor="relative-relationship">
+                <Select id="relative-relationship" name="relationship" value={form.relationship} onChange={change} required>
+                  <option value="">Choose</option>
+                  {RELATIONSHIPS.map((value) => (
+                    <option key={value} value={value}>
+                      {pretty(value)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Gender" htmlFor="relative-gender">
+                <Select id="relative-gender" name="gender" value={form.gender} onChange={change} required>
+                  <option value="">Choose</option>
+                  <option value="FEMALE">Female</option>
+                  <option value="MALE">Male</option>
+                  <option value="OTHER">Other</option>
+                </Select>
+              </Field>
+            </div>
+            <Field label="Date of birth" htmlFor="relative-dob">
+              <Input id="relative-dob" name="dob" type="date" value={form.dob} max={toLocalISODate()} onChange={change} required />
+            </Field>
+            <Field label="Aadhaar number (optional)" htmlFor="relative-aadhaar" hint="12 digits.">
+              <Input
+                id="relative-aadhaar"
+                name="patientAadharNo"
+                inputMode="numeric"
+                pattern="[0-9]{12}"
+                title="Aadhaar number must be 12 digits"
+                value={form.patientAadharNo}
+                onChange={change}
+              />
+            </Field>
+            <div className="flex justify-end gap-2 border-t border-line pt-4">
+              <Button as={Link} to={back} variant="secondary">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving..." : editing ? "Save changes" : "Add family member"}
+              </Button>
+            </div>
+          </form>
+        </Card>
       </div>
-    </div>
+    </PublicPage>
   );
 }

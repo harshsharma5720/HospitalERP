@@ -1,267 +1,32 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import PublicHeader from "../../shared/layout/PublicHeader";
+import React, { useCallback, useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { CalendarPlus, ChevronRight, FileDown, WifiOff } from "lucide-react";
 import { toLocalISODate } from "../../shared/utils/dateUtils";
 import { getErrorMessage } from "../../shared/utils/apiError";
+import { PageIntro, PublicPage } from "../../shared/layout/PublicSections";
+import { Badge, Button, Card, EmptyState, useConfirm, useToast } from "../../shared/ui";
 import { downloadPrescription } from "../clinical/downloadPrescription";
 import { getMyHistory } from "../clinical/api";
+import { formatDate, timeRange, visitStatus } from "./appointmentFormat";
 import * as appointmentsApi from "./api";
 
-const STATUS_LABELS = {
-  SCHEDULED: "Scheduled",
-  CONFIRMED: "Confirmed",
-  COMPLETED: "Completed",
-  CANCELLED_BY_DOCTOR: "Cancelled (doctor on leave)",
-  CANCELLED_BY_PATIENT: "Cancelled",
-};
+// The patient's appointments (docs/PATIENT_AREA_REFRESH_PLAN.md, P.3): upcoming ones to move or cancel, past ones
+// with the doctor's notes, the prescription and Book again
 
-const STATUS_STYLES = {
-  SCHEDULED: "bg-blue-100 text-blue-800",
-  CONFIRMED: "bg-blue-100 text-blue-800",
-  COMPLETED: "bg-green-100 text-green-800",
-  CANCELLED_BY_DOCTOR: "bg-red-100 text-red-800",
-  CANCELLED_BY_PATIENT: "bg-gray-200 text-gray-700",
-};
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const formatTime = (time) => (time ? String(time).slice(0, 5) : "");
+// Compares dates only, so an appointment later today is still upcoming
+const isUpcoming = (a, today) => (a.status === "SCHEDULED" || a.status === "CONFIRMED") && a.date >= today;
+const when = (a) => `${a.date} ${a.startTime ?? ""}`;
 
-export default function AppointmentDetails() {
-  const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  // Consultation notes by appointment id (only completed visits have one)
-  const [consultations, setConsultations] = useState({});
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        const response = await appointmentsApi.getMyAppointments();
-        // Upcoming first, then most recent history
-        const sorted = [...response.data].sort((a, b) => {
-          const aUpcoming = isUpcoming(a);
-          const bUpcoming = isUpcoming(b);
-          if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
-          return aUpcoming ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date);
-        });
-        setAppointments(sorted);
-        try {
-          const history = await getMyHistory();
-          setConsultations(Object.fromEntries(history.data.map((c) => [c.appointmentId, c])));
-        } catch {
-          setConsultations({});
-        }
-      } catch (err) {
-        alert(getErrorMessage(err, "Could not load your appointments. Please try again later."));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAppointments();
-  }, []);
-
-  // Compares dates only, so an appointment later today is still upcoming
-  const isUpcoming = (appointment) =>
-    (appointment.status === "SCHEDULED" || appointment.status === "CONFIRMED") &&
-    appointment.date >= toLocalISODate();
-
-  const handleCancel = async (appointmentID) => {
-    const confirmCancel = window.confirm(
-      "Are you sure you want to cancel this appointment?"
-    );
-    if (!confirmCancel) return;
-
-    try {
-      const response = await appointmentsApi.cancelAppointment(appointmentID);
-      alert(response.data);
-      // The appointment stays in the history with a "Cancelled" status
-      setAppointments((prev) =>
-        prev.map((a) => (a.appointmentID === appointmentID ? { ...a, status: "CANCELLED_BY_PATIENT" } : a))
-      );
-    } catch (err) {
-      alert(getErrorMessage(err, "Failed to cancel appointment. Please try again."));
-    }
-  };
-
-  const handleReschedule = (appointment) => {
-    navigate("/appointments", { state: { rescheduleAppointment: appointment } });
-  };
-
-  const handleBookAgain = (appointment) => {
-    navigate("/appointments", { state: { doctorName: appointment.doctorName, doctorId: appointment.doctorId } });
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-[#0a1124]">
-        <p className="text-lg font-medium text-gray-600 dark:text-[#50d4f2]">
-          Loading appointments...
-        </p>
-      </div>
-    );
-  }
-
+function DateBlock({ date }) {
+  const [year, month, day] = date.split("-").map(Number);
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0a1124] relative">
-      <PublicHeader />
-
-      <div className="flex flex-col items-center py-12 px-4 relative">
-        <img
-          src="Shreyahospital.jpg"
-          alt="Hospital Background"
-          className="absolute top-0 left-0 w-full h-full object-cover opacity-20 -z-10"
-        />
-
-        <div className="
-          bg-white bg-opacity-90
-          dark:bg-[#111a3b]/70 dark:text-[#50d4f2]
-          backdrop-blur-md shadow-2xl rounded-2xl
-          p-8 w-full max-w-5xl relative z-10
-        ">
-          <h2 className="
-            text-6xl md:text-7xl font-black tracking-tight leading-tight text-center
-            text-black dark:text-[#50d4f2]
-            mb-6
-          ">
-            Your{" "}
-              <span
-                 className="
-                    bg-gradient-to-r from-blue-600 to-cyan-400
-                    bg-clip-text text-transparent
-                 "
-              >
-                Appointments
-              </span>
-          </h2>
-          <div className="w-40 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 dark:from-[#50d4f2] dark:to-[#63e6ff] mx-auto mb-10 rounded-full"></div>
-
-          {appointments.length === 0 ? (
-            <p className="text-center text-gray-600 dark:text-gray-300">
-              No appointments found. Book one below!
-            </p>
-          ) : (
-            <div className="grid md:grid-cols-2 gap-6">
-              {appointments.map((appointment) => {
-                const upcoming = isUpcoming(appointment);
-                return (
-                  <div
-                    key={appointment.appointmentID}
-                    className="
-                      bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF]
-                      dark:from-[#0f172a] dark:to-[#111a3b]
-                      border border-gray-200 dark:border-[#233565]
-                      p-6 rounded-2xl shadow-2xl
-                      hover:shadow-3xl transition-transform
-                      transform hover:scale-105 duration-300
-                    "
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="
-                        text-lg font-semibold
-                        text-[#1E63DB] dark:text-[#50d4f2]
-                      ">
-                        Appointment ID: {appointment.appointmentID}
-                      </h3>
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${STATUS_STYLES[appointment.status] || "bg-gray-200 text-gray-700"}`}>
-                        {STATUS_LABELS[appointment.status] || appointment.status}
-                      </span>
-                    </div>
-
-                    <p><strong>Patient Name:</strong> {appointment.patientName}</p>
-                    <p><strong>Doctor:</strong> {appointment.doctorName || "N/A"}</p>
-                    <p><strong>Date:</strong> {appointment.date}</p>
-                    <p><strong>Shift:</strong> {appointment.shift}</p>
-                    <p>
-                      <strong>Time:</strong>{" "}
-                      {appointment.startTime
-                        ? `${formatTime(appointment.startTime)} - ${formatTime(appointment.endTime)}`
-                        : "N/A"}
-                    </p>
-                    <p>
-                      <strong>Message:</strong>{" "}
-                      {appointment.message || "No message"}
-                    </p>
-
-                    {consultations[appointment.appointmentID] && (
-                      <ConsultationSummary consultation={consultations[appointment.appointmentID]} />
-                    )}
-
-                    <div className="flex flex-col gap-3 mt-4">
-                      {upcoming ? (
-                        <>
-                          <button
-                            onClick={() => handleReschedule(appointment)}
-                            className="
-                              w-full bg-gradient-to-br
-                              from-green-500 to-emerald-700
-                              text-white py-2 rounded-lg font-semibold
-                              hover:opacity-90 transition-all
-                            "
-                          >
-                            Reschedule Appointment
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleCancel(appointment.appointmentID)
-                            }
-                            className="
-                              w-full bg-gradient-to-br
-                              from-red-600 to-red-800
-                              text-white py-2 rounded-lg font-semibold
-                              hover:opacity-90 transition-all
-                            "
-                          >
-                            Cancel Appointment
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                        {consultations[appointment.appointmentID] && (
-                          <button
-                            onClick={() => downloadPrescription(appointment.appointmentID)}
-                            className="
-                              w-full bg-gradient-to-br
-                              from-green-500 to-emerald-700
-                              text-white py-2 rounded-lg font-semibold
-                              hover:opacity-90 transition-all
-                            "
-                          >
-                            Download Prescription
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleBookAgain(appointment)}
-                          className="
-                            w-full bg-gradient-to-br
-                            from-[#1E63DB] to-[#27496d]
-                            text-white py-2 rounded-lg font-semibold
-                            hover:opacity-90 transition-all
-                          "
-                        >
-                          Book Again
-                        </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          <button
-            onClick={() => navigate("/appointments")}
-            className="
-              mt-8 w-full bg-gradient-to-br
-              from-[#1E63DB] to-[#27496d]
-              text-white py-3 rounded-xl font-semibold
-              hover:opacity-90 transition-all duration-300
-            "
-          >
-            Book New Appointment
-          </button>
-        </div>
-      </div>
+    <div aria-hidden="true" className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-primary-ink/10 text-primary-ink">
+      <span className="text-xs font-medium uppercase">{WEEKDAYS[new Date(year, month - 1, day).getDay()]}</span>
+      <span className="text-xl font-semibold leading-none">{day}</span>
+      <span className="text-xs">{MONTHS[month - 1]}</span>
     </div>
   );
 }
@@ -269,36 +34,260 @@ export default function AppointmentDetails() {
 // Diagnosis, medicines and follow-up from the doctor's consultation
 function ConsultationSummary({ consultation }) {
   const [open, setOpen] = useState(false);
+  const extras = consultation.medicines.length > 0 || consultation.symptoms || consultation.notes;
   return (
-    <div className="mt-3 p-3 rounded-lg bg-white/70 dark:bg-[#0a1124] border border-green-200 dark:border-[#233565]">
-      <p><strong>Diagnosis:</strong> {consultation.diagnosis}</p>
+    <div className="mt-4 rounded-lg bg-surface-2 p-4 text-sm">
+      <p>
+        <span className="font-medium">Diagnosis:</span> {consultation.diagnosis}
+      </p>
       {consultation.followUpDate && (
-        <p><strong>Follow-up:</strong> {consultation.followUpDate}</p>
+        <p className="mt-1">
+          <span className="font-medium">Follow-up:</span> {formatDate(consultation.followUpDate, true)}
+        </p>
       )}
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="text-sm text-blue-700 dark:text-[#50d4f2] mt-1"
-      >
-        {open ? "Hide details" : `Show details (${consultation.medicines.length} medicines)`}
-      </button>
+      {extras && (
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+          className="mt-2 inline-flex items-center gap-1 font-medium text-primary-ink hover:underline"
+        >
+          <ChevronRight size={16} aria-hidden="true" className={`transition-transform ${open ? "rotate-90" : ""}`} />
+          {open ? "Hide the details" : `The doctor's notes (${consultation.medicines.length} medicines)`}
+        </button>
+      )}
       {open && (
-        <div className="text-sm mt-2 space-y-1">
-          {consultation.symptoms && <p><strong>Symptoms:</strong> {consultation.symptoms}</p>}
+        <div className="mt-3 space-y-2">
+          {consultation.symptoms && (
+            <p>
+              <span className="font-medium">Symptoms:</span> {consultation.symptoms}
+            </p>
+          )}
           {consultation.medicines.length > 0 && (
-            <ul className="list-disc ml-5">
+            <ul className="list-disc space-y-1 pl-5">
               {consultation.medicines.map((m, i) => (
                 <li key={i}>
-                  <strong>{m.medicineName}</strong>
+                  <span className="font-medium">{m.medicineName}</span>
                   {[m.dosage, m.frequency, m.duration, m.instructions].filter(Boolean).length > 0 &&
                     ` — ${[m.dosage, m.frequency, m.duration, m.instructions].filter(Boolean).join(", ")}`}
                 </li>
               ))}
             </ul>
           )}
-          {consultation.notes && <p><strong>Advice:</strong> {consultation.notes}</p>}
+          {consultation.notes && (
+            <p>
+              <span className="font-medium">Advice:</span> {consultation.notes}
+            </p>
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+function AppointmentCard({ appointment, upcoming, consultation, onReschedule, onCancel, onBookAgain, onPrescription }) {
+  const { label, tone } = visitStatus(appointment);
+  return (
+    <article aria-label={`${formatDate(appointment.date, true)} with Dr. ${appointment.doctorName}`} className="rounded-2xl border border-line bg-surface p-5 shadow-card">
+      <div className="flex gap-4">
+        <DateBlock date={appointment.date} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="font-semibold">Dr. {appointment.doctorName || "—"}</p>
+              <p className="text-sm text-ink-muted">
+                {timeRange(appointment)} · for {appointment.patientName}
+              </p>
+            </div>
+            <Badge tone={tone}>{label}</Badge>
+          </div>
+          {appointment.message && <p className="mt-2 text-sm text-ink-muted">“{appointment.message}”</p>}
+        </div>
+      </div>
+
+      {consultation && <ConsultationSummary consultation={consultation} />}
+
+      <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-line pt-4">
+        {upcoming ? (
+          <>
+            <Button size="sm" variant="danger-ghost" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button size="sm" variant="secondary" onClick={onReschedule}>
+              Reschedule
+            </Button>
+          </>
+        ) : (
+          <>
+            {consultation && (
+              <Button size="sm" variant="secondary" onClick={onPrescription}>
+                <FileDown size={16} aria-hidden="true" />
+                Prescription
+              </Button>
+            )}
+            <Button size="sm" onClick={onBookAgain}>
+              Book again
+            </Button>
+          </>
+        )}
+      </div>
+    </article>
+  );
+}
+
+export default function AppointmentDetails() {
+  const navigate = useNavigate();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [appointments, setAppointments] = useState(null);
+  const [error, setError] = useState("");
+  // Consultation notes by appointment id (only completed visits have one)
+  const [consultations, setConsultations] = useState({});
+  const [tab, setTab] = useState("upcoming");
+
+  const load = useCallback(async () => {
+    setError("");
+    setAppointments(null);
+    try {
+      const response = await appointmentsApi.getMyAppointments();
+      setAppointments(response.data);
+      try {
+        const history = await getMyHistory();
+        setConsultations(Object.fromEntries(history.data.map((c) => [c.appointmentId, c])));
+      } catch {
+        setConsultations({});
+      }
+    } catch (err) {
+      setError(getErrorMessage(err, "Could not load your appointments."));
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const cancel = async (appointment) => {
+    const ok = await confirm({
+      title: "Cancel this appointment?",
+      message: `${formatDate(appointment.date, true)}, ${timeRange(appointment)} with Dr. ${appointment.doctorName}. The time is freed for someone else.`,
+      confirmLabel: "Cancel appointment",
+      cancelLabel: "Keep it",
+      tone: "danger",
+    });
+    if (!ok) return;
+    try {
+      const response = await appointmentsApi.cancelAppointment(appointment.appointmentID);
+      // The appointment stays in the history with a "Cancelled" status
+      setAppointments((prev) => prev.map((a) => (a.appointmentID === appointment.appointmentID ? { ...a, status: "CANCELLED_BY_PATIENT" } : a)));
+      toast.success(typeof response.data === "string" && response.data ? response.data : "Appointment cancelled.");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to cancel the appointment. Please try again."));
+    }
+  };
+
+  const today = toLocalISODate();
+  const upcoming = (appointments ?? []).filter((a) => isUpcoming(a, today)).sort((a, b) => when(a).localeCompare(when(b)));
+  const past = (appointments ?? []).filter((a) => !isUpcoming(a, today)).sort((a, b) => when(b).localeCompare(when(a)));
+  const shown = tab === "upcoming" ? upcoming : past;
+
+  return (
+    <PublicPage>
+      <PageIntro
+        eyebrow="My appointments"
+        title="Your appointments"
+        actions={
+          <Button as={Link} to="/appointments" size="lg">
+            <CalendarPlus size={18} aria-hidden="true" />
+            Book an appointment
+          </Button>
+        }
+      >
+        Move or cancel an upcoming visit, or see the doctor's notes and prescription of a past one.
+      </PageIntro>
+
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="max-w-4xl">
+        <div role="group" aria-label="Which appointments" className="mb-6 inline-flex rounded-lg border border-line bg-surface p-1 shadow-card">
+          {[
+            ["upcoming", "Upcoming", upcoming.length],
+            ["past", "Past", past.length],
+          ].map(([value, label, count]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={tab === value}
+              onClick={() => setTab(value)}
+              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                tab === value ? "bg-primary text-white" : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              {label}
+              {appointments && ` (${count})`}
+            </button>
+          ))}
+        </div>
+
+        {!appointments && !error && (
+          <div aria-busy="true" className="space-y-4">
+            <span className="sr-only">Loading your appointments...</span>
+            {[0, 1].map((i) => (
+              <div key={i} aria-hidden="true" className="h-36 animate-pulse rounded-2xl border border-line bg-surface" />
+            ))}
+          </div>
+        )}
+
+        {error && (
+          <Card padding="none">
+            <EmptyState
+              icon={WifiOff}
+              title="We couldn't load your appointments"
+              action={
+                <Button variant="secondary" onClick={load}>
+                  Try again
+                </Button>
+              }
+            >
+              {error}
+            </EmptyState>
+          </Card>
+        )}
+
+        {appointments && shown.length === 0 && (
+          <Card padding="none">
+            <EmptyState
+              icon={CalendarPlus}
+              title={tab === "upcoming" ? "No upcoming appointments" : "No past appointments yet"}
+              action={
+                tab === "upcoming" && (
+                  <Button as={Link} to="/appointments">
+                    Book an appointment
+                  </Button>
+                )
+              }
+            >
+              {tab === "upcoming" ? "Book a visit and it will show here." : "Visits you've had will show here with the doctor's notes."}
+            </EmptyState>
+          </Card>
+        )}
+
+        {shown.length > 0 && (
+          <div className="space-y-4">
+            {shown.map((appointment) => (
+              <AppointmentCard
+                key={appointment.appointmentID}
+                appointment={appointment}
+                upcoming={tab === "upcoming"}
+                consultation={consultations[appointment.appointmentID]}
+                onCancel={() => cancel(appointment)}
+                onReschedule={() => navigate("/appointments", { state: { rescheduleAppointment: appointment } })}
+                onBookAgain={() => navigate("/appointments", { state: { doctorName: appointment.doctorName, doctorId: appointment.doctorId } })}
+                onPrescription={() => downloadPrescription(appointment.appointmentID, toast.error)}
+              />
+            ))}
+          </div>
+        )}
+        </div>
+      </div>
+    </PublicPage>
   );
 }
