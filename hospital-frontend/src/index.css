@@ -63,3 +63,17 @@
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
+
+/* Dialogs come in with a short fade and lift; nothing moves for people who ask for reduced motion */
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .animate-dialog-in { animation: dialog-in 180ms ease-out; }
+  .animate-backdrop-in { animation: backdrop-in 180ms ease-out; }
+}

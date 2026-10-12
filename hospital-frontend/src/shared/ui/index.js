@@ -9,5 +9,7 @@ export { default as Pagination } from "./Pagination";
 export { default as Notice } from "./Notice";
 export { default as EmptyState } from "./EmptyState";
 export { default as Modal } from "./Modal";
+export { default as Reveal } from "./Reveal";
+export { default as ThemeButton } from "./ThemeButton";
 export { ToastProvider, useToast } from "./Toast";
 export { ConfirmProvider, useConfirm } from "./ConfirmDialog";

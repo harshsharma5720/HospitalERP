@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../../shared/Navbar";
-import TopNavbar from "../../shared/TopNavbar";
+import PublicHeader from "../../shared/layout/PublicHeader";
 import PopupForm from "../../shared/PopupForm";
 import Lottie from "lottie-react";
 import doctorAnimation from "./Doctor.json";
@@ -76,8 +75,7 @@ export default function DoctorPage() {
       </div>
 
       <div className="relative z-10">
-        <TopNavbar />
-        <Navbar />
+        <PublicHeader />
 
         {/* Header */}
         <div className="text-center mt-10">

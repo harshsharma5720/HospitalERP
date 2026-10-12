@@ -1,395 +1,332 @@
 import React, { useEffect, useState } from "react";
-import Navbar from "../../shared/Navbar";
-import TopNavbar from "../../shared/TopNavbar";
+import { Link } from "react-router-dom";
+import {
+  ArrowRight, Baby, Bone, Brain, CalendarCheck, CheckCircle2, Clock, FileText, HeartPulse, ListOrdered, MapPin, Phone,
+  Smile, Sparkles, UserPlus,
+} from "lucide-react";
+import PublicHeader from "../../shared/layout/PublicHeader";
 import PopupForm from "../../shared/PopupForm";
-import { useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
-import ScrollAnimate from "../../shared/utils/ScrollAnimate";
-import useAuthStore from "../auth/useAuthStore";
+import { API_BASE_URL } from "../../app/config";
+import { HOSPITAL, directionsHref, phoneHref } from "../../shared/hospitalInfo";
+import { Button, Reveal } from "../../shared/ui";
+import { getAllDoctors } from "../doctors/api";
+import { specialityLabel } from "../appointments/appointmentFormat";
+
+// The public landing page (docs/UI_REFRESH_PLAN.md, U.6): what the hospital offers, real doctors and specialities
+// from the public directory, how a visit works, and how to reach the hospital. Sections fade in as they scroll
+// into view (not for people who ask for reduced motion).
+
+const SPECIALITIES = [
+  { key: "CARDIOLOGY", icon: HeartPulse, text: "Heart health, from check-ups to cardiac care." },
+  { key: "NEUROLOGY", icon: Brain, text: "Brain, spine and nerve conditions." },
+  { key: "ORTHOPEDICS", icon: Bone, text: "Bones, joints and sports injuries." },
+  { key: "PEDIATRICS", icon: Baby, text: "Care for babies, children and teenagers." },
+  { key: "DERMATOLOGY", icon: Sparkles, text: "Skin, hair and nail conditions." },
+  { key: "DENTISTRY", icon: Smile, text: "Check-ups, fillings and dental care." },
+];
+
+const STEPS = [
+  { icon: UserPlus, title: "Register", text: "Create an account online, or simply walk in: the front desk registers you." },
+  { icon: CalendarCheck, title: "Book a time", text: "Choose a doctor and a free slot; an SMS confirms the booking." },
+  { icon: ListOrdered, title: "Check in", text: "At the front desk you get a token, and the waiting-room screen shows your turn." },
+  { icon: FileText, title: "See the doctor", text: "After the visit your prescription is ready to download." },
+];
+
+const DOCTORS_SHOWN = 4;
+
+const initials = (name) =>
+  (name || "?")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join("");
+
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+function SectionHeading({ eyebrow, title, children, center = false }) {
+  return (
+    <Reveal className={`max-w-2xl ${center ? "mx-auto text-center" : ""}`}>
+      {eyebrow && <p className="text-sm font-semibold uppercase tracking-wide text-primary-ink">{eyebrow}</p>}
+      <h2 className="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{title}</h2>
+      {children && <p className="mt-3 text-lg text-ink-muted">{children}</p>}
+    </Reveal>
+  );
+}
 
 export default function HomePage() {
-  const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState("");
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  const checkLoginStatus = () => {
-    const token = localStorage.getItem("jwtToken");
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        setIsLoggedIn(true);
-        setUsername(payload.sub || "User");
-      } catch {
-        setIsLoggedIn(false);
-      }
-    } else {
-      setIsLoggedIn(false);
-    }
-  };
+  const [doctors, setDoctors] = useState(null); // null: loading or not available
 
   useEffect(() => {
-    checkLoginStatus();
-    const handleStorageChange = () => checkLoginStatus();
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
-
-  useEffect(() => {
-    const html = document.documentElement;
-
-    const updateTheme = () => {
-      setIsDarkMode(html.classList.contains("dark"));
+    let current = true;
+    getAllDoctors()
+      .then((response) => current && setDoctors((response.data || []).filter((d) => d.active !== false)))
+      .catch(() => current && setDoctors(null));
+    return () => {
+      current = false;
     };
-
-    // Check initial
-    updateTheme();
-
-    // Listen for changes (whenever toggle button switches)
-    const observer = new MutationObserver(updateTheme);
-    observer.observe(html, { attributes: true, attributeFilter: ["class"] });
-
-    return () => observer.disconnect();
   }, []);
 
-  const handleLogout = () => {
-    useAuthStore.getState().logout(); // clears token + role everywhere
-    setIsLoggedIn(false);
-    navigate("/login");
-    window.dispatchEvent(new Event("storage"));
-  };
+  const perSpeciality = (key) => (doctors ?? []).filter((d) => d.specialist === key).length;
+  const specialityCount = new Set((doctors ?? []).map((d) => d.specialist).filter((s) => s && s !== "NOT_ASSIGNED")).size;
+  const facts = [
+    doctors?.length ? [String(doctors.length), doctors.length === 1 ? "doctor" : "doctors"] : null,
+    specialityCount ? [String(specialityCount), specialityCount === 1 ? "speciality" : "specialities"] : null,
+    ["24×7", "care, every day"],
+    ["SMS", "booking confirmations"],
+  ].filter(Boolean);
 
   return (
-    <div
-      className="
-        min-h-screen
-        bg-gray-50 dark:bg-[#0a1124]
-        text-gray-900 dark:text-gray-200
-        relative overflow-hidden
-        transition-colors duration-300
-      "
-    >
-      <TopNavbar />
-      <Navbar />
+    <div className="min-h-screen bg-canvas text-ink">
+      <PublicHeader />
 
-      {/* HERO SECTION */}
-      <div
-        className="relative grid grid-cols-1 md:grid-cols-2 gap-10 px-10 py-12"
-        style={{
-          backgroundImage: isDarkMode
-                ? "url('/doctor_black_theam.jpg')"
-                : "url('/doctors-image3.jpg')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          height: "600px",
-        }}
-      >
-        {/* Bottom gradient overlay */}
-        <div
-          className="
-            absolute bottom-0 left-0 w-full h-40
-            bg-gradient-to-t
-            from-white dark:from-[#0a1124]
-            to-transparent
-            z-10 pointer-events-none
-          "
-        ></div>
-
-        {/* Left Hero Card */}
-        <div
-          className="
-            relative z-20 w-[700px] p-4
-            border-2 border-[#1E63DB]
-            rounded-xl space-y-8
-            bg-white/20 dark:bg-[#111a3b]/40
-            backdrop-blur-md
-            transition
-          "
-        >
-         <ScrollAnimate>
-          <h2 className="text-5xl font-extrabold mb-4">
-                To Book {" "}
-                <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
-                  An Appointment
-                </span>
-          </h2>
-
-          <div className="w-80 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full"></div>
-
-           <p className="mt-4 text-lg mb-4 dark:text-gray-300">
-            📞 <span className="font-semibold">Call Us:</span> +91 92895 20303
-           </p>
-          </ScrollAnimate>
-
-          <button
-            onClick={() => navigate("/appointments")}
-            className="
-              bg-gradient-to-br
-              from-[#1E63DB] to-[#27496d]
-              dark:from-[#50d4f2] dark:to-[#3bc2df]
-              dark:text-black
-              text-white px-4 py-2 rounded-lg shadow
-              hover:opacity-90 transition
-            "
-          >
-            Book Appointment
-          </button>
-
-          {/* WHY SECTION CARD */}
-          <div
-            className="
-              w-[600px] mx-auto border-2 border-[#1E63DB]
-              rounded-xl p-6 shadow-md
-              bg-white/30 dark:bg-[#16224a]/50
-              backdrop-blur-md
-              hover:-translate-y-2 hover:shadow-2xl transition
-            "
-          >
-            <h3 className="text-xl font-semibold text-[#1E63DB] dark:text-[#50d4f2] mb-3">
-              Why Shreya-Hospital Healthcare?
-            </h3>
-
-            <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
-              <li>Trusted healthcare provider with years of experience.</li>
-              <li>Qualified and compassionate team of doctors & staff.</li>
-              <li>Modern patient-focused facilities.</li>
-              <li>Affordable, advanced medical equipment.</li>
-              <li>Easy and fast appointment booking.</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* TRUSTED HEALTH PARTNER */}
-      <section
-        className="
-          text-center py-16
-          bg-gradient-to-b from-white to-[#f8fbff]
-          dark:from-[#0a1330] dark:to-[#0a1124]
-          transition
-        "
-      >
-        <ScrollAnimate>
-          <div
-            className="
-                inline-block
-                bg-blue-100 dark:bg-[#16224a]
-                text-blue-700 dark:text-[#50d4f2]
-                font-medium px-4 py-1 rounded-full mb-4 shadow-sm
-                "
-            >
-              Welcome to Modern Healthcare
-          </div>
-        </ScrollAnimate>
-
-
-
-
-        <ScrollAnimate>
-          <h1 className="text-5xl font-extrabold mb-4">
-                    Your Trusted{" "}
-                    <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
-                      Health Partner
-                    </span>
-          </h1>
-        </ScrollAnimate>
-
-        <ScrollAnimate>
-          <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl mx-auto mb-8">
-                    <b>Professional Hospital Management System</b> designed for seamless patient care,
-                    efficient appointment scheduling, real-time medical records, and modern healthcare services.
-                    Empowering hospitals with <b>faster workflows, improved doctor–patient communication,
-                    and a secure, intuitive platform for better decision-making.</b>
-          </p>
-        </ScrollAnimate>
-
-
-
-        <div className="flex justify-center gap-6">
-          {!isLoggedIn ? (
-            <>
-              <button
-                onClick={() => navigate("/login")}
-                className="
-                  bg-gradient-to-r from-blue-600 to-cyan-500
-                  dark:from-[#50d4f2] dark:to-[#3bc2df]
-                  dark:text-black
-                  text-white px-6 py-2 rounded-md shadow hover:opacity-90 transition
-                "
-              >
-                Sign In →
-              </button>
-
-              <button
-                onClick={() => navigate("/register")}
-                className="
-                  border border-gray-300 dark:border-gray-500
-                  px-6 py-2 rounded-md
-                  text-gray-700 dark:text-gray-300
-                  hover:bg-gray-100 dark:hover:bg-[#111a3b]
-                  transition shadow-sm
-                "
-              >
-                Create Account
-              </button>
-            </>
-          ) : (
-            <>
-              <span className="text-black dark:text-white font-semibold">
-                {username}
-              </span>
-
-              <button
-                onClick={handleLogout}
-                className="
-                  flex items-center gap-2 px-4 py-2 rounded-xl
-                  bg-[#1E63DB] dark:bg-[#50d4f2]
-                  text-white dark:text-black
-                  shadow-lg hover:opacity-90 transition
-                "
-              >
-                <LogOut size={20} /> Logout
-              </button>
-            </>
-          )}
-        </div>
-      </section>
-      <section className="py-10 bg-white dark:bg-[#0a1124] transition">
-        <div className="max-w-7xl mx-auto flex justify-between items-center px-4 md:px-10">
-
-          {/* Facilities */}
-          <div className="px-5 flex-1 text-center">
-            <h2 className="text-4xl font-extrabold text-blue-600 dark:text-[#50d4f2]">70</h2>
-            <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">Facilities</p>
-            <p className="text-gray-500 dark:text-gray-400 text-base">Multi-specialty hospitals and clinics</p>
-          </div>
-
-          {/* Thin Vertical Line */}
-          <div className="hidden md:block h-16 w-[0.5px] bg-gray-300 dark:bg-gray-600"></div>
-
-          {/* Staff */}
-          <div className="px-5 flex-1 text-center">
-            <h2 className="text-4xl font-extrabold text-blue-600 dark:text-[#50d4f2]">5,300+</h2>
-            <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">Allied & Nursing Staff</p>
-            <p className="text-gray-500 dark:text-gray-400 text-base">Compassionate care and rehabilitation</p>
-          </div>
-
-          {/* Thin Vertical Line */}
-          <div className="hidden md:block h-16 w-[0.5px] bg-gray-300 dark:bg-gray-600"></div>
-
-          {/* Doctors */}
-          <div className="px-5 flex-1 text-center">
-            <h2 className="text-4xl font-extrabold text-blue-600 dark:text-[#50d4f2]">1,700+</h2>
-            <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">Doctors</p>
-            <p className="text-gray-500 dark:text-gray-400 text-base">Providing personalised care that matters</p>
-          </div>
-
-          {/* Thin Vertical Line */}
-          <div className="hidden md:block h-16 w-[0.5px] bg-gray-300 dark:bg-gray-600"></div>
-
-          {/* Patients */}
-          <div className="px-5 flex-1 text-center">
-            <h2 className="text-4xl font-extrabold text-blue-600 dark:text-[#50d4f2]">5.3 Million</h2>
-            <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">Patients</p>
-            <p className="text-gray-500 dark:text-gray-400 text-base">Treated every year</p>
-          </div>
-
-        </div>
-      </section>
-
-
-      {/* BANNER */}
-      <ScrollAnimate>
-       <section className="relative mx-10 my-10 rounded-2xl overflow-hidden shadow-lg">
-               <div
-                 className="
-                   relative text-white text-center py-12 px-6
-                   bg-gradient-to-r from-[#1E63DB] to-[#27496d]
-                   dark:from-[#111a3b] dark:to-[#0a1330]
-                 "
-               >
-                 <div className="relative z-10 flex flex-col md:flex-row items-center justify-center gap-6">
-                   <div className="text-3xl md:text-4xl font-extrabold tracking-wide">
-                     SHREYA HOSPITAL
-                   </div>
-
-                   <div className="hidden md:block w-[2px] h-10 bg-white/50"></div>
-
-                   <div className="text-2xl md:text-3xl font-semibold text-yellow-300 dark:text-yellow-400">
-                     Advanced Care. Modern Equipment. Trusted Hands.
-                   </div>
-                 </div>
-               </div>
-       </section>
-      </ScrollAnimate>
-
-
-      {/* HOSPITALS & CLINICS */}
-      <section className="py-16 bg-white dark:bg-[#0a1124] text-center transition">
-        <ScrollAnimate>
-          <h2 className="text-5xl font-extrabold mb-10">
-             <span className="text-black dark:text-white">Featured </span>
-             <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
-                      Hospitals & Clinics
-             </span>
-          </h2>
-
-          <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl mx-auto mb-12">
-             Delivering compassionate care through our trusted network of hospitals,
-             clinics, pharmacies, and nursing centers.
-          </p>
-        </ScrollAnimate>
-
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 px-10">
-          {[
-            {
-              img: "https://mir-s3-cdn-cf.behance.net/project_modules/1400_webp/67718f100399635.5f07f485280c4.jpg",
-              name: "Shreya's Doctors",
-            },
-            {
-              img: "https://i.pinimg.com/236x/13/d4/82/13d482936ab5d4a6172137d175366303.jpg",
-              name: "Shreya's Clinics",
-            },
-            {
-              img: "https://png.pngtree.com/thumb_back/fw800/background/20250813/pngtree-a-modern-hospital-building-with-sleek-glass-and-steel-facade-image_17907375.webp",
-              name: "Shreya Pharmacy",
-            },
-            {
-              img: "https://manage.nakshewala.com/assets/files/40x100sqft_Hospital_Front_elevation_L_63eb1ed19eb49.webp",
-              name: "Shreya's Nursing",
-            },
-          ].map((item, index) => (
-            <div
-              key={index}
-              className="relative overflow-hidden rounded-2xl shadow-lg group transition"
-            >
-              <img
-                src={item.img}
-                alt={item.name}
-                className="
-                  w-full h-[400px] object-cover
-                  filter grayscale group-hover:grayscale-0
-                  transition-all duration-700 ease-in-out
-                  transform group-hover:scale-105
-                "
-              />
-              <div
-                className="
-                  absolute inset-0 bg-black/30
-                  opacity-0 group-hover:opacity-100
-                  flex items-end justify-center
-                  transition
-                "
-              >
-                <h3 className="text-white text-lg font-semibold mb-4">
-                  {item.name}
-                </h3>
+      <main>
+        {/* ================= HERO ================= */}
+        <section className="relative overflow-hidden">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary-ink/[0.07] to-transparent" />
+          <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 pb-20 pt-12 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:pb-28 lg:pt-20">
+            <Reveal>
+              <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-sm font-medium text-ink-muted shadow-card">
+                <Clock size={14} aria-hidden="true" className="text-success-ink" />
+                {HOSPITAL.hours} · {HOSPITAL.area}
+              </p>
+              <h1 className="mt-6 text-4xl font-semibold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+                Specialist care, <span className="text-primary-ink">booked in a minute.</span>
+              </h1>
+              <p className="mt-5 max-w-xl text-lg leading-relaxed text-ink-muted">
+                See the right specialist at {HOSPITAL.name}. Book online, get an SMS confirmation, and follow your turn
+                on the waiting-room screen when you arrive.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Button as={Link} to="/appointments" size="lg">
+                  Book an appointment
+                  <ArrowRight size={18} aria-hidden="true" />
+                </Button>
+                <Button as={Link} to="/doctors" size="lg" variant="secondary">
+                  Find a doctor
+                </Button>
               </div>
+              <p className="mt-6 text-sm text-ink-muted">
+                Prefer to call?{" "}
+                <a href={phoneHref} className="font-medium text-ink hover:text-primary-ink">
+                  {HOSPITAL.phone}
+                </a>
+              </p>
+            </Reveal>
+
+            <Reveal delay={0.15} className="relative mx-auto w-full max-w-xl lg:max-w-none">
+              <div aria-hidden="true" className="absolute -inset-6 rounded-[2.5rem] bg-primary-ink/10 blur-3xl" />
+              <img
+                src="/Treatments-pediatrics.jpg"
+                alt="A doctor listening to a baby's heartbeat with a stethoscope"
+                className="relative aspect-[4/3] w-full rounded-3xl object-cover shadow-overlay"
+              />
+              <Reveal
+                delay={0.45}
+                className="absolute -bottom-6 left-4 flex items-center gap-3 rounded-xl border border-line bg-surface p-4 shadow-overlay sm:-left-6"
+              >
+                <span className="rounded-full bg-success-ink/10 p-2 text-success-ink">
+                  <CheckCircle2 size={20} aria-hidden="true" />
+                </span>
+                <span className="text-sm">
+                  <span className="block font-semibold">Appointment confirmed</span>
+                  <span className="text-ink-muted">SMS sent to your phone</span>
+                </span>
+              </Reveal>
+              <Reveal
+                delay={0.6}
+                className="absolute -top-5 right-4 hidden items-center gap-3 rounded-xl border border-line bg-surface p-3 shadow-overlay sm:flex sm:-right-6"
+              >
+                <span className="rounded-lg bg-primary p-2 text-white">
+                  <ListOrdered size={18} aria-hidden="true" />
+                </span>
+                <span className="text-sm">
+                  <span className="block font-semibold">Live queue</span>
+                  <span className="text-ink-muted">Your token on the screen</span>
+                </span>
+              </Reveal>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* ================= FACTS (from the doctors' directory) ================= */}
+        <section aria-label="At a glance" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <Reveal className={`grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line shadow-card ${facts.length === 4 ? "lg:grid-cols-4" : ""}`}>
+            {facts.map(([value, label]) => (
+              <div key={label} className="bg-surface px-6 py-6 text-center">
+                <p className="text-3xl font-semibold tracking-tight text-ink">{value}</p>
+                <p className="mt-1 text-sm text-ink-muted">{label}</p>
+              </div>
+            ))}
+          </Reveal>
+        </section>
+
+        {/* ================= SPECIALITIES ================= */}
+        <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+          <SectionHeading eyebrow="Specialities" title="Care across the departments you need">
+            Experienced doctors in each department, with appointments you can book online.
+          </SectionHeading>
+          <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {SPECIALITIES.map(({ key, icon: Icon, text }, i) => {
+              const count = perSpeciality(key);
+              return (
+                <Reveal as="li" key={key} delay={(i % 3) * 0.08}>
+                  <Link
+                    to="/doctors"
+                    className="group flex h-full flex-col rounded-2xl border border-line bg-surface p-6 shadow-card transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  >
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-ink/10 text-primary-ink">
+                      <Icon size={22} aria-hidden="true" />
+                    </span>
+                    <span className="mt-5 text-lg font-semibold text-ink">{specialityLabel(key)}</span>
+                    <span className="mt-1.5 flex-1 text-sm text-ink-muted">{text}</span>
+                    <span className="mt-5 flex items-center gap-1.5 text-sm font-medium text-primary-ink">
+                      {count > 0 ? plural(count, "doctor") : "See doctors"}
+                      <ArrowRight size={16} aria-hidden="true" className="transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                  </Link>
+                </Reveal>
+              );
+            })}
+          </ul>
+        </section>
+
+        {/* ================= HOW IT WORKS ================= */}
+        <section className="border-y border-line bg-surface">
+          <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-24">
+            <SectionHeading eyebrow="Your visit" title="Simple from booking to prescription" center />
+            <ol className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+              {STEPS.map(({ icon: Icon, title, text }, i) => (
+                <Reveal as="li" key={title} delay={i * 0.1}>
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-white">
+                      <Icon size={20} aria-hidden="true" />
+                    </span>
+                    <span className="text-sm font-semibold text-ink-muted">Step {i + 1}</span>
+                  </div>
+                  <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">{text}</p>
+                </Reveal>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* ================= DOCTORS ================= */}
+        {doctors?.length > 0 && (
+          <section aria-labelledby="home-doctors" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <Reveal>
+                <p className="text-sm font-semibold uppercase tracking-wide text-primary-ink">Our doctors</p>
+                <h2 id="home-doctors" className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+                  Meet some of our doctors
+                </h2>
+              </Reveal>
+              <Button as={Link} to="/doctors" variant="secondary">
+                All doctors
+                <ArrowRight size={16} aria-hidden="true" />
+              </Button>
             </div>
-          ))}
-        </div>
-      </section>
+            <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {doctors.slice(0, DOCTORS_SHOWN).map((doctor, i) => (
+                <Reveal
+                  as="li"
+                  key={doctor.id}
+                  delay={i * 0.08}
+                  className="flex flex-col items-center rounded-2xl border border-line bg-surface p-6 text-center shadow-card"
+                >
+                  {doctor.profileImage ? (
+                    <img src={`${API_BASE_URL}${doctor.profileImage}`} alt="" className="h-20 w-20 rounded-full object-cover ring-4 ring-primary-ink/10" />
+                  ) : (
+                    <span aria-hidden="true" className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-ink/10 text-xl font-semibold text-primary-ink">
+                      {initials(doctor.name)}
+                    </span>
+                  )}
+                  <h3 className="mt-4 font-semibold">Dr. {doctor.name}</h3>
+                  <p className="text-sm text-ink-muted">{specialityLabel(doctor.specialist) || "General"}</p>
+                  <Button
+                    as={Link}
+                    to={`/doctor-profile/${doctor.id}`}
+                    variant="secondary"
+                    size="sm"
+                    className="mt-5"
+                    aria-label={`View profile of Dr. ${doctor.name}`}
+                  >
+                    View profile
+                  </Button>
+                </Reveal>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* ================= VISIT US ================= */}
+        <section
+          aria-labelledby="home-visit"
+          className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${doctors?.length > 0 ? "pb-20 lg:pb-28" : "py-20 lg:py-28"}`}
+        >
+          <div className="grid items-center gap-10 overflow-hidden rounded-3xl border border-line bg-surface p-6 shadow-card sm:p-10 lg:grid-cols-2">
+            <Reveal>
+              <img src="/shreya.jpg" alt={`The entrance of ${HOSPITAL.name}`} className="aspect-[4/3] w-full max-w-lg rounded-2xl object-cover" />
+            </Reveal>
+            <Reveal delay={0.1}>
+              <p className="text-sm font-semibold uppercase tracking-wide text-primary-ink">Visit us</p>
+              <h2 id="home-visit" className="mt-2 text-3xl font-semibold tracking-tight">
+                {HOSPITAL.name}, {HOSPITAL.area}
+              </h2>
+              <ul className="mt-6 space-y-4 text-ink-muted">
+                <li className="flex gap-3">
+                  <MapPin size={20} aria-hidden="true" className="mt-0.5 shrink-0 text-primary-ink" />
+                  {HOSPITAL.address}
+                </li>
+                <li className="flex gap-3">
+                  <Phone size={20} aria-hidden="true" className="mt-0.5 shrink-0 text-primary-ink" />
+                  <a href={phoneHref} className="font-medium text-ink hover:text-primary-ink">
+                    {HOSPITAL.phone}
+                  </a>
+                </li>
+                <li className="flex gap-3">
+                  <Clock size={20} aria-hidden="true" className="mt-0.5 shrink-0 text-primary-ink" />
+                  {HOSPITAL.hours}
+                </li>
+              </ul>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Button as="a" href={directionsHref} target="_blank" rel="noreferrer">
+                  Get directions<span className="sr-only"> (opens in a new tab)</span>
+                </Button>
+                <Button as={Link} to="/contact" variant="secondary">
+                  Contact us
+                </Button>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* ================= CALL TO ACTION ================= */}
+        <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8 lg:pb-28">
+          <Reveal className="relative overflow-hidden rounded-3xl bg-primary px-6 py-14 text-center text-white shadow-overlay sm:px-12">
+            <div aria-hidden="true" className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10" />
+            <div aria-hidden="true" className="absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-white/10" />
+            <h2 className="relative text-3xl font-semibold tracking-tight sm:text-4xl">Ready to see a doctor?</h2>
+            <p className="relative mx-auto mt-3 max-w-xl text-lg text-white">Book online in a minute, or call us any time of day.</p>
+            <div className="relative mt-8 flex flex-wrap justify-center gap-3">
+              <Link
+                to="/appointments"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-5 font-medium text-primary shadow-sm transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              >
+                Book an appointment
+              </Link>
+              <a
+                href={phoneHref}
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-white/40 px-5 font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              >
+                <Phone size={18} aria-hidden="true" />
+                Call {HOSPITAL.phone}
+              </a>
+            </div>
+          </Reveal>
+        </section>
+      </main>
 
       <PopupForm />
     </div>

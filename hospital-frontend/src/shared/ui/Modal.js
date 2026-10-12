@@ -16,7 +16,7 @@ export default function Modal({ title, description, onClose, size = "md", closeO
   });
 
   useEffect(() => {
-    const first = panel.current.querySelector("input, select, textarea, button:not([data-modal-close])");
+    const first = panel.current.querySelector("input, select, textarea, a[href], button:not([data-modal-close])");
     (first ?? panel.current).focus();
     const onKey = (e) => {
       if (e.key === "Escape") close.current();
@@ -32,7 +32,7 @@ export default function Modal({ title, description, onClose, size = "md", closeO
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 dark:bg-black/60 sm:items-center"
+      className="animate-backdrop-in fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 dark:bg-black/60 sm:items-center"
       onMouseDown={(e) => {
         if (closeOnBackdrop && e.target === e.currentTarget) close.current();
       }}
@@ -44,7 +44,7 @@ export default function Modal({ title, description, onClose, size = "md", closeO
         aria-modal="true"
         aria-labelledby={`${id}-title`}
         aria-describedby={description ? `${id}-description` : undefined}
-        className={`my-8 w-full ${SIZES[size] ?? SIZES.md} rounded-xl border border-line bg-surface text-ink shadow-overlay focus:outline-none`}
+        className={`animate-dialog-in my-8 w-full ${SIZES[size] ?? SIZES.md} rounded-xl border border-line bg-surface text-ink shadow-overlay focus:outline-none`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
           <div className="min-w-0">

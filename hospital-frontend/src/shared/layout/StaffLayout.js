@@ -1,12 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { ExternalLink, HeartPulse, LogOut, Menu, Moon, Sun, X } from "lucide-react";
+import { ExternalLink, HeartPulse, LogOut, Menu, X } from "lucide-react";
 import useAuthStore from "../../features/auth/useAuthStore";
-import useAppStore from "../useAppStore";
 import { hasProfile, getOwnProfile } from "../profileApi";
 import { getUsernameFromToken } from "../utils/jwtUtils";
 import { API_BASE_URL } from "../../app/config";
-import { Button } from "../ui";
+import { Button, ThemeButton } from "../ui";
 import { STAFF_MENUS, isActive } from "./staffMenus";
 
 // The staff portals' frame (docs/UI_REFRESH_PLAN.md): the logged-in role's menu on the left (a drawer on a phone)
@@ -171,18 +170,6 @@ function Drawer({ menu, pathname, onClose }) {
         <Sidebar menu={menu} pathname={pathname} onNavigate={onClose} />
       </div>
     </div>
-  );
-}
-
-function ThemeButton() {
-  const darkMode = useAppStore((s) => s.darkMode);
-  const toggleDarkMode = useAppStore((s) => s.toggleDarkMode);
-  const label = darkMode ? "Switch to light mode" : "Switch to dark mode";
-  const Icon = darkMode ? Sun : Moon;
-  return (
-    <button type="button" onClick={toggleDarkMode} aria-label={label} title={label} className={ICON_BUTTON}>
-      <Icon size={18} aria-hidden="true" />
-    </button>
   );
 }
 

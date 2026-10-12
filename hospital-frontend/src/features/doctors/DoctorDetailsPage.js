@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import Navbar from "../../shared/Navbar";
-import TopNavbar from "../../shared/TopNavbar";
+import PublicHeader from "../../shared/layout/PublicHeader";
 import Lottie from "lottie-react";
 import doctorAnimation from "./Doctor.json";
 import { getPublicDoctor } from "./api";
@@ -63,8 +62,7 @@ export default function DoctorDetailsPage() {
 
       {/* Foreground Content */}
       <div className="relative z-10">
-        <TopNavbar />
-        <Navbar />
+        <PublicHeader />
 
         {/* Profile Section */}
         <div className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] max-w-5xl mx-auto mt-10 bg-white dark:bg-[#111a3b] rounded-2xl shadow-2xl p-8 flex flex-col md:flex-row items-center md:items-start gap-10">

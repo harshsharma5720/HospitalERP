@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import Navbar from "../../shared/Navbar";
-import TopNavbar from "../../shared/TopNavbar";
+import PublicHeader from "../../shared/layout/PublicHeader";
 import ScrollAnimate from "../../shared/utils/ScrollAnimate";
 import { FaInstagram, FaFacebook, FaXTwitter, FaLinkedin, FaYoutube } from "react-icons/fa6";
 
@@ -34,8 +33,7 @@ function ContactUsPage() {
         transition-all duration-300
       "
     >
-      <TopNavbar />
-      <Navbar />
+      <PublicHeader />
 
       {/* Main Section */}
       <div

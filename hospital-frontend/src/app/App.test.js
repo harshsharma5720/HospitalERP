@@ -20,5 +20,5 @@ test("the waiting-room screen opens without a login, without the site's footer",
 
   expect(await screen.findByText("No patients in the queue right now.")).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Now serving" })).toBeInTheDocument();
-  expect(screen.queryByText("Toll Free: 8006624")).not.toBeInTheDocument();
+  expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument(); // no site footer on the TV
 });

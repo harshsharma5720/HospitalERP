@@ -42,13 +42,13 @@ function Dialog({ request, onAnswer }) {
   }, [onAnswer]);
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 dark:bg-black/60" onClick={() => onAnswer(false)}>
+    <div className="animate-backdrop-in fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 dark:bg-black/60" onClick={() => onAnswer(false)}>
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-title"
         aria-describedby={request.message ? "confirm-message" : undefined}
-        className="w-full max-w-md rounded-xl border border-line bg-surface p-6 shadow-overlay"
+        className="animate-dialog-in w-full max-w-md rounded-xl border border-line bg-surface p-6 shadow-overlay"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="confirm-title" className="text-lg font-semibold text-ink">

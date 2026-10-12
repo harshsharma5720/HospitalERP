@@ -1,6 +1,5 @@
 import React from "react";
-import Navbar from "../../shared/Navbar";
-import TopNavbar from "../../shared/TopNavbar";
+import PublicHeader from "../../shared/layout/PublicHeader";
 import { FaHeartbeat, FaHospital, FaPhoneAlt } from "react-icons/fa";
 
 export default function AboutUs() {
@@ -18,8 +17,7 @@ export default function AboutUs() {
     >
       {/* Overlay */}
       <div className="bg-black/40 dark:bg-[#0a1330]/80 min-h-screen">
-        <TopNavbar />
-        <Navbar />
+        <PublicHeader />
 
         {/* HEADER */}
         <div className="text-center py-20">

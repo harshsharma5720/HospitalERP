@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import './App.css'; // shared keyframes (animate-scaleUp, ...) of the public pages
 import './app/setupAxios'; // global JWT header + 401 handling
 import { applyDarkMode, savedDarkMode } from './shared/theme';
 import App from './app/App';

@@ -1,6 +1,5 @@
 import React from "react";
-import Navbar from "../../shared/Navbar";
-import TopNavbar from "../../shared/TopNavbar";
+import PublicHeader from "../../shared/layout/PublicHeader";
 import ScrollAnimate from "../../shared/utils/ScrollAnimate";
 
 export default function Treatments() {
@@ -53,8 +52,7 @@ export default function Treatments() {
         relative
       "
     >
-      <TopNavbar />
-      <Navbar />
+      <PublicHeader />
 
       {/* Intro Section */}
       <div

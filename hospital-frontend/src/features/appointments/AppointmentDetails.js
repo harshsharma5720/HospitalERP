@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../../shared/Navbar";
-import TopNavbar from "../../shared/TopNavbar";
+import PublicHeader from "../../shared/layout/PublicHeader";
 import { toLocalISODate } from "../../shared/utils/dateUtils";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import { downloadPrescription } from "../clinical/downloadPrescription";
@@ -104,8 +103,7 @@ export default function AppointmentDetails() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0a1124] relative">
-      <TopNavbar />
-      <Navbar />
+      <PublicHeader />
 
       <div className="flex flex-col items-center py-12 px-4 relative">
         <img

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import Navbar from "../../shared/Navbar";
-import TopNavbar from "../../shared/TopNavbar";
+import PublicHeader from "../../shared/layout/PublicHeader";
 import { getRoleFromToken, getUserIdFromToken } from "../../shared/utils/jwtUtils";
 import { useNavigate } from "react-router-dom";
 import { Pencil } from "lucide-react";
@@ -218,8 +217,7 @@ export default function ProfilePage({ onClose }) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0a1124] flex flex-col w-full">
-      <TopNavbar />
-      <Navbar />
+      <PublicHeader />
 
       <div className="flex flex-col animate-scaleUp lg:flex-row w-full h-[calc(100vh-6rem)] bg-white dark:bg-[#0f172a] shadow-lg overflow-hidden">
 
