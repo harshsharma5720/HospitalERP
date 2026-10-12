@@ -1,173 +1,174 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import PublicHeader from "../../shared/layout/PublicHeader";
-import Lottie from "lottie-react";
-import doctorAnimation from "./Doctor.json";
+import React, { useCallback, useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { Check, Mail, Phone, UserX } from "lucide-react";
+import { PublicPage } from "../../shared/layout/PublicSections";
+import { HOSPITAL, phoneHref } from "../../shared/hospitalInfo";
+import { Badge, Button, Card, EmptyState, Notice, Reveal } from "../../shared/ui";
+import { specialityLabel } from "../appointments/appointmentFormat";
+import DoctorCard, { DoctorAvatar } from "./DoctorCard";
+import useBooking from "./useBooking";
+import useDoctorDirectory from "./useDoctorDirectory";
+import { departmentOf } from "./departments";
 import { getPublicDoctor } from "./api";
 
-// Public, read-only profile of one doctor (opened from the doctor list)
+const OTHERS_SHOWN = 4;
+
+// Public profile of one doctor (opened from the doctor list): what the directory knows about them, their
+// department, Book, and other doctors in the same speciality
 export default function DoctorDetailsPage() {
   const { doctorId } = useParams();
   const [doctor, setDoctor] = useState(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const { doctors } = useDoctorDirectory();
+  const { book, loginPrompt } = useBooking();
 
-  useEffect(() => {
-    const fetchDoctor = async () => {
-      try {
-        setLoading(true);
-        const response = await getPublicDoctor(doctorId);
-        setDoctor(response.data);
-        setError("");
-      } catch (err) {
-        console.error("Error fetching doctor:", err);
-        setError("Unable to load doctor details.");
-      } finally {
-        setLoading(false);
-      }
+  const load = useCallback(() => {
+    let current = true;
+    setLoading(true);
+    setError(false);
+    getPublicDoctor(doctorId)
+      .then((response) => current && setDoctor(response.data))
+      .catch(() => current && setError(true))
+      .finally(() => current && setLoading(false));
+    return () => {
+      current = false;
     };
-    fetchDoctor();
   }, [doctorId]);
 
-  if (loading)
-    return (
-      <div className="min-h-screen flex items-center justify-center dark:bg-[#0a1124] bg-gray-100">
-        <p className="text-xl dark:text-[#50d4f2]">Loading doctor details...</p>
-      </div>
-    );
+  useEffect(() => load(), [load]);
 
-  if (error)
-    return (
-      <div className="min-h-screen flex items-center justify-center dark:bg-[#0a1124] bg-gray-100">
-        <p className="text-red-500 text-lg">{error}</p>
-      </div>
-    );
+  const back = (
+    <Link to={doctor?.specialist ? `/doctors?speciality=${doctor.specialist}` : "/doctors"} className="text-sm text-primary-ink hover:underline">
+      ← All doctors
+    </Link>
+  );
 
-  if (!doctor)
+  if (loading || error || !doctor) {
     return (
-      <div className="min-h-screen flex items-center justify-center dark:bg-[#0a1124] bg-gray-100">
-        <p className="dark:text-[#50d4f2] text-gray-700">
-          No doctor data available.
-        </p>
-      </div>
+      <PublicPage>
+        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+          <div className="mb-6">{back}</div>
+          {loading ? (
+            <div aria-busy="true" className="h-72 animate-pulse rounded-2xl border border-line bg-surface">
+              <span className="sr-only">Loading the doctor's profile...</span>
+            </div>
+          ) : (
+            <Card padding="none">
+              <EmptyState
+                icon={UserX}
+                title="We couldn't load this doctor"
+                action={
+                  <Button variant="secondary" onClick={load}>
+                    Try again
+                  </Button>
+                }
+              >
+                Please try again in a moment, or call us on {HOSPITAL.phone}.
+              </EmptyState>
+            </Card>
+          )}
+        </div>
+      </PublicPage>
     );
+  }
+
+  const department = departmentOf(doctor.specialist);
+  const active = doctor.active !== false;
+  const others = (doctors ?? []).filter((d) => d.specialist === doctor.specialist && d.id !== doctor.id).slice(0, OTHERS_SHOWN);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-[#0a1124] flex flex-col relative overflow-hidden">
-      {/* Background Animation */}
-      <div className="absolute inset-0 opacity-20 pointer-events-none z-0">
-        <Lottie animationData={doctorAnimation} loop={true} />
-      </div>
+    <PublicPage>
+      <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mb-6">{back}</div>
 
-      {/* Foreground Content */}
-      <div className="relative z-10">
-        <PublicHeader />
+        <Reveal>
+          <Card className="sm:p-8">
+            <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-start sm:text-left">
+              <DoctorAvatar doctor={doctor} size="lg" />
+              <div className="min-w-0 flex-1">
+                <h1 className="text-3xl font-semibold tracking-tight">Dr. {doctor.name}</h1>
+                <div className="mt-2">
+                  <Badge tone="primary">{specialityLabel(doctor.specialist) || "General"}</Badge>
+                </div>
+                <ul className="mt-5 space-y-2 text-sm text-ink-muted">
+                  {doctor.email && (
+                    <li className="flex items-center justify-center gap-2 sm:justify-start">
+                      <Mail size={16} aria-hidden="true" className="text-primary-ink" />
+                      <a href={`mailto:${doctor.email}`} className="hover:text-ink">
+                        {doctor.email}
+                      </a>
+                    </li>
+                  )}
+                  {doctor.phoneNumber && (
+                    <li className="flex items-center justify-center gap-2 sm:justify-start">
+                      <Phone size={16} aria-hidden="true" className="text-primary-ink" />
+                      <a href={`tel:${String(doctor.phoneNumber).replace(/\s/g, "")}`} className="hover:text-ink">
+                        {doctor.phoneNumber}
+                      </a>
+                    </li>
+                  )}
+                </ul>
+              </div>
+              <div className="flex w-full flex-col gap-2 sm:w-auto">
+                {active ? (
+                  <Button size="lg" onClick={() => book(doctor)}>
+                    Book an appointment
+                  </Button>
+                ) : null}
+                <Button as="a" href={phoneHref} size="lg" variant="secondary">
+                  <Phone size={18} aria-hidden="true" />
+                  Call the hospital
+                </Button>
+              </div>
+            </div>
+            {!active && (
+              <Notice tone="warning" className="mt-6">
+                Dr. {doctor.name} no longer takes appointments here.
+              </Notice>
+            )}
+          </Card>
+        </Reveal>
 
-        {/* Profile Section */}
-        <div className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] max-w-5xl mx-auto mt-10 bg-white dark:bg-[#111a3b] rounded-2xl shadow-2xl p-8 flex flex-col md:flex-row items-center md:items-start gap-10">
-          {/* Left Section - Image & Basic Info */}
-          <div className="flex flex-col items-center md:w-1/3 text-center">
-            <img
-              src="https://cdn-icons-png.flaticon.com/512/387/387561.png"
-              alt="Doctor Avatar"
-              className="h-40 w-40 rounded-full shadow-lg mb-4"
-            />
-            <h2 className="text-2xl font-bold text-[#003366] dark:text-[#50d4f2]">
-              {doctor.name}
+        {department && (
+          <Reveal className="mt-8">
+            <section aria-labelledby="doctor-department" className="rounded-2xl border border-line bg-surface p-6 shadow-card sm:p-8">
+              <h2 id="doctor-department" className="text-xl font-semibold">
+                {department.label} at {HOSPITAL.name}
+              </h2>
+              <p className="mt-2 text-ink-muted">{department.summary}</p>
+              <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
+                {department.treats.map((item) => (
+                  <li key={item} className="flex gap-2">
+                    <Check size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-success-ink" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link to="/treatments" className="mt-5 inline-block text-sm font-medium text-primary-ink hover:underline">
+                All departments
+              </Link>
+            </section>
+          </Reveal>
+        )}
+
+        {others.length > 0 && (
+          <section aria-labelledby="doctor-others" className="mt-12">
+            <h2 id="doctor-others" className="text-xl font-semibold">
+              Other doctors in {specialityLabel(doctor.specialist)}
             </h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-2">
-              {doctor.specialist || "General Practitioner"}
-            </p>
-
-            {/* Rating Stars */}
-            <div className="flex justify-center mb-3">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <span key={star} className="text-yellow-400 text-xl">
-                  ★
-                </span>
+            <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {others.map((other, i) => (
+                <Reveal as="li" key={other.id} delay={i * 0.06}>
+                  <DoctorCard doctor={other} onBook={book} />
+                </Reveal>
               ))}
-            </div>
-
-            <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-              <p>
-                <strong>Gender:</strong> {doctor.gender || "N/A"}
-              </p>
-              <p>
-                <strong>Email:</strong> {doctor.email}
-              </p>
-              <p>
-                <strong>Phone:</strong> {doctor.phoneNumber}
-              </p>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex flex-col gap-3 mt-6 w-full">
-              <button
-                onClick={() =>
-                  navigate("/appointments", {
-                    state: { doctorName: doctor.name },
-                  })
-                }
-                className="bg-gradient-to-r from-[#007B9E] to-[#00A2B8] text-white py-2 rounded-full font-semibold hover:scale-105 transition-transform shadow-md"
-              >
-                Book Appointment
-              </button>
-
-              <button
-                onClick={() => alert(`Chat feature coming soon with ${doctor.name}`)}
-                className="bg-gradient-to-r from-[#1E63DB] to-[#27496d] text-white py-2 rounded-full font-semibold hover:scale-105 transition-transform shadow-md"
-              >
-                Chat with Doctor
-              </button>
-            </div>
-          </div>
-
-          {/* Right Section - Details */}
-          <div className="flex-1 text-gray-700 dark:text-gray-300">
-            <h3 className="text-2xl font-semibold text-[#003366] dark:text-[#50d4f2] mb-4">
-              About Dr. {doctor.name}
-            </h3>
-            <p className="leading-relaxed mb-6">
-              Dr. {doctor.name} is a highly skilled specialist in{" "}
-              {doctor.specialist || "General Medicine"}. They are known for
-              their compassionate approach and commitment to providing
-              high-quality healthcare to all patients. With years of experience,
-              Dr. {doctor.name} ensures that every patient receives personalized
-              care and attention.
-            </p>
-
-            <div className="mb-4">
-              <h4 className="font-semibold text-[#003366] dark:text-[#50d4f2]">
-                Specialty Interests
-              </h4>
-              <p>{doctor.specialisation || "Internal Medicine, Surgery, etc."}</p>
-            </div>
-
-            <div className="mb-4">
-              <h4 className="font-semibold text-[#003366] dark:text-[#50d4f2]">
-                Experience
-              </h4>
-              <p>
-                {doctor.experience ||
-                  "Over 5 years of experience providing patient-centered care."}
-              </p>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-[#003366] dark:text-[#50d4f2]">
-                Languages
-              </h4>
-              <p>{doctor.languages || "English, Hindi"}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <footer className="bg-blue-600 dark:bg-[#111a3b] text-white py-4 text-center mt-10">
-          <p>© {new Date().getFullYear()} Shreya Hospital. All Rights Reserved.</p>
-        </footer>
+            </ul>
+          </section>
+        )}
       </div>
-    </div>
+
+      {loginPrompt}
+    </PublicPage>
   );
 }

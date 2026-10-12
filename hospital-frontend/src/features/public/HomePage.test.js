@@ -51,7 +51,7 @@ test("the numbers come from the doctors' directory, deactivated doctors left out
   expect(within(facts).getByText("2")).toBeInTheDocument();
   expect(within(facts).getByText("specialities")).toBeInTheDocument();
   // Specialities with their doctors
-  expect(screen.getByRole("link", { name: /Cardiology.*2 doctors/ })).toHaveAttribute("href", "/doctors");
+  expect(screen.getByRole("link", { name: /Cardiology.*2 doctors/ })).toHaveAttribute("href", "/doctors?speciality=CARDIOLOGY");
   expect(screen.getByRole("link", { name: /Orthopedics.*1 doctor$/ })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Neurology.*See doctors/ })).toBeInTheDocument();
 });
