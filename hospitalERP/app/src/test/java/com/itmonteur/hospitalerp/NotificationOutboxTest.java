@@ -94,6 +94,16 @@ class NotificationOutboxTest {
         assertThat(sender.sendDueMessages()).as("nothing is sent twice").isZero();
     }
 
+    // The clock can be finer than the database (microseconds), and the sender can look within the same tick: the message
+    // must be due at once, not rounded into the future by the database
+    @Test
+    void aMessageIsDueWithinTheClockTickItWasQueuedIn() {
+        clock.set(START.withNano(123_456_789));
+        inTransaction(() -> outbox.queueSms("+919800000001", "Booked", "booking SMS to patient", null));
+
+        assertThat(sender.sendDueMessages()).isEqualTo(1);
+    }
+
     @Test
     void aFailedSendIsRetriedWithGrowingGapsUntilItGivesUp() {
         doThrow(new RuntimeException("Twilio is down")).when(smsService).send(anyString(), anyString());

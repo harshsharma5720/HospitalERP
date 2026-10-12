@@ -3,6 +3,11 @@
 |Base package
 |`com.itmonteur.hospitalerp.billing`
 |Bean references
-|* `c.i.h.s.DoctorService` (in Staff)
+|* `c.i.h.a.AppointmentService` (in Appointments)
+* `c.i.h.s.DoctorService` (in Staff)
 * `c.i.h.i.CurrentUserService` (in Identity)
+|Events listened to
+|* `c.i.h.a.AppointmentCancelledEvent` 
+* `c.i.h.a.AppointmentCheckedInEvent` 
+* `c.i.h.a.AppointmentLeftQueueEvent` 
 |===

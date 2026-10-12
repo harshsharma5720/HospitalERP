@@ -59,6 +59,11 @@ public class FeeService {
         return new FeeListDTO(defaultFee, doctors);
     }
 
+    /** The fee for doctors without their own (BILLING_DEFAULT_FEE). */
+    public BigDecimal defaultFee() {
+        return defaultFee;
+    }
+
     /** The fee a visit with this doctor starts with: theirs, or the default. */
     @Transactional(readOnly = true)
     public BigDecimal feeFor(Long doctorId) {

@@ -1,7 +1,9 @@
 package com.itmonteur.hospitalerp.appointments.internal;
 
 import com.itmonteur.hospitalerp.appointments.Appointment;
+import com.itmonteur.hospitalerp.appointments.AppointmentCheckedInEvent;
 import com.itmonteur.hospitalerp.appointments.AppointmentDTO;
+import com.itmonteur.hospitalerp.appointments.AppointmentLeftQueueEvent;
 import com.itmonteur.hospitalerp.appointments.AppointmentStatus;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ConflictException;
@@ -15,6 +17,7 @@ import com.itmonteur.hospitalerp.staff.DoctorService;
 import com.itmonteur.hospitalerp.staff.Specialist;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,14 +56,17 @@ public class QueueService {
     private final SlotService slotService;
     private final CurrentUserService currentUserService;
     private final DoctorService doctorService;
+    private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
     public QueueService(AppointmentRepository appointmentRepository, SlotService slotService,
-                        CurrentUserService currentUserService, DoctorService doctorService, Clock clock) {
+                        CurrentUserService currentUserService, DoctorService doctorService,
+                        ApplicationEventPublisher eventPublisher, Clock clock) {
         this.appointmentRepository = appointmentRepository;
         this.slotService = slotService;
         this.currentUserService = currentUserService;
         this.doctorService = doctorService;
+        this.eventPublisher = eventPublisher;
         this.clock = clock;
     }
 
@@ -82,6 +88,7 @@ public class QueueService {
             appointment.setCheckedInAt(now());
             appointmentRepository.save(appointment);
             logger.info("Appointment {} checked in, token {}", appointmentId, appointment.getTokenNumber());
+            eventPublisher.publishEvent(new AppointmentCheckedInEvent(appointmentId));
         }
         return AppointmentMapper.toDTO(appointment);
     }
@@ -93,8 +100,13 @@ public class QueueService {
         if (appointment.getCalledAt() != null) {
             throw new ConflictException("The doctor has already called this patient in");
         }
+        boolean wasCheckedIn = appointment.getCheckedInAt() != null;
         appointment.clearQueueState();
-        return AppointmentMapper.toDTO(appointmentRepository.save(appointment));
+        Appointment saved = appointmentRepository.save(appointment);
+        if (wasCheckedIn) {
+            eventPublisher.publishEvent(new AppointmentLeftQueueEvent(appointmentId));
+        }
+        return AppointmentMapper.toDTO(saved);
     }
 
     // ---------------------------------------------------------------- the doctor
@@ -182,10 +194,22 @@ public class QueueService {
     }
 
     private AppointmentDTO callIn(Appointment appointment) {
-        appointment.setCalledAt(now());
+        appointment.setCalledAt(callTime(appointment));
         appointmentRepository.save(appointment);
         logger.info("Appointment {} called in, token {}", appointment.getAppointmentID(), appointment.getTokenNumber());
         return AppointmentMapper.toDTO(appointment);
+    }
+
+    // Later than every other call of the doctor's day: the system clock can be coarse, and two calls in one tick
+    // would leave "the last one called in" (the screen's now serving) undecided
+    private LocalDateTime callTime(Appointment appointment) {
+        LocalDateTime now = now();
+        LocalDateTime latest = doctorsDay(appointment.getDoctor(), appointment.getDate()).stream()
+                .map(Appointment::getCalledAt)
+                .filter(Objects::nonNull)
+                .max(Comparator.naturalOrder())
+                .orElse(null);
+        return latest != null && !now.isAfter(latest) ? latest.plus(1, ChronoUnit.MICROS) : now;
     }
 
     private Doctor currentDoctor() {

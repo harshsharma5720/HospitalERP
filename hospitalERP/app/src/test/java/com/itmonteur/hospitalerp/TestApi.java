@@ -9,6 +9,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -102,6 +103,30 @@ final class TestApi {
             }
         }
         throw new AssertionError("doctor not found");
+    }
+
+    /**
+     * Three walk-in visits with a doctor from {@link #doctorWithSchedule} - booked for tomorrow 10:00, 16:00 and 16:30,
+     * then moved to today in the database, so tests of today's queue don't depend on the time of day. Patients are
+     * named "{surname} 1..3", phones "{phonePrefix}01..03" (10 digits in all). Returns the appointment ids in time order.
+     */
+    List<Long> visitsToday(String desk, long doctorId, String surname, String phonePrefix, JdbcTemplate jdbc)
+            throws Exception {
+        JsonNode slots = get(desk, "/api/receptionist/doctors/" + doctorId + "/next-free-slots?limit=3");
+        List<Long> ids = new ArrayList<>();
+        for (JsonNode slot : slots) {
+            ResponseEntity<String> res = call(HttpMethod.POST, "/api/receptionist/walk-in", desk,
+                    "{\"newPatient\":{\"name\":\"" + surname + " " + (ids.size() + 1) + "\",\"phone\":\""
+                            + phonePrefix + "%02d".formatted(ids.size() + 1) + "\",\"gender\":\"OTHER\"},"
+                            + "\"age\":40,\"slotId\":" + slot.get("slotId").asLong() + "}");
+            assertThat(res.getStatusCode()).as(res.getBody()).isEqualTo(HttpStatus.OK);
+            JsonNode appointment = json.readTree(res.getBody()).get("appointment");
+            assertThat(appointment.get("tokenNumber").isNull()).as("booked for tomorrow: not checked in").isTrue();
+            ids.add(appointment.get("appointmentID").asLong());
+            jdbc.update("UPDATE slots SET date = ? WHERE id = ?", LocalDate.now(), slot.get("slotId").asLong());
+            jdbc.update("UPDATE appointments SET date = ? WHERE appointmentid = ?", LocalDate.now(), ids.get(ids.size() - 1));
+        }
+        return ids;
     }
 
     private static String scheduleEntry(DayOfWeek day, String shift, String hours) {

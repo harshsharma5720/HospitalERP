@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Today's queue (docs/TODAYS_QUEUE_PLAN.md): check-in and tokens (step Q.1), the doctor's queue and the waiting-room
  * screen (step Q.2). Same configuration as FeatureFlowH2Test,
- * so both share one application context; the phone numbers +91 90000 444xx are used by no other test. Bookings are
+ * so both share one application context; the phone numbers 9000044xxx are used by no other test. Bookings are
  * made for tomorrow and then moved to today in the database, so the tests don't depend on the time of day.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
@@ -39,6 +39,7 @@ class QueueH2Test {
     @Autowired private ObjectMapper json;
     @Autowired private JdbcTemplate jdbc;
     private TestApi api;
+    private int batch = 0;
     private int nextPhone = 0;
 
     @BeforeEach
@@ -46,29 +47,14 @@ class QueueH2Test {
         api = new TestApi(rest, json);
     }
 
-    /**
-     * Three walk-in visits with a new doctor - booked for tomorrow 10:00, 16:00 and 16:30, then moved to today.
-     * Returns their appointment ids in time order.
-     */
+    // Three visits today (10:00, 16:00, 16:30), see TestApi.visitsToday; phones 9000044b0n, one batch b per call
     private List<Long> visitsToday(String desk, long doctorId, String surname) throws Exception {
-        JsonNode slots = api.get(desk, "/api/receptionist/doctors/" + doctorId + "/next-free-slots?limit=3");
-        List<Long> ids = new ArrayList<>();
-        for (JsonNode slot : slots) {
-            ResponseEntity<String> res = api.call(HttpMethod.POST, "/api/receptionist/walk-in", desk,
-                    "{\"newPatient\":{\"name\":\"" + surname + " " + (ids.size() + 1) + "\",\"phone\":\"%s\",\"gender\":\"OTHER\"},"
-                            .formatted(phone()) + "\"age\":40,\"slotId\":" + slot.get("slotId").asLong() + "}");
-            assertThat(res.getStatusCode()).as(res.getBody()).isEqualTo(HttpStatus.OK);
-            JsonNode appointment = json.readTree(res.getBody()).get("appointment");
-            assertThat(appointment.get("tokenNumber").isNull()).as("booked for tomorrow: not checked in").isTrue();
-            ids.add(appointment.get("appointmentID").asLong());
-            jdbc.update("UPDATE slots SET date = ? WHERE id = ?", LocalDate.now(), slot.get("slotId").asLong());
-            jdbc.update("UPDATE appointments SET date = ? WHERE appointmentid = ?", LocalDate.now(), ids.get(ids.size() - 1));
-        }
-        return ids;
+        return api.visitsToday(desk, doctorId, surname, "9000044" + (++batch), jdbc);
     }
 
+    // Other numbers: 900004490n
     private String phone() {
-        return "90000444%02d".formatted(++nextPhone);
+        return "90000449%02d".formatted(++nextPhone);
     }
 
     private ResponseEntity<String> checkIn(String token, long appointmentId) {

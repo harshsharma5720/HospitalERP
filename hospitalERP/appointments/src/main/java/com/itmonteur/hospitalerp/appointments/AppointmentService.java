@@ -159,6 +159,7 @@ public class AppointmentService {
         slotService.releaseSlot(appointment.getSlot());
         Appointment saved = appointmentRepository.save(appointment);
         logger.info("Appointment {} cancelled", appointmentID);
+        eventPublisher.publishEvent(new AppointmentCancelledEvent(appointmentID));
         eventPublisher.publishEvent(new AppointmentNotificationEvent(
                 AppointmentNotificationEvent.Kind.CANCELLED, notificationInfo(saved)));
         return AppointmentMapper.toDTO(saved);
@@ -195,6 +196,9 @@ public class AppointmentService {
             appointment.setShift(newSlot.getShift());
             appointment.setDate(newSlot.getDate());
             appointment.setReminderSent(false); // remind again for the new date
+            if (appointment.getCheckedInAt() != null) {
+                eventPublisher.publishEvent(new AppointmentLeftQueueEvent(appointmentID));
+            }
             appointment.clearQueueState(); // another time: checked in again on that day
             logger.info("Appointment {} rescheduled to slot {}", appointmentID, newSlot.getId());
         }
@@ -306,6 +310,7 @@ public class AppointmentService {
             Appointment saved = appointmentRepository.save(appointment);
             eventPublisher.publishEvent(new AppointmentNotificationEvent(
                     AppointmentNotificationEvent.Kind.CANCELLED, notificationInfo(saved)));
+            eventPublisher.publishEvent(new AppointmentCancelledEvent(saved.getAppointmentID()));
             cancelled++;
         }
         return cancelled;

@@ -21,10 +21,6 @@ include::module-audit.adoc[]
 plantuml::module-staff.puml[,,format=svg]
 include::module-staff.adoc[]
 
-== Billing
-plantuml::module-billing.puml[,,format=svg]
-include::module-billing.adoc[]
-
 == Patients
 plantuml::module-patients.puml[,,format=svg]
 include::module-patients.adoc[]
@@ -36,6 +32,10 @@ include::module-scheduling.adoc[]
 == Appointments
 plantuml::module-appointments.puml[,,format=svg]
 include::module-appointments.adoc[]
+
+== Billing
+plantuml::module-billing.puml[,,format=svg]
+include::module-billing.adoc[]
 
 == Clinical
 plantuml::module-clinical.puml[,,format=svg]
