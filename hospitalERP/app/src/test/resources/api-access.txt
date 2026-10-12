@@ -18,6 +18,7 @@ GET /api/admin/dashboard anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorAppointmentCount/{doctorId} anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorCompletedAppointments/{userId} anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorPendingAppointments/{userId} anonymous- patient- doctor- receptionist- admin+
+GET /api/admin/fees anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/notifications anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/{id} anonymous- patient- doctor- receptionist- admin+
 GET /api/auth/otp-required anonymous+ patient+ doctor+ receptionist+ admin+
@@ -92,6 +93,7 @@ POST /api/receptionist/walk-in anonymous- patient- doctor- receptionist+ admin+
 POST /api/slots/generate/{doctorId} anonymous- patient- doctor- receptionist- admin+
 POST /appointment/NewAppointment anonymous- patient+ doctor+ receptionist+ admin+
 PUT /api/admin/approve/{leaveId} anonymous- patient- doctor- receptionist- admin+
+PUT /api/admin/fees/{doctorId} anonymous- patient- doctor- receptionist- admin+
 PUT /api/admin/reject/{leaveId} anonymous- patient- doctor- receptionist- admin+
 PUT /api/admin/users/{userId}/deactivate anonymous- patient- doctor- receptionist- admin+
 PUT /api/admin/users/{userId}/reactivate anonymous- patient- doctor- receptionist- admin+

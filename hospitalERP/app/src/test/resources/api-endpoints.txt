@@ -17,6 +17,7 @@ GET /api/admin/dashboard
 GET /api/admin/doctorAppointmentCount/{doctorId}
 GET /api/admin/doctorCompletedAppointments/{userId}
 GET /api/admin/doctorPendingAppointments/{userId}
+GET /api/admin/fees
 GET /api/admin/notifications
 GET /api/admin/{id}
 GET /api/auth/otp-required
@@ -88,6 +89,7 @@ POST /api/receptionist/walk-in
 POST /api/slots/generate/{doctorId}
 POST /appointment/NewAppointment
 PUT /api/admin/approve/{leaveId}
+PUT /api/admin/fees/{doctorId}
 PUT /api/admin/reject/{leaveId}
 PUT /api/admin/users/{userId}/deactivate
 PUT /api/admin/users/{userId}/reactivate

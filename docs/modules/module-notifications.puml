@@ -9,9 +9,11 @@ top to bottom direction
 !include <C4/C4_Component>
 
 Container_Boundary("HospitalErpApplication.HospitalErpApplication_boundary", "HospitalErpApplication", $tags="") {
+  Component(HospitalErpApplication.HospitalErpApplication.Common, "Common", $techn="Module", $descr="", $tags="", $link="")
   Component(HospitalErpApplication.HospitalErpApplication.Notifications, "Notifications", $techn="Module", $descr="", $tags="", $link="")
 }
 
+Rel(HospitalErpApplication.HospitalErpApplication.Notifications, HospitalErpApplication.HospitalErpApplication.Common, "depends on", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 @enduml

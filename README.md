@@ -162,6 +162,9 @@ REMINDERS_CRON=0 0 * * * *
 HOSPITAL_NAME=Shreya Hospital
 HOSPITAL_ADDRESS=12 MG Road, Pune
 HOSPITAL_PHONE=+91 20 5555 1234
+
+# Consultation fee in rupees for doctors without their own (set per doctor under Admin → Fees) — optional
+BILLING_DEFAULT_FEE=0
 ```
 
 > **Note:** Twilio and email settings are optional. Without Twilio, SMS is skipped (a warning is logged) and you should set `OTP_REQUIRED=false`, otherwise nobody can sign up. Without SMTP, emails are skipped.
@@ -294,6 +297,7 @@ The database schema is owned by the migration scripts in `hospitalERP/app/src/ma
 | `notifications/V2026_10_07_1__notifications_outbox.sql` | Creates the empty `notification_outbox` table: appointment emails / SMS waiting to be sent or retried ([reliable notifications](docs/RELIABLE_NOTIFICATIONS_PLAN.md)). |
 | `patients/V2026_10_08_1__patients_walk_in.sql` | Makes `patient.email` optional and adds `patient.created_at`, for walk-in patients registered at the front desk without a login ([walk-in registration](docs/WALK_IN_REGISTRATION_PLAN.md)). |
 | `appointments/V2026_10_11_1__appointments_queue.sql` | Adds `appointments.checked_in_at`, `token_number` and `called_at` (all empty for existing appointments), for today's queue: check-in at the front desk, tokens, the doctor calling the next patient ([today's queue](docs/TODAYS_QUEUE_PLAN.md)). |
+| `billing/V2026_10_12_1__billing.sql` | Creates the empty `doctor_fees`, `bills` and `bill_items` tables ([billing](docs/BILLING_PLAN.md)). |
 
 **Changing the schema:** add a new file to the owning module's folder, e.g. `db/migration/appointments/V2026_10_05_1__appointments_add_room.sql`, with the next date-based version. Never edit a migration that has already run anywhere — Flyway checks their checksums and refuses to start. Hibernate then validates the entities against the result, so an entity change without a migration stops the app with a clear "Schema-validation" message.
 
@@ -426,6 +430,7 @@ The backend is a modular monolith: one application and one database, split into 
 | [`scheduling`](hospitalERP/scheduling/README.md) | Doctor weekly schedules and slots | common, identity, staff |
 | [`appointments`](hospitalERP/appointments/README.md) | Booking, reschedule, cancel, day-before reminders | common, identity, notifications, patients, staff, scheduling |
 | [`clinical`](hospitalERP/clinical/README.md) | Consultations, prescriptions, prescription PDF, medical history | common, identity, audit, patients, staff, appointments |
+| [`billing`](hospitalERP/billing/README.md) | Consultation fees per doctor, a bill per visit, payments, refunds and receipts at the front desk | common, identity, patients, staff, appointments |
 | [`administration`](hospitalERP/administration/README.md) | Admin use cases across modules: create users, leave decisions, account deactivation / reactivation (and the guarded permanent delete) | all of the above |
 | `app` | Main class, `SecurityConfig`, `application.properties`, end-to-end tests | all modules |
 

@@ -1,0 +1,8 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`com.itmonteur.hospitalerp.billing`
+|Bean references
+|* `c.i.h.s.DoctorService` (in Staff)
+* `c.i.h.i.CurrentUserService` (in Identity)
+|===

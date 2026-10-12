@@ -6,6 +6,7 @@
 |_Services_
 
 * `c.i.h.a.AppointmentService`
+* `c.i.h.a.AppointmentStatistics`
 |Bean references
 |* `c.i.h.p.PtInfoService` (in Patients)
 * `c.i.h.p.PtRelativeService` (in Patients)

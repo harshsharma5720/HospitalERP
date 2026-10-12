@@ -39,6 +39,7 @@
 		<module>scheduling</module>
 		<module>appointments</module>
 		<module>clinical</module>
+		<module>billing</module>
 		<module>administration</module>
 		<module>app</module>
 	</modules>
@@ -113,6 +114,11 @@
 			<dependency>
 				<groupId>${project.groupId}</groupId>
 				<artifactId>hospital-clinical</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>hospital-billing</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>

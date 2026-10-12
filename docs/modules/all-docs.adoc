@@ -21,6 +21,10 @@ include::module-audit.adoc[]
 plantuml::module-staff.puml[,,format=svg]
 include::module-staff.adoc[]
 
+== Billing
+plantuml::module-billing.puml[,,format=svg]
+include::module-billing.adoc[]
+
 == Patients
 plantuml::module-patients.puml[,,format=svg]
 include::module-patients.adoc[]
