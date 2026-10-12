@@ -1,6 +1,7 @@
 import React from "react";
 
-// The app's buttons (docs/UI_REFRESH_PLAN.md). variant: primary (the main action), secondary, danger, success, ghost;
+// The app's buttons (docs/UI_REFRESH_PLAN.md). variant: primary (the main action), secondary, danger, success, ghost,
+// danger-ghost (a quiet destructive action in a row);
 // size: sm, md, lg. as={Link} (with to=...) renders a link that looks like a button.
 const VARIANTS = {
   primary: "bg-primary text-white hover:bg-primary-hover shadow-sm",
@@ -8,6 +9,7 @@ const VARIANTS = {
   danger: "bg-danger text-white hover:bg-danger-hover shadow-sm",
   success: "bg-success text-white hover:bg-success-hover shadow-sm",
   ghost: "text-ink-muted hover:text-ink hover:bg-surface-2",
+  "danger-ghost": "text-danger-ink hover:bg-danger-ink/10",
 };
 
 const SIZES = {

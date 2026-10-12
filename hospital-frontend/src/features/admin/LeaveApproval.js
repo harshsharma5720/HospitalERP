@@ -1,17 +1,33 @@
 import React, { useEffect, useState } from "react";
+import { CalendarCheck } from "lucide-react";
 import { getErrorMessage } from "../../shared/utils/apiError";
+import { formatDate } from "../appointments/appointmentFormat";
 import * as adminApi from "./api";
+import { Badge, Button, Card, EmptyState, PageHeader, Table, Td, Th, useConfirm, useToast } from "../../shared/ui";
 
 const TABS = [
-  { key: "PENDING", label: "Pending Leaves", load: adminApi.getPendingLeaves, active: "bg-blue-600 text-white" },
-  { key: "APPROVED", label: "Approved Leaves", load: adminApi.getApprovedLeaves, active: "bg-green-600 text-white" },
-  { key: "REJECTED", label: "Rejected Leaves", load: adminApi.getRejectedLeaves, active: "bg-red-600 text-white" },
+  { key: "PENDING", label: "Pending", load: adminApi.getPendingLeaves },
+  { key: "APPROVED", label: "Approved", load: adminApi.getApprovedLeaves },
+  { key: "REJECTED", label: "Rejected", load: adminApi.getRejectedLeaves },
 ];
+const STATUS = {
+  PENDING: { label: "Pending", tone: "warning" },
+  APPROVED: { label: "Approved", tone: "success" },
+  REJECTED: { label: "Rejected", tone: "danger" },
+};
+const ROLE = { ROLE_DOCTOR: "Doctor", ROLE_RECEPTIONIST: "Receptionist", ROLE_ADMIN: "Admin" };
 
+// Days from start to end, both included
+const dayCount = (start, end) => Math.round((new Date(end) - new Date(start)) / 86400000) + 1;
+
+// Leave requests of the staff: approve or reject the pending ones
 export default function LeaveApproval() {
+  const toast = useToast();
+  const confirm = useConfirm();
   const [leaves, setLeaves] = useState([]);
   const [filter, setFilter] = useState("PENDING"); // default tab
   const [busyId, setBusyId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchLeaves();
@@ -19,128 +35,120 @@ export default function LeaveApproval() {
   }, [filter]);
 
   const fetchLeaves = async () => {
+    setLoading(true);
     try {
       const tab = TABS.find((t) => t.key === filter);
       const response = await tab.load();
       setLeaves(response.data);
     } catch (error) {
-      alert(getErrorMessage(error, "Could not load leave requests."));
+      setLeaves([]);
+      toast.error(getErrorMessage(error, "Could not load leave requests."));
+    } finally {
+      setLoading(false);
     }
   };
 
   // Approving a doctor's leave also cancels their appointments in that period and notifies patients
-  const decideLeave = async (leaveId, decision) => {
-    const question =
-      decision === "approve"
-        ? "Approve this leave? Appointments in this period will be cancelled and patients notified."
-        : "Reject this leave request?";
-    if (!window.confirm(question)) return;
+  const decideLeave = async (leave, decision) => {
+    const approve = decision === "approve";
+    const ok = await confirm(
+      approve
+        ? {
+            title: "Approve this leave?",
+            message: "Appointments in this period will be cancelled and the patients notified.",
+            confirmLabel: "Approve",
+          }
+        : { title: "Reject this leave request?", confirmLabel: "Reject", tone: "danger" }
+    );
+    if (!ok) return;
     try {
-      setBusyId(leaveId);
-      await adminApi.decideLeave(leaveId, decision);
-      alert(decision === "approve" ? "Leave Approved Successfully" : "Leave Rejected");
+      setBusyId(leave.id);
+      await adminApi.decideLeave(leave.id, decision);
+      toast.success(approve ? "Leave approved." : "Leave rejected.");
       fetchLeaves();
     } catch (error) {
-      alert(getErrorMessage(error, "Could not update the leave request."));
+      toast.error(getErrorMessage(error, "Could not update the leave request."));
     } finally {
       setBusyId(null);
     }
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-        Leave Approval Dashboard
-      </h1>
+    <>
+      <PageHeader
+        title="Leave approvals"
+        description="Approving a doctor's leave cancels their appointments in that period and notifies the patients."
+      />
 
-      {/* FILTER BUTTONS */}
-      <div className="flex flex-wrap gap-3 mb-5">
+      <div role="group" aria-label="Which requests" className="mb-4 inline-flex rounded-lg border border-line bg-surface p-1 shadow-card">
         {TABS.map((tab) => (
           <button
             key={tab.key}
-            className={`px-4 py-2 rounded-lg font-semibold ${
-              filter === tab.key ? tab.active : "bg-gray-200 dark:bg-gray-700 dark:text-white"
-            }`}
+            type="button"
+            aria-pressed={filter === tab.key}
             onClick={() => setFilter(tab.key)}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+              filter === tab.key ? "bg-primary text-white" : "text-ink-muted hover:text-ink"
+            }`}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      {/* TABLE */}
-      {leaves.length === 0 ? (
-        <p className="text-gray-600 dark:text-gray-300 text-lg">
-          No {filter.toLowerCase()} leave requests
-        </p>
+      {loading ? (
+        <p className="text-ink-muted">Loading...</p>
+      ) : leaves.length === 0 ? (
+        <Card padding="none">
+          <EmptyState icon={CalendarCheck} title={`No ${filter.toLowerCase()} leave requests`} />
+        </Card>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border rounded-xl overflow-hidden bg-white dark:bg-gray-800 shadow-lg">
-            <thead className="bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-200">
-              <tr>
-                <th className="p-3 border">Leave ID</th>
-                <th className="p-3 border">User ID</th>
-                <th className="p-3 border">Role</th>
-                <th className="p-3 border">Start Date</th>
-                <th className="p-3 border">End Date</th>
-                <th className="p-3 border">Reason</th>
-                <th className="p-3 border">Status</th>
-                <th className="p-3 border text-center">Action</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {leaves.map((leave) => (
-                <tr
-                  key={leave.id}
-                  className="hover:bg-gray-100 dark:hover:bg-gray-700 transition dark:text-gray-200"
-                >
-                  <td className="p-3 border">{leave.id}</td>
-                  <td className="p-3 border">{leave.userId}</td>
-                  <td className="p-3 border">{(leave.role || "").replace("ROLE_", "")}</td>
-                  <td className="p-3 border">{leave.startDate}</td>
-                  <td className="p-3 border">{leave.endDate}</td>
-                  <td className="p-3 border">{leave.reason}</td>
-                  <td className="p-3 border font-semibold">{leave.status}</td>
-
-                  <td className="p-3 border text-center">
-                    {filter === "PENDING" && (
-                      <div className="flex gap-2 justify-center">
-                        <button
-                          disabled={busyId === leave.id}
-                          className="bg-green-600 hover:bg-green-700 transition text-white px-4 py-1 rounded-lg disabled:opacity-60"
-                          onClick={() => decideLeave(leave.id, "approve")}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          disabled={busyId === leave.id}
-                          className="bg-red-600 hover:bg-red-700 transition text-white px-4 py-1 rounded-lg disabled:opacity-60"
-                          onClick={() => decideLeave(leave.id, "reject")}
-                        >
+        <Table>
+          <thead>
+            <tr>
+              <Th>Requested by</Th>
+              <Th>From</Th>
+              <Th>To</Th>
+              <Th align="right">Days</Th>
+              <Th>Reason</Th>
+              <Th>Status</Th>
+              {filter === "PENDING" && <Th align="right">Decision</Th>}
+            </tr>
+          </thead>
+          <tbody>
+            {leaves.map((leave) => {
+              const status = STATUS[leave.status] ?? { label: leave.status, tone: "neutral" };
+              return (
+                <tr key={leave.id}>
+                  <Td className="whitespace-nowrap">
+                    <span className="font-medium">User #{leave.userId}</span>
+                    <span className="ml-2 text-ink-muted">{ROLE[leave.role] ?? (leave.role || "").replace("ROLE_", "")}</span>
+                  </Td>
+                  <Td className="whitespace-nowrap">{formatDate(leave.startDate, true)}</Td>
+                  <Td className="whitespace-nowrap">{formatDate(leave.endDate, true)}</Td>
+                  <Td align="right" className="tabular-nums">{dayCount(leave.startDate, leave.endDate)}</Td>
+                  <Td className="text-ink-muted">{leave.reason}</Td>
+                  <Td>
+                    <Badge tone={status.tone}>{status.label}</Badge>
+                  </Td>
+                  {filter === "PENDING" && (
+                    <Td align="right">
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="secondary" disabled={busyId === leave.id} onClick={() => decideLeave(leave, "reject")} aria-label={`Reject leave ${leave.id}`}>
                           Reject
-                        </button>
+                        </Button>
+                        <Button size="sm" variant="success" disabled={busyId === leave.id} onClick={() => decideLeave(leave, "approve")} aria-label={`Approve leave ${leave.id}`}>
+                          Approve
+                        </Button>
                       </div>
-                    )}
-
-                    {filter === "APPROVED" && (
-                      <span className="text-green-700 font-semibold">
-                        ✔ Approved
-                      </span>
-                    )}
-
-                    {filter === "REJECTED" && (
-                      <span className="text-red-600 font-semibold">
-                        ✖ Rejected
-                      </span>
-                    )}
-                  </td>
+                    </Td>
+                  )}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              );
+            })}
+          </tbody>
+        </Table>
       )}
-    </div>
+    </>
   );
 }

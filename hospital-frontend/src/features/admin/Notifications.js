@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import * as adminApi from "./api";
+import { Badge, Button, Card, Field, Notice, PageHeader, Pagination, Select, Table, TableMessage, Td, Th } from "../../shared/ui";
 
 // Appointment emails and SMS in the outbox (docs/RELIABLE_NOTIFICATIONS_PLAN.md): what couldn't be delivered,
 // with a Resend button. Failed messages are shown first; the filter shows the others.
@@ -12,13 +13,13 @@ export const STATUS_LABELS = {
   SKIPPED: "Skipped",
 };
 
-// The badge always carries its label; the color only supports it
-const STATUS_STYLES = {
-  FAILED: "bg-red-100 text-red-800",
-  PENDING: "bg-amber-100 text-amber-800",
-  SENDING: "bg-blue-100 text-blue-800",
-  SENT: "bg-green-100 text-green-800",
-  SKIPPED: "bg-gray-200 text-gray-700",
+// Badge tones: the badge always carries its label; the colour only supports it
+const STATUS_TONES = {
+  FAILED: "danger",
+  PENDING: "warning",
+  SENDING: "info",
+  SENT: "success",
+  SKIPPED: "neutral",
 };
 
 const RESENDABLE = new Set(["FAILED", "SKIPPED"]);
@@ -76,122 +77,78 @@ export default function Notifications() {
   const totalPages = result?.totalPages ?? 0;
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-2">Notifications</h1>
-      <p className="text-gray-600 dark:text-gray-300 mb-4">
-        Appointment emails and SMS. A message that can't be sent is retried for up to 24 hours (never after the
-        appointment); after that it is marked failed and can be sent again here.
-      </p>
+    <>
+      <PageHeader
+        title="Notifications"
+        description="Appointment emails and SMS. A message that can't be sent is retried for up to 24 hours (never after the appointment); after that it is marked failed and can be sent again here."
+      />
 
-      <div className="flex flex-wrap items-end gap-3 mb-4">
-        <div className="flex flex-col text-sm">
-          <label htmlFor="notification-status">Show</label>
-          <select id="notification-status" value={status} onChange={changeStatus} className="border p-2 rounded">
+      <Card padding="sm" className="mb-4">
+        <Field label="Show" htmlFor="notification-status" className="max-w-xs">
+          <Select id="notification-status" value={status} onChange={changeStatus}>
             {Object.entries(STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
             ))}
             <option value="">All messages</option>
-          </select>
-        </div>
-      </div>
+          </Select>
+        </Field>
+      </Card>
 
-      {notice && (
-        <p role="status" className="text-green-700 dark:text-green-400 mb-4">
-          {notice}
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="text-red-600 mb-4">
-          {error}
-        </p>
-      )}
+      <Notice tone="success" className="mb-4">{notice}</Notice>
+      <Notice tone="danger" className="mb-4">{error}</Notice>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse bg-white dark:bg-[#1e293b] shadow-md rounded-lg text-sm">
-          <thead>
-            <tr className="bg-gray-100 dark:bg-gray-800 border-b">
-              <th className="p-3 text-left">Queued</th>
-              <th className="p-3 text-left">Message</th>
-              <th className="p-3 text-left">To</th>
-              <th className="p-3 text-left">Status</th>
-              <th className="p-3 text-right">Attempts</th>
-              <th className="p-3 text-left">Last error</th>
-              <th className="p-3 text-left">Action</th>
+      <Table>
+        <thead>
+          <tr>
+            <Th>Queued</Th>
+            <Th>Message</Th>
+            <Th>To</Th>
+            <Th>Status</Th>
+            <Th align="right">Attempts</Th>
+            <Th>Last error</Th>
+            <Th align="right">Action</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((message) => (
+            <tr key={message.id}>
+              <Td className="whitespace-nowrap tabular-nums text-ink-muted">{formatTime(message.createdAt)}</Td>
+              <Td>
+                {message.description}
+                <span className="ml-2 text-xs text-ink-muted">{message.channel === "SMS" ? "SMS" : "Email"}</span>
+              </Td>
+              <Td className="tabular-nums">{message.recipient}</Td>
+              <Td>
+                <Badge tone={STATUS_TONES[message.status] ?? "neutral"}>{STATUS_LABELS[message.status] ?? message.status}</Badge>
+                {message.status === "PENDING" && (
+                  <span className="mt-1 block text-xs text-ink-muted">next try {formatTime(message.nextAttemptAt)}</span>
+                )}
+                {message.status === "SENT" && <span className="mt-1 block text-xs text-ink-muted">{formatTime(message.sentAt)}</span>}
+              </Td>
+              <Td align="right" className="tabular-nums">{message.attempts}</Td>
+              <Td className="max-w-xs truncate text-ink-muted" title={message.lastError ?? ""}>
+                {message.lastError ?? "—"}
+              </Td>
+              <Td align="right">
+                {RESENDABLE.has(message.status) && (
+                  <Button size="sm" variant="secondary" onClick={() => resend(message)}>
+                    Resend
+                  </Button>
+                )}
+              </Td>
             </tr>
-          </thead>
-          <tbody>
-            {entries.map((message) => (
-              <tr key={message.id} className="border-b">
-                <td className="p-3 whitespace-nowrap">{formatTime(message.createdAt)}</td>
-                <td className="p-3">
-                  {message.description}
-                  <span className="ml-2 text-xs text-gray-500">{message.channel === "SMS" ? "SMS" : "Email"}</span>
-                </td>
-                <td className="p-3">{message.recipient}</td>
-                <td className="p-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[message.status] ?? ""}`}>
-                    {STATUS_LABELS[message.status] ?? message.status}
-                  </span>
-                  {message.status === "PENDING" && (
-                    <span className="block text-xs text-gray-500 mt-1">next try {formatTime(message.nextAttemptAt)}</span>
-                  )}
-                  {message.status === "SENT" && (
-                    <span className="block text-xs text-gray-500 mt-1">{formatTime(message.sentAt)}</span>
-                  )}
-                </td>
-                <td className="p-3 text-right">{message.attempts}</td>
-                <td className="p-3 max-w-xs truncate" title={message.lastError ?? ""}>
-                  {message.lastError ?? "—"}
-                </td>
-                <td className="p-3">
-                  {RESENDABLE.has(message.status) && (
-                    <button
-                      type="button"
-                      onClick={() => resend(message)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs"
-                    >
-                      Resend
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {!loading && !error && entries.length === 0 && (
-              <tr>
-                <td colSpan={7} className="p-6 text-center text-gray-500">
-                  {status === "FAILED" ? "Nothing failed — every message was delivered or is still being tried." : "No messages here."}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+          ))}
+          {!loading && !error && entries.length === 0 && (
+            <TableMessage colSpan={7}>
+              {status === "FAILED" ? "Nothing failed — every message was delivered or is still being tried." : "No messages here."}
+            </TableMessage>
+          )}
+        </tbody>
+      </Table>
 
-      <div className="flex items-center gap-3 mt-4">
-        <button
-          type="button"
-          onClick={() => setPage(page - 1)}
-          disabled={loading || page === 0}
-          className="border px-3 py-1 rounded disabled:opacity-50"
-        >
-          Previous
-        </button>
-        <span className="text-sm text-gray-700 dark:text-gray-300">
-          {loading
-            ? "Loading..."
-            : `Page ${totalPages === 0 ? 0 : page + 1} of ${totalPages} · ${result?.totalEntries ?? 0} messages`}
-        </span>
-        <button
-          type="button"
-          onClick={() => setPage(page + 1)}
-          disabled={loading || page + 1 >= totalPages}
-          className="border px-3 py-1 rounded disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
-    </div>
+      <Pagination page={page} totalPages={totalPages} totalEntries={result?.totalEntries} noun="messages" loading={loading} onPage={setPage} />
+    </>
   );
 }

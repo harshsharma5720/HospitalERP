@@ -20,7 +20,7 @@ test("every doctor with their fee; the default fee for those without", async () 
   expect(rowOf("Anita Rao")).toHaveTextContent("Cardiology");
   expect(screen.getByLabelText("Fee of Dr. Vikram Shah")).toHaveValue(null);
   expect(rowOf("Vikram Shah")).toHaveTextContent("Not set: the default fee applies");
-  expect(rowOf("Old Doctor")).toHaveTextContent("(inactive)");
+  expect(rowOf("Old Doctor")).toHaveTextContent("Deactivated");
   expect(screen.getByText(/the default fee of ₹250\.00/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Save the fee of Dr. Anita Rao" })).toBeDisabled(); // nothing changed
 });

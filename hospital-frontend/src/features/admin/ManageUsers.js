@@ -1,135 +1,169 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { Search, UserPlus } from "lucide-react";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import * as adminApi from "./api";
+import {
+  Badge, Button, Card, Input, PageHeader, Select, Table, TableMessage, Td, Th, useConfirm, useToast,
+} from "../../shared/ui";
+
+export const ROLE_LABELS = { ADMIN: "Admin", DOCTOR: "Doctor", PATIENT: "Patient", RECEPTIONIST: "Receptionist" };
 
 // Accounts are deactivated, not deleted (docs/ACCOUNT_DEACTIVATION_PLAN.md): a deactivated user can't log in
 // and their history is kept. "Delete permanently" only works for accounts without any appointment.
 export default function ManageUsers() {
+  const toast = useToast();
+  const confirm = useConfirm();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [search, setSearch] = useState("");
+  const [role, setRole] = useState("");
+
   const fetchUsers = async () => {
     try {
       const response = await adminApi.getAllUsers();
       setUsers(response.data);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      toast.error(getErrorMessage(error, "Could not load the users."));
     } finally {
       setLoading(false);
     }
   };
 
   const deactivate = async (user) => {
-    const ok = window.confirm(
-      `Deactivate ${user.username}?\n\nThey can't log in any more and their upcoming appointments are cancelled. ` +
-        "All history is kept, and you can reactivate the account later."
-    );
+    const ok = await confirm({
+      title: `Deactivate ${user.username}?`,
+      message:
+        "They can't log in any more and their upcoming appointments are cancelled. All history is kept, and you can reactivate the account later.",
+      confirmLabel: "Deactivate",
+      tone: "danger",
+    });
     if (!ok) return;
     try {
       await adminApi.deactivateUser(user.id);
-      alert(`${user.username} deactivated.`);
+      toast.success(`${user.username} deactivated.`);
       fetchUsers();
     } catch (error) {
-      alert(getErrorMessage(error, "Deactivation failed!"));
+      toast.error(getErrorMessage(error, "Deactivation failed!"));
     }
   };
 
   const reactivate = async (user) => {
     try {
       await adminApi.reactivateUser(user.id);
-      alert(`${user.username} reactivated - they can log in again.`);
+      toast.success(`${user.username} reactivated: they can log in again.`);
       fetchUsers();
     } catch (error) {
-      alert(getErrorMessage(error, "Reactivation failed!"));
+      toast.error(getErrorMessage(error, "Reactivation failed!"));
     }
   };
 
   const deletePermanently = async (user) => {
-    const ok = window.confirm(
-      `Delete ${user.username} permanently?\n\nThis can't be undone. It only works for accounts without any ` +
-        "appointment (medical records must be kept) - otherwise deactivate the account."
-    );
+    const ok = await confirm({
+      title: `Delete ${user.username} permanently?`,
+      message:
+        "This can't be undone. It only works for accounts without any appointment (medical records must be kept); otherwise deactivate the account.",
+      confirmLabel: "Delete permanently",
+      tone: "danger",
+    });
     if (!ok) return;
     try {
       await adminApi.deleteUserPermanently(user.id);
-      alert(`${user.username} deleted permanently.`);
+      toast.success(`${user.username} deleted permanently.`);
       fetchUsers();
     } catch (error) {
-      alert(getErrorMessage(error, "Delete failed!"));
+      toast.error(getErrorMessage(error, "Delete failed!"));
     }
   };
 
   useEffect(() => {
     fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (loading) return <p className="text-center mt-5">Loading users...</p>;
+  if (loading) return <p className="text-ink-muted">Loading users...</p>;
+
+  const needle = search.trim().toLowerCase();
+  const shown = users.filter((user) => (!role || user.role === role) && (!needle || user.username.toLowerCase().includes(needle)));
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-4">Manage Users</h1>
+    <>
+      <PageHeader
+        title="Users"
+        description="Accounts are deactivated rather than deleted, so their history is kept."
+        actions={
+          <Button as={Link} to="/admin/register-user">
+            <UserPlus size={16} aria-hidden="true" />
+            Add user
+          </Button>
+        }
+      />
 
-      <button
-        onClick={() => navigate("/admin/register-user")}
-        className="bg-blue-600 text-white py-2 px-4 rounded-lg mb-4"
-      >
-        + Add New User
-      </button>
+      <Card padding="sm" className="mb-4">
+        <div className="flex flex-wrap gap-3">
+          <div className="relative min-w-[14rem] flex-1">
+            <Search size={16} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
+            <Input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by username" aria-label="Search by username" className="pl-9" />
+          </div>
+          <div className="w-48">
+            <Select value={role} onChange={(e) => setRole(e.target.value)} aria-label="Role">
+              <option value="">All roles</option>
+              {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+      </Card>
 
-      <table className="w-full border-collapse bg-white shadow-md rounded-lg">
+      <Table>
         <thead>
-          <tr className="bg-gray-100 border-b">
-            <th className="p-3 text-left">ID</th>
-            <th className="p-3 text-left">Username</th>
-            <th className="p-3 text-left">Role</th>
-            <th className="p-3 text-left">Status</th>
-            <th className="p-3 text-left">Actions</th>
+          <tr>
+            <Th>ID</Th>
+            <Th>Username</Th>
+            <Th>Role</Th>
+            <Th>Status</Th>
+            <Th align="right">Actions</Th>
           </tr>
         </thead>
-
         <tbody>
-          {users.map((user) => (
-            <tr key={user.id} className={`border-b ${user.active ? "" : "bg-gray-50 text-gray-500"}`}>
-              <td className="p-3">{user.id}</td>
-              <td className="p-3">{user.username}</td>
-              <td className="p-3">{user.role}</td>
-              <td className="p-3">
+          {shown.map((user) => (
+            <tr key={user.id} className={user.active ? "" : "text-ink-muted"}>
+              <Td className="tabular-nums text-ink-muted">{user.id}</Td>
+              <Td className="font-medium">{user.username}</Td>
+              <Td>{ROLE_LABELS[user.role] ?? user.role}</Td>
+              <Td>
                 {user.active ? (
-                  <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-700 font-semibold">Active</span>
+                  <Badge tone="success">Active</Badge>
                 ) : (
-                  <span
-                    className="px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-700 font-semibold"
-                    title={user.deactivatedAt ? `since ${String(user.deactivatedAt).slice(0, 10)}` : undefined}
-                  >
-                    Deactivated
+                  <span title={user.deactivatedAt ? `since ${String(user.deactivatedAt).slice(0, 10)}` : undefined}>
+                    <Badge>Deactivated</Badge>
                   </span>
                 )}
-              </td>
-              <td className="p-3">
-                <div className="flex flex-wrap gap-2">
-                  <button className="bg-yellow-500 text-white px-3 py-1 rounded">Edit</button>
+              </Td>
+              <Td align="right">
+                <div className="flex flex-wrap justify-end gap-2">
                   {user.active ? (
-                    <button onClick={() => deactivate(user)} className="bg-orange-600 text-white px-3 py-1 rounded">
+                    <Button size="sm" variant="secondary" onClick={() => deactivate(user)}>
                       Deactivate
-                    </button>
+                    </Button>
                   ) : (
-                    <button onClick={() => reactivate(user)} className="bg-green-600 text-white px-3 py-1 rounded">
+                    <Button size="sm" variant="secondary" onClick={() => reactivate(user)}>
                       Reactivate
-                    </button>
+                    </Button>
                   )}
-                  <button
-                    onClick={() => deletePermanently(user)}
-                    className="border border-red-600 text-red-600 px-3 py-1 rounded"
-                  >
+                  <Button size="sm" variant="danger-ghost" onClick={() => deletePermanently(user)}>
                     Delete permanently
-                  </button>
+                  </Button>
                 </div>
-              </td>
+              </Td>
             </tr>
           ))}
+          {shown.length === 0 && <TableMessage colSpan={5}>No users match.</TableMessage>}
         </tbody>
-      </table>
-    </div>
+      </Table>
+    </>
   );
 }

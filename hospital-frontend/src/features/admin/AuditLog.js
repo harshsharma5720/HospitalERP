@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import * as adminApi from "./api";
+import { Badge, Button, Card, Field, Input, Notice, PageHeader, Pagination, Select, Table, TableMessage, Td, Th } from "../../shared/ui";
 
 // Who viewed or changed which patient record, and when (docs/AUDIT_LOG_PLAN.md). Read-only: entries are never changed.
 export const ACTION_LABELS = {
@@ -81,126 +82,89 @@ export default function AuditLog() {
   const totalPages = result?.totalPages ?? 0;
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-2">Audit Log</h1>
-      <p className="text-gray-600 mb-4">
-        Who viewed or changed patient records and accounts, newest first. Entries are kept forever and can't be changed.
-      </p>
+    <>
+      <PageHeader
+        title="Audit log"
+        description="Who viewed or changed patient records and accounts, newest first. Entries are kept forever and can't be changed."
+      />
 
-      <form onSubmit={search} className="bg-white shadow-md rounded-lg p-4 mb-4 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
-        <div className="flex flex-col text-sm">
-          <label htmlFor="audit-patient">Patient ID</label>
-          <input id="audit-patient" type="number" min="1" value={filters.patientId} onChange={change("patientId")}
-            className="border p-2 rounded" />
-        </div>
-        <div className="flex flex-col text-sm">
-          <label htmlFor="audit-username">Username</label>
-          <input id="audit-username" type="text" value={filters.username} onChange={change("username")}
-            className="border p-2 rounded" />
-        </div>
-        <div className="flex flex-col text-sm">
-          <label htmlFor="audit-action">Action</label>
-          <select id="audit-action" value={filters.action} onChange={change("action")} className="border p-2 rounded">
-            <option value="">All actions</option>
-            {Object.entries(ACTION_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col text-sm">
-          <label htmlFor="audit-from">From</label>
-          <input id="audit-from" type="date" value={filters.from} onChange={change("from")} className="border p-2 rounded" />
-        </div>
-        <div className="flex flex-col text-sm">
-          <label htmlFor="audit-to">To</label>
-          <input id="audit-to" type="date" value={filters.to} onChange={change("to")} className="border p-2 rounded" />
-        </div>
-        <div className="flex gap-2">
-          <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
-            Search
-          </button>
-          <button type="button" onClick={clear} className="border border-gray-400 px-4 py-2 rounded">
-            Clear
-          </button>
-        </div>
-      </form>
+      <Card padding="sm" className="mb-4">
+        <form onSubmit={search} className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <Field label="Patient ID" htmlFor="audit-patient">
+            <Input id="audit-patient" type="number" min="1" value={filters.patientId} onChange={change("patientId")} />
+          </Field>
+          <Field label="Username" htmlFor="audit-username">
+            <Input id="audit-username" type="text" value={filters.username} onChange={change("username")} />
+          </Field>
+          <Field label="Action" htmlFor="audit-action">
+            <Select id="audit-action" value={filters.action} onChange={change("action")}>
+              <option value="">All actions</option>
+              {Object.entries(ACTION_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="From" htmlFor="audit-from">
+            <Input id="audit-from" type="date" value={filters.from} onChange={change("from")} />
+          </Field>
+          <Field label="To" htmlFor="audit-to">
+            <Input id="audit-to" type="date" value={filters.to} onChange={change("to")} />
+          </Field>
+          <div className="flex gap-2">
+            <Button type="submit">Search</Button>
+            <Button variant="secondary" onClick={clear}>
+              Clear
+            </Button>
+          </div>
+        </form>
+      </Card>
 
-      {error && <p className="text-red-600 mb-4">{error}</p>}
+      <Notice tone="danger" className="mb-4">{error}</Notice>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse bg-white shadow-md rounded-lg text-sm">
-          <thead>
-            <tr className="bg-gray-100 border-b">
-              <th className="p-3 text-left">Time</th>
-              <th className="p-3 text-left">User</th>
-              <th className="p-3 text-left">Action</th>
-              <th className="p-3 text-left">Patient</th>
-              <th className="p-3 text-left">Record</th>
-              <th className="p-3 text-left">Details</th>
-              <th className="p-3 text-left">IP address</th>
+      <Table>
+        <thead>
+          <tr>
+            <Th>Time</Th>
+            <Th>User</Th>
+            <Th>Action</Th>
+            <Th>Patient</Th>
+            <Th>Record</Th>
+            <Th>Details</Th>
+            <Th>IP address</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry) => (
+            <tr key={entry.id}>
+              <Td className="whitespace-nowrap tabular-nums text-ink-muted">{formatTime(entry.occurredAt)}</Td>
+              <Td className="whitespace-nowrap">
+                {entry.actorUsername ? (
+                  <>
+                    <span className="font-medium">{entry.actorUsername}</span>
+                    {entry.actorRole && (
+                      <span className="ml-2">
+                        <Badge>{entry.actorRole}</Badge>
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-ink-muted">System</span>
+                )}
+              </Td>
+              <Td>{ACTION_LABELS[entry.action] ?? entry.action}</Td>
+              <Td>{entry.patientId != null ? `${entry.patientName ?? "(deleted)"} #${entry.patientId}` : "—"}</Td>
+              <Td className="whitespace-nowrap">{targetLabel(entry)}</Td>
+              <Td className="text-ink-muted">{entry.details}</Td>
+              <Td className="tabular-nums text-ink-muted">{entry.ipAddress}</Td>
             </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry) => (
-              <tr key={entry.id} className="border-b">
-                <td className="p-3 whitespace-nowrap">{formatTime(entry.occurredAt)}</td>
-                <td className="p-3">
-                  {entry.actorUsername ? (
-                    <>
-                      {entry.actorUsername}
-                      {entry.actorRole && (
-                        <span className="ml-2 px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-700">{entry.actorRole}</span>
-                      )}
-                    </>
-                  ) : (
-                    <span className="text-gray-500">System</span>
-                  )}
-                </td>
-                <td className="p-3">{ACTION_LABELS[entry.action] ?? entry.action}</td>
-                <td className="p-3">
-                  {entry.patientId != null ? `${entry.patientName ?? "(deleted)"} #${entry.patientId}` : "—"}
-                </td>
-                <td className="p-3">{targetLabel(entry)}</td>
-                <td className="p-3">{entry.details}</td>
-                <td className="p-3">{entry.ipAddress}</td>
-              </tr>
-            ))}
-            {!loading && !error && entries.length === 0 && (
-              <tr>
-                <td colSpan={7} className="p-6 text-center text-gray-500">
-                  No entries match these filters.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+          ))}
+          {!loading && !error && entries.length === 0 && <TableMessage colSpan={7}>No entries match these filters.</TableMessage>}
+        </tbody>
+      </Table>
 
-      <div className="flex items-center gap-3 mt-4">
-        <button
-          type="button"
-          onClick={() => setPage(page - 1)}
-          disabled={loading || page === 0}
-          className="border px-3 py-1 rounded disabled:opacity-50"
-        >
-          Previous
-        </button>
-        <span className="text-sm text-gray-700">
-          {loading
-            ? "Loading..."
-            : `Page ${totalPages === 0 ? 0 : page + 1} of ${totalPages} · ${result?.totalEntries ?? 0} entries`}
-        </span>
-        <button
-          type="button"
-          onClick={() => setPage(page + 1)}
-          disabled={loading || page + 1 >= totalPages}
-          className="border px-3 py-1 rounded disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
-    </div>
+      <Pagination page={page} totalPages={totalPages} totalEntries={result?.totalEntries} noun="entries" loading={loading} onPage={setPage} />
+    </>
   );
 }

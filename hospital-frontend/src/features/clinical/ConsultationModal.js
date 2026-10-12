@@ -196,7 +196,7 @@ export default function ConsultationModal({ appointment, onClose, onSaved }) {
                 <div className="flex gap-1">
                   <Input value={m.instructions || ""} onChange={(e) => changeMedicine(i, "instructions", e.target.value)}
                     placeholder="After food" aria-label="Instructions" />
-                  <Button variant="ghost" size="sm" onClick={() => removeMedicine(i)} aria-label="Remove medicine" className="h-10 text-danger-ink">
+                  <Button variant="danger-ghost" size="sm" onClick={() => removeMedicine(i)} aria-label="Remove medicine" className="h-10 px-2">
                     <X size={16} aria-hidden="true" />
                   </Button>
                 </div>

@@ -39,6 +39,13 @@ describe("Button", () => {
     expect(screen.getByRole("button", { name: "Back" })).toHaveClass("bg-surface", "border-line");
   });
 
+  test("a quiet destructive action is red text, not grey", () => {
+    render(<Button variant="danger-ghost">Delete permanently</Button>);
+    const button = screen.getByRole("button", { name: "Delete permanently" });
+    expect(button).toHaveClass("text-danger-ink");
+    expect(button).not.toHaveClass("text-ink-muted");
+  });
+
   test("as a link it goes somewhere and has no button type", () => {
     render(
       <MemoryRouter>
