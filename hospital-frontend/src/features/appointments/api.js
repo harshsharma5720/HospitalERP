@@ -50,6 +50,10 @@ export const callPatient = (appointmentId) => axios.post(`${API_BASE_URL}/api/do
 export const patientNotHere = (appointmentId) =>
   axios.post(`${API_BASE_URL}/api/doctor/queue/${appointmentId}/not-here`);
 
+// ---------- the waiting-room screen (no login) ----------
+// { date, doctors: [{ doctorName, specialist, nowServing, next: [tokens] }] } - tokens only, no patient data
+export const getQueueScreen = () => axios.get(`${API_BASE_URL}/api/queue/screen`);
+
 // ---------- front desk (receptionist) ----------
 export const getFrontDeskAppointments = () => axios.get(`${API_BASE_URL}/api/receptionist/getAppointments`);
 
