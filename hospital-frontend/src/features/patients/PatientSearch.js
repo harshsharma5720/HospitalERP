@@ -4,6 +4,8 @@ import { getErrorMessage } from "../../shared/utils/apiError";
 import { calculateAgeFromDOB } from "../../shared/utils/calculateAgeFromDOB";
 import useAreaBase from "../../shared/useAreaBase";
 import * as patientsApi from "./api";
+import { Search } from "lucide-react";
+import { Badge, Button, Input, Notice, PageHeader, Pagination, Table, TableMessage, Td, Th } from "../../shared/ui";
 
 // The front desk's Patients page (docs/PATIENT_SEARCH_PLAN.md): one search box - part of a name, a phone number or a
 // patient ID - and the patients found, 20 per page; without a search, everyone. The search and the page are kept in
@@ -60,107 +62,81 @@ export default function PatientSearch() {
   const from = location.pathname + location.search; // the patient page links back here
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-2">Patients</h1>
-      <p className="text-gray-600 dark:text-gray-300 mb-4">
-        Search by part of a name, a phone number (10 digits or more) or a patient ID such as #41.
-      </p>
+    <>
+      <PageHeader
+        title="Patients"
+        description="Search by part of a name, a phone number (10 digits or more) or a patient ID such as #41."
+      />
 
-      <form onSubmit={search} role="search" className="flex flex-wrap gap-3 mb-4 max-w-2xl">
+      <form onSubmit={search} role="search" className="mb-4 flex max-w-2xl flex-wrap gap-2">
         <label htmlFor="patient-search" className="sr-only">
           Name, phone or patient ID
         </label>
-        <input
-          id="patient-search"
-          type="search"
-          value={box}
-          onChange={(e) => setBox(e.target.value)}
-          placeholder="Name, phone or patient ID"
-          className="flex-1 min-w-0 p-2 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2]"
-        />
-        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
-          Search
-        </button>
+        <div className="relative min-w-0 flex-1">
+          <Search size={16} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
+          <Input
+            id="patient-search"
+            type="search"
+            value={box}
+            onChange={(e) => setBox(e.target.value)}
+            placeholder="Name, phone or patient ID"
+            className="pl-9"
+          />
+        </div>
+        <Button type="submit">Search</Button>
         {query && (
-          <button type="button" onClick={() => setParams({})} className="border dark:border-gray-600 px-4 py-2 rounded">
+          <Button variant="secondary" onClick={() => setParams({})}>
             Show everyone
-          </button>
+          </Button>
         )}
       </form>
 
-      {error && (
-        <p role="alert" className="text-red-600 mb-4">
-          {error}
-        </p>
-      )}
+      <Notice tone="danger" className="mb-4">{error}</Notice>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse bg-white dark:bg-[#1e293b] shadow-md rounded-lg text-sm">
-          <thead>
-            <tr className="bg-gray-100 dark:bg-gray-800 border-b dark:border-gray-600">
-              <th className="p-3 text-left">ID</th>
-              <th className="p-3 text-left">Name</th>
-              <th className="p-3 text-left">Gender</th>
-              <th className="p-3 text-right">Age</th>
-              <th className="p-3 text-left">Phone</th>
-              <th className="p-3 text-left">Email</th>
-              <th className="p-3 text-left">Account</th>
+      <Table>
+        <thead>
+          <tr>
+            <Th>ID</Th>
+            <Th>Name</Th>
+            <Th>Gender</Th>
+            <Th align="right">Age</Th>
+            <Th>Phone</Th>
+            <Th>Email</Th>
+            <Th>Account</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((patient) => (
+            <tr key={patient.patientId}>
+              <Td className="text-ink-muted tabular-nums">#{patient.patientId}</Td>
+              <Td>
+                <Link to={`${base}/patients/${patient.patientId}`} state={{ from }} className="font-medium text-primary-ink hover:underline">
+                  {patient.patientName || "(no name)"}
+                </Link>
+              </Td>
+              <Td>{GENDER_LABELS[patient.gender] ?? "—"}</Td>
+              <Td align="right" className="tabular-nums">{patient.dob ? calculateAgeFromDOB(patient.dob) : "—"}</Td>
+              <Td className="whitespace-nowrap tabular-nums">{patient.contactNo || "—"}</Td>
+              <Td className="text-ink-muted">{patient.email || "—"}</Td>
+              <Td>
+                <Badge tone={patient.hasLogin ? "primary" : "neutral"}>{patient.hasLogin ? "App account" : "Front-desk record"}</Badge>
+              </Td>
             </tr>
-          </thead>
-          <tbody>
-            {entries.map((patient) => (
-              <tr key={patient.patientId} className="border-b dark:border-gray-700">
-                <td className="p-3 text-gray-500 dark:text-gray-400">#{patient.patientId}</td>
-                <td className="p-3">
-                  <Link
-                    to={`${base}/patients/${patient.patientId}`}
-                    state={{ from }}
-                    className="font-semibold text-blue-700 dark:text-[#50d4f2] hover:underline"
-                  >
-                    {patient.patientName || "(no name)"}
-                  </Link>
-                </td>
-                <td className="p-3">{GENDER_LABELS[patient.gender] ?? "—"}</td>
-                <td className="p-3 text-right">{patient.dob ? calculateAgeFromDOB(patient.dob) : "—"}</td>
-                <td className="p-3 whitespace-nowrap">{patient.contactNo || "—"}</td>
-                <td className="p-3">{patient.email || "—"}</td>
-                <td className="p-3">{patient.hasLogin ? "App account" : "Front-desk record"}</td>
-              </tr>
-            ))}
-            {!loading && !error && entries.length === 0 && (
-              <tr>
-                <td colSpan={7} className="p-6 text-center text-gray-500">
-                  {query ? `No patient found for "${query}".` : "No patients yet."}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+          ))}
+          {!loading && !error && entries.length === 0 && (
+            <TableMessage colSpan={7}>{query ? `No patient found for "${query}".` : "No patients yet."}</TableMessage>
+          )}
+        </tbody>
+      </Table>
 
-      <div className="flex items-center gap-3 mt-4">
-        <button
-          type="button"
-          onClick={() => goToPage(page - 1)}
-          disabled={loading || page === 0}
-          className="border dark:border-gray-600 px-3 py-1 rounded disabled:opacity-50"
-        >
-          Previous
-        </button>
-        <span className="text-sm text-gray-700 dark:text-gray-300">
-          {loading
-            ? "Loading..."
-            : `Page ${totalPages === 0 ? 0 : page + 1} of ${totalPages} · ${result?.totalEntries ?? 0} patients`}
-        </span>
-        <button
-          type="button"
-          onClick={() => goToPage(page + 1)}
-          disabled={loading || page + 1 >= totalPages}
-          className="border dark:border-gray-600 px-3 py-1 rounded disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
-    </div>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalEntries={result?.totalEntries}
+        noun="patients"
+        loading={loading}
+        onPage={goToPage}
+      />
+    </>
   );
 }

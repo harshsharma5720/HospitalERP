@@ -8,6 +8,8 @@ import { getAllDoctors } from "../doctors/api";
 import { getFrontDeskPatient } from "../patients/api";
 import { dayLabel, doctorLabel, formatDate, formatTime } from "./appointmentFormat";
 import * as appointmentsApi from "./api";
+import { CheckCircle2 } from "lucide-react";
+import { Button, Card, Field, Input, Notice, PageHeader, Select } from "../../shared/ui";
 
 // Walk-in patients at the front desk (docs/WALK_IN_REGISTRATION_PLAN.md): look the phone number up, book for one
 // of the patients found or register a new one, pick a doctor and one of their next free slots (the earliest is
@@ -19,10 +21,21 @@ const MORE_SLOTS = 20;
 
 const GENDER_LABELS = { FEMALE: "Female", MALE: "Male", OTHER: "Other" };
 
-const INPUT =
-  "w-full p-2 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2]";
-const CARD = "bg-white dark:bg-[#1e293b] shadow-md rounded-lg p-5 mb-5";
-const QUIET_BORDER = "border-gray-300 dark:border-gray-600";
+const CHOICE = "rounded-lg border transition-colors";
+const CHOSEN = "border-primary bg-primary-ink/10";
+const NOT_CHOSEN = "border-line hover:bg-surface-2";
+
+// A numbered step's title (the number is decoration; the title is the heading or label)
+function Step({ number, children }) {
+  return (
+    <div className="mb-4 flex items-center gap-3">
+      <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
+        {number}
+      </span>
+      {children}
+    </div>
+  );
+}
 
 const EMPTY_NEW_PATIENT = { name: "", gender: "", dob: "", email: "" };
 
@@ -192,34 +205,34 @@ export default function WalkInBooking() {
   if (confirmation) {
     const { appointment } = confirmation;
     return (
-      <div className="p-6 max-w-3xl">
-        <h1 className="text-3xl font-bold mb-4">Walk-in booking</h1>
-        <div role="status" className={`${CARD} border-l-4 border-green-600`}>
-          <h2 className="text-xl font-semibold mb-2">Booked</h2>
-          <p className="mb-1">
-            <strong>{appointment.patientName}</strong> with{" "}
-            <strong>{confirmation.doctor ? doctorLabel(confirmation.doctor) : `Dr. ${appointment.doctorName}`}</strong>
-          </p>
-          <p className="mb-1">
-            {formatDate(appointment.date, true)}, {formatTime(appointment.startTime)}–{formatTime(appointment.endTime)}
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            {confirmation.newPatient ? "New patient record created. " : ""}
-            An SMS confirmation is sent to {confirmation.phone}.
-          </p>
-          {appointment.tokenNumber && (
-            <p className="mt-2 text-lg font-semibold">Checked in for today: token {appointment.tokenNumber}</p>
-          )}
-          <Link
-            to={`${base}/patients/${confirmation.patientId}`}
-            className="inline-block mt-2 text-sm text-blue-700 dark:text-[#50d4f2] hover:underline"
-          >
-            Open the patient's page
-          </Link>
-        </div>
-        <button type="button" onClick={nextPatient} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
-          Next patient
-        </button>
+      <div className="max-w-3xl">
+        <PageHeader title="Walk-in booking" />
+        <Card role="status" className="mb-5 border-l-4 border-l-success">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 size={22} aria-hidden="true" className="mt-0.5 shrink-0 text-success-ink" />
+            <div>
+              <h2 className="mb-2 text-lg font-semibold">Booked</h2>
+              <p className="mb-1">
+                <strong>{appointment.patientName}</strong> with{" "}
+                <strong>{confirmation.doctor ? doctorLabel(confirmation.doctor) : `Dr. ${appointment.doctorName}`}</strong>
+              </p>
+              <p className="mb-1">
+                {formatDate(appointment.date, true)}, {formatTime(appointment.startTime)}–{formatTime(appointment.endTime)}
+              </p>
+              <p className="text-sm text-ink-muted">
+                {confirmation.newPatient ? "New patient record created. " : ""}
+                An SMS confirmation is sent to {confirmation.phone}.
+              </p>
+              {appointment.tokenNumber && (
+                <p className="mt-3 text-lg font-semibold">Checked in for today: token {appointment.tokenNumber}</p>
+              )}
+              <Link to={`${base}/patients/${confirmation.patientId}`} className="mt-3 inline-block text-sm font-medium text-primary-ink hover:underline">
+                Open the patient's page
+              </Link>
+            </div>
+          </div>
+        </Card>
+        <Button onClick={nextPatient}>Next patient</Button>
       </div>
     );
   }
@@ -228,63 +241,56 @@ export default function WalkInBooking() {
   const knownDob = isNew ? newPatient.dob : patient?.dob;
 
   return (
-    <div className="p-6 max-w-3xl">
-      <h1 className="text-3xl font-bold mb-2">Walk-in booking</h1>
-      <p className="text-gray-600 dark:text-gray-300 mb-5">
-        Look the phone number up first: the patient may already be registered, or share the number with family.
-      </p>
+    <div className="max-w-3xl">
+      <PageHeader
+        title="Walk-in booking"
+        description="Look the phone number up first: the patient may already be registered, or share the number with family."
+      />
 
       {/* 1. Phone number */}
-      <form onSubmit={search} className={CARD}>
-        <label htmlFor="walkin-phone" className="block font-semibold mb-2">
-          Phone number
-        </label>
-        <div className="flex gap-3">
-          <input
-            id="walkin-phone"
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+91 98765 43210"
-            className={INPUT}
-            required
-          />
-          <button
-            type="submit"
-            disabled={searching}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50"
-          >
-            {searching ? "Searching..." : "Find"}
-          </button>
-        </div>
-      </form>
+      <Card className="mb-5">
+        <form onSubmit={search}>
+          <Step number={1}>
+            <label htmlFor="walkin-phone" className="font-semibold">
+              Phone number
+            </label>
+          </Step>
+          <div className="flex gap-2">
+            <Input
+              id="walkin-phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+91 98765 43210"
+              required
+            />
+            <Button type="submit" disabled={searching}>
+              {searching ? "Searching..." : "Find"}
+            </Button>
+          </div>
+        </form>
+      </Card>
 
-      {error && (
-        <p role="alert" className="text-red-600 mb-4">
-          {error}
-        </p>
-      )}
+      <Notice tone="danger" className="mb-5">{error}</Notice>
 
       {/* 2. Patient */}
       {matches && (
-        <div className={CARD}>
-          <h2 className="font-semibold mb-3">Patient</h2>
+        <Card className="mb-5">
+          <Step number={2}>
+            <h2 className="font-semibold">Patient</h2>
+          </Step>
           {matches.length === 0 ? (
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-              No patient with this number yet — register a new patient.
-            </p>
+            <p className="mb-3 text-sm text-ink-muted">No patient with this number yet — register a new patient.</p>
           ) : (
             <ul className="mb-3 space-y-2">
               {matches.map((match) => (
                 <li
                   key={match.patientId}
-                  className={`flex items-center justify-between gap-3 border rounded p-3 ${
-                    patient === match ? "border-blue-600 bg-blue-50 dark:bg-[#16224a]" : QUIET_BORDER
-                  }`}
+                  className={`flex items-center justify-between gap-3 p-3 ${CHOICE} ${patient === match ? CHOSEN : NOT_CHOSEN}`}
                 >
                   <div>
-                    <p className="font-semibold">{match.patientName}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <p className="font-medium">{match.patientName}</p>
+                    <p className="text-sm text-ink-muted">
                       {[
                         GENDER_LABELS[match.gender],
                         match.dob ? `${calculateAgeFromDOB(match.dob)} years` : null,
@@ -295,133 +301,120 @@ export default function WalkInBooking() {
                         .join(" · ")}
                     </p>
                   </div>
-                  <button
-                    type="button"
+                  <Button
+                    size="sm"
+                    variant={patient === match ? "primary" : "secondary"}
                     aria-pressed={patient === match}
                     onClick={() => choosePatient(match)}
-                    className="border border-blue-600 text-blue-700 dark:text-[#50d4f2] px-3 py-1 rounded text-sm whitespace-nowrap"
                   >
                     Book for {match.patientName}
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
           )}
           {matches.length > 0 && (
-            <button
-              type="button"
-              aria-pressed={isNew}
-              onClick={() => choosePatient("new")}
-              className={`border px-3 py-1 rounded text-sm ${isNew ? "border-blue-600 bg-blue-50 dark:bg-[#16224a]" : QUIET_BORDER}`}
-            >
+            <Button size="sm" variant={isNew ? "primary" : "secondary"} aria-pressed={isNew} onClick={() => choosePatient("new")}>
               Someone else — new patient
-            </button>
+            </Button>
           )}
 
           {isNew && (
-            <div className="grid sm:grid-cols-2 gap-3 mt-3">
-              <p className="sm:col-span-2 text-sm">
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <p className="text-sm sm:col-span-2">
                 Phone: <strong>{searchedPhone}</strong>
               </p>
-              <div>
-                <label htmlFor="walkin-name" className="block text-sm">Name</label>
-                <input id="walkin-name" value={newPatient.name} onChange={changeNewPatient("name")} maxLength={100}
-                       className={INPUT} />
-              </div>
-              <div>
-                <label htmlFor="walkin-gender" className="block text-sm">Gender</label>
-                <select id="walkin-gender" value={newPatient.gender} onChange={changeNewPatient("gender")} className={INPUT}>
+              <Field label="Name" htmlFor="walkin-name">
+                <Input id="walkin-name" value={newPatient.name} onChange={changeNewPatient("name")} maxLength={100} />
+              </Field>
+              <Field label="Gender" htmlFor="walkin-gender">
+                <Select id="walkin-gender" value={newPatient.gender} onChange={changeNewPatient("gender")}>
                   <option value="">Choose</option>
                   {Object.entries(GENDER_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
                   ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="walkin-dob" className="block text-sm">Date of birth (optional)</label>
-                <input id="walkin-dob" type="date" value={newPatient.dob} onChange={changeNewPatient("dob")}
-                       max={toLocalISODate()} className={INPUT} />
-              </div>
-              <div>
-                <label htmlFor="walkin-email" className="block text-sm">Email (optional)</label>
-                <input id="walkin-email" type="email" value={newPatient.email} onChange={changeNewPatient("email")}
-                       className={INPUT} />
-              </div>
+                </Select>
+              </Field>
+              <Field label="Date of birth (optional)" htmlFor="walkin-dob">
+                <Input id="walkin-dob" type="date" value={newPatient.dob} onChange={changeNewPatient("dob")} max={toLocalISODate()} />
+              </Field>
+              <Field label="Email (optional)" htmlFor="walkin-email">
+                <Input id="walkin-email" type="email" value={newPatient.email} onChange={changeNewPatient("email")} />
+              </Field>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {/* 3. Doctor, time and visit */}
       {patient && (
-        <form onSubmit={book} className={CARD}>
-          <h2 className="font-semibold mb-3">Visit</h2>
-          <label htmlFor="walkin-doctor" className="block text-sm">Doctor</label>
-          <select id="walkin-doctor" value={doctorId} onChange={chooseDoctor} className={`${INPUT} mb-3`}>
-            <option value="">Choose a doctor</option>
-            {doctors.map((doctor) => (
-              <option key={doctor.id} value={doctor.id}>{doctorLabel(doctor)}</option>
-            ))}
-          </select>
-
-          {doctorId && slots === null && <p className="text-sm mb-3">Loading free times...</p>}
-          {slots && slots.length === 0 && (
-            <p className="text-sm mb-3">No free times in the next 30 days — please choose another doctor.</p>
-          )}
-          {slots && slots.length > 0 && (
-            <fieldset className="mb-3">
-              <legend className="text-sm mb-1">Time (the earliest is chosen)</legend>
-              <div className="flex flex-wrap gap-2">
-                {slots.map((slot) => (
-                  <label
-                    key={slot.slotId}
-                    className={`cursor-pointer border rounded px-3 py-1 text-sm ${
-                      slotId === slot.slotId ? "bg-blue-600 text-white border-blue-600" : QUIET_BORDER
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="walkin-slot"
-                      value={slot.slotId}
-                      checked={slotId === slot.slotId}
-                      onChange={() => setSlotId(slot.slotId)}
-                      className="sr-only"
-                    />
-                    {dayLabel(slot.date)} {formatTime(slot.startTime)}
-                  </label>
+        <Card>
+          <form onSubmit={book}>
+            <Step number={3}>
+              <h2 className="font-semibold">Visit</h2>
+            </Step>
+            <Field label="Doctor" htmlFor="walkin-doctor" className="mb-4">
+              <Select id="walkin-doctor" value={doctorId} onChange={chooseDoctor}>
+                <option value="">Choose a doctor</option>
+                {doctors.map((doctor) => (
+                  <option key={doctor.id} value={doctor.id}>
+                    {doctorLabel(doctor)}
+                  </option>
                 ))}
-                {slotLimit === SLOTS_SHOWN && slots.length === SLOTS_SHOWN && (
-                  <button type="button" onClick={showMoreSlots} className="text-sm underline px-2">
-                    More times
-                  </button>
-                )}
-              </div>
-            </fieldset>
-          )}
+              </Select>
+            </Field>
 
-          <div className="grid sm:grid-cols-2 gap-3 mb-3">
-            <div>
-              <label htmlFor="walkin-age" className="block text-sm">Age</label>
-              <input id="walkin-age" type="number" min={0} max={130} value={age} onChange={(e) => setAge(e.target.value)}
-                     className={INPUT} />
-              {knownDob && age === "" && (
-                <p className="text-xs text-gray-500 mt-1">Empty: taken from the date of birth.</p>
-              )}
-            </div>
-            <div>
-              <label htmlFor="walkin-message" className="block text-sm">Reason for the visit (optional)</label>
-              <input id="walkin-message" value={message} onChange={(e) => setMessage(e.target.value)} className={INPUT} />
-            </div>
-          </div>
+            {doctorId && slots === null && <p className="mb-4 text-sm text-ink-muted">Loading free times...</p>}
+            {slots && slots.length === 0 && (
+              <Notice tone="warning" className="mb-4">No free times in the next 30 days — please choose another doctor.</Notice>
+            )}
+            {slots && slots.length > 0 && (
+              <fieldset className="mb-4">
+                <legend className="mb-1.5 text-sm font-medium">Time (the earliest is chosen)</legend>
+                <div className="flex flex-wrap gap-2">
+                  {slots.map((slot) => (
+                    <label
+                      key={slot.slotId}
+                      className={`cursor-pointer px-3 py-1.5 text-sm font-medium focus-within:ring-2 focus-within:ring-primary/40 ${CHOICE} ${
+                        slotId === slot.slotId ? "border-primary bg-primary text-white" : NOT_CHOSEN
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="walkin-slot"
+                        value={slot.slotId}
+                        checked={slotId === slot.slotId}
+                        onChange={() => setSlotId(slot.slotId)}
+                        className="sr-only"
+                      />
+                      {dayLabel(slot.date)} {formatTime(slot.startTime)}
+                    </label>
+                  ))}
+                  {slotLimit === SLOTS_SHOWN && slots.length === SLOTS_SHOWN && (
+                    <Button variant="ghost" size="sm" onClick={showMoreSlots}>
+                      More times
+                    </Button>
+                  )}
+                </div>
+              </fieldset>
+            )}
 
-          <button
-            type="submit"
-            disabled={booking}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded disabled:opacity-50"
-          >
-            {booking ? "Booking..." : isNew ? "Register and book" : "Book"}
-          </button>
-        </form>
+            <div className="mb-5 grid gap-4 sm:grid-cols-2">
+              <Field label="Age" htmlFor="walkin-age" hint={knownDob && age === "" ? "Empty: taken from the date of birth." : null}>
+                <Input id="walkin-age" type="number" min={0} max={130} value={age} onChange={(e) => setAge(e.target.value)} />
+              </Field>
+              <Field label="Reason for the visit (optional)" htmlFor="walkin-message">
+                <Input id="walkin-message" value={message} onChange={(e) => setMessage(e.target.value)} />
+              </Field>
+            </div>
+
+            <Button type="submit" variant="success" disabled={booking}>
+              {booking ? "Booking..." : isNew ? "Register and book" : "Book"}
+            </Button>
+          </form>
+        </Card>
       )}
     </div>
   );

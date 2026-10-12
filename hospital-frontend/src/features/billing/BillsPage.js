@@ -7,15 +7,13 @@ import useAreaBase from "../../shared/useAreaBase";
 import { dayLabel, formatDate } from "../appointments/appointmentFormat";
 import { BILL_STATUS, BillStatusBadge } from "./billFormat";
 import { getBills } from "./api";
+import { Button, Card, Field, Input, Notice, PageHeader, Pagination, Select, Table, TableMessage, Td, Th } from "../../shared/ui";
 
 // The front desk's bills (docs/BILLING_PLAN.md): today's by default; dates, status and patient (or bill number)
 // filters; newest first, 20 per page. The filters live in the address, so coming back from a bill shows the same
 // list. Receptionists: /bills, admins: /admin/bills.
 
 const PAGE_SIZE = 20;
-const INPUT =
-  "h-10 px-2 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2]";
-const QUIET_BUTTON = "border dark:border-gray-600 rounded";
 
 const dateLabel = (isoDate) =>
   isoDate.startsWith(String(new Date().getFullYear())) ? dayLabel(isoDate) : formatDate(isoDate, true);
@@ -81,121 +79,86 @@ export default function BillsPage() {
   const back = location.pathname + location.search;
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-4">Bills</h1>
+    <>
+      <PageHeader title="Bills" description="Today's bills by default, newest first." />
 
-      <form onSubmit={apply} aria-label="Filters" className="flex flex-wrap items-end gap-3 mb-4">
-        <div className="flex flex-col text-sm">
-          <label htmlFor="bills-from">From</label>
-          <input id="bills-from" type="date" value={draft.from} onChange={change("from")} className={INPUT} />
-        </div>
-        <div className="flex flex-col text-sm">
-          <label htmlFor="bills-to">To</label>
-          <input id="bills-to" type="date" value={draft.to} onChange={change("to")} className={INPUT} />
-        </div>
-        <div className="flex flex-col text-sm">
-          <label htmlFor="bills-status">Status</label>
-          <select id="bills-status" value={draft.status} onChange={change("status")} className={INPUT}>
-            <option value="all">All</option>
-            {Object.entries(BILL_STATUS).map(([value, { label }]) => (
-              <option key={value} value={value.toLowerCase()}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col text-sm">
-          <label htmlFor="bills-patient">Patient or bill number</label>
-          <input
-            id="bills-patient"
-            value={draft.patient}
-            onChange={change("patient")}
-            placeholder="e.g. Asha or B-2026-000123"
-            className={`${INPUT} w-64`}
-          />
-        </div>
-        <button type="submit" className="h-10 bg-blue-600 hover:bg-blue-700 text-white px-4 rounded">
-          Show
-        </button>
-        <button type="button" onClick={() => show({ ...filters, from: today, to: today })} className={`${QUIET_BUTTON} h-10 px-4`}>
-          Today
-        </button>
-        <button type="button" onClick={() => show({ ...filters, from: "", to: "" })} className={`${QUIET_BUTTON} h-10 px-4`}>
-          Any date
-        </button>
-      </form>
+      <Card padding="sm" className="mb-4">
+        <form onSubmit={apply} aria-label="Filters" className="flex flex-wrap items-end gap-3">
+          <Field label="From" htmlFor="bills-from">
+            <Input id="bills-from" type="date" value={draft.from} onChange={change("from")} />
+          </Field>
+          <Field label="To" htmlFor="bills-to">
+            <Input id="bills-to" type="date" value={draft.to} onChange={change("to")} />
+          </Field>
+          <Field label="Status" htmlFor="bills-status">
+            <Select id="bills-status" value={draft.status} onChange={change("status")}>
+              <option value="all">All</option>
+              {Object.entries(BILL_STATUS).map(([value, { label }]) => (
+                <option key={value} value={value.toLowerCase()}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Patient or bill number" htmlFor="bills-patient" className="min-w-[16rem] flex-1">
+            <Input id="bills-patient" value={draft.patient} onChange={change("patient")} placeholder="e.g. Asha or B-2026-000123" />
+          </Field>
+          <div className="flex gap-2">
+            <Button type="submit">Show</Button>
+            <Button variant="secondary" onClick={() => show({ ...filters, from: today, to: today })}>
+              Today
+            </Button>
+            <Button variant="secondary" onClick={() => show({ ...filters, from: "", to: "" })}>
+              Any date
+            </Button>
+          </div>
+        </form>
+      </Card>
 
-      {error && (
-        <p role="alert" className="text-red-600 mb-4">
-          {error}
-        </p>
-      )}
+      <Notice tone="danger" className="mb-4">{error}</Notice>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse bg-white dark:bg-[#1e293b] shadow-md rounded-lg text-sm">
-          <thead>
-            <tr className="bg-gray-100 dark:bg-gray-800 border-b dark:border-gray-600">
-              <th className="p-3 text-left">Bill</th>
-              <th className="p-3 text-left">Visit</th>
-              <th className="p-3 text-left">Patient</th>
-              <th className="p-3 text-left">Doctor</th>
-              <th className="p-3 text-right">Total</th>
-              <th className="p-3 text-left">Status</th>
+      <Table>
+        <thead>
+          <tr>
+            <Th>Bill</Th>
+            <Th>Visit</Th>
+            <Th>Patient</Th>
+            <Th>Doctor</Th>
+            <Th align="right">Total</Th>
+            <Th>Status</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((bill) => (
+            <tr key={bill.id}>
+              <Td className="whitespace-nowrap">
+                <Link to={`${base}/bills/${bill.id}`} state={{ from: back }} className="font-medium text-primary-ink hover:underline">
+                  {bill.billNumber}
+                </Link>
+              </Td>
+              <Td className="whitespace-nowrap">{dateLabel(bill.visitDate)}</Td>
+              <Td>{bill.patientName}</Td>
+              <Td className="text-ink-muted">{bill.doctorName ? `Dr. ${bill.doctorName}` : "—"}</Td>
+              <Td align="right" className="whitespace-nowrap font-medium tabular-nums">{formatRupees(bill.total)}</Td>
+              <Td>
+                <BillStatusBadge status={bill.status} />
+              </Td>
             </tr>
-          </thead>
-          <tbody>
-            {entries.map((bill) => (
-              <tr key={bill.id} className="border-b dark:border-gray-700">
-                <td className="p-3 whitespace-nowrap">
-                  <Link
-                    to={`${base}/bills/${bill.id}`}
-                    state={{ from: back }}
-                    className="font-semibold text-blue-700 dark:text-[#50d4f2] hover:underline"
-                  >
-                    {bill.billNumber}
-                  </Link>
-                </td>
-                <td className="p-3 whitespace-nowrap">{dateLabel(bill.visitDate)}</td>
-                <td className="p-3">{bill.patientName}</td>
-                <td className="p-3">{bill.doctorName ? `Dr. ${bill.doctorName}` : "—"}</td>
-                <td className="p-3 text-right whitespace-nowrap tabular-nums">{formatRupees(bill.total)}</td>
-                <td className="p-3">
-                  <BillStatusBadge status={bill.status} />
-                </td>
-              </tr>
-            ))}
-            {!loading && !error && entries.length === 0 && (
-              <tr>
-                <td colSpan={6} className="p-6 text-center text-gray-500">
-                  No bills for these filters. Bills are made when a patient checks in.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+          ))}
+          {!loading && !error && entries.length === 0 && (
+            <TableMessage colSpan={6}>No bills for these filters. Bills are made when a patient checks in.</TableMessage>
+          )}
+        </tbody>
+      </Table>
 
-      <div className="flex items-center gap-3 mt-4">
-        <button
-          type="button"
-          onClick={() => show(filters, page - 1)}
-          disabled={loading || page === 0}
-          className={`${QUIET_BUTTON} px-3 py-1 disabled:opacity-50`}
-        >
-          Previous
-        </button>
-        <span className="text-sm text-gray-700 dark:text-gray-300">
-          {loading ? "Loading..." : `Page ${totalPages === 0 ? 0 : page + 1} of ${totalPages} · ${result?.totalEntries ?? 0} bills`}
-        </span>
-        <button
-          type="button"
-          onClick={() => show(filters, page + 1)}
-          disabled={loading || page + 1 >= totalPages}
-          className={`${QUIET_BUTTON} px-3 py-1 disabled:opacity-50`}
-        >
-          Next
-        </button>
-      </div>
-    </div>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalEntries={result?.totalEntries}
+        noun="bills"
+        loading={loading}
+        onPage={(number) => show(filters, number)}
+      />
+    </>
   );
 }

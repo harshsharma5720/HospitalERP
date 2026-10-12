@@ -48,19 +48,19 @@ const STATUS_LABELS = {
   CANCELLED_BY_DOCTOR: "Cancelled by doctor",
 };
 
-// The badge always carries its label; the color only supports it
-const STYLES = {
-  upcoming: "bg-blue-100 text-blue-800",
-  completed: "bg-green-100 text-green-800",
-  missed: "bg-amber-100 text-amber-800",
-  cancelled: "bg-gray-200 text-gray-700",
+// Badge tones (shared/ui/Badge): the badge always carries its label; the colour only supports it
+const TONES = {
+  upcoming: "info",
+  completed: "success",
+  missed: "warning",
+  cancelled: "neutral",
 };
 
 // What the front desk calls an appointment's state: a past appointment that was never completed is "Missed"
 export const visitStatus = (appointment, today = toLocalISODate()) => {
   const { status, date } = appointment;
-  if (status === "COMPLETED") return { label: STATUS_LABELS.COMPLETED, style: STYLES.completed };
-  if (status?.startsWith("CANCELLED")) return { label: STATUS_LABELS[status], style: STYLES.cancelled };
-  if (date < today) return { label: "Missed", style: STYLES.missed };
-  return { label: STATUS_LABELS[status] ?? status, style: STYLES.upcoming };
+  if (status === "COMPLETED") return { label: STATUS_LABELS.COMPLETED, tone: TONES.completed };
+  if (status?.startsWith("CANCELLED")) return { label: STATUS_LABELS[status], tone: TONES.cancelled };
+  if (date < today) return { label: "Missed", tone: TONES.missed };
+  return { label: STATUS_LABELS[status] ?? status, tone: TONES.upcoming };
 };

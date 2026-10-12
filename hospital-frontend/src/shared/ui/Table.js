@@ -1,12 +1,13 @@
 import React from "react";
 
 // Tables with one look: a bordered card that scrolls sideways on a small screen, a quiet header row and
-// separated rows. Use <Table>, <Th>, <Td> with ordinary <thead>/<tbody>/<tr>.
+// separated rows. Use <Table>, <Th>, <Td> with ordinary <thead>/<tbody>/<tr>; <Table plain> inside a Card.
 
-export function Table({ className = "", children, ...props }) {
+export function Table({ plain = false, className = "", children, ...props }) {
+  const frame = plain ? "" : "rounded-xl border border-line bg-surface shadow-card";
   return (
-    <div className={`overflow-x-auto rounded-xl border border-line bg-surface shadow-card ${className}`}>
-      <table className="w-full border-collapse text-sm" {...props}>
+    <div className={`overflow-x-auto ${frame} ${className}`}>
+      <table className="w-full border-collapse text-sm [&>tbody>tr:last-child>td]:border-b-0" {...props}>
         {children}
       </table>
     </div>
