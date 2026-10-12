@@ -7,12 +7,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Billing (docs/BILLING_PLAN.md): consultation fees per doctor (step B.1), bills made and changed by the queue
- * (step B.2). Same configuration as FeatureFlowH2Test, so both share one application context; the phone numbers
+ * (step B.2), the front desk's billing API (step B.3). Same configuration as FeatureFlowH2Test, so both share one application context; the phone numbers
  * 9000055xxx are used by no other test.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
@@ -234,5 +239,180 @@ class BillingH2Test {
         assertThat(api.call(HttpMethod.PUT, "/api/admin/approve/" + json.readTree(leave.getBody()).get("id").asLong(),
                 api.admin(), null).getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(statusOf(visits.get(2))).isEqualTo("REFUND_DUE");
+    }
+
+    // ------------------------------------------------------------------ the front desk's billing API (step B.3)
+
+    private static final String BILLS = "/api/receptionist/bills";
+
+    // A checked-in visit's bill, through the API
+    private JsonNode billFor(String token, long appointmentId) throws Exception {
+        return api.get(token, BILLS + "/by-appointment/" + appointmentId);
+    }
+
+    private JsonNode change(String token, HttpMethod method, String url, String body, HttpStatus expected) throws Exception {
+        ResponseEntity<String> res = api.call(method, url, token, body);
+        assertThat(res.getStatusCode()).as(url + " " + body + " " + res.getBody()).isEqualTo(expected);
+        return json.readTree(res.getBody());
+    }
+
+    private static List<String> descriptions(JsonNode bill) {
+        List<String> lines = new ArrayList<>();
+        // (the JSON says 500.00; read back as a double it is 500.0, hence the scale)
+        bill.get("items").forEach(item -> lines.add(item.get("description").asText() + " "
+                + item.get("amount").decimalValue().setScale(2, java.math.RoundingMode.HALF_UP)));
+        return lines;
+    }
+
+    private static BigDecimal amount(JsonNode bill, String field) {
+        return bill.get(field).decimalValue();
+    }
+
+    @Test
+    void theFrontDeskAddsItemsGivesADiscountAndTakesThePayment() throws Exception {
+        String desk = api.staff("deskbill4", "RECEPTIONIST");
+        long doctorId = api.doctorWithSchedule("drbill4").id();
+        setFee(api.admin(), doctorId, "500");
+        long visit = visitsToday(desk, doctorId, "Billdesk").get(0);
+        assertThat(api.call(HttpMethod.GET, BILLS + "/by-appointment/" + visit, desk, null).getStatusCode())
+                .as("no bill before check-in").isEqualTo(HttpStatus.NOT_FOUND);
+        checkIn(desk, visit);
+
+        JsonNode bill = billFor(desk, visit);
+        long billId = bill.get("id").asLong();
+        assertThat(bill.get("status").asText()).isEqualTo("UNPAID");
+        assertThat(bill.get("patientName").asText()).isEqualTo("Billdesk 1");
+        assertThat(descriptions(bill)).containsExactly("Consultation — Dr. drbill4 500.00");
+        assertThat(amount(bill, "total")).isEqualByComparingTo("500");
+
+        // Extra lines and a discount while unpaid
+        bill = change(desk, HttpMethod.POST, BILLS + "/" + billId + "/items", "{\"description\":\" Dressing \",\"amount\":150}", HttpStatus.OK);
+        bill = change(desk, HttpMethod.POST, BILLS + "/" + billId + "/items", "{\"description\":\"Injection\",\"amount\":99.5}", HttpStatus.OK);
+        assertThat(descriptions(bill)).containsExactly("Consultation — Dr. drbill4 500.00", "Dressing 150.00", "Injection 99.50");
+        assertThat(amount(bill, "subtotal")).isEqualByComparingTo("749.50");
+        long injection = bill.get("items").get(2).get("id").asLong();
+        long consultation = bill.get("items").get(0).get("id").asLong();
+        bill = change(desk, HttpMethod.DELETE, BILLS + "/" + billId + "/items/" + injection, null, HttpStatus.OK);
+        assertThat(amount(bill, "subtotal")).isEqualByComparingTo("650");
+        change(desk, HttpMethod.DELETE, BILLS + "/" + billId + "/items/" + consultation, null, HttpStatus.BAD_REQUEST);
+        bill = change(desk, HttpMethod.PUT, BILLS + "/" + billId + "/discount", "{\"discount\":50}", HttpStatus.OK);
+        assertThat(amount(bill, "total")).isEqualByComparingTo("600");
+        for (String wrong : List.of("{\"discount\":650.01}", "{\"discount\":-1}", "{\"discount\":1.234}")) {
+            change(desk, HttpMethod.PUT, BILLS + "/" + billId + "/discount", wrong, HttpStatus.BAD_REQUEST);
+        }
+        for (String wrong : List.of("{\"description\":\"\",\"amount\":10}", "{\"description\":\"Free\",\"amount\":0}",
+                "{\"description\":\"x\",\"amount\":100000.01}")) {
+            change(desk, HttpMethod.POST, BILLS + "/" + billId + "/items", wrong, HttpStatus.BAD_REQUEST);
+        }
+        assertThat(api.call(HttpMethod.GET, BILLS + "/" + billId + "/receipt.pdf", desk, null).getStatusCode())
+                .as("no receipt before payment").isEqualTo(HttpStatus.CONFLICT);
+
+        // Paid by UPI
+        change(desk, HttpMethod.POST, BILLS + "/" + billId + "/pay", "{\"method\":\"bitcoin\"}", HttpStatus.BAD_REQUEST);
+        bill = change(desk, HttpMethod.POST, BILLS + "/" + billId + "/pay", "{\"method\":\"upi\",\"reference\":\" UPI-1234 \"}", HttpStatus.OK);
+        assertThat(bill.get("status").asText()).isEqualTo("PAID");
+        assertThat(bill.get("paymentMethod").asText()).isEqualTo("UPI");
+        assertThat(bill.get("paymentReference").asText()).isEqualTo("UPI-1234");
+        assertThat(bill.get("paidBy").asText()).isEqualTo("deskbill4");
+        assertThat(bill.get("paidAt").isNull()).isFalse();
+        assertThat(amount(bill, "total")).isEqualByComparingTo("600");
+
+        // A paid bill doesn't change
+        change(desk, HttpMethod.POST, BILLS + "/" + billId + "/items", "{\"description\":\"Late\",\"amount\":10}", HttpStatus.CONFLICT);
+        change(desk, HttpMethod.PUT, BILLS + "/" + billId + "/discount", "{\"discount\":0}", HttpStatus.CONFLICT);
+        change(desk, HttpMethod.POST, BILLS + "/" + billId + "/pay", "{\"method\":\"CASH\"}", HttpStatus.CONFLICT);
+        change(desk, HttpMethod.POST, BILLS + "/" + billId + "/refund", "{\"method\":\"CASH\"}", HttpStatus.CONFLICT);
+
+        // The receipt
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(desk);
+        ResponseEntity<byte[]> receipt = rest.exchange(BILLS + "/" + billId + "/receipt.pdf", HttpMethod.GET,
+                new HttpEntity<>(headers), byte[].class);
+        assertThat(receipt.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(receipt.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_PDF);
+        assertThat(receipt.getHeaders().getContentDisposition().getFilename())
+                .isEqualTo("receipt-" + bill.get("billNumber").asText() + ".pdf");
+        assertThat(new String(receipt.getBody(), 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
+    }
+
+    @Test
+    void aPaidVisitThatIsCancelledIsRefundedAtTheDesk() throws Exception {
+        String desk = api.staff("deskbill5", "RECEPTIONIST");
+        long doctorId = api.doctorWithSchedule("drbill5").id();
+        setFee(api.admin(), doctorId, "400");
+        List<Long> visits = visitsToday(desk, doctorId, "Billrefund");
+        checkIn(desk, visits.get(0));
+        long billId = billFor(desk, visits.get(0)).get("id").asLong();
+        change(desk, HttpMethod.POST, BILLS + "/" + billId + "/refund", "{\"method\":\"CASH\"}", HttpStatus.CONFLICT);
+        change(desk, HttpMethod.POST, BILLS + "/" + billId + "/pay", "{\"method\":\"CARD\"}", HttpStatus.OK);
+
+        cancel(desk, visits.get(0));
+        assertThat(api.get(desk, BILLS + "/" + billId).get("status").asText()).isEqualTo("REFUND_DUE");
+        JsonNode refunded = change(desk, HttpMethod.POST, BILLS + "/" + billId + "/refund", "{\"method\":\"cash\"}", HttpStatus.OK);
+
+        assertThat(refunded.get("status").asText()).isEqualTo("REFUNDED");
+        assertThat(refunded.get("refundMethod").asText()).isEqualTo("CASH");
+        assertThat(refunded.get("refundReference").isNull()).isTrue();
+        assertThat(refunded.get("refundedBy").asText()).isEqualTo("deskbill5");
+        assertThat(refunded.get("paymentMethod").asText()).as("the payment stays on record").isEqualTo("CARD");
+        change(desk, HttpMethod.POST, BILLS + "/" + billId + "/refund", "{\"method\":\"CASH\"}", HttpStatus.CONFLICT);
+        assertThat(api.call(HttpMethod.GET, BILLS + "/" + billId + "/receipt.pdf", desk, null).getStatusCode())
+                .as("the receipt shows the refund").isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void theBillsListFiltersByDateStatusAndPatientNewestFirst() throws Exception {
+        String desk = api.staff("deskbill6", "RECEPTIONIST");
+        long doctorId = api.doctorWithSchedule("drbill6").id();
+        List<Long> visits = visitsToday(desk, doctorId, "Billlister");
+        for (long visit : visits) {
+            checkIn(desk, visit);
+        }
+        long paid = billFor(desk, visits.get(1)).get("id").asLong();
+        change(desk, HttpMethod.POST, BILLS + "/" + paid + "/pay", "{\"method\":\"CASH\"}", HttpStatus.OK);
+        undoCheckIn(desk, visits.get(2)); // cancelled
+
+        List<String> all = names(api.get(desk, BILLS + "?patient=billlister"));
+        assertThat(all).as("newest first").containsExactly("Billlister 3", "Billlister 2", "Billlister 1");
+        assertThat(names(api.get(desk, BILLS + "?patient=billlister&status=unpaid"))).containsExactly("Billlister 1");
+        assertThat(names(api.get(desk, BILLS + "?patient=billlister&status=PAID"))).containsExactly("Billlister 2");
+        assertThat(names(api.get(desk, BILLS + "?patient=billlister&status=cancelled"))).containsExactly("Billlister 3");
+        String number = api.get(desk, BILLS + "/" + paid).get("billNumber").asText();
+        assertThat(names(api.get(desk, BILLS + "?patient=" + number.toLowerCase()))).as("by bill number").containsExactly("Billlister 2");
+        assertThat(names(api.get(desk, BILLS + "?patient=billlister&from=" + LocalDate.now().plusDays(1)))).isEmpty();
+        JsonNode page = api.get(desk, BILLS + "?patient=billlister&size=2&page=1");
+        assertThat(page.get("totalEntries").asLong()).isEqualTo(3);
+        assertThat(page.get("totalPages").asInt()).isEqualTo(2);
+        assertThat(names(page)).containsExactly("Billlister 1");
+        JsonNode first = api.get(desk, BILLS + "?patient=billlister&size=1").at("/entries/0");
+        assertThat(first.get("total").decimalValue()).isEqualByComparingTo("0");
+        assertThat(first.get("billNumber").asText()).startsWith("B-");
+
+        assertThat(api.call(HttpMethod.GET, BILLS + "?status=lost", desk, null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(api.call(HttpMethod.GET, BILLS + "?size=101", desk, null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(api.call(HttpMethod.GET, BILLS + "/987654", desk, null).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void billsAreForTheFrontDeskAndAdmins() throws Exception {
+        String desk = api.staff("deskbill7", "RECEPTIONIST");
+        long doctorId = api.doctorWithSchedule("drbill7").id();
+        long visit = visitsToday(desk, doctorId, "Billguard").get(0);
+        checkIn(desk, visit);
+        long billId = billFor(desk, visit).get("id").asLong();
+
+        for (String token : List.of(api.registerPatient("billpeek"), api.login("drbill7", "doctor-123"))) {
+            assertThat(api.call(HttpMethod.GET, BILLS, token, null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(api.call(HttpMethod.GET, BILLS + "/" + billId, token, null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(api.call(HttpMethod.POST, BILLS + "/" + billId + "/pay", token, "{\"method\":\"CASH\"}")
+                    .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        }
+        assertThat(billFor(api.admin(), visit).get("id").asLong()).isEqualTo(billId);
+    }
+
+    private static List<String> names(JsonNode page) {
+        List<String> names = new ArrayList<>();
+        page.get("entries").forEach(b -> names.add(b.get("patientName").asText()));
+        return names;
     }
 }

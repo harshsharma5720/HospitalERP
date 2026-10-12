@@ -5,6 +5,7 @@ DELETE /api/leaves/{id}
 DELETE /api/patient/deleteAccount/{ptId}
 DELETE /api/patient/relative/delete/{id}
 DELETE /api/receptionist/appointments/{appointmentId}/check-in
+DELETE /api/receptionist/bills/{billId}/items/{itemId}
 DELETE /api/receptionist/delete/{receptionistId} auth=hasRole('ADMIN')
 DELETE /api/receptionist/deleteAppointment/{appointmentId}
 DELETE /appointment/CancelAppointment/{appointmentId}
@@ -47,6 +48,10 @@ GET /api/patient/relative/patient/{patientId}
 GET /api/patient/relative/{id}
 GET /api/queue/screen
 GET /api/receptionist/appointments
+GET /api/receptionist/bills
+GET /api/receptionist/bills/by-appointment/{appointmentId}
+GET /api/receptionist/bills/{billId}
+GET /api/receptionist/bills/{billId}/receipt.pdf
 GET /api/receptionist/doctorCompletedAppointments/{userId}
 GET /api/receptionist/doctorPendingAppointments/{userId}
 GET /api/receptionist/doctors/{doctorId}/next-free-slots
@@ -85,6 +90,9 @@ POST /api/leaves/apply
 POST /api/patient/relative/add
 POST /api/receptionist/NewAppointment
 POST /api/receptionist/appointments/{appointmentId}/check-in
+POST /api/receptionist/bills/{billId}/items
+POST /api/receptionist/bills/{billId}/pay
+POST /api/receptionist/bills/{billId}/refund
 POST /api/receptionist/walk-in
 POST /api/slots/generate/{doctorId}
 POST /appointment/NewAppointment
@@ -101,5 +109,6 @@ PUT /api/leaves/{id}
 PUT /api/leaves/{id}/status auth=hasRole('ADMIN')
 PUT /api/patient/relative/update/{id}
 PUT /api/patient/updateAccount/{ptId} consumes=multipart/form-data
+PUT /api/receptionist/bills/{billId}/discount
 PUT /api/receptionist/{id} consumes=multipart/form-data
 PUT /appointment/update/{appointmentId}

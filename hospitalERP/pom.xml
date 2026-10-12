@@ -128,7 +128,7 @@
 			</dependency>
 
 			<!-- Third-party libraries not managed by Spring Boot; each is used by one module only -->
-			<!-- PDF generation for e-prescriptions (clinical) -->
+			<!-- PDF generation: e-prescriptions (clinical), receipts (billing) -->
 			<dependency>
 				<groupId>com.github.librepdf</groupId>
 				<artifactId>openpdf</artifactId>
