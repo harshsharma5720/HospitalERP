@@ -34,6 +34,9 @@ import DoctorLayout from "../features/doctors/portal/DoctorLayout";
 import ProtectedRoute from "./ProtectedRoute";
 import useAuthStore, { homePathForRole } from "../features/auth/useAuthStore";
 
+/* SHARED UI */
+import { ToastProvider, ConfirmProvider } from "../shared/ui";
+
 const PATIENT = ["ROLE_PATIENT"];
 const FRONT_DESK = ["ROLE_RECEPTIONIST", "ROLE_ADMIN"];
 
@@ -47,91 +50,95 @@ function App() {
   const role = useAuthStore((s) => s.role);
 
   return (
-    <Router>
-      <Routes>
+    <ToastProvider>
+      <ConfirmProvider>
+        <Router>
+          <Routes>
 
-        {/* ===================== PUBLIC ROUTES ===================== */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/doctors" element={<DoctorPage />} />
-        <Route path="/contact" element={<ContactUsPage />} />
-        <Route path="/treatments" element={<Treatments />} />
-        <Route path="/about" element={<AboutUs />} />
-        <Route path="/doctor-profile/:doctorId" element={<DoctorDetailsPage />} />
-        {/* The waiting-room screen: tokens only, no login (docs/TODAYS_QUEUE_PLAN.md) */}
-        <Route path="/queue-screen" element={<QueueScreen />} />
+            {/* ===================== PUBLIC ROUTES ===================== */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/doctors" element={<DoctorPage />} />
+            <Route path="/contact" element={<ContactUsPage />} />
+            <Route path="/treatments" element={<Treatments />} />
+            <Route path="/about" element={<AboutUs />} />
+            <Route path="/doctor-profile/:doctorId" element={<DoctorDetailsPage />} />
+            {/* The waiting-room screen: tokens only, no login (docs/TODAYS_QUEUE_PLAN.md) */}
+            <Route path="/queue-screen" element={<QueueScreen />} />
 
-        {/* ===================== PATIENT ===================== */}
-        <Route path="/appointments" element={<ProtectedRoute roles={PATIENT}><AppointmentPage /></ProtectedRoute>} />
-        <Route path="/appointment-details" element={<ProtectedRoute roles={PATIENT}><AppointmentDetails /></ProtectedRoute>} />
-        <Route path="/add-relative" element={<ProtectedRoute roles={PATIENT}><AddRelativePage /></ProtectedRoute>} />
-        <Route path="/edit-relative" element={<ProtectedRoute roles={PATIENT}><AddRelativePage /></ProtectedRoute>} />
-        <Route path="/relatives" element={<ProtectedRoute roles={PATIENT}><RelativesList /></ProtectedRoute>} />
-        <Route
-          path="/edit-profile"
-          element={
-            <ProtectedRoute roles={["ROLE_PATIENT", "ROLE_DOCTOR", "ROLE_RECEPTIONIST"]}>
-              <EditProfilePage />
-            </ProtectedRoute>
-          }
-        />
+            {/* ===================== PATIENT ===================== */}
+            <Route path="/appointments" element={<ProtectedRoute roles={PATIENT}><AppointmentPage /></ProtectedRoute>} />
+            <Route path="/appointment-details" element={<ProtectedRoute roles={PATIENT}><AppointmentDetails /></ProtectedRoute>} />
+            <Route path="/add-relative" element={<ProtectedRoute roles={PATIENT}><AddRelativePage /></ProtectedRoute>} />
+            <Route path="/edit-relative" element={<ProtectedRoute roles={PATIENT}><AddRelativePage /></ProtectedRoute>} />
+            <Route path="/relatives" element={<ProtectedRoute roles={PATIENT}><RelativesList /></ProtectedRoute>} />
+            <Route
+              path="/edit-profile"
+              element={
+                <ProtectedRoute roles={["ROLE_PATIENT", "ROLE_DOCTOR", "ROLE_RECEPTIONIST"]}>
+                  <EditProfilePage />
+                </ProtectedRoute>
+              }
+            />
 
-        {/* ===================== RECEPTIONIST ===================== */}
-        <Route
-          path="/receptionist-appointments"
-          element={<ProtectedRoute roles={FRONT_DESK}><SitePage><FrontDeskAppointments /></SitePage></ProtectedRoute>}
-        />
-        <Route
-          path="/walk-in"
-          element={<ProtectedRoute roles={FRONT_DESK}><SitePage><WalkInBooking /></SitePage></ProtectedRoute>}
-        />
-        <Route
-          path="/patients"
-          element={<ProtectedRoute roles={FRONT_DESK}><SitePage><PatientSearch /></SitePage></ProtectedRoute>}
-        />
-        <Route
-          path="/patients/:patientId"
-          element={<ProtectedRoute roles={FRONT_DESK}><SitePage><FrontDeskPatient /></SitePage></ProtectedRoute>}
-        />
-        <Route
-          path="/bills"
-          element={<ProtectedRoute roles={FRONT_DESK}><SitePage><BillsPage /></SitePage></ProtectedRoute>}
-        />
-        <Route
-          path="/bills/:billId"
-          element={<ProtectedRoute roles={FRONT_DESK}><SitePage><BillPage /></SitePage></ProtectedRoute>}
-        />
-        <Route
-          path="/bills/visit/:appointmentId"
-          element={<ProtectedRoute roles={FRONT_DESK}><SitePage><BillPage /></SitePage></ProtectedRoute>}
-        />
+            {/* ===================== RECEPTIONIST ===================== */}
+            <Route
+              path="/receptionist-appointments"
+              element={<ProtectedRoute roles={FRONT_DESK}><SitePage><FrontDeskAppointments /></SitePage></ProtectedRoute>}
+            />
+            <Route
+              path="/walk-in"
+              element={<ProtectedRoute roles={FRONT_DESK}><SitePage><WalkInBooking /></SitePage></ProtectedRoute>}
+            />
+            <Route
+              path="/patients"
+              element={<ProtectedRoute roles={FRONT_DESK}><SitePage><PatientSearch /></SitePage></ProtectedRoute>}
+            />
+            <Route
+              path="/patients/:patientId"
+              element={<ProtectedRoute roles={FRONT_DESK}><SitePage><FrontDeskPatient /></SitePage></ProtectedRoute>}
+            />
+            <Route
+              path="/bills"
+              element={<ProtectedRoute roles={FRONT_DESK}><SitePage><BillsPage /></SitePage></ProtectedRoute>}
+            />
+            <Route
+              path="/bills/:billId"
+              element={<ProtectedRoute roles={FRONT_DESK}><SitePage><BillPage /></SitePage></ProtectedRoute>}
+            />
+            <Route
+              path="/bills/visit/:appointmentId"
+              element={<ProtectedRoute roles={FRONT_DESK}><SitePage><BillPage /></SitePage></ProtectedRoute>}
+            />
 
-        {/* ===================== ADMIN ===================== */}
-        <Route
-          path="/admin/*"
-          element={<ProtectedRoute roles={["ROLE_ADMIN"]}><AdminLayout /></ProtectedRoute>}
-        />
+            {/* ===================== ADMIN ===================== */}
+            <Route
+              path="/admin/*"
+              element={<ProtectedRoute roles={["ROLE_ADMIN"]}><AdminLayout /></ProtectedRoute>}
+            />
 
-        {/* ===================== DOCTOR ===================== */}
-        <Route
-          path="/doctor/*"
-          element={<ProtectedRoute roles={["ROLE_DOCTOR"]}><DoctorLayout /></ProtectedRoute>}
-        />
+            {/* ===================== DOCTOR ===================== */}
+            <Route
+              path="/doctor/*"
+              element={<ProtectedRoute roles={["ROLE_DOCTOR"]}><DoctorLayout /></ProtectedRoute>}
+            />
 
-        {/* ===================== REDIRECT ROOT BASED ON ROLE ===================== */}
-        <Route path="/redirect" element={<Navigate to={homePathForRole(role)} replace />} />
+            {/* ===================== REDIRECT ROOT BASED ON ROLE ===================== */}
+            <Route path="/redirect" element={<Navigate to={homePathForRole(role)} replace />} />
 
-        {/* ===================== FALLBACK ===================== */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+            {/* ===================== FALLBACK ===================== */}
+            <Route path="*" element={<Navigate to="/" replace />} />
 
-      </Routes>
+          </Routes>
 
-      {/* Footer only for public */}
-      {!role && <PublicFooter />}
+          {/* Footer only for public */}
+          {!role && <PublicFooter />}
 
-    </Router>
+        </Router>
+      </ConfirmProvider>
+    </ToastProvider>
   );
 }
 
