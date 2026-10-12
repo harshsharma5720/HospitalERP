@@ -18,7 +18,7 @@ const frontDesk = (base) => [
 export const STAFF_MENUS = {
   ROLE_RECEPTIONIST: {
     area: "Front desk",
-    profilePath: "/edit-profile",
+    profilePath: "/my-profile",
     sections: [{ items: frontDesk("") }],
   },
   ROLE_DOCTOR: {

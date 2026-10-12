@@ -11,7 +11,6 @@ import { ToastProvider } from "../../shared/ui";
 jest.mock("./api");
 jest.mock("../doctors/api");
 jest.mock("../patients/api");
-jest.mock("../../shared/ProfilePage", () => () => null);
 
 const TODAY = toLocalISODate();
 const TOMORROW = toLocalISODate(addDays(new Date(), 1));

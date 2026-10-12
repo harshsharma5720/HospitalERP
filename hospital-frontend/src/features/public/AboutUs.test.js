@@ -4,7 +4,6 @@ import AboutUs from "./AboutUs";
 import { getAllDoctors } from "../doctors/api";
 
 jest.mock("../doctors/api");
-jest.mock("../../shared/ProfilePage", () => () => null);
 
 const renderPage = () =>
   render(

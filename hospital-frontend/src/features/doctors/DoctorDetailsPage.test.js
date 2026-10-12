@@ -5,7 +5,6 @@ import { getAllDoctors, getPublicDoctor } from "./api";
 import useAuthStore from "../auth/useAuthStore";
 
 jest.mock("./api");
-jest.mock("../../shared/ProfilePage", () => () => null);
 
 const RAO = { id: 1, name: "Anita Rao", specialist: "CARDIOLOGY", email: "rao@example.com", phoneNumber: "+91 98765 00011", active: true };
 

@@ -3,7 +3,7 @@ import { API_BASE_URL } from "../app/config";
 import { getDoctor, updateDoctor } from "../features/doctors/api";
 import { getPatientAccount, updatePatientAccount } from "../features/patients/api";
 
-// The logged-in user's own profile, whatever their role (navbar profile panel, edit-profile page).
+// The logged-in user's own profile, whatever their role (the staff top bar, My account, the receptionist's profile).
 // The login token is added by app/setupAxios.
 
 export const getReceptionist = (userId) =>

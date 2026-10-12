@@ -146,7 +146,7 @@ describe("the user in the top bar", () => {
     getOwnProfile.mockResolvedValue({ data: { name: "Asha Verma" } });
     renderLayout("ROLE_RECEPTIONIST", "/bills");
     const profile = await screen.findByRole("link", { name: "My profile (Asha Verma)" });
-    expect(profile).toHaveAttribute("href", "/edit-profile");
+    expect(profile).toHaveAttribute("href", "/my-profile");
     expect(profile).toHaveTextContent("AV");
   });
 

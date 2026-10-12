@@ -2,7 +2,6 @@ import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import ContactUsPage from "./ContactUsPage";
 
-jest.mock("../../shared/ProfilePage", () => () => null);
 
 const renderPage = () =>
   render(

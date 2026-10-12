@@ -8,7 +8,6 @@ import { ConfirmProvider, ToastProvider } from "../../shared/ui";
 
 jest.mock("./api");
 jest.mock("../clinical/api");
-jest.mock("../../shared/ProfilePage", () => () => null);
 
 const day = (n) => toLocalISODate(addDays(new Date(), n));
 const visit = (id, date, status, extra = {}) => ({

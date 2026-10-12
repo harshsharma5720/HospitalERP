@@ -3,14 +3,6 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import PublicHeader from "./PublicHeader";
 import useAuthStore from "../../features/auth/useAuthStore";
 
-// The profile panel loads the user's profile; here it only shows that it opened
-jest.mock("../ProfilePage", () => ({ onClose }) => (
-  <div role="dialog" aria-label="Profile">
-    <button type="button" onClick={onClose}>
-      Close profile
-    </button>
-  </div>
-));
 
 // Unsigned test token; the header only reads the payload
 const tokenFor = (sub, role) => `x.${btoa(JSON.stringify({ sub, role, userId: 1 }))}.y`;
@@ -48,7 +40,7 @@ test("everyone sees the hospital, the site's pages and the phone number; visitor
   expect(screen.getByRole("link", { name: "+91 92895 20303" })).toHaveAttribute("href", "tel:+919289520303");
   expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login");
   expect(screen.getByRole("link", { name: "Register" })).toHaveAttribute("href", "/register");
-  expect(screen.queryByRole("button", { name: "Profile" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "My account" })).not.toBeInTheDocument();
   expect(screen.queryByRole("link", { name: /Staff portal/ })).not.toBeInTheDocument();
 });
 
@@ -66,16 +58,14 @@ test.each([
   renderAs(role);
   expect(screen.getByRole("link", { name: "Staff portal" })).toHaveAttribute("href", home);
   expect(screen.queryByRole("link", { name: "My appointments" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "My account" })).not.toBeInTheDocument(); // their profile is in the portal
 });
 
-test("a patient gets their appointments and the profile, and no staff portal", () => {
+test("a patient gets their appointments and their account, and no staff portal", () => {
   renderAs("ROLE_PATIENT");
   expect(screen.getByRole("link", { name: "My appointments" })).toHaveAttribute("href", "/appointment-details");
+  expect(screen.getByRole("link", { name: "My account" })).toHaveAttribute("href", "/edit-profile");
   expect(screen.queryByRole("link", { name: "Staff portal" })).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Profile" }));
-  expect(screen.getByRole("dialog", { name: "Profile" })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Close profile" }));
-  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
 
 test("Log out ends the session and goes to the home page", () => {
