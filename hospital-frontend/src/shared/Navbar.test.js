@@ -32,12 +32,13 @@ test("doctors get their appointments link", () => {
   expect(screen.getByText("Profile")).toBeInTheDocument();
 });
 
-test("receptionists get the front-desk appointments, walk-in and patients links", () => {
+test("receptionists get the front-desk appointments, walk-in, patients and bills links", () => {
   renderAs("ROLE_RECEPTIONIST");
   expect(screen.getByText("Appointments").closest("a")).toHaveAttribute("href", "/receptionist-appointments");
   expect(screen.queryByText("My Appointments")).not.toBeInTheDocument();
   expect(screen.getByText("Walk-in").closest("a")).toHaveAttribute("href", "/walk-in");
   expect(screen.getByText("Patients").closest("a")).toHaveAttribute("href", "/patients");
+  expect(screen.getByText("Bills").closest("a")).toHaveAttribute("href", "/bills");
 });
 
 test("admins get no appointments link", () => {

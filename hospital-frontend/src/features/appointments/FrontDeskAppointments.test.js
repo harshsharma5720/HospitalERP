@@ -158,6 +158,12 @@ test("today's patients are checked in as they arrive, and a mistake can be undon
 
   await screen.findByRole("link", { name: "Asha Rao" });
   expect(rowOf("Kiran Rao")).toHaveTextContent("With the doctor · token 2");
+  // A checked-in visit has a bill (docs/BILLING_PLAN.md)
+  expect(within(rowOf("Kiran Rao")).getByRole("link", { name: "Bill of Kiran Rao" })).toHaveAttribute(
+    "href",
+    "/bills/visit/2"
+  );
+  expect(within(rowOf("Asha Rao")).queryByRole("link", { name: /Bill of/ })).not.toBeInTheDocument();
   expect(within(rowOf("Meera Nair")).queryByRole("button")).toBeNull(); // done
   expect(within(rowOf("Arjun Das")).queryByRole("button")).toBeNull(); // another day
 
