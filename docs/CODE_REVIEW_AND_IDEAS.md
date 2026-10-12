@@ -693,11 +693,13 @@ The web pages looked dated: neon dark colours, three different layouts for the a
 - **One staff layout** (`src/shared/layout/StaffLayout.js`): the role's menu on the left (a drawer on a phone), the current page marked, the user's name and photo, the light / dark switch and Log out. Admin, doctor and front-desk pages all use it; the dead admin buttons are gone.
 - **Every staff page rebuilt** — front desk, doctor portal and admin portal — with the same texts and behaviour; toasts and a confirm dialog replace `alert()` / `confirm()`.
 - **Home page**: hero, real numbers and doctors from the public directory, specialities, the visit step by step, the hospital's own photo, and sections that fade in as they scroll into view (not for people who ask for reduced motion). One clean header and footer for the public site; hospital details in `src/shared/hospitalInfo.js`; a calm welcome dialog, once per visit.
+- **The other public pages**: Treatments (departments, what they look after, their doctors), Doctors (speciality filter in the address, name search, retry when offline), a doctor's profile (real details only), Contact Us (call, book online, visit, before your visit) and About Us (story, mission, vision, the real doctors). Made-up content is gone: invented figures, a team of random people's photos, ratings, biographies, a chat button and an enquiry form that sent nothing, and another hospital's contact details.
 
-**Tests:** 176 frontend tests (was 113), new ones for the components, the layouts, the doctor and admin pages and the home page; mutation checks for each step; screenshots of every page in light and dark, and phone layouts. The dashboard chart's colours were re-validated on the new dark surface.
+**Tests:** 193 frontend tests (was 113), new ones for the components, the layouts, the doctor and admin pages and the home page; mutation checks for each step; screenshots of every page in light and dark, and phone layouts. The dashboard chart's colours were re-validated on the new dark surface.
 
 **Not covered yet:**
-- The bodies of the other public pages (Treatments, Doctors, Contact, About), the patient pages and login / register keep their old look (they have the new header and footer).
-- `Shreyahospital.jpg`, used on four of those pages, carries a stock-photo watermark and should be replaced.
+- The patient pages and login / register keep their old look (they have the new header and footer).
+- `Shreyahospital.jpg`, still used on three patient pages, carries a stock-photo watermark and should be replaced.
+- A real enquiry inbox for the Contact page.
 - A click-through against the running app.
 
