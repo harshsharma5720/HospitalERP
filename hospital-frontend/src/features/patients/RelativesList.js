@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import Navbar from "../../shared/Navbar";
-import TopNavbar from "../../shared/TopNavbar";
+import PublicHeader from "../../shared/layout/PublicHeader";
 import * as patientsApi from "./api";
 
 export default function RelativesList() {
@@ -60,8 +59,7 @@ export default function RelativesList() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0a1124] relative">
-      <TopNavbar />
-      <Navbar />
+      <PublicHeader />
 
       <div className="flex flex-col items-center py-12 px-4 relative">
         {/* Background blur image */}

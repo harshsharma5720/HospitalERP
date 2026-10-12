@@ -7,6 +7,7 @@ import useAreaBase from "../../shared/useAreaBase";
 import { getFrontDeskAppointmentPage } from "../appointments/api";
 import { dayLabel, formatDate, timeRange, visitStatus } from "../appointments/appointmentFormat";
 import * as patientsApi from "./api";
+import { Badge, Button, Card, CardHeader, Notice, PageHeader, Pagination, Table, TableMessage, Td, Th } from "../../shared/ui";
 
 // One patient at the front desk (docs/PATIENT_SEARCH_PLAN.md): details, upcoming appointments, every appointment
 // newest first (10 per page), and Book -> Walk-in booking with this patient chosen. /patients/:patientId for
@@ -14,14 +15,13 @@ import * as patientsApi from "./api";
 
 const HISTORY_PAGE_SIZE = 10;
 const GENDER_LABELS = { FEMALE: "Female", MALE: "Male", OTHER: "Other" };
-const CARD = "bg-white dark:bg-[#1e293b] shadow-md rounded-lg p-5 mb-5";
 
 // Only the last 4 digits of the Aadhaar number are shown
 const maskAadhaar = (number) => (number ? `XXXX XXXX ${String(number).slice(-4)}` : null);
 
 function StatusBadge({ appointment }) {
-  const { label, style } = visitStatus(appointment);
-  return <span className={`px-2 py-1 rounded-full text-xs font-semibold ${style}`}>{label}</span>;
+  const { label, tone } = visitStatus(appointment);
+  return <Badge tone={tone}>{label}</Badge>;
 }
 
 export default function FrontDeskPatient() {
@@ -58,20 +58,22 @@ export default function FrontDeskPatient() {
   const backTo = location.state?.from || `${base}/patients`;
   const backLabel = `← ${location.state?.fromLabel ?? "Patients"}`;
 
+  const back = (
+    <Link to={backTo} className="text-primary-ink hover:underline">
+      {backLabel}
+    </Link>
+  );
+
   if (error) {
     return (
-      <div className="p-6">
-        <Link to={backTo} className="text-sm text-blue-700 dark:text-[#50d4f2] hover:underline">
-          {backLabel}
-        </Link>
-        <p role="alert" className="text-red-600 mt-4">
-          {error}
-        </p>
-      </div>
+      <>
+        <div className="mb-4 text-sm">{back}</div>
+        <Notice tone="danger">{error}</Notice>
+      </>
     );
   }
   if (!patient) {
-    return <p className="p-6">Loading...</p>;
+    return <p className="text-ink-muted">Loading...</p>;
   }
 
   const details = [
@@ -86,126 +88,99 @@ export default function FrontDeskPatient() {
   const historyPages = history?.totalPages ?? 0;
 
   return (
-    <div className="p-6 max-w-4xl">
-      <Link to={backTo} className="text-sm text-blue-700 dark:text-[#50d4f2] hover:underline">
-        {backLabel}
-      </Link>
+    <div className="max-w-5xl">
+      <PageHeader
+        back={back}
+        title={patient.patientName}
+        description={`#${patient.patientId} · ${patient.hasLogin ? "App account" : "Front-desk record"}`}
+        actions={
+          <Button as={Link} to={`${base}/walk-in?patientId=${patient.patientId}`} state={{ patient }} variant="success">
+            Book an appointment
+          </Button>
+        }
+      />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 mt-2 mb-5">
-        <div>
-          <h1 className="text-3xl font-bold">{patient.patientName}</h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            #{patient.patientId} · {patient.hasLogin ? "App account" : "Front-desk record"}
-          </p>
-        </div>
-        <Link
-          to={`${base}/walk-in?patientId=${patient.patientId}`}
-          state={{ patient }}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-        >
-          Book an appointment
-        </Link>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card aria-labelledby="patient-details">
+          <CardHeader id="patient-details" title="Details" />
+          <dl className="grid gap-y-2.5 text-sm">
+            {details.map(([label, value]) => (
+              <div key={label} className="flex gap-3">
+                <dt className="w-20 shrink-0 text-ink-muted">{label}</dt>
+                <dd>{value || "—"}</dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
+
+        <Card aria-labelledby="patient-upcoming">
+          <CardHeader id="patient-upcoming" title="Upcoming appointments" />
+          {upcoming === null && <p className="text-sm text-ink-muted">Loading...</p>}
+          {upcoming?.length === 0 && <p className="text-sm text-ink-muted">No upcoming appointments.</p>}
+          {upcoming?.length > 0 && (
+            <ul className="divide-y divide-line text-sm">
+              {upcoming.map((appointment) => (
+                <li key={appointment.appointmentID} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 first:pt-0 last:pb-0">
+                  <span className="font-medium">
+                    {dayLabel(appointment.date)} {timeRange(appointment)}
+                  </span>
+                  <span className="text-ink-muted">Dr. {appointment.doctorName}</span>
+                  {appointment.patientName !== patient.patientName && (
+                    <span className="text-ink-muted">for {appointment.patientName}</span>
+                  )}
+                  <span className="ml-auto">
+                    <StatusBadge appointment={appointment} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
       </div>
 
-      <section aria-labelledby="patient-details" className={CARD}>
-        <h2 id="patient-details" className="font-semibold mb-3">
-          Details
-        </h2>
-        <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-          {details.map(([label, value]) => (
-            <div key={label} className="flex gap-2">
-              <dt className="text-gray-500 dark:text-gray-400 w-20 shrink-0">{label}</dt>
-              <dd>{value || "—"}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      <section aria-labelledby="patient-upcoming" className={CARD}>
-        <h2 id="patient-upcoming" className="font-semibold mb-3">
-          Upcoming appointments
-        </h2>
-        {upcoming === null && <p className="text-sm">Loading...</p>}
-        {upcoming?.length === 0 && <p className="text-sm text-gray-600 dark:text-gray-300">No upcoming appointments.</p>}
-        {upcoming?.length > 0 && (
-          <ul className="space-y-2 text-sm">
-            {upcoming.map((appointment) => (
-              <li key={appointment.appointmentID} className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="font-semibold">
-                  {dayLabel(appointment.date)} {timeRange(appointment)}
-                </span>
-                <span>Dr. {appointment.doctorName}</span>
-                {appointment.patientName !== patient.patientName && (
-                  <span className="text-gray-600 dark:text-gray-300">for {appointment.patientName}</span>
-                )}
-                <StatusBadge appointment={appointment} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section aria-labelledby="patient-history" className={CARD}>
-        <h2 id="patient-history" className="font-semibold mb-3">
-          All appointments, newest first
-        </h2>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b dark:border-gray-600 text-left">
-                <th className="py-2 pr-3">Date</th>
-                <th className="py-2 pr-3">Time</th>
-                <th className="py-2 pr-3">Doctor</th>
-                <th className="py-2 pr-3">For</th>
-                <th className="py-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {historyEntries.map((appointment) => (
-                <tr key={appointment.appointmentID} className="border-b dark:border-gray-700">
-                  <td className="py-2 pr-3 whitespace-nowrap">{formatDate(appointment.date, true)}</td>
-                  <td className="py-2 pr-3 whitespace-nowrap">{timeRange(appointment)}</td>
-                  <td className="py-2 pr-3">Dr. {appointment.doctorName}</td>
-                  <td className="py-2 pr-3">{appointment.patientName}</td>
-                  <td className="py-2">
-                    <StatusBadge appointment={appointment} />
-                  </td>
-                </tr>
-              ))}
-              {history && historyEntries.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-4 text-center text-gray-500">
-                    No appointments yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      <Card padding="none" aria-labelledby="patient-history" className="mt-5">
+        <div className="px-5 pt-5">
+          <CardHeader id="patient-history" title="All appointments, newest first" />
         </div>
+        <Table plain>
+          <thead>
+            <tr>
+              <Th>Date</Th>
+              <Th>Time</Th>
+              <Th>Doctor</Th>
+              <Th>For</Th>
+              <Th>Status</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {historyEntries.map((appointment) => (
+              <tr key={appointment.appointmentID}>
+                <Td className="whitespace-nowrap">{formatDate(appointment.date, true)}</Td>
+                <Td className="whitespace-nowrap tabular-nums">{timeRange(appointment)}</Td>
+                <Td className="text-ink-muted">Dr. {appointment.doctorName}</Td>
+                <Td>{appointment.patientName}</Td>
+                <Td>
+                  <StatusBadge appointment={appointment} />
+                </Td>
+              </tr>
+            ))}
+            {history && historyEntries.length === 0 && <TableMessage colSpan={5}>No appointments yet.</TableMessage>}
+          </tbody>
+        </Table>
         {historyPages > 1 && (
-          <div className="flex items-center gap-3 mt-3">
-            <button
-              type="button"
-              onClick={() => setHistoryPage(historyPage - 1)}
-              disabled={historyPage === 0}
-              className="border dark:border-gray-600 px-3 py-1 rounded disabled:opacity-50"
-            >
-              Newer
-            </button>
-            <span className="text-sm text-gray-700 dark:text-gray-300">
-              Page {historyPage + 1} of {historyPages} · {history.totalEntries} appointments
-            </span>
-            <button
-              type="button"
-              onClick={() => setHistoryPage(historyPage + 1)}
-              disabled={historyPage + 1 >= historyPages}
-              className="border dark:border-gray-600 px-3 py-1 rounded disabled:opacity-50"
-            >
-              Older
-            </button>
+          <div className="border-t border-line px-5 pb-4">
+            <Pagination
+              page={historyPage}
+              totalPages={historyPages}
+              totalEntries={history.totalEntries}
+              noun="appointments"
+              onPage={setHistoryPage}
+              previousLabel="Newer"
+              nextLabel="Older"
+            />
           </div>
         )}
-      </section>
+      </Card>
     </div>
   );
 }

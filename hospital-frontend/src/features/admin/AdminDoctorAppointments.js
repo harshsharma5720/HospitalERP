@@ -1,15 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import { CalendarDays } from "lucide-react";
 import { getDoctor } from "../doctors/api";
 import * as adminApi from "./api";
 import { getErrorMessage } from "../../shared/utils/apiError";
+import { formatDate, specialityLabel, timeRange, visitStatus } from "../appointments/appointmentFormat";
+import { Badge, Card, EmptyState, PageHeader, Table, Td, Th, useToast } from "../../shared/ui";
 
-const formatTime = (time) => (time ? String(time).slice(0, 5) : "");
+const VIEWS = [
+  ["pending", "Upcoming"],
+  ["completed", "Completed"],
+];
 
 // Admin view of one doctor's pending / completed appointments (route: /admin/doctor/:userId/appointments)
 export default function AdminDoctorAppointments() {
   const { userId } = useParams();
-  const navigate = useNavigate();
+  const toast = useToast();
   const [viewType, setViewType] = useState("pending");
   const [appointments, setAppointments] = useState([]);
   const [doctor, setDoctor] = useState(null);
@@ -22,81 +28,89 @@ export default function AdminDoctorAppointments() {
   }, [userId]);
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const res =
-          viewType === "pending"
-            ? await adminApi.getDoctorPendingAppointments(userId)
-            : await adminApi.getDoctorCompletedAppointments(userId);
-        setAppointments(res.data);
-      } catch (err) {
+    let current = true;
+    setLoading(true);
+    const load = viewType === "pending" ? adminApi.getDoctorPendingAppointments : adminApi.getDoctorCompletedAppointments;
+    load(userId)
+      .then((res) => current && setAppointments(res.data))
+      .catch((err) => {
+        if (!current) return;
         setAppointments([]);
-        alert(getErrorMessage(err, "Could not load appointments."));
-      } finally {
-        setLoading(false);
-      }
+        toast.error(getErrorMessage(err, "Could not load appointments."));
+      })
+      .finally(() => current && setLoading(false));
+    return () => {
+      current = false;
     };
-    load();
-  }, [userId, viewType]);
+  }, [userId, viewType, toast]);
 
   return (
-    <div className="p-6">
-      <button onClick={() => navigate("/admin/manage-doctor")} className="text-blue-600 dark:text-[#50d4f2] mb-4">
-        ← Back to doctors
-      </button>
-      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
-        Appointments {doctor ? `— ${doctor.name} (${doctor.specialist?.replace(/_/g, " ")})` : ""}
-      </h1>
+    <>
+      <PageHeader
+        back={
+          <Link to="/admin/manage-doctor" className="text-primary-ink hover:underline">
+            ← Doctors
+          </Link>
+        }
+        title={doctor ? `Appointments of Dr. ${doctor.name}` : "Appointments"}
+        description={doctor ? specialityLabel(doctor.specialist) || null : null}
+      />
 
-      <div className="flex gap-3 mb-5">
-        {["pending", "completed"].map((type) => (
+      <div role="group" aria-label="Which appointments" className="mb-4 inline-flex rounded-lg border border-line bg-surface p-1 shadow-card">
+        {VIEWS.map(([value, label]) => (
           <button
-            key={type}
-            onClick={() => setViewType(type)}
-            className={`px-4 py-2 rounded-lg font-semibold ${
-              viewType === type ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700 dark:text-white"
+            key={value}
+            type="button"
+            aria-pressed={viewType === value}
+            onClick={() => setViewType(value)}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+              viewType === value ? "bg-primary text-white" : "text-ink-muted hover:text-ink"
             }`}
           >
-            {type === "pending" ? "Upcoming" : "Completed"}
+            {label}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <p className="text-gray-600 dark:text-gray-300">Loading...</p>
+        <p className="text-ink-muted">Loading...</p>
       ) : appointments.length === 0 ? (
-        <p className="text-gray-600 dark:text-gray-300">No {viewType} appointments.</p>
+        <Card padding="none">
+          <EmptyState icon={CalendarDays} title={viewType === "pending" ? "No upcoming appointments" : "No completed appointments"} />
+        </Card>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border rounded-xl overflow-hidden bg-white dark:bg-gray-800 shadow-lg dark:text-gray-200">
-            <thead className="bg-gray-100 dark:bg-gray-700">
-              <tr>
-                <th className="p-3 border">ID</th>
-                <th className="p-3 border">Patient</th>
-                <th className="p-3 border">Date</th>
-                <th className="p-3 border">Time</th>
-                <th className="p-3 border">Status</th>
-                <th className="p-3 border">Message</th>
-              </tr>
-            </thead>
-            <tbody>
-              {appointments.map((a) => (
-                <tr key={a.appointmentID} className="hover:bg-gray-100 dark:hover:bg-gray-700">
-                  <td className="p-3 border">{a.appointmentID}</td>
-                  <td className="p-3 border">{a.patientName}</td>
-                  <td className="p-3 border">{a.date}</td>
-                  <td className="p-3 border">
-                    {a.startTime ? `${formatTime(a.startTime)} - ${formatTime(a.endTime)}` : a.shift}
-                  </td>
-                  <td className="p-3 border">{a.status}</td>
-                  <td className="p-3 border">{a.message || "—"}</td>
+        <Table>
+          <thead>
+            <tr>
+              <Th>ID</Th>
+              <Th>Date</Th>
+              <Th>Time</Th>
+              <Th>Patient</Th>
+              <Th>Status</Th>
+              <Th>Reason</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {appointments.map((a) => {
+              const { label, tone } = visitStatus(a);
+              return (
+                <tr key={a.appointmentID}>
+                  <Td className="tabular-nums text-ink-muted">#{a.appointmentID}</Td>
+                  <Td className="whitespace-nowrap">{a.date ? formatDate(a.date, true) : "—"}</Td>
+                  <Td className="whitespace-nowrap tabular-nums">{a.startTime ? timeRange(a) : a.shift || "—"}</Td>
+                  <Td className="font-medium">{a.patientName}</Td>
+                  <Td>
+                    <Badge tone={tone}>{label}</Badge>
+                  </Td>
+                  <Td className="max-w-xs truncate text-ink-muted" title={a.message ?? ""}>
+                    {a.message || "—"}
+                  </Td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              );
+            })}
+          </tbody>
+        </Table>
       )}
-    </div>
+    </>
   );
 }

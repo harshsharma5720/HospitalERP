@@ -1,7 +1,6 @@
 // Part 1 of 2 — AppointmentPage (neon dark theme) - TOP
 import React, { useState, useEffect } from "react";
-import Navbar from "../../shared/Navbar";
-import TopNavbar from "../../shared/TopNavbar";
+import PublicHeader from "../../shared/layout/PublicHeader";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getUserIdFromToken } from "../../shared/utils/jwtUtils";
 import { calculateAgeFromDOB } from "../../shared/utils/calculateAgeFromDOB";
@@ -282,8 +281,7 @@ export default function AppointmentPage() {
         />
       )}
     <div className="min-h-screen bg-white dark:bg-[#0a1124] text-gray-900 dark:text-[#50d4f2] transition-all">
-      <TopNavbar />
-      <Navbar />
+      <PublicHeader />
 
       <div className="flex justify-center items-start py-12 px-6 relative">
         {/* subtle decorative background image with low opacity */}

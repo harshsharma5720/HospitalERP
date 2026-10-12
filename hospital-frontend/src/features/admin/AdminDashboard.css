@@ -3,15 +3,15 @@
  * Series: the dataviz reference palette, in a fixed order. "Missed" (past days) and "upcoming" (today) never
  * share a bar, so the only colors that touch in a stack are completed/missed/upcoming next to cancelled and
  * completed - those pairs were validated (colorblind separation, contrast) on the white card and, with the
- * dark steps, on the dark card #1e293b. Aqua and yellow are below 3:1 on white, so the numbers are also in
- * the table view under the chart.
+ * dark steps, on the dark card (re-checked 2026-10-12 on the refreshed dark surface #111827: all pass). Aqua and
+ * yellow are below 3:1 on white, so the numbers are also in the table view under the chart.
+ * The chart's chrome (grid, axis, text) uses the design tokens of src/index.css.
  */
 .admin-dash {
-  --dash-surface: #ffffff;
-  --dash-muted: #6b6a66;
-  --dash-grid: #e1e0d9;
-  --dash-axis: #c3c2b7;
-  --dash-hover: rgba(11, 11, 11, 0.05);
+  --dash-muted: rgb(var(--ink-muted));
+  --dash-grid: rgb(var(--line));
+  --dash-axis: rgb(var(--line));
+  --dash-hover: rgb(var(--ink) / 0.05);
   --dash-completed: #2a78d6;
   --dash-missed: #eb6834;
   --dash-upcoming: #eda100;
@@ -19,11 +19,6 @@
 }
 
 .dark .admin-dash {
-  --dash-surface: #1e293b;
-  --dash-muted: #a3a29b;
-  --dash-grid: #334155;
-  --dash-axis: #475569;
-  --dash-hover: rgba(255, 255, 255, 0.06);
   --dash-completed: #3987e5;
   --dash-missed: #d95926;
   --dash-upcoming: #c98500;

@@ -6,6 +6,9 @@ import useAreaBase from "../../shared/useAreaBase";
 import { getAllDoctors } from "../doctors/api";
 import { dayLabel, doctorLabel, formatDate, timeRange, visitStatus } from "./appointmentFormat";
 import { checkInAppointment, getFrontDeskAppointmentPage, undoCheckIn } from "./api";
+import {
+  Badge, Button, Card, Field, Input, Notice, PageHeader, Pagination, Select, Table, TableMessage, Td, Th,
+} from "../../shared/ui";
 
 // The front desk's appointment list (docs/PATIENT_SEARCH_PLAN.md): today by default; dates, doctor, status and
 // patient filters; 20 per page, by date and time. The filters live in the address, so coming back from a patient
@@ -21,9 +24,7 @@ const STATUS_OPTIONS = [
   ["completed", "Completed"],
   ["cancelled", "Cancelled"],
 ];
-const INPUT =
-  "h-10 px-2 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2]";
-const QUIET_BUTTON = "border dark:border-gray-600 rounded";
+const LINK = "font-medium text-primary-ink hover:underline";
 
 // "Today", "Tomorrow", "Fri 9 Oct" this year, "Tue 8 Oct 2025" other years
 const dateLabel = (isoDate) =>
@@ -38,42 +39,36 @@ function QueueCell({ appointment, today, busy, onCheckIn, onUndo, billPath, back
       to={billPath}
       state={{ from: back, fromLabel: "Appointments" }}
       aria-label={`Bill of ${appointment.patientName}`}
-      className="text-xs underline text-blue-700 dark:text-[#50d4f2]"
+      className={`text-xs ${LINK}`}
     >
       Bill
     </Link>
   ) : null;
   let state;
   if (appointment.date !== today || !booked) {
-    state = billLink ? null : "—";
+    state = billLink ? null : <span className="text-ink-muted">—</span>;
   } else if (appointment.calledAt) {
-    state = `With the doctor · token ${appointment.tokenNumber}`;
+    state = <Badge tone="primary">{`With the doctor · token ${appointment.tokenNumber}`}</Badge>;
   } else if (appointment.checkedInAt) {
     state = (
-      <span className="flex items-center gap-2">
-        Waiting · token {appointment.tokenNumber}
+      <>
+        <Badge tone="info">Waiting · token {appointment.tokenNumber}</Badge>
         <button
           type="button"
           onClick={onUndo}
           disabled={busy}
           aria-label={`Undo the check-in of ${appointment.patientName}`}
-          className="text-xs underline text-gray-600 dark:text-gray-300 disabled:opacity-50"
+          className="text-xs text-ink-muted underline hover:text-ink disabled:opacity-50"
         >
           Undo
         </button>
-      </span>
+      </>
     );
   } else {
     state = (
-      <button
-        type="button"
-        onClick={onCheckIn}
-        disabled={busy}
-        aria-label={`Check in ${appointment.patientName}`}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs disabled:opacity-50"
-      >
+      <Button size="sm" onClick={onCheckIn} disabled={busy} aria-label={`Check in ${appointment.patientName}`}>
         Check in
-      </button>
+      </Button>
     );
   }
   return (
@@ -190,165 +185,124 @@ export default function FrontDeskAppointments() {
   const back = location.pathname + location.search; // the patient page links back here
 
   return (
-    <div className="p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h1 className="text-3xl font-bold">Appointments</h1>
-        <Link to={`${base}/walk-in`} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
-          Walk-in booking
-        </Link>
-      </div>
+    <>
+      <PageHeader
+        title="Appointments"
+        description="Today's visits by default. Check patients in as they arrive; the list refreshes itself."
+        actions={
+          <Button as={Link} to={`${base}/walk-in`} variant="success">
+            Walk-in booking
+          </Button>
+        }
+      />
 
-      <form onSubmit={apply} aria-label="Filters" className="flex flex-wrap items-end gap-3 mb-4">
-        <div className="flex flex-col text-sm">
-          <label htmlFor="appointments-from">From</label>
-          <input id="appointments-from" type="date" value={draft.from} onChange={change("from")} className={INPUT} />
-        </div>
-        <div className="flex flex-col text-sm">
-          <label htmlFor="appointments-to">To</label>
-          <input id="appointments-to" type="date" value={draft.to} onChange={change("to")} className={INPUT} />
-        </div>
-        <div className="flex flex-col text-sm">
-          <label htmlFor="appointments-doctor">Doctor</label>
-          <select id="appointments-doctor" value={draft.doctorId} onChange={change("doctorId")} className={INPUT}>
-            <option value="">All doctors</option>
-            {doctors.map((doctor) => (
-              <option key={doctor.id} value={doctor.id}>
-                {doctorLabel(doctor)}
-                {doctor.active === false ? " (inactive)" : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col text-sm">
-          <label htmlFor="appointments-status">Status</label>
-          <select id="appointments-status" value={draft.status} onChange={change("status")} className={INPUT}>
-            {STATUS_OPTIONS.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col text-sm">
-          <label htmlFor="appointments-patient">Patient</label>
-          <input
-            id="appointments-patient"
-            value={draft.patient}
-            onChange={change("patient")}
-            placeholder="Part of the name"
-            className={INPUT}
-          />
-        </div>
-        <button type="submit" className="h-10 bg-blue-600 hover:bg-blue-700 text-white px-4 rounded">
-          Show
-        </button>
-        <button type="button" onClick={() => show({ ...filters, from: today, to: today })} className={`${QUIET_BUTTON} h-10 px-4`}>
-          Today
-        </button>
-        <button type="button" onClick={() => show({ ...filters, from: "", to: "" })} className={`${QUIET_BUTTON} h-10 px-4`}>
-          Any date
-        </button>
-      </form>
+      <Card padding="sm" className="mb-4">
+        <form onSubmit={apply} aria-label="Filters" className="flex flex-wrap items-end gap-3">
+          <Field label="From" htmlFor="appointments-from">
+            <Input id="appointments-from" type="date" value={draft.from} onChange={change("from")} />
+          </Field>
+          <Field label="To" htmlFor="appointments-to">
+            <Input id="appointments-to" type="date" value={draft.to} onChange={change("to")} />
+          </Field>
+          <Field label="Doctor" htmlFor="appointments-doctor" className="min-w-[14rem] flex-1">
+            <Select id="appointments-doctor" value={draft.doctorId} onChange={change("doctorId")}>
+              <option value="">All doctors</option>
+              {doctors.map((doctor) => (
+                <option key={doctor.id} value={doctor.id}>
+                  {doctorLabel(doctor)}
+                  {doctor.active === false ? " (inactive)" : ""}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Status" htmlFor="appointments-status">
+            <Select id="appointments-status" value={draft.status} onChange={change("status")}>
+              {STATUS_OPTIONS.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Patient" htmlFor="appointments-patient">
+            <Input id="appointments-patient" value={draft.patient} onChange={change("patient")} placeholder="Part of the name" />
+          </Field>
+          <div className="flex gap-2">
+            <Button type="submit">Show</Button>
+            <Button variant="secondary" onClick={() => show({ ...filters, from: today, to: today })}>
+              Today
+            </Button>
+            <Button variant="secondary" onClick={() => show({ ...filters, from: "", to: "" })}>
+              Any date
+            </Button>
+          </div>
+        </form>
+      </Card>
 
-      {notice && (
-        <p role="status" className="text-green-700 dark:text-green-400 mb-4">
-          {notice}
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="text-red-600 mb-4">
-          {error}
-        </p>
-      )}
+      <Notice tone="success" className="mb-4">{notice}</Notice>
+      <Notice tone="danger" className="mb-4">{error}</Notice>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse bg-white dark:bg-[#1e293b] shadow-md rounded-lg text-sm">
-          <thead>
-            <tr className="bg-gray-100 dark:bg-gray-800 border-b dark:border-gray-600">
-              <th className="p-3 text-left">Date</th>
-              <th className="p-3 text-left">Time</th>
-              <th className="p-3 text-left">Patient</th>
-              <th className="p-3 text-left">Doctor</th>
-              <th className="p-3 text-left">Status</th>
-              <th className="p-3 text-left">Queue</th>
-              <th className="p-3 text-left">Reason</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((appointment) => {
-              const { label, style } = visitStatus(appointment, today);
-              return (
-                <tr key={appointment.appointmentID} className="border-b dark:border-gray-700">
-                  <td className="p-3 whitespace-nowrap">{dateLabel(appointment.date)}</td>
-                  <td className="p-3 whitespace-nowrap">{timeRange(appointment)}</td>
-                  <td className="p-3">
-                    {appointment.ptInfoId ? (
-                      <Link
-                        to={`${base}/patients/${appointment.ptInfoId}`}
-                        state={{ from: back, fromLabel: "Appointments" }}
-                        className="font-semibold text-blue-700 dark:text-[#50d4f2] hover:underline"
-                      >
-                        {appointment.patientName}
-                      </Link>
-                    ) : (
-                      appointment.patientName
-                    )}
-                  </td>
-                  <td className="p-3">Dr. {appointment.doctorName}</td>
-                  <td className="p-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${style}`}>{label}</span>
-                  </td>
-                  <td className="p-3 whitespace-nowrap">
-                    <QueueCell
-                      appointment={appointment}
-                      today={today}
-                      busy={busyId === appointment.appointmentID}
-                      onCheckIn={() => queueAction(appointment, checkInAppointment)}
-                      onUndo={() => queueAction(appointment, undoCheckIn)}
-                      billPath={`${base}/bills/visit/${appointment.appointmentID}`}
-                      back={back}
-                    />
-                  </td>
-                  <td className="p-3 max-w-xs truncate" title={appointment.message ?? ""}>
-                    {appointment.message || "—"}
-                  </td>
-                </tr>
-              );
-            })}
-            {!loading && !error && entries.length === 0 && (
-              <tr>
-                <td colSpan={7} className="p-6 text-center text-gray-500">
-                  No appointments for these filters.
-                </td>
+      <Table>
+        <thead>
+          <tr>
+            <Th>Date</Th>
+            <Th>Time</Th>
+            <Th>Patient</Th>
+            <Th>Doctor</Th>
+            <Th>Status</Th>
+            <Th>Queue</Th>
+            <Th>Reason</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((appointment) => {
+            const { label, tone } = visitStatus(appointment, today);
+            return (
+              <tr key={appointment.appointmentID}>
+                <Td className="whitespace-nowrap">{dateLabel(appointment.date)}</Td>
+                <Td className="whitespace-nowrap tabular-nums">{timeRange(appointment)}</Td>
+                <Td>
+                  {appointment.ptInfoId ? (
+                    <Link to={`${base}/patients/${appointment.ptInfoId}`} state={{ from: back, fromLabel: "Appointments" }} className={LINK}>
+                      {appointment.patientName}
+                    </Link>
+                  ) : (
+                    appointment.patientName
+                  )}
+                </Td>
+                <Td className="text-ink-muted">Dr. {appointment.doctorName}</Td>
+                <Td>
+                  <Badge tone={tone}>{label}</Badge>
+                </Td>
+                <Td className="whitespace-nowrap">
+                  <QueueCell
+                    appointment={appointment}
+                    today={today}
+                    busy={busyId === appointment.appointmentID}
+                    onCheckIn={() => queueAction(appointment, checkInAppointment)}
+                    onUndo={() => queueAction(appointment, undoCheckIn)}
+                    billPath={`${base}/bills/visit/${appointment.appointmentID}`}
+                    back={back}
+                  />
+                </Td>
+                <Td className="max-w-xs truncate text-ink-muted" title={appointment.message ?? ""}>
+                  {appointment.message || "—"}
+                </Td>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            );
+          })}
+          {!loading && !error && entries.length === 0 && <TableMessage colSpan={7}>No appointments for these filters.</TableMessage>}
+        </tbody>
+      </Table>
 
-      <div className="flex items-center gap-3 mt-4">
-        <button
-          type="button"
-          onClick={() => show(filters, page - 1)}
-          disabled={loading || page === 0}
-          className={`${QUIET_BUTTON} px-3 py-1 disabled:opacity-50`}
-        >
-          Previous
-        </button>
-        <span className="text-sm text-gray-700 dark:text-gray-300">
-          {loading
-            ? "Loading..."
-            : `Page ${totalPages === 0 ? 0 : page + 1} of ${totalPages} · ${result?.totalEntries ?? 0} appointments`}
-        </span>
-        <button
-          type="button"
-          onClick={() => show(filters, page + 1)}
-          disabled={loading || page + 1 >= totalPages}
-          className={`${QUIET_BUTTON} px-3 py-1 disabled:opacity-50`}
-        >
-          Next
-        </button>
-      </div>
-    </div>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalEntries={result?.totalEntries}
+        noun="appointments"
+        loading={loading}
+        onPage={(number) => show(filters, number)}
+      />
+    </>
   );
 }

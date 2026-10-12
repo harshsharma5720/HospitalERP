@@ -402,7 +402,7 @@ Grouped by module and roughly ordered by value against effort. ⭐ marks ideas t
   - REST URL cleanup and merging duplicate endpoints (kept for frontend compatibility).
   - Package rename.
   - Duplicate React components and very long files.
-  - Toasts instead of `alert()`.
+  - 🟨 Toasts instead of `alert()`: done in the staff portals and on the home page ([UI refresh](UI_REFRESH_PLAN.md)); the patient pages and login / register still use `alert()`.
   - Accessibility.
   - Swagger, CI, Docker, Vite, ESLint/Prettier.
 
@@ -683,3 +683,23 @@ From idea #18 above (first version: payment at the desk; online payment later). 
 - A click-through against the real database.
 - No daily cash summary yet (what was taken by cash / card / UPI per day), and patients don't see their bills in the app.
 - Old doctor records without a login can still be deleted with their appointments; their bills would stay, without the visit (such doctors can't run a queue, so they have none).
+
+### UI refresh: staff portals and home page (done 2026-10-12)
+
+The web pages looked dated: neon dark colours, three different layouts for the admin, doctor and front-desk staff, `alert()` and `confirm()` for every message, dead menu buttons, and a home page with stretched low-resolution images, hot-linked third-party pictures, made-up figures and a popup with an animation running behind its buttons. Decisions, design and steps: [UI_REFRESH_PLAN.md](UI_REFRESH_PLAN.md).
+
+**What it does**
+- **One look**: design tokens (colours as CSS variables, light and dark, text contrast checked at 4.5:1 or better in both), the Inter font, and shared components in `hospital-frontend/src/shared/ui/` (buttons, cards, form fields, badges, tables, pagination, notices, empty states, modal, toasts, confirm dialog, scroll reveal).
+- **One staff layout** (`src/shared/layout/StaffLayout.js`): the role's menu on the left (a drawer on a phone), the current page marked, the user's name and photo, the light / dark switch and Log out. Admin, doctor and front-desk pages all use it; the dead admin buttons are gone.
+- **Every staff page rebuilt** — front desk, doctor portal and admin portal — with the same texts and behaviour; toasts and a confirm dialog replace `alert()` / `confirm()`.
+- **Home page**: hero, real numbers and doctors from the public directory, specialities, the visit step by step, the hospital's own photo, and sections that fade in as they scroll into view (not for people who ask for reduced motion). One clean header and footer for the public site; hospital details in `src/shared/hospitalInfo.js`; a calm welcome dialog, once per visit.
+- **The other public pages**: Treatments (departments, what they look after, their doctors), Doctors (speciality filter in the address, name search, retry when offline), a doctor's profile (real details only), Contact Us (call, book online, visit, before your visit) and About Us (story, mission, vision, the real doctors). Made-up content is gone: invented figures, a team of random people's photos, ratings, biographies, a chat button and an enquiry form that sent nothing, and another hospital's contact details.
+
+**Tests:** 193 frontend tests (was 113), new ones for the components, the layouts, the doctor and admin pages and the home page; mutation checks for each step; screenshots of every page in light and dark, and phone layouts. The dashboard chart's colours were re-validated on the new dark surface.
+
+**Not covered yet:**
+- The patient pages and login / register keep their old look (they have the new header and footer).
+- `Shreyahospital.jpg`, still used on three patient pages, carries a stock-photo watermark and should be replaced.
+- A real enquiry inbox for the Contact page.
+- A click-through against the running app.
+

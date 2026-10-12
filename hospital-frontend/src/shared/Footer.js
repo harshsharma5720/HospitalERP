@@ -1,114 +1,78 @@
 import React from "react";
+import { Link } from "react-router-dom";
+import { Clock, HeartPulse, MapPin, Phone } from "lucide-react";
+import { HOSPITAL, directionsHref, phoneHref } from "./hospitalInfo";
 
+const LINKS = [
+  ["/treatments", "Treatments"],
+  ["/doctors", "Doctors"],
+  ["/about", "About Us"],
+  ["/contact", "Contact Us"],
+];
+
+// The public site's footer (docs/UI_REFRESH_PLAN.md, U.6): the hospital, its pages and how to reach it
 export default function Footer() {
   return (
-    <footer
-      className="
-        bg-white dark:bg-[#0a1330]
-        border-t shadow-inner mt-16
-        dark:border-[#111a3b]
-        transition-all duration-300
-      "
-    >
-      <div className="flex flex-col md:flex-row w-full">
-        {/* Left Section - Contact Info */}
-        <div
-          className="
-            bg-gradient-to-br from-[#1E63DB] to-[#27496d]
-            dark:from-[#111a3b] dark:to-[#0a1330]
-            text-white dark:text-[#50d4f2]
-            md:w-1/2 w-full p-10 flex flex-col justify-center space-y-6
-            transition-all
-          "
-        >
-          {/* Logo */}
-          <div>
-            <img
-              src="download.jpeg"
-              alt="Hospital Logo"
-              className="h-14 mb-4 rounded-md shadow-md bg-white p-1"
-            />
-          </div>
-
-          {/* Location */}
-          <div className="flex items-start space-x-3">
-            <span className="text-2xl">📍</span>
-            <div>
-              <h3 className="font-semibold text-lg dark:text-[#50d4f2]">Location</h3>
-              <p className="text-sm leading-relaxed dark:text-[#50d4f2]">
-                Amman Street, Next to Bait Al Khair Building, Al Nahda 2,
-                P.O.Box: 7832, Dubai, United Arab Emirates.
-              </p>
-            </div>
-          </div>
-
-          {/* Email */}
-          <div className="flex items-start space-x-3">
-            <span className="text-2xl">✉️</span>
-            <div>
-              <h3 className="font-semibold text-lg dark:text-[#50d4f2]">Email</h3>
-              <a
-                href="mailto:sphdxb.receptions@nmchospital.ae"
-                className="
-                  text-sm hover:underline
-                  hover:text-yellow-300
-                  dark:text-[#50d4f2]
-                  dark:hover:text-[#3bc2df]
-                  transition
-                "
-              >
-                sphdxb.receptions@nmchospital.ae
-              </a>
-            </div>
-          </div>
-
-          {/* Phone */}
-          <div className="flex items-start space-x-3">
-            <span className="text-2xl">📞</span>
-            <div>
-              <h3 className="font-semibold text-lg dark:text-[#50d4f2]">Phone</h3>
-              <p className="text-sm dark:text-[#50d4f2]">Landline: +971 4 267 9999</p>
-              <p className="text-sm dark:text-[#50d4f2]">Toll Free: 8006624</p>
-              <p className="text-sm dark:text-[#50d4f2]">Fax: +971 4 267 8889</p>
-            </div>
-          </div>
+    <footer className="border-t border-line bg-surface">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-4 lg:px-8">
+        <div className="md:col-span-2">
+          <Link to="/" className="inline-flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white">
+              <HeartPulse size={20} aria-hidden="true" />
+            </span>
+            <span className="font-semibold text-ink">{HOSPITAL.name}</span>
+          </Link>
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-muted">
+            Specialist care in {HOSPITAL.area}: book online, get an SMS confirmation, and follow your turn on the
+            waiting-room screen when you arrive.
+          </p>
         </div>
 
-        {/* Right Section - Map */}
-        <div className="md:w-1/2 w-full">
-          <iframe
-            title="Hospital Location"
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d115847.42517897102!2d55.1712795!3d25.0742828!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3e5f5c9c9e4dce33%3A0xd03b05dcd01dbf9d!2sDubai%2C%20United%20Arab%20Emirates!5e0!3m2!1sen!2sin!4v1698682456532!5m2!1sen!2sin"
-            width="100%"
-            height="100%"
-            allowFullScreen=""
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            className="
-              h-[400px] md:h-full
-              border-l-4 border-teal-600
-              dark:border-[#50d4f2]
-              transition-all
-            "
-          ></iframe>
+        <nav aria-label="Footer">
+          <h2 className="text-sm font-semibold text-ink">Hospital</h2>
+          <ul className="mt-4 space-y-2.5 text-sm">
+            {LINKS.map(([to, label]) => (
+              <li key={to}>
+                <Link to={to} className="text-ink-muted hover:text-ink">
+                  {label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div>
+          <h2 className="text-sm font-semibold text-ink">Visit us</h2>
+          <ul className="mt-4 space-y-3 text-sm text-ink-muted">
+            <li className="flex gap-2.5">
+              <MapPin size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-primary-ink" />
+              <span>
+                {HOSPITAL.address}
+                <a href={directionsHref} target="_blank" rel="noreferrer" className="mt-1 block font-medium text-primary-ink hover:underline">
+                  Get directions<span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              </span>
+            </li>
+            <li className="flex gap-2.5">
+              <Phone size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-primary-ink" />
+              <a href={phoneHref} className="hover:text-ink">
+                {HOSPITAL.phone}
+              </a>
+            </li>
+            <li className="flex gap-2.5">
+              <Clock size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-primary-ink" />
+              {HOSPITAL.hours}
+            </li>
+          </ul>
         </div>
       </div>
-
-      {/* Bottom Bar */}
-      <div
-        className="
-        bg-gradient-to-r from-gray-900 to-gray-800
-        dark:from-[#111a3b] dark:to-[#0a1330]
-        text-gray-300 dark:text-[#50d4f2]
-        text-center py-3 text-sm tracking-wide
-        transition
-      "
-      >
-        © {new Date().getFullYear()}{" "}
-        <span className="font-semibold text-white dark:text-[#3bc2df]">
-          Shreya Hospital
-        </span>
-        . All rights reserved.
+      <div className="border-t border-line">
+        <div className="mx-auto flex max-w-7xl flex-wrap justify-between gap-2 px-4 py-5 text-xs text-ink-muted sm:px-6 lg:px-8">
+          <span>
+            © {new Date().getFullYear()} {HOSPITAL.name}
+          </span>
+          <span>Runs on HospitalERP</span>
+        </div>
       </div>
     </footer>
   );

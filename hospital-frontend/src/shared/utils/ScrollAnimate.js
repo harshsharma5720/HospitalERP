@@ -1,14 +1,7 @@
-import { motion } from "framer-motion";
+import React from "react";
+import { Reveal } from "../ui";
 
+// Fades its content in as it scrolls into view (the shared Reveal: no movement for people who ask for reduced motion)
 export default function ScrollAnimate({ children }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 50 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8 }}
-      viewport={{ once: true }}
-    >
-      {children}
-    </motion.div>
-  );
+  return <Reveal>{children}</Reveal>;
 }

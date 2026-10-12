@@ -1,206 +1,109 @@
 import React from "react";
-import Navbar from "../../shared/Navbar";
-import TopNavbar from "../../shared/TopNavbar";
-import { FaHeartbeat, FaHospital, FaPhoneAlt } from "react-icons/fa";
+import { Link } from "react-router-dom";
+import { ArrowRight, Clock, FileText, HeartPulse, Hospital, ListOrdered, MessageSquare, Receipt } from "lucide-react";
+import { CallToAction, PageIntro, PublicPage, SectionHeading } from "../../shared/layout/PublicSections";
+import { HOSPITAL } from "../../shared/hospitalInfo";
+import { Button, Reveal } from "../../shared/ui";
+import DoctorCard from "../doctors/DoctorCard";
+import useDoctorDirectory from "../doctors/useDoctorDirectory";
+
+// The hospital's story, mission and vision, what patients can count on, and its doctors from the public directory
+// (docs/UI_REFRESH_PLAN.md, U.9)
+
+const PROMISES = [
+  { icon: Clock, title: "Care around the clock", text: `${HOSPITAL.name} is open 24×7, every day of the year.` },
+  { icon: MessageSquare, title: "Bookings you can trust", text: "Book online and get an SMS confirmation and a reminder." },
+  { icon: ListOrdered, title: "No guessing in the waiting room", text: "Your token and the screen tell you when it's your turn." },
+  { icon: FileText, title: "Your records, at hand", text: "Prescriptions are ready to download after each visit." },
+  { icon: Receipt, title: "Clear bills", text: "Every charge itemised, with a receipt for each payment." },
+];
+
+const DOCTORS_SHOWN = 4;
 
 export default function AboutUs() {
+  const { doctors } = useDoctorDirectory();
+
   return (
-    <div
-      className="
-        min-h-screen
-        bg-gray-50 dark:bg-[#0a1124]
-        text-gray-900 dark:text-gray-200
-        transition-all duration-300
-        bg-no-repeat bg-cover
-        bg-fixed
-      "
-      style={{ backgroundImage: "url('doctor_black_theam.jpg')" }}
-    >
-      {/* Overlay */}
-      <div className="bg-black/40 dark:bg-[#0a1330]/80 min-h-screen">
-        <TopNavbar />
-        <Navbar />
+    <PublicPage>
+      <PageIntro eyebrow="About us" title="Caring for you, every step of the way">
+        With compassion and expertise.
+      </PageIntro>
 
-        {/* HEADER */}
-        <div className="text-center py-20">
-          <h1 className="text-5xl text-white font-extrabold mb-4">
-              About/{" "}
-              <span
-                className="
-                     bg-gradient-to-r from-blue-600 to-cyan-400
-                     bg-clip-text text-transparent
-                "
-              >
-                 Our Hospital
-             </span>
-          </h1>
-          <div className="w-40 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 dark:from-[#50d4f2] dark:to-[#63e6ff] mx-auto mb-10 rounded-full"></div>
-          <p className="text-white max-w-2xl mx-auto dark:text-gray-300">
-            Caring for you, every step of the way — with compassion and expertise.
-          </p>
+      {/* ================= STORY ================= */}
+      <section aria-labelledby="about-story" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+        <div className="grid items-center gap-12 lg:grid-cols-2">
+          <Reveal>
+            <img src="/shreya.jpg" alt={`The entrance of ${HOSPITAL.name}`} className="aspect-[4/3] w-full rounded-3xl object-cover shadow-overlay" />
+          </Reveal>
+          <Reveal delay={0.1}>
+            <p className="text-sm font-semibold uppercase tracking-wide text-primary-ink">Our story</p>
+            <h2 id="about-story" className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+              Welcome to {HOSPITAL.name}
+            </h2>
+            <p className="mt-5 text-lg leading-relaxed text-ink-muted">
+              At {HOSPITAL.name}, we believe healthcare should be personal, accessible, and compassionate. For more than a
+              decade, we have provided expert medical care using advanced technology and highly experienced doctors.
+            </p>
+            <p className="mt-4 text-lg leading-relaxed text-ink-muted">
+              We deliver high-quality and affordable healthcare with respect, transparency, and empathy.
+            </p>
+          </Reveal>
         </div>
+      </section>
 
-        {/* INTRO SECTION */}
-        <section
-          className="
-            max-w-6xl mx-auto p-10 rounded-2xl shadow-lg mb-10
-            bg-white/20 dark:bg-[#111a3b]/40
-            backdrop-blur-md
-          "
-        >
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            <img
-              src="Shreyahospital.jpg"
-              alt="Hospital"
-              className="rounded-2xl shadow-lg"
-            />
+      {/* ================= MISSION + VISION ================= */}
+      <section aria-label="Mission and vision" className="border-y border-line bg-surface">
+        <div className="mx-auto grid max-w-7xl gap-5 px-4 py-16 sm:px-6 md:grid-cols-2 lg:px-8 lg:py-20">
+          {[
+            { icon: HeartPulse, title: "Our mission", text: "To provide exceptional healthcare services with compassion, innovation, and integrity." },
+            { icon: Hospital, title: "Our vision", text: "To be a global leader in healthcare, recognized for trust, care, and medical excellence." },
+          ].map(({ icon: Icon, title, text }, i) => (
+            <Reveal key={title} delay={i * 0.08} className="rounded-2xl border border-line bg-canvas p-8">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-ink/10 text-primary-ink">
+                <Icon size={22} aria-hidden="true" />
+              </span>
+              <h2 className="mt-5 text-xl font-semibold">{title}</h2>
+              <p className="mt-2 text-lg leading-relaxed text-ink-muted">{text}</p>
+            </Reveal>
+          ))}
+        </div>
+      </section>
 
-            <div>
-              <h2 className="text-3xl font-bold mb-4 text-[#1E63DB] dark:text-[#50d4f2]">
-                Welcome to Shreya Hospital
-              </h2>
+      {/* ================= WHAT PATIENTS CAN COUNT ON ================= */}
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+        <SectionHeading eyebrow="What you can count on" title="Care that's easy to arrange" />
+        <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+          {PROMISES.map(({ icon: Icon, title, text }, i) => (
+            <Reveal as="li" key={title} delay={i * 0.06} className="rounded-2xl border border-line bg-surface p-6 shadow-card">
+              <Icon size={22} aria-hidden="true" className="text-primary-ink" />
+              <h3 className="mt-4 font-semibold">{title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">{text}</p>
+            </Reveal>
+          ))}
+        </ul>
+      </section>
 
-              <p className="text-lg text-gray-100 dark:text-gray-300 leading-relaxed">
-                At <strong>Shreya Hospital</strong>, we believe healthcare should be
-                personal, accessible, and compassionate. For more than a decade, we
-                have provided expert medical care using advanced technology and
-                highly experienced doctors.
-              </p>
-
-              <p className="mt-4 text-lg text-gray-100 dark:text-gray-300 leading-relaxed">
-                We deliver high-quality and affordable healthcare with respect,
-                transparency, and empathy.
-              </p>
-            </div>
+      {/* ================= OUR DOCTORS ================= */}
+      {doctors?.length > 0 && (
+        <section aria-labelledby="about-team" className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8 lg:pb-24">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <SectionHeading eyebrow="Our team" title="Meet our doctors" id="about-team" />
+            <Button as={Link} to="/doctors" variant="secondary">
+              All doctors
+              <ArrowRight size={16} aria-hidden="true" />
+            </Button>
           </div>
-        </section>
-
-        {/* MISSION + VISION */}
-        <section
-          className="
-            max-w-6xl mx-auto p-10 rounded-2xl shadow-lg mb-10
-            bg-white/20 dark:bg-[#111a3b]/40
-            backdrop-blur-md
-          "
-        >
-          <h2 className="text-3xl font-extrabold mb-8 text-center text-[#1E63DB] dark:text-[#50d4f2]">
-            Our Mission & Vision
-          </h2>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Mission */}
-            <div
-              className="
-                p-6 rounded-2xl shadow-md
-                bg-white/30 dark:bg-[#16224a]/50
-              "
-            >
-              <FaHeartbeat className="text-red-400 text-4xl mb-4 mx-auto" />
-              <h3 className="text-2xl font-bold text-center mb-3 dark:text-[#50d4f2]">
-                Our Mission
-              </h3>
-              <p className="text-lg text-gray-100 dark:text-gray-300 text-center">
-                To provide exceptional healthcare services with compassion,
-                innovation, and integrity.
-              </p>
-            </div>
-
-            {/* Vision */}
-            <div
-              className="
-                p-6 rounded-2xl shadow-md
-                bg-white/30 dark:bg-[#16224a]/50
-              "
-            >
-              <FaHospital className="text-[#1E63DB] dark:text-[#50d4f2] text-4xl mb-4 mx-auto" />
-              <h3 className="text-2xl font-bold text-center mb-3 dark:text-[#50d4f2]">
-                Our Vision
-              </h3>
-              <p className="text-lg text-gray-100 dark:text-gray-300 text-center">
-                To be a global leader in healthcare, recognized for trust, care,
-                and medical excellence.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* TEAM SECTION */}
-        <section
-          className="
-            max-w-6xl mx-auto p-10 rounded-2xl shadow-lg mb-10 text-center
-            bg-white/20 dark:bg-[#111a3b]/40
-            backdrop-blur-md
-          "
-        >
-          <h2 className="text-3xl font-extrabold mb-8 text-[#1E63DB] dark:text-[#50d4f2]">
-            Meet Our Dedicated Team
-          </h2>
-
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
-            {[
-              {
-                name: "Dr. Priya Sharma",
-                role: "Cardiologist",
-                img: "https://randomuser.me/api/portraits/women/65.jpg",
-              },
-              {
-                name: "Dr. Arjun Mehta",
-                role: "Neurologist",
-                img: "https://randomuser.me/api/portraits/men/32.jpg",
-              },
-              {
-                name: "Dr. Neha Kapoor",
-                role: "Pediatrician",
-                img: "https://randomuser.me/api/portraits/women/70.jpg",
-              },
-            ].map((member) => (
-              <div
-                key={member.name}
-                className="
-                  p-6 rounded-2xl shadow-md
-                  bg-white/30 dark:bg-[#16224a]/50
-                  hover:-translate-y-2 hover:shadow-2xl transition
-                "
-              >
-                <img
-                  src={member.img}
-                  alt={member.name}
-                  className="
-                    w-32 h-32 mx-auto rounded-full mb-4 object-cover
-                    border-4 border-[#1E63DB] dark:border-[#50d4f2]
-                  "
-                />
-                <h3 className="text-xl font-bold dark:text-[#50d4f2]">
-                  {member.name}
-                </h3>
-                <p className="text-gray-800 dark:text-gray-300">
-                  {member.role}
-                </p>
-              </div>
+          <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {doctors.slice(0, DOCTORS_SHOWN).map((doctor, i) => (
+              <Reveal as="li" key={doctor.id} delay={i * 0.06}>
+                <DoctorCard doctor={doctor} />
+              </Reveal>
             ))}
-          </div>
+          </ul>
         </section>
+      )}
 
-        {/* CONTACT CTA */}
-        <section
-          className="
-            py-12 text-center
-            bg-gradient-to-r from-[#1E63DB] to-[#27496d]
-            dark:from-[#16224a] dark:to-[#0a1330]
-            text-white dark:text-[#50d4f2]
-          "
-        >
-          <h2 className="text-3xl font-bold mb-4">Need Medical Assistance?</h2>
-          <p className="text-lg mb-6 dark:text-gray-300">
-            Our team is available 24/7 to support your healthcare needs.
-          </p>
-
-          <div className="flex justify-center items-center gap-3">
-            <FaPhoneAlt className="text-2xl" />
-            <span className="text-xl font-semibold">+91 98765 43210</span>
-          </div>
-        </section>
-      </div>
-    </div>
+      <CallToAction title="Need medical assistance?" text="Our team is available 24/7 to support your healthcare needs." />
+    </PublicPage>
   );
 }

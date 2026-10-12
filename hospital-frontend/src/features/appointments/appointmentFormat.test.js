@@ -15,6 +15,14 @@ test("times without seconds; a visit without its slot shows a dash", () => {
   expect(timeRange({ startTime: null, endTime: null })).toBe("—");
 });
 
+test("each state has its badge tone", () => {
+  const today = "2026-10-11";
+  expect(visitStatus({ status: "SCHEDULED", date: "2026-10-12" }, today).tone).toBe("info");
+  expect(visitStatus({ status: "COMPLETED", date: "2026-10-10" }, today).tone).toBe("success");
+  expect(visitStatus({ status: "CONFIRMED", date: "2026-10-10" }, today).tone).toBe("warning");
+  expect(visitStatus({ status: "CANCELLED_BY_PATIENT", date: "2026-10-12" }, today).tone).toBe("neutral");
+});
+
 test("a past appointment that was never completed is missed", () => {
   const today = "2026-10-11";
   expect(visitStatus({ status: "SCHEDULED", date: "2026-10-12" }, today).label).toBe("Scheduled");

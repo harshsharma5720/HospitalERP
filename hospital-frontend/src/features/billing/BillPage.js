@@ -6,14 +6,13 @@ import useAreaBase from "../../shared/useAreaBase";
 import { formatDate } from "../appointments/appointmentFormat";
 import { BillStatusBadge, PAYMENT_METHODS, methodLabel } from "./billFormat";
 import * as billingApi from "./api";
+import { Download } from "lucide-react";
+import { Button, Card, CardHeader, Field, Input, Notice, PageHeader } from "../../shared/ui";
 
 // One bill at the front desk (docs/BILLING_PLAN.md): its lines, extra items and a discount while unpaid, the payment
 // (cash, card or UPI), the refund of a cancelled paid visit, and the receipt. /bills/:billId, or
 // /bills/visit/:appointmentId from the appointment list; under /admin for admins.
 
-const CARD = "bg-white dark:bg-[#1e293b] shadow-md rounded-lg p-5 mb-5";
-const INPUT =
-  "h-10 px-2 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2]";
 
 // "2026-10-12T10:05:31" -> "Mon 12 Oct 2026, 10:05"
 const formatDateTime = (time) => (time ? `${formatDate(time.slice(0, 10), true)}, ${time.slice(11, 16)}` : "");
@@ -30,16 +29,16 @@ function MoneyForm({ idPrefix, action, busy, onSubmit }) {
         e.preventDefault();
         onSubmit({ method, reference: ref.trim() || null });
       }}
-      className="flex flex-wrap items-end gap-4"
+      className="space-y-4"
     >
       <fieldset>
-        <legend className="text-sm mb-1">Paid with</legend>
-        <div className="flex gap-2">
+        <legend className="mb-1.5 text-sm font-medium">Paid with</legend>
+        <div className="grid grid-cols-3 gap-2">
           {PAYMENT_METHODS.map(([value, label]) => (
             <label
               key={value}
-              className={`cursor-pointer border rounded px-3 py-2 text-sm ${
-                method === value ? "bg-blue-600 text-white border-blue-600" : "border-gray-300 dark:border-gray-600"
+              className={`cursor-pointer rounded-lg border px-3 py-2 text-center text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-primary/40 ${
+                method === value ? "border-primary bg-primary text-white" : "border-line hover:bg-surface-2"
               }`}
             >
               <input
@@ -55,20 +54,18 @@ function MoneyForm({ idPrefix, action, busy, onSubmit }) {
           ))}
         </div>
       </fieldset>
-      <div className="flex flex-col text-sm">
-        <label htmlFor={`${idPrefix}-reference`}>Reference (optional)</label>
-        <input
+      <Field label="Reference (optional)" htmlFor={`${idPrefix}-reference`}>
+        <Input
           id={`${idPrefix}-reference`}
           value={ref}
           onChange={(e) => setRef(e.target.value)}
           maxLength={100}
           placeholder="UPI transaction id, card slip no."
-          className={`${INPUT} w-64`}
         />
-      </div>
-      <button type="submit" disabled={busy} className="h-10 bg-green-600 hover:bg-green-700 text-white px-4 rounded disabled:opacity-50">
+      </Field>
+      <Button type="submit" variant="success" disabled={busy} className="w-full">
         {action}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -149,23 +146,17 @@ export default function BillPage() {
   const backTo = location.state?.from || `${base}/bills`;
   const backLabel = `← ${location.state?.fromLabel ?? "Bills"}`;
   const back = (
-    <Link to={backTo} className="text-sm text-blue-700 dark:text-[#50d4f2] hover:underline">
+    <Link to={backTo} className="text-primary-ink hover:underline">
       {backLabel}
     </Link>
   );
 
   if (!bill) {
     return (
-      <div className="p-6">
-        {back}
-        {error ? (
-          <p role="alert" className="text-red-600 mt-4">
-            {error}
-          </p>
-        ) : (
-          <p className="mt-4">Loading...</p>
-        )}
-      </div>
+      <>
+        <div className="mb-4 text-sm">{back}</div>
+        {error ? <Notice tone="danger">{error}</Notice> : <p className="text-ink-muted">Loading...</p>}
+      </>
     );
   }
 
@@ -173,194 +164,185 @@ export default function BillPage() {
   const hasReceipt = ["PAID", "REFUND_DUE", "REFUNDED"].includes(bill.status);
 
   return (
-    <div className="p-6 max-w-4xl">
-      {back}
-      <div className="flex flex-wrap items-center justify-between gap-3 mt-2 mb-5">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
+    <div className="max-w-5xl">
+      <PageHeader
+        back={back}
+        title={
+          <span className="flex flex-wrap items-center gap-3">
             Bill {bill.billNumber} <BillStatusBadge status={bill.status} />
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300">
+          </span>
+        }
+        description={
+          <>
             {bill.patientId ? (
-              <Link to={`${base}/patients/${bill.patientId}`} className="text-blue-700 dark:text-[#50d4f2] hover:underline">
+              <Link to={`${base}/patients/${bill.patientId}`} className="font-medium text-primary-ink hover:underline">
                 {bill.patientName}
               </Link>
             ) : (
               bill.patientName
             )}
             {bill.doctorName && ` · Dr. ${bill.doctorName}`} · {formatDate(bill.visitDate, true)}
-          </p>
-        </div>
-        {hasReceipt && (
-          <button type="button" onClick={downloadReceipt} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
-            Download receipt
-          </button>
-        )}
-      </div>
+          </>
+        }
+        actions={
+          hasReceipt && (
+            <Button variant="secondary" onClick={downloadReceipt}>
+              <Download size={16} aria-hidden="true" />
+              Download receipt
+            </Button>
+          )
+        }
+      />
 
-      {notice && (
-        <p role="status" className="text-green-700 dark:text-green-400 mb-4">
-          {notice}
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="text-red-600 mb-4">
-          {error}
-        </p>
-      )}
+      <Notice tone="success" className="mb-4">{notice}</Notice>
+      <Notice tone="danger" className="mb-4">{error}</Notice>
 
-      <section aria-labelledby="bill-lines" className={CARD}>
-        <h2 id="bill-lines" className="font-semibold mb-3">
-          Items
-        </h2>
-        <table className="w-full text-sm">
-          <tbody>
-            {bill.items.map((line) => (
-              <tr key={line.id} className="border-b dark:border-gray-700">
-                <td className="py-2">{line.description}</td>
-                <td className="py-2 text-right tabular-nums whitespace-nowrap">{formatRupees(line.amount)}</td>
-                <td className="py-2 pl-3 w-20 text-right">
-                  {unpaid && !line.consultation && (
-                    <button
-                      type="button"
-                      onClick={() => run(() => billingApi.removeBillItem(bill.id, line.id), () => `${line.description} removed.`)}
-                      disabled={busy}
-                      aria-label={`Remove ${line.description}`}
-                      className="text-xs underline text-red-700 dark:text-red-400 disabled:opacity-50"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            <tr>
-              <td className="pt-3">Subtotal</td>
-              <td className="pt-3 text-right tabular-nums">{formatRupees(bill.subtotal)}</td>
-              <td />
-            </tr>
-            {(Number(bill.discount) > 0 || unpaid) && (
-              <tr>
-                <td>Discount</td>
-                <td className="text-right tabular-nums">− {formatRupees(bill.discount)}</td>
+      <div className="grid items-start gap-5 lg:grid-cols-5">
+        <Card aria-labelledby="bill-lines" className="lg:col-span-3">
+          <CardHeader id="bill-lines" title="Items" />
+          <table className="w-full text-sm">
+            <tbody>
+              {bill.items.map((line) => (
+                <tr key={line.id} className="border-b border-line">
+                  <td className="py-2.5">{line.description}</td>
+                  <td className="py-2.5 text-right tabular-nums whitespace-nowrap">{formatRupees(line.amount)}</td>
+                  <td className="w-20 py-2.5 pl-3 text-right">
+                    {unpaid && !line.consultation && (
+                      <button
+                        type="button"
+                        onClick={() => run(() => billingApi.removeBillItem(bill.id, line.id), () => `${line.description} removed.`)}
+                        disabled={busy}
+                        aria-label={`Remove ${line.description}`}
+                        className="text-xs font-medium text-danger-ink hover:underline disabled:opacity-50"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              <tr className="text-ink-muted">
+                <td className="pt-3">Subtotal</td>
+                <td className="pt-3 text-right tabular-nums">{formatRupees(bill.subtotal)}</td>
                 <td />
               </tr>
-            )}
-            <tr className="font-bold text-lg">
-              <td className="pt-2">Total</td>
-              <td className="pt-2 text-right tabular-nums" aria-label="Total">
-                {formatRupees(bill.total)}
-              </td>
-              <td />
-            </tr>
-          </tbody>
-        </table>
+              {(Number(bill.discount) > 0 || unpaid) && (
+                <tr className="text-ink-muted">
+                  <td className="pt-1">Discount</td>
+                  <td className="pt-1 text-right tabular-nums">− {formatRupees(bill.discount)}</td>
+                  <td />
+                </tr>
+              )}
+              <tr className="text-lg font-semibold">
+                <td className="pt-3">Total</td>
+                <td className="pt-3 text-right tabular-nums" aria-label="Total">
+                  {formatRupees(bill.total)}
+                </td>
+                <td />
+              </tr>
+            </tbody>
+          </table>
 
-        {unpaid && (
-          <div className="grid sm:grid-cols-2 gap-6 mt-5">
-            <form onSubmit={addItem} aria-label="Add an item" className="flex flex-wrap items-end gap-2">
-              <div className="flex flex-col text-sm flex-1 min-w-[10rem]">
-                <label htmlFor="item-description">Item</label>
-                <input
-                  id="item-description"
-                  value={item.description}
-                  onChange={(e) => setItem({ ...item, description: e.target.value })}
-                  maxLength={200}
-                  placeholder="e.g. Dressing"
-                  className={INPUT}
-                />
-              </div>
-              <div className="flex flex-col text-sm">
-                <label htmlFor="item-amount">Amount (₹)</label>
-                <input
-                  id="item-amount"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={item.amount}
-                  onChange={(e) => setItem({ ...item, amount: e.target.value })}
-                  className={`${INPUT} w-28 text-right`}
-                />
-              </div>
-              <button type="submit" disabled={busy} className="h-10 border dark:border-gray-600 px-3 rounded disabled:opacity-50">
-                Add
-              </button>
-            </form>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                run(() => billingApi.setBillDiscount(bill.id, Number(discount)), (b) => `Discount of ${formatRupees(b.discount)} given.`);
-              }}
-              aria-label="Discount"
-              className="flex items-end gap-2"
-            >
-              <div className="flex flex-col text-sm">
-                <label htmlFor="bill-discount">Discount (₹)</label>
-                <input
-                  id="bill-discount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={discount}
-                  onChange={(e) => setDiscount(e.target.value)}
-                  className={`${INPUT} w-28 text-right`}
-                />
-              </div>
-              <button type="submit" disabled={busy} className="h-10 border dark:border-gray-600 px-3 rounded disabled:opacity-50">
-                Apply
-              </button>
-            </form>
-          </div>
-        )}
-      </section>
+          {unpaid && (
+            <div className="mt-5 space-y-4 border-t border-line pt-5">
+              <form onSubmit={addItem} aria-label="Add an item" className="flex flex-wrap items-end gap-2">
+                <Field label="Item" htmlFor="item-description" className="min-w-[10rem] flex-1">
+                  <Input
+                    id="item-description"
+                    value={item.description}
+                    onChange={(e) => setItem({ ...item, description: e.target.value })}
+                    maxLength={200}
+                    placeholder="e.g. Dressing"
+                  />
+                </Field>
+                <Field label="Amount (₹)" htmlFor="item-amount" className="w-32">
+                  <Input
+                    id="item-amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={item.amount}
+                    onChange={(e) => setItem({ ...item, amount: e.target.value })}
+                    className="text-right"
+                  />
+                </Field>
+                <Button type="submit" variant="secondary" disabled={busy}>
+                  Add
+                </Button>
+              </form>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  run(() => billingApi.setBillDiscount(bill.id, Number(discount)), (b) => `Discount of ${formatRupees(b.discount)} given.`);
+                }}
+                aria-label="Discount"
+                className="flex items-end gap-2"
+              >
+                <Field label="Discount (₹)" htmlFor="bill-discount" className="w-32">
+                  <Input
+                    id="bill-discount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={discount}
+                    onChange={(e) => setDiscount(e.target.value)}
+                    className="text-right"
+                  />
+                </Field>
+                <Button type="submit" variant="secondary" disabled={busy}>
+                  Apply
+                </Button>
+              </form>
+            </div>
+          )}
+        </Card>
 
-      <section aria-labelledby="bill-payment" className={CARD}>
-        <h2 id="bill-payment" className="font-semibold mb-3">
-          Payment
-        </h2>
-        {unpaid && (
-          <MoneyForm
-            idPrefix="payment"
-            action={`Record payment of ${formatRupees(bill.total)}`}
-            busy={busy}
-            onSubmit={(payment) =>
-              run(() => billingApi.payBill(bill.id, payment), (b) => `Paid: ${formatRupees(b.total)} by ${methodLabel(b.paymentMethod)}.`)
-            }
-          />
-        )}
-        {bill.paidAt && (
-          <p>
-            Paid {formatRupees(bill.total)} by {methodLabel(bill.paymentMethod)}
-            {reference(bill.paymentReference)} on {formatDateTime(bill.paidAt)}
-            {bill.paidBy && `, received by ${bill.paidBy}`}.
-          </p>
-        )}
-        {bill.status === "REFUND_DUE" && (
-          <div className="mt-4 border-l-4 border-red-500 pl-4">
-            <p className="font-semibold mb-3">Refund due: {formatRupees(bill.total)}. The visit was cancelled.</p>
+        <Card aria-labelledby="bill-payment" className="lg:col-span-2">
+          <CardHeader id="bill-payment" title="Payment" />
+          {unpaid && (
             <MoneyForm
-              idPrefix="refund"
-              action={`Record refund of ${formatRupees(bill.total)}`}
+              idPrefix="payment"
+              action={`Record payment of ${formatRupees(bill.total)}`}
               busy={busy}
-              onSubmit={(refund) =>
-                run(() => billingApi.refundBill(bill.id, refund), (b) => `Refunded: ${formatRupees(b.total)} by ${methodLabel(b.refundMethod)}.`)
+              onSubmit={(payment) =>
+                run(() => billingApi.payBill(bill.id, payment), (b) => `Paid: ${formatRupees(b.total)} by ${methodLabel(b.paymentMethod)}.`)
               }
             />
-          </div>
-        )}
-        {bill.refundedAt && (
-          <p className="mt-2 font-semibold">
-            Refunded {formatRupees(bill.total)} by {methodLabel(bill.refundMethod)}
-            {reference(bill.refundReference)} on {formatDateTime(bill.refundedAt)}
-            {bill.refundedBy && `, by ${bill.refundedBy}`}.
-          </p>
-        )}
-        {bill.status === "CANCELLED" && (
-          <p className="text-gray-600 dark:text-gray-300">
-            Cancelled: the patient left the queue or the visit was cancelled. Checking in again reopens it.
-          </p>
-        )}
-      </section>
+          )}
+          {bill.paidAt && (
+            <p className="text-sm">
+              Paid {formatRupees(bill.total)} by {methodLabel(bill.paymentMethod)}
+              {reference(bill.paymentReference)} on {formatDateTime(bill.paidAt)}
+              {bill.paidBy && `, received by ${bill.paidBy}`}.
+            </p>
+          )}
+          {bill.status === "REFUND_DUE" && (
+            <div className="mt-4 rounded-lg border border-danger-ink/30 bg-danger-ink/5 p-4">
+              <p className="mb-3 font-semibold text-danger-ink">Refund due: {formatRupees(bill.total)}. The visit was cancelled.</p>
+              <MoneyForm
+                idPrefix="refund"
+                action={`Record refund of ${formatRupees(bill.total)}`}
+                busy={busy}
+                onSubmit={(refund) =>
+                  run(() => billingApi.refundBill(bill.id, refund), (b) => `Refunded: ${formatRupees(b.total)} by ${methodLabel(b.refundMethod)}.`)
+                }
+              />
+            </div>
+          )}
+          {bill.refundedAt && (
+            <p className="mt-2 text-sm font-semibold">
+              Refunded {formatRupees(bill.total)} by {methodLabel(bill.refundMethod)}
+              {reference(bill.refundReference)} on {formatDateTime(bill.refundedAt)}
+              {bill.refundedBy && `, by ${bill.refundedBy}`}.
+            </p>
+          )}
+          {bill.status === "CANCELLED" && (
+            <p className="text-sm text-ink-muted">
+              Cancelled: the patient left the queue or the visit was cancelled. Checking in again reopens it.
+            </p>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

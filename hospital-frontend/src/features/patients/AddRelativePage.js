@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import TopNavbar from "../../shared/TopNavbar";
-import Navbar from "../../shared/Navbar";
+import PublicHeader from "../../shared/layout/PublicHeader";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import { toLocalISODate } from "../../shared/utils/dateUtils";
 import { useLocation } from "react-router-dom";
@@ -53,8 +52,7 @@ export default function AddRelativePage() {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-[#0a1124]">
-      <TopNavbar />
-      <Navbar />
+      <PublicHeader />
 
       <div className="max-w-3xl mx-auto bg-white dark:bg-[#111a3b] mt-10 p-8 rounded-xl shadow-lg">
         <h2 className="text-2xl font-bold mb-6 text-center dark:text-[#50d4f2]">

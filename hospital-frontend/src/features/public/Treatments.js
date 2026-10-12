@@ -1,147 +1,102 @@
 import React from "react";
-import Navbar from "../../shared/Navbar";
-import TopNavbar from "../../shared/TopNavbar";
-import ScrollAnimate from "../../shared/utils/ScrollAnimate";
+import { Link } from "react-router-dom";
+import { ArrowRight, Check, Phone, PhoneCall } from "lucide-react";
+import { CallToAction, PageIntro, PublicPage } from "../../shared/layout/PublicSections";
+import { HOSPITAL, phoneHref } from "../../shared/hospitalInfo";
+import { Button, Reveal } from "../../shared/ui";
+import useDoctorDirectory from "../doctors/useDoctorDirectory";
+import { DEPARTMENTS } from "../doctors/departments";
+
+// The hospital's departments (docs/UI_REFRESH_PLAN.md, U.8): what each looks after and its doctors, from the
+// public directory. A department without doctors in the app is arranged by phone.
+
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+function DepartmentCard({ department, doctorCount }) {
+  const { key, label, icon: Icon, summary, treats, bookable = true } = department;
+  return (
+    <article aria-labelledby={`department-${key}`} className="flex h-full flex-col rounded-2xl border border-line bg-surface p-6 shadow-card">
+      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-ink/10 text-primary-ink">
+        <Icon size={22} aria-hidden="true" />
+      </span>
+      <h2 id={`department-${key}`} className="mt-5 text-lg font-semibold">
+        {label}
+      </h2>
+      <p className="mt-1.5 text-sm text-ink-muted">{summary}</p>
+      <ul className="mt-4 flex-1 space-y-2 text-sm">
+        {treats.map((item) => (
+          <li key={item} className="flex gap-2">
+            <Check size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-success-ink" />
+            {item}
+          </li>
+        ))}
+      </ul>
+      <div className="mt-6 border-t border-line pt-4">
+        {bookable ? (
+          <Link to={`/doctors?speciality=${key}`} className="group flex items-center gap-1.5 text-sm font-medium text-primary-ink">
+            {doctorCount > 0 ? `See ${plural(doctorCount, "doctor")}` : "See doctors"}
+            <ArrowRight size={16} aria-hidden="true" className="transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        ) : (
+          <a href={phoneHref} className="flex items-center gap-1.5 text-sm font-medium text-primary-ink">
+            <PhoneCall size={16} aria-hidden="true" />
+            Call to arrange a visit
+          </a>
+        )}
+      </div>
+    </article>
+  );
+}
 
 export default function Treatments() {
-  const treatments = [
-    {
-      title: "Cardiology",
-      desc: "Heart and cardiovascular system treatment",
-      img: "/treatment-Cardilogy.jpg",
-      icon: "❤️",
-    },
-    {
-      title: "Orthopedics",
-      desc: "Bone and joint treatment",
-      img: "/Treatments-Orthopedics.png",
-      icon: "🦴",
-    },
-    {
-      title: "Neurology",
-      desc: "Brain and nervous system treatment",
-      img: "/Treatments-Neurology.jpg",
-      icon: "🧠",
-    },
-    {
-      title: "Pediatrics",
-      desc: "Child and adolescent healthcare",
-      img: "/Treatments-pediatrics.jpg",
-      icon: "👶",
-    },
-    {
-      title: "Dermatology",
-      desc: "Skin and hair-related treatments",
-      img: "/Treatments-Dermatology.jpg",
-      icon: "💆‍♀️",
-    },
-    {
-      title: "Oncology",
-      desc: "Cancer diagnosis and treatment",
-      img: "/Treatments-oncology.jpg",
-      icon: "🏥",
-    },
-  ];
+  const { doctors } = useDoctorDirectory();
+  const countFor = (key) => (doctors ?? []).filter((doctor) => doctor.specialist === key).length;
 
   return (
-    <div
-      className="
-        min-h-screen
-        bg-gray-50 dark:bg-[#0a1124]
-        text-black dark:text-gray-200
-        transition-colors duration-300
-        relative
-      "
-    >
-      <TopNavbar />
-      <Navbar />
-
-      {/* Intro Section */}
-      <div
-        className="
-            relative flex items-center justify-center
-            px-6 md:px-16
-        "
+    <PublicPage>
+      <PageIntro
+        eyebrow="Treatments"
+        title="Specialist care under one roof"
+        actions={
+          <>
+            <Button as={Link} to="/doctors" size="lg">
+              Find a doctor
+            </Button>
+            <Button as="a" href={phoneHref} size="lg" variant="secondary">
+              <Phone size={18} aria-hidden="true" />
+              Call {HOSPITAL.phone}
+            </Button>
+          </>
+        }
       >
-        <div className="relative z-10 max-w-5xl py-20">
-          <ScrollAnimate>
-            <h1 className="text-center text-5xl font-extrabold mb-4">
-                Our{" "}
-                <span
-                    className="
-                       bg-gradient-to-r from-blue-600 to-cyan-400
-                       bg-clip-text text-transparent
-                    "
-                >
-                    Treatments
-                </span>
-            </h1>
-            <div className="w-40 h-1 bg-gradient-to-r from-blue-600 to-cyan-400 dark:from-[#50d4f2] dark:to-[#63e6ff] mx-auto mb-10 rounded-full"></div>
+        Our departments and what they look after. Book a specialist online, or call us if you're not sure where to start.
+      </PageIntro>
 
-             <p className="text-lg md:text-xl text-gray-800 dark:text-[#50d4f2] text-center font-semibold">
-                We offer comprehensive medical services across multiple
-                pecializations
-             </p>
-          </ScrollAnimate>
-
-
-        </div>
-      </div>
-
-      {/* Treatments Grid */}
-      <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 px-8 md:px-16 pb-16">
-        {treatments.map((treatment, index) => (
-          <div
-            key={index}
-            className="
-              group relative animate-scaleUp overflow-hidden rounded-2xl shadow-md cursor-pointer
-              bg-white dark:bg-[#111a3b]
-              transform transition-all duration-500
-              hover:scale-105 hover:shadow-2xl
-            "
-          >
-            {/* Background image */}
-            <div
-              className="
-                absolute inset-0 bg-cover bg-center
-                transition-transform duration-500 group-hover:scale-110
-              "
-              style={{ backgroundImage: `url(${treatment.img})` }}
-            ></div>
-
-            {/* Overlay gradient */}
-            <div
-              className="
-              absolute inset-0
-              bg-gradient-to-t from-[#1E63DB]/80 to-transparent
-              dark:from-[#0a1330]/80 dark:to-transparent
-            "
-            ></div>
-
-            {/* Content */}
-            <div className="relative p-6 flex flex-col justify-end h-64 text-white transition-all duration-500">
-              <div className="text-5xl mb-2">{treatment.icon}</div>
-
-              {/* Title */}
-              <h3 className="text-2xl font-bold mb-2 dark:text-[#50d4f2]">
-                {treatment.title}
-              </h3>
-
-              {/* Description */}
-              <p
-                className="
-                text-sm text-gray-100 dark:text-[#50d4f2]
-                transform translate-y-10 opacity-0
-                group-hover:translate-y-0 group-hover:opacity-100
-                transition-all duration-500
-              "
-              >
-                {treatment.desc}
-              </p>
+      <section aria-label="Departments" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {DEPARTMENTS.map((department, i) => (
+            <Reveal as="li" key={department.key} delay={(i % 4) * 0.06}>
+              <DepartmentCard department={department} doctorCount={countFor(department.key)} />
+            </Reveal>
+          ))}
+          <Reveal as="li" delay={0.18}>
+            <div className="flex h-full flex-col justify-between rounded-2xl border border-primary/30 bg-primary-ink/5 p-6 shadow-card">
+              <div>
+                <h2 className="text-lg font-semibold">Not sure where to start?</h2>
+                <p className="mt-2 text-sm text-ink-muted">
+                  Call us and we'll help you find the right department and doctor, day or night.
+                </p>
+              </div>
+              <Button as="a" href={phoneHref} className="mt-6">
+                <Phone size={16} aria-hidden="true" />
+                {HOSPITAL.phone}
+              </Button>
             </div>
-          </div>
-        ))}
-      </div>
-    </div>
+          </Reveal>
+        </ul>
+      </section>
+
+      <CallToAction />
+    </PublicPage>
   );
 }

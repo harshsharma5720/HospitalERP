@@ -32,7 +32,7 @@ function TrendTooltip({ active, payload }) {
   const row = payload[0].payload;
   const total = SERIES.reduce((sum, s) => sum + row[s.key], 0);
   return (
-    <div className="bg-white dark:bg-[#0f172a] text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-lg shadow px-3 py-2 text-sm">
+    <div className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink shadow-overlay">
       <p className="font-semibold mb-1">{formatDay(row.date)}</p>
       {SERIES.map((s) => (
         <p key={s.key} className="flex items-center gap-2">
@@ -41,7 +41,7 @@ function TrendTooltip({ active, payload }) {
           <span className="dash-num font-medium">{row[s.key]}</span>
         </p>
       ))}
-      <p className="flex justify-between gap-4 border-t border-gray-200 dark:border-gray-700 mt-1 pt-1">
+      <p className="mt-1 flex justify-between gap-4 border-t border-line pt-1">
         <span>Total</span>
         <span className="dash-num font-medium">{total}</span>
       </p>

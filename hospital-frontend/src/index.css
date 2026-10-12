@@ -2,23 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  transition: background-color 0.3s ease, color 0.3s ease;
+/*
+ * Design tokens (docs/UI_REFRESH_PLAN.md): colours as RGB channels, so Tailwind can add opacity (bg-primary/10).
+ * Pages use the token classes (bg-surface, text-ink-muted, border-line, ...) instead of hex codes, and dark mode
+ * (the "dark" class on <html>) swaps the values here. Calm, not neon.
+ *
+ * Each tone has three colours:
+ *   --{tone}        a solid fill for buttons; white text on it reads at 4.5:1 or better, so it's the same in both modes
+ *   --{tone}-hover  the fill under the pointer (darker)
+ *   --{tone}-ink    the tone as text, icons and light tints (bg-success-ink/10) on a surface; lighter in dark mode
+ */
+:root {
+  --canvas: 246 247 249;       /* the page */
+  --surface: 255 255 255;      /* cards, menus */
+  --surface-2: 241 243 246;    /* table heads, subtle fills */
+  --line: 226 230 236;         /* borders */
+  --ink: 15 23 42;             /* text */
+  --ink-muted: 88 99 117;      /* secondary text */
+  --primary: 37 99 235;
+  --primary-hover: 29 78 216;
+  --primary-ink: 29 78 216;
+  --success: 21 128 61;
+  --success-hover: 22 101 52;
+  --success-ink: 22 101 52;
+  --warning: 180 83 9;
+  --warning-ink: 146 64 14;
+  --danger: 220 38 38;
+  --danger-hover: 185 28 28;
+  --danger-ink: 185 28 28;
+  --info: 3 105 161;
+  --info-ink: 3 105 161;
+  color-scheme: light;
 }
 
-/* Light Mode Background */
-html, body {
-  background-color: #f8fafc; /* light slate */
-  color: #0f172a;
+.dark {
+  --canvas: 11 17 32;
+  --surface: 17 24 39;
+  --surface-2: 26 35 51;
+  --line: 40 51 70;
+  --ink: 229 231 235;
+  --ink-muted: 156 165 179;
+  --primary-ink: 96 165 250;
+  --success-ink: 74 222 128;
+  --warning-ink: 251 191 36;
+  --danger-ink: 248 113 113;
+  --info-ink: 56 189 248;
+  color-scheme: dark;
 }
 
-/* Dark Mode Background */
-html.dark, body.dark {
-  background-color: #0f172a; /* dark slate */
-  color: #e2e8f0;
+@layer base {
+  html,
+  body {
+    background-color: rgb(var(--canvas));
+    color: rgb(var(--ink));
+  }
+
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
 }
 
-/* Prevent scrollbars flickering on theme change */
-body {
-  transition: background-color 0.4s ease, color 0.4s ease;
+/* Dialogs come in with a short fade and lift; nothing moves for people who ask for reduced motion */
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .animate-dialog-in { animation: dialog-in 180ms ease-out; }
+  .animate-backdrop-in { animation: backdrop-in 180ms ease-out; }
 }

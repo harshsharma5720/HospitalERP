@@ -18,7 +18,11 @@ test("new consultation: sends vitals as numbers, skips empty medicine rows and c
   const onSaved = jest.fn();
   render(<ConsultationModal appointment={appointment} onClose={() => {}} onSaved={onSaved} />);
 
-  expect(await screen.findByText("▶ Previous visits (1)")).toBeInTheDocument();
+  const previous = await screen.findByRole("button", { name: "Previous visits (1)" });
+  expect(previous).toHaveAttribute("aria-expanded", "false");
+  fireEvent.click(previous);
+  expect(previous).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByText(/Cold/)).toBeInTheDocument();
 
   fireEvent.change(screen.getByLabelText("Pulse (bpm)"), { target: { value: "72" } });
   fireEvent.change(screen.getByLabelText("Diagnosis *"), { target: { value: "Viral fever" } });

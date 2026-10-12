@@ -478,6 +478,8 @@ A GitHub Actions workflow (`.github/workflows/ci.yml`) is **prepared but not in 
 
 ### Frontend
 
+The look comes from design tokens in `src/index.css` (light and dark), shared components in `src/shared/ui/` and two layouts in `src/shared/layout/` (the staff portals and the public site) — see [docs/UI_REFRESH_PLAN.md](docs/UI_REFRESH_PLAN.md). Build new pages from those, not from raw colours.
+
 ```bash
 cd hospital-frontend
 
