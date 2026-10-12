@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import * as clinicalApi from "./api";
 import { downloadPrescription } from "./downloadPrescription";
+import { ChevronRight, X } from "lucide-react";
+import { formatDate } from "../appointments/appointmentFormat";
+import { Button, Field, Input, Modal, Notice, Textarea, useToast } from "../../shared/ui";
 
 const emptyMedicine = { medicineName: "", dosage: "", frequency: "", duration: "", instructions: "" };
 const emptyForm = {
@@ -16,12 +19,10 @@ const emptyForm = {
   medicines: [],
 };
 
-const inputClass =
-  "w-full p-2 border rounded-lg bg-white dark:bg-[#0a1124] dark:border-[#233565] text-black dark:text-[#e2f6ff]";
-
 // Doctor's consultation form for one appointment: vitals, findings, diagnosis and prescription.
 // Saving it marks the appointment as completed. Also shows the patient's previous visits.
 export default function ConsultationModal({ appointment, onClose, onSaved }) {
+  const toast = useToast();
   const [form, setForm] = useState(emptyForm);
   const [exists, setExists] = useState(false);
   const [history, setHistory] = useState([]);
@@ -96,126 +97,137 @@ export default function ConsultationModal({ appointment, onClose, onSaved }) {
     }
   };
 
+  const about = [
+    `${appointment.patientName}${appointment.age ? `, ${appointment.age} yrs` : ""}`,
+    appointment.date ? formatDate(appointment.date, true) : null,
+    `Appointment #${appointment.appointmentID}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center overflow-y-auto p-4" role="dialog" aria-modal="true">
-      <div className="bg-white dark:bg-[#111a3b] dark:text-gray-100 rounded-2xl shadow-2xl w-full max-w-3xl p-6 my-8">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-[#1E63DB] dark:text-[#50d4f2]">Consultation</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {appointment.patientName}
-              {appointment.age ? `, ${appointment.age} yrs` : ""} • {appointment.date} • Appointment #{appointment.appointmentID}
-            </p>
-            {appointment.message && (
-              <p className="text-sm mt-1"><strong>Patient note:</strong> {appointment.message}</p>
-            )}
+    <Modal title="Consultation" description={about} onClose={onClose} size="lg" closeOnBackdrop={false}>
+      {appointment.message && (
+        <p className="mb-4 rounded-lg bg-surface-2 px-3 py-2 text-sm">
+          <span className="font-medium">Patient note:</span> {appointment.message}
+        </p>
+      )}
+
+      {history.length > 0 && (
+        <div className="mb-5 rounded-lg border border-line">
+          <button
+            type="button"
+            onClick={() => setShowHistory(!showHistory)}
+            aria-expanded={showHistory}
+            className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm font-medium text-primary-ink hover:bg-surface-2"
+          >
+            <ChevronRight size={16} aria-hidden="true" className={`transition-transform ${showHistory ? "rotate-90" : ""}`} />
+            Previous visits ({history.length})
+          </button>
+          {showHistory && (
+            <ul className="max-h-56 space-y-2 overflow-y-auto px-4 pb-3 text-sm">
+              {history.map((h) => (
+                <li key={h.id} className="border-t border-line pt-2">
+                  <span className="font-medium">{h.appointmentDate}</span> — Dr. {h.doctorName}: {h.diagnosis}
+                  {h.medicines?.length > 0 && (
+                    <span className="text-ink-muted"> ({h.medicines.map((m) => m.medicineName).join(", ")})</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      <form onSubmit={save} className="space-y-5">
+        <fieldset>
+          <legend className="mb-2 text-sm font-semibold">Vitals (optional)</legend>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Field label="BP (mmHg)" htmlFor="c-bp">
+              <Input id="c-bp" name="bloodPressure" value={form.bloodPressure} onChange={change} placeholder="120/80" />
+            </Field>
+            <Field label="Pulse (bpm)" htmlFor="c-pulse">
+              <Input id="c-pulse" name="pulse" type="number" min="20" max="250" value={form.pulse} onChange={change} />
+            </Field>
+            <Field label="Temp (°C)" htmlFor="c-temp">
+              <Input id="c-temp" name="temperature" type="number" step="0.1" min="30" max="45" value={form.temperature} onChange={change} />
+            </Field>
+            <Field label="Weight (kg)" htmlFor="c-weight">
+              <Input id="c-weight" name="weightKg" type="number" step="0.1" min="0.5" max="500" value={form.weightKg} onChange={change} />
+            </Field>
           </div>
-          <button onClick={onClose} className="text-2xl leading-none text-gray-500 hover:text-gray-800" aria-label="Close">×</button>
+        </fieldset>
+
+        <Field label="Symptoms" htmlFor="c-symptoms">
+          <Textarea id="c-symptoms" name="symptoms" rows="2" value={form.symptoms} onChange={change} />
+        </Field>
+        <Field label="Diagnosis *" htmlFor="c-diagnosis">
+          <Textarea id="c-diagnosis" name="diagnosis" rows="2" required value={form.diagnosis} onChange={change} />
+        </Field>
+
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm font-semibold">Prescription</span>
+            <Button size="sm" variant="secondary" onClick={addMedicine}>
+              + Add medicine
+            </Button>
+          </div>
+          {form.medicines.length === 0 && <p className="text-sm text-ink-muted">No medicines added.</p>}
+          {form.medicines.length > 0 && (
+            <div aria-hidden="true" className="mb-1 hidden gap-2 text-xs font-medium text-ink-muted md:grid md:grid-cols-6">
+              <span className="md:col-span-2">Medicine *</span>
+              <span>Dosage</span>
+              <span>Frequency</span>
+              <span>Duration</span>
+              <span>Instructions</span>
+            </div>
+          )}
+          <div className="space-y-2">
+            {form.medicines.map((m, i) => (
+              <div key={i} className="grid grid-cols-2 items-center gap-2 md:grid-cols-6">
+                <Input value={m.medicineName} onChange={(e) => changeMedicine(i, "medicineName", e.target.value)}
+                  placeholder="e.g. Paracetamol" aria-label="Medicine name" className="md:col-span-2" />
+                <Input value={m.dosage || ""} onChange={(e) => changeMedicine(i, "dosage", e.target.value)}
+                  placeholder="500 mg" aria-label="Dosage" />
+                <Input value={m.frequency || ""} onChange={(e) => changeMedicine(i, "frequency", e.target.value)}
+                  placeholder="1-0-1" aria-label="Frequency" />
+                <Input value={m.duration || ""} onChange={(e) => changeMedicine(i, "duration", e.target.value)}
+                  placeholder="5 days" aria-label="Duration" />
+                <div className="flex gap-1">
+                  <Input value={m.instructions || ""} onChange={(e) => changeMedicine(i, "instructions", e.target.value)}
+                    placeholder="After food" aria-label="Instructions" />
+                  <Button variant="ghost" size="sm" onClick={() => removeMedicine(i)} aria-label="Remove medicine" className="h-10 text-danger-ink">
+                    <X size={16} aria-hidden="true" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {history.length > 0 && (
-          <div className="mb-4 border rounded-lg dark:border-[#233565]">
-            <button
-              type="button"
-              onClick={() => setShowHistory(!showHistory)}
-              className="w-full text-left px-4 py-2 font-semibold text-blue-700 dark:text-[#50d4f2]"
-            >
-              {showHistory ? "▼" : "▶"} Previous visits ({history.length})
-            </button>
-            {showHistory && (
-              <ul className="px-4 pb-3 space-y-2 text-sm max-h-56 overflow-y-auto">
-                {history.map((h) => (
-                  <li key={h.id} className="border-t pt-2 dark:border-[#233565]">
-                    <strong>{h.appointmentDate}</strong> — Dr. {h.doctorName}: {h.diagnosis}
-                    {h.medicines?.length > 0 && (
-                      <span className="text-gray-500"> ({h.medicines.map((m) => m.medicineName).join(", ")})</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+        <Field label="Advice / notes" htmlFor="c-notes">
+          <Textarea id="c-notes" name="notes" rows="2" value={form.notes} onChange={change} />
+        </Field>
+        <Field label="Follow-up date" htmlFor="c-follow-up" className="md:w-1/2">
+          <Input id="c-follow-up" name="followUpDate" type="date" min={appointment.date} value={form.followUpDate} onChange={change} />
+        </Field>
 
-        <form onSubmit={save} className="space-y-4">
-          <fieldset className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <legend className="font-semibold mb-1 col-span-full">Vitals (optional)</legend>
-            <label className="text-sm">BP (mmHg)
-              <input name="bloodPressure" value={form.bloodPressure} onChange={change} placeholder="120/80" className={inputClass} />
-            </label>
-            <label className="text-sm">Pulse (bpm)
-              <input name="pulse" type="number" min="20" max="250" value={form.pulse} onChange={change} className={inputClass} />
-            </label>
-            <label className="text-sm">Temp (°C)
-              <input name="temperature" type="number" step="0.1" min="30" max="45" value={form.temperature} onChange={change} className={inputClass} />
-            </label>
-            <label className="text-sm">Weight (kg)
-              <input name="weightKg" type="number" step="0.1" min="0.5" max="500" value={form.weightKg} onChange={change} className={inputClass} />
-            </label>
-          </fieldset>
+        <Notice tone="danger">{error}</Notice>
 
-          <label className="block text-sm font-semibold">Symptoms
-            <textarea name="symptoms" rows="2" value={form.symptoms} onChange={change} className={inputClass} />
-          </label>
-          <label className="block text-sm font-semibold">Diagnosis *
-            <textarea name="diagnosis" rows="2" required value={form.diagnosis} onChange={change} className={inputClass} />
-          </label>
-
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-semibold">Prescription</span>
-              <button type="button" onClick={addMedicine} className="text-sm px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
-                + Add medicine
-              </button>
-            </div>
-            {form.medicines.length === 0 && <p className="text-sm text-gray-500">No medicines added.</p>}
-            <div className="space-y-2">
-              {form.medicines.map((m, i) => (
-                <div key={i} className="grid grid-cols-2 md:grid-cols-6 gap-2 items-center">
-                  <input value={m.medicineName} onChange={(e) => changeMedicine(i, "medicineName", e.target.value)}
-                    placeholder="Medicine *" aria-label="Medicine name" className={`${inputClass} md:col-span-2`} />
-                  <input value={m.dosage || ""} onChange={(e) => changeMedicine(i, "dosage", e.target.value)}
-                    placeholder="Dosage (500 mg)" aria-label="Dosage" className={inputClass} />
-                  <input value={m.frequency || ""} onChange={(e) => changeMedicine(i, "frequency", e.target.value)}
-                    placeholder="Frequency (1-0-1)" aria-label="Frequency" className={inputClass} />
-                  <input value={m.duration || ""} onChange={(e) => changeMedicine(i, "duration", e.target.value)}
-                    placeholder="Duration (5 days)" aria-label="Duration" className={inputClass} />
-                  <div className="flex gap-1">
-                    <input value={m.instructions || ""} onChange={(e) => changeMedicine(i, "instructions", e.target.value)}
-                      placeholder="After food" aria-label="Instructions" className={inputClass} />
-                    <button type="button" onClick={() => removeMedicine(i)} aria-label="Remove medicine"
-                      className="px-2 text-red-600 hover:text-red-800 text-xl">×</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <label className="block text-sm font-semibold">Advice / notes
-            <textarea name="notes" rows="2" value={form.notes} onChange={change} className={inputClass} />
-          </label>
-          <label className="block text-sm font-semibold md:w-1/2">Follow-up date
-            <input name="followUpDate" type="date" min={appointment.date} value={form.followUpDate} onChange={change} className={inputClass} />
-          </label>
-
-          {error && <p className="text-red-600 font-semibold">{error}</p>}
-
-          <div className="flex flex-wrap justify-end gap-3 pt-2">
-            {exists && (
-              <button type="button" onClick={() => downloadPrescription(appointment.appointmentID)}
-                className="px-4 py-2 rounded-lg border border-blue-600 text-blue-700 dark:text-[#50d4f2] font-semibold">
-                Download Prescription
-              </button>
-            )}
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-300 dark:bg-[#2c3558] font-semibold">
-              Close
-            </button>
-            <button type="submit" disabled={saving} className="px-5 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 disabled:opacity-60">
-              {saving ? "Saving..." : exists ? "Update Consultation" : "Save & Complete"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-4">
+          {exists && (
+            <Button variant="secondary" onClick={() => downloadPrescription(appointment.appointmentID, toast.error)}>
+              Download Prescription
+            </Button>
+          )}
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+          <Button type="submit" variant="success" disabled={saving}>
+            {saving ? "Saving..." : exists ? "Update Consultation" : "Save & Complete"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

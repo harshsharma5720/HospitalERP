@@ -1,244 +1,134 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Users, CalendarCheck, Clock } from "lucide-react";
-import { getRoleFromToken, getUserIdFromToken } from "../../../shared/utils/jwtUtils";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+import { Link } from "react-router-dom";
+import { CalendarCheck, CalendarDays, CalendarOff, ChevronRight, Clock, ListOrdered, Users } from "lucide-react";
+import useAuthStore from "../../auth/useAuthStore";
+import { specialityLabel } from "../../appointments/appointmentFormat";
 import { getDoctor } from "../api";
 import * as appointmentsApi from "../../appointments/api";
+import { Button, Card, CardHeader, PageHeader } from "../../../shared/ui";
+
+// The doctor's home: their appointments in numbers, how many are done, and the way to the day's work
+const QUICK_LINKS = [
+  { to: "/doctor/queue", icon: ListOrdered, label: "Today's queue", hint: "Call patients in as they arrive" },
+  { to: "/doctor/doctor-appointments", icon: CalendarDays, label: "Appointments", hint: "Pending and completed visits" },
+  { to: "/doctor/schedule", icon: Clock, label: "Schedule", hint: "Your weekly working hours" },
+  { to: "/doctor/leave-management", icon: CalendarOff, label: "Leave", hint: "Ask for days off" },
+];
+
+// A list from the API, or an empty one when it fails (the dashboard still shows what it has)
+const listOf = (request) => request.then((res) => res.data || []).catch(() => []);
 
 export default function DoctorDashboard() {
-  const navigate = useNavigate();
-
+  const userId = useAuthStore((s) => s.userId);
   const [doctor, setDoctor] = useState(null);
-  const [appointments, setAppointments] = useState([]);
-  const [completed, setCompleted] = useState([]);
-  const [pending, setPending] = useState([]);
-
-  const appointmentStatusData = [
-    { name: "Completed", value: completed.length },
-    { name: "Pending", value: pending.length },
-  ];
-  const COLORS = ["#1E63DB", "#f97316"]; // green, orange
+  const [counts, setCounts] = useState(null); // { total, completed, pending }
 
   useEffect(() => {
-    const token = localStorage.getItem("jwtToken");
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
-    const role = getRoleFromToken(token);
-    const userId = getUserIdFromToken(token);
-
-    if (role !== "ROLE_DOCTOR") {
-      navigate("/login");
-      return;
-    }
-
-    fetchDoctor(userId);
-    fetchAppointments();
-  }, [navigate]);
-
-  useEffect(() => {
-    const loadAppointments = async () => {
-      const doctorId = getUserIdFromToken(localStorage.getItem("jwtToken"));
-
-      const pending = await fetchPendingAppointments(doctorId);
-      console.log("Pending:", pending);
-      setPending(pending);
-
-      const completed = await fetchCompletedAppointments(doctorId);
-      console.log("Completed:", completed);
-      setCompleted(completed);
+    let current = true;
+    getDoctor(userId)
+      .then((res) => current && setDoctor(res.data))
+      .catch(() => current && setDoctor({}));
+    Promise.all([
+      listOf(appointmentsApi.getDoctorAppointments()),
+      listOf(appointmentsApi.getDoctorCompletedAppointments(userId)),
+      listOf(appointmentsApi.getDoctorPendingAppointments(userId)),
+    ]).then(([all, completed, pending]) => {
+      if (current) setCounts({ total: all.length, completed: completed.length, pending: pending.length });
+    });
+    return () => {
+      current = false;
     };
+  }, [userId]);
 
-    loadAppointments();
-  }, []);
+  if (!doctor || !counts) return <p className="text-ink-muted">Loading doctor dashboard...</p>;
 
-  const fetchDoctor = async (id) => {
-    try {
-      const res = await getDoctor(id);
-      setDoctor(res.data);
-    } catch (err) {
-      console.error("Doctor fetch failed", err);
-    }
-  };
-
-  const fetchAppointments = async () => {
-    try {
-      const res = await appointmentsApi.getDoctorAppointments();
-
-      const data = res.data || [];
-      setAppointments(data);
-    } catch (err) {
-      console.error("Appointments fetch failed", err);
-    }
-  };
-  const fetchPendingAppointments = async (doctorId) => {
-    try {
-      const response = await appointmentsApi.getDoctorPendingAppointments(doctorId);
-      return response.data; // list of pending appointments
-    } catch (error) {
-      console.error("Error fetching pending appointments:", error);
-      return [];
-    }
-  };
-
-  const fetchCompletedAppointments = async (doctorId) => {
-    try {
-      const response = await appointmentsApi.getDoctorCompletedAppointments(doctorId);
-      return response.data; // list of completed appointments
-    } catch (error) {
-      console.error("Error fetching completed appointments:", error);
-      return [];
-    }
-  };
-
-  if (!doctor)
-    return (
-      <p className="text-center mt-20 text-gray-600 dark:text-gray-300">
-        Loading doctor dashboard...
-      </p>
-    );
+  const handled = counts.completed + counts.pending;
+  const share = handled === 0 ? 0 : Math.round((counts.completed / handled) * 100);
 
   return (
-    <div className="min-h-screen  dark:bg-[#0a1124] p-8 transition-all">
+    <>
+      <PageHeader
+        title={doctor.name ? `Hello, Dr. ${doctor.name}` : "Hello"}
+        description={specialityLabel(doctor.specialist) || null}
+        actions={
+          <Button as={Link} to="/doctor/queue">
+            <ListOrdered size={16} aria-hidden="true" />
+            Today's queue
+          </Button>
+        }
+      />
 
-      {/* HEADER */}
-      <div className="mb-10">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-          Hello,{" "}
-          <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
-            {doctor.name}
-          </span>
-        </h1>
-        <p className="text-gray-500 dark:text-[#8ddff8]">
-          {doctor.specialist}
-        </p>
+      <div className="grid gap-5 sm:grid-cols-3">
+        <Stat title="Total appointments" value={counts.total} icon={Users} />
+        <Stat title="Completed" value={counts.completed} icon={CalendarCheck} />
+        <Stat title="Pending" value={counts.pending} icon={Clock} />
       </div>
 
-      {/* STATS */}
-      <div className="grid grid-cols-1  md:grid-cols-3 gap-6">
-        <Stat title="Total Appointments" value={appointments.length} icon={<Users />} />
-        <Stat title="Completed Appointments" value={completed.length} icon={<CalendarCheck />} />
-        <Stat title="Pending Appointments" value={pending.length} icon={<Clock />} />
+      <div className="mt-5 grid gap-5 lg:grid-cols-5">
+        <Card className="lg:col-span-3">
+          <CardHeader title="Visits completed" description={`${counts.completed} of ${handled} visits assigned to you`} />
+          <div
+            role="img"
+            aria-label={`${share}% of your visits are completed`}
+            className="h-3 overflow-hidden rounded-full bg-primary-ink/15"
+          >
+            <div className="h-full rounded-full bg-success" style={{ width: `${share}%` }} />
+          </div>
+          <dl className="mt-4 flex flex-wrap gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-success" />
+              <dt className="text-ink-muted">Completed</dt>
+              <dd className="font-semibold tabular-nums">{counts.completed}</dd>
+            </div>
+            <div className="flex items-center gap-2">
+              <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-primary-ink/30" />
+              <dt className="text-ink-muted">Pending</dt>
+              <dd className="font-semibold tabular-nums">{counts.pending}</dd>
+            </div>
+            <div className="flex items-center gap-2">
+              <dt className="text-ink-muted">Done</dt>
+              <dd className="font-semibold tabular-nums">{share}%</dd>
+            </div>
+          </dl>
+        </Card>
+
+        <Card padding="sm" className="lg:col-span-2">
+          <nav aria-label="Quick links">
+            <ul className="divide-y divide-line">
+              {QUICK_LINKS.map(({ to, icon: Icon, label, hint }) => (
+                <li key={to}>
+                  <Link to={to} className="group flex items-center gap-3 rounded-lg px-2 py-3 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+                    <span className="rounded-lg bg-primary-ink/10 p-2 text-primary-ink">
+                      <Icon size={18} aria-hidden="true" />
+                    </span>
+                    <span className="flex-1">
+                      <span className="block text-sm font-medium">{label}</span>
+                      <span className="block text-xs text-ink-muted">{hint}</span>
+                    </span>
+                    <ChevronRight size={16} aria-hidden="true" className="text-ink-muted group-hover:text-ink" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </Card>
       </div>
-
-      {/* CHARTS */}
-      <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-        {/* PIE CHART */}
-        <div className="bg-white dark:bg-[#111a3b] p-6 rounded-2xl shadow-xl">
-          <h3 className="text-lg font-semibold mb-4 dark:text-white">
-            Appointment Status Distribution
-          </h3>
-
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={appointmentStatusData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                label
-              >
-                {appointmentStatusData.map((entry, index) => (
-                  <Cell key={index} fill={COLORS[index]} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* BAR CHART */}
-        <div className="bg-white dark:bg-[#111a3b] p-6 rounded-2xl shadow-xl">
-          <h3 className="text-lg font-semibold mb-4 dark:text-white">
-            Completed vs Pending Appointments
-          </h3>
-
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={appointmentStatusData}>
-              <defs>
-                <linearGradient id="completedGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#1E63DB" />
-                  <stop offset="100%" stopColor="#27496d" />
-                </linearGradient>
-              </defs>
-
-              <XAxis dataKey="name" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Legend />
-
-              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                {appointmentStatusData.map((entry, index) => (
-                  <Cell
-                    key={index}
-                    fill={index === 0 ? "url(#completedGradient)" : "#f97316"}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-
-        </div>
-
-      </div>
-
-      {/* ACTIONS */}
-      <div className="mt-10 flex gap-4">
-        <button
-          onClick={() => navigate("/doctor/doctor-appointments")}
-          className="px-6 py-2 rounded-lg
-                     bg-gradient-to-r from-[#007B9E] to-[#00A2B8]
-                     dark:from-[#50d4f2] dark:to-[#3bc2df]
-                     text-white dark:text-black font-semibold"
-        >
-          View Appointments
-        </button>
-
-        <button
-          onClick={() => navigate("/doctor/leave-management")}
-          className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-        >
-          Apply Leave
-        </button>
-      </div>
-
-    </div>
+    </>
   );
-
 }
 
-/* ---------- COMPONENT ---------- */
-function Stat({ title, value, icon }) {
+function Stat({ title, value, icon: Icon }) {
   return (
-    <div className="bg-white dark:bg-[#111a3b] p-6 rounded-2xl shadow-xl
-                    border border-gray-100 dark:border-[#16224a]">
+    <Card>
       <div className="flex items-center gap-4">
-        <div className="p-3 bg-[#50d4f2]/20 text-[#50d4f2] rounded-xl">
-          {icon}
-        </div>
+        <span className="rounded-xl bg-primary-ink/10 p-3 text-primary-ink">
+          <Icon size={22} aria-hidden="true" />
+        </span>
         <div>
-          <p className="text-gray-500 dark:text-[#8ddff8]">{title}</p>
-          <h2 className="text-2xl font-bold dark:text-white">{value}</h2>
+          <p className="text-sm text-ink-muted">{title}</p>
+          <p className="text-2xl font-semibold tabular-nums">{value}</p>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

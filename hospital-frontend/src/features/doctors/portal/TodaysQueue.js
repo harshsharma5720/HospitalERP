@@ -3,13 +3,13 @@ import { getErrorMessage } from "../../../shared/utils/apiError";
 import ConsultationModal from "../../clinical/ConsultationModal";
 import { formatDate, timeRange } from "../../appointments/appointmentFormat";
 import { callNextPatient, callPatient, getMyQueue, patientNotHere } from "../../appointments/api";
+import { Button, Card, CardHeader, Notice, PageHeader } from "../../../shared/ui";
 
 // The doctor's queue today (docs/TODAYS_QUEUE_PLAN.md): who is with the doctor, who is waiting (by appointment
 // time, with their tokens), who hasn't arrived and who is done. Call next / Call / Not here; the consultation form
 // completes the visit as on the Appointments page. Refreshes itself, so patients checked in at the front desk appear.
 
 const REFRESH_MS = 10000;
-const CARD = "bg-white dark:bg-[#1e293b] shadow-md rounded-lg p-5 mb-5";
 const GENDER = { FEMALE: "F", MALE: "M", OTHER: "" };
 
 // "34 y · F" from the appointment's age and gender
@@ -19,8 +19,8 @@ const patientFacts = (appointment) =>
 function Token({ number, large = false }) {
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-lg bg-blue-600 text-white font-bold ${
-        large ? "w-16 h-16 text-3xl" : "w-10 h-10 text-lg"
+      className={`inline-flex shrink-0 items-center justify-center rounded-lg font-semibold tabular-nums ${
+        large ? "h-16 w-16 bg-primary text-3xl text-white" : "h-10 w-10 bg-primary-ink/10 text-lg text-primary-ink"
       }`}
       aria-label={`Token ${number}`}
     >
@@ -78,147 +78,111 @@ export default function TodaysQueue() {
 
   if (!queue) {
     return (
-      <div className="p-6">
-        <h1 className="text-3xl font-bold mb-4">Today's queue</h1>
-        {error ? (
-          <p role="alert" className="text-red-600">
-            {error}
-          </p>
-        ) : (
-          <p>Loading...</p>
-        )}
-      </div>
+      <>
+        <PageHeader title="Today's queue" />
+        {error ? <Notice tone="danger">{error}</Notice> : <p className="text-ink-muted">Loading...</p>}
+      </>
     );
   }
 
   const { withDoctor, waiting, notArrived, done } = queue;
 
   return (
-    <div className="p-6 max-w-4xl">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div>
-          <h1 className="text-3xl font-bold">Today's queue</h1>
-          <p className="text-gray-600 dark:text-gray-300">{formatDate(queue.date, true)}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => runAction(callNextPatient, called)}
-          disabled={busy || waiting.length === 0}
-          className="bg-green-600 hover:bg-green-700 text-white text-lg px-6 py-3 rounded-lg disabled:opacity-50"
-        >
-          Call next
-        </button>
-      </div>
+    <div className="max-w-5xl">
+      <PageHeader
+        title="Today's queue"
+        description={formatDate(queue.date, true)}
+        actions={
+          <Button size="lg" variant="success" onClick={() => runAction(callNextPatient, called)} disabled={busy || waiting.length === 0}>
+            Call next
+          </Button>
+        }
+      />
 
-      {notice && (
-        <p role="status" className="text-green-700 dark:text-green-400 mb-4">
-          {notice}
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="text-red-600 mb-4">
-          {error}
-        </p>
-      )}
+      <Notice tone="success" className="mb-4">{notice}</Notice>
+      <Notice tone="danger" className="mb-4">{error}</Notice>
 
-      <section aria-labelledby="queue-with-you" className={CARD}>
-        <h2 id="queue-with-you" className="font-semibold mb-3">
-          With you
-        </h2>
+      <Card aria-labelledby="queue-with-you" className="mb-5 border-l-4 border-l-primary">
+        <CardHeader id="queue-with-you" title="With you" />
         {withDoctor.length === 0 && (
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            {waiting.length > 0 ? "Nobody yet: call the next patient." : "Nobody is waiting."}
-          </p>
+          <p className="text-sm text-ink-muted">{waiting.length > 0 ? "Nobody yet: call the next patient." : "Nobody is waiting."}</p>
         )}
-        <ul className="space-y-3">
+        <ul className="space-y-4">
           {withDoctor.map((appointment) => (
             <li key={appointment.appointmentID} className="flex flex-wrap items-center gap-4">
               <Token number={appointment.tokenNumber} large />
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-xl font-semibold">{appointment.patientName}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
+                <p className="text-sm text-ink-muted">
                   {[patientFacts(appointment), timeRange(appointment), appointment.message].filter(Boolean).join(" · ")}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setConsulting(appointment)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-              >
-                Start consultation
-              </button>
-              <button
-                type="button"
+              <Button onClick={() => setConsulting(appointment)}>Start consultation</Button>
+              <Button
+                variant="secondary"
                 onClick={() =>
                   runAction(() => patientNotHere(appointment.appointmentID), (a) => `${a.patientName} is waiting again (token ${a.tokenNumber}).`)
                 }
                 disabled={busy}
                 aria-label={`${appointment.patientName} is not here`}
-                className="border dark:border-gray-600 px-4 py-2 rounded disabled:opacity-50"
               >
                 Not here
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
-      </section>
+      </Card>
 
-      <section aria-labelledby="queue-waiting" className={CARD}>
-        <h2 id="queue-waiting" className="font-semibold mb-3">
-          Waiting ({waiting.length})
-        </h2>
-        {waiting.length === 0 && <p className="text-sm text-gray-600 dark:text-gray-300">Nobody has checked in.</p>}
-        <ul className="divide-y dark:divide-gray-700">
+      <Card aria-labelledby="queue-waiting" className="mb-5">
+        <CardHeader id="queue-waiting" title={`Waiting (${waiting.length})`} />
+        {waiting.length === 0 && <p className="text-sm text-ink-muted">Nobody has checked in.</p>}
+        <ul className="divide-y divide-line">
           {waiting.map((appointment) => (
-            <li key={appointment.appointmentID} className="flex flex-wrap items-center gap-4 py-2">
+            <li key={appointment.appointmentID} className="flex flex-wrap items-center gap-4 py-2.5 first:pt-0 last:pb-0">
               <Token number={appointment.tokenNumber} />
-              <span className="w-28 text-sm whitespace-nowrap">{timeRange(appointment)}</span>
-              <span className="flex-1 min-w-0">
-                <span className="font-semibold">{appointment.patientName}</span>
-                <span className="text-sm text-gray-600 dark:text-gray-300">
+              <span className="w-28 whitespace-nowrap text-sm tabular-nums text-ink-muted">{timeRange(appointment)}</span>
+              <span className="min-w-0 flex-1">
+                <span className="font-medium">{appointment.patientName}</span>
+                <span className="text-sm text-ink-muted">
                   {" "}
                   {[patientFacts(appointment), appointment.message].filter(Boolean).join(" · ")}
                 </span>
               </span>
-              <button
-                type="button"
+              <Button
+                size="sm"
+                variant="secondary"
                 onClick={() => runAction(() => callPatient(appointment.appointmentID), called)}
                 disabled={busy}
                 aria-label={`Call ${appointment.patientName}`}
-                className="border border-blue-600 text-blue-700 dark:text-[#50d4f2] px-3 py-1 rounded text-sm disabled:opacity-50"
               >
                 Call
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
-      </section>
+      </Card>
 
-      <div className="grid sm:grid-cols-2 gap-5">
-        <section aria-labelledby="queue-not-arrived" className={CARD}>
-          <h2 id="queue-not-arrived" className="font-semibold mb-3">
-            Not arrived yet ({notArrived.length})
-          </h2>
-          <ul className="text-sm space-y-1">
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Card aria-labelledby="queue-not-arrived">
+          <CardHeader id="queue-not-arrived" title={`Not arrived yet (${notArrived.length})`} />
+          <ul className="space-y-1.5 text-sm">
             {notArrived.map((appointment) => (
               <li key={appointment.appointmentID}>
-                <span className="text-gray-600 dark:text-gray-300">{timeRange(appointment)}</span> {appointment.patientName}
+                <span className="tabular-nums text-ink-muted">{timeRange(appointment)}</span> {appointment.patientName}
               </li>
             ))}
           </ul>
-        </section>
-        <section aria-labelledby="queue-done" className={CARD}>
-          <h2 id="queue-done" className="font-semibold mb-3">
-            Done ({done.length})
-          </h2>
-          <ul className="text-sm space-y-1">
+        </Card>
+        <Card aria-labelledby="queue-done">
+          <CardHeader id="queue-done" title={`Done (${done.length})`} />
+          <ul className="space-y-1.5 text-sm">
             {done.map((appointment) => (
               <li key={appointment.appointmentID}>
-                <span className="text-gray-600 dark:text-gray-300">{timeRange(appointment)}</span> {appointment.patientName}
+                <span className="tabular-nums text-ink-muted">{timeRange(appointment)}</span> {appointment.patientName}
               </li>
             ))}
           </ul>
-        </section>
+        </Card>
       </div>
 
       {consulting && (

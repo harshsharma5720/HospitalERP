@@ -2,8 +2,9 @@ import { render, screen, fireEvent, act } from "@testing-library/react";
 import { MemoryRouter, Link } from "react-router-dom";
 import {
   Button, Card, CardHeader, PageHeader, Field, Input, Select, Badge, Table, Th, Td, TableMessage, Pagination, Notice,
-  EmptyState, ToastProvider, useToast, ConfirmProvider, useConfirm,
+  EmptyState, Modal, ToastProvider, useToast, ConfirmProvider, useConfirm,
 } from "./index";
+import { useState } from "react";
 
 describe("Button", () => {
   test("is a plain button unless told otherwise, so it never submits a form by accident", () => {
@@ -311,5 +312,58 @@ describe("confirm dialog", () => {
     expect(browserConfirm).toHaveBeenCalledWith("Deactivate Asha?\n\nShe can't log in any more.");
     expect(onAnswer).toHaveBeenCalledWith(true);
     browserConfirm.mockRestore();
+  });
+});
+
+function LeaveForm({ onClose, closeOnBackdrop }) {
+  const [reason, setReason] = useState("");
+  return (
+    <Modal title="Apply for leave" description="Pending until an admin approves it." onClose={onClose} closeOnBackdrop={closeOnBackdrop}>
+      <Field label="From" htmlFor="m-from">
+        <Input id="m-from" type="date" />
+      </Field>
+      <Field label="Reason" htmlFor="m-reason">
+        <Input id="m-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
+      </Field>
+    </Modal>
+  );
+}
+
+describe("modal", () => {
+  test("is a named dialog that opens on its first field and keeps the page from scrolling", () => {
+    const { unmount } = render(<LeaveForm onClose={() => {}} />);
+    const dialog = screen.getByRole("dialog", { name: "Apply for leave" });
+    expect(dialog).toHaveAccessibleDescription("Pending until an admin approves it.");
+    expect(screen.getByLabelText("From")).toHaveFocus();
+    expect(document.body.style.overflow).toBe("hidden");
+    unmount();
+    expect(document.body.style.overflow).toBe("");
+  });
+
+  test("typing in a later field keeps the focus there", () => {
+    render(<LeaveForm onClose={() => {}} />);
+    const reason = screen.getByLabelText("Reason");
+    reason.focus();
+    fireEvent.change(reason, { target: { value: "Conference" } });
+    expect(reason).toHaveValue("Conference");
+    expect(reason).toHaveFocus();
+  });
+
+  test("closes with ×, with Escape and with a click beside it", () => {
+    const onClose = jest.fn();
+    render(<LeaveForm onClose={onClose} />);
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.mouseDown(screen.getByRole("dialog"));
+    expect(onClose).toHaveBeenCalledTimes(2);
+    fireEvent.mouseDown(screen.getByRole("dialog").parentElement);
+    expect(onClose).toHaveBeenCalledTimes(3);
+  });
+
+  test("a form that shouldn't be lost ignores a click beside it", () => {
+    const onClose = jest.fn();
+    render(<LeaveForm onClose={onClose} closeOnBackdrop={false} />);
+    fireEvent.mouseDown(screen.getByRole("dialog").parentElement);
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

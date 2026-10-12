@@ -1,180 +1,162 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { getRoleFromToken, getUserIdFromToken } from "../../../shared/utils/jwtUtils";
+import { CalendarDays } from "lucide-react";
+import useAuthStore from "../../auth/useAuthStore";
 import { getErrorMessage } from "../../../shared/utils/apiError";
 import * as appointmentsApi from "../../appointments/api";
+import { formatDate, timeRange } from "../../appointments/appointmentFormat";
 import ConsultationModal from "../../clinical/ConsultationModal";
 import { downloadPrescription } from "../../clinical/downloadPrescription";
+import { Button, Card, EmptyState, PageHeader, Table, Td, Th, useConfirm, useToast } from "../../../shared/ui";
+
+// The doctor's appointments: pending ones (start the consultation, or complete without notes) and completed ones
+// (their notes and the prescription PDF).
+const VIEWS = [
+  ["pending", "Pending"],
+  ["completed", "Completed"],
+];
 
 export default function DoctorAppointments() {
+  const userId = useAuthStore((s) => s.userId);
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [view, setView] = useState("pending");
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  const [viewType, setViewType] = useState("pending"); // pending or completed
   const [consulting, setConsulting] = useState(null); // appointment open in the consultation form
 
   useEffect(() => {
-    const fetchAppointments = async () => {
-      const token = localStorage.getItem("jwtToken");
-      const decodedRole = getRoleFromToken(token);
-      const decodedUserId = getUserIdFromToken(token);
-
-      if (!token || !decodedRole?.toUpperCase().includes("DOCTOR")) {
-        alert("Unauthorized Access! Login as a doctor.");
-        navigate("/login");
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const response =
-          viewType === "pending"
-            ? await appointmentsApi.getDoctorPendingAppointments(decodedUserId)
-            : await appointmentsApi.getDoctorCompletedAppointments(decodedUserId);
-        setAppointments(response.data);
-      } catch (err) {
-        console.error("Error:", err);
-      } finally {
-        setLoading(false);
-      }
+    let current = true;
+    setLoading(true);
+    const load = view === "pending" ? appointmentsApi.getDoctorPendingAppointments : appointmentsApi.getDoctorCompletedAppointments;
+    load(userId)
+      .then((response) => current && setAppointments(response.data))
+      .catch((err) => {
+        if (!current) return;
+        setAppointments([]);
+        toast.error(getErrorMessage(err, "Could not load your appointments."));
+      })
+      .finally(() => current && setLoading(false));
+    return () => {
+      current = false;
     };
+  }, [userId, view, toast]);
 
-    fetchAppointments();
-  }, [navigate, viewType]);
-
-
-  // Mark appointment as completed
-  const handleMarkCompleted = async (appointmentID) => {
-    const confirmDone = window.confirm("Mark this appointment as completed?");
-    if (!confirmDone) return;
-
+  const markCompleted = async (appointment) => {
+    const yes = await confirm({
+      title: `Complete the visit of ${appointment.patientName}?`,
+      message: "No consultation notes are saved with it.",
+      confirmLabel: "Complete visit",
+    });
+    if (!yes) return;
     try {
-      const response = await appointmentsApi.completeAppointment(appointmentID);
-      alert(response.data);
-      setAppointments((prev) =>
-        prev.filter((a) => a.appointmentID !== appointmentID)
-      );
+      const response = await appointmentsApi.completeAppointment(appointment.appointmentID);
+      setAppointments((prev) => prev.filter((a) => a.appointmentID !== appointment.appointmentID));
+      toast.success(typeof response.data === "string" && response.data ? response.data : "Visit completed.");
     } catch (err) {
-      console.error("Error completing appointment:", err);
-      alert(getErrorMessage(err, "Failed to update appointment status."));
+      toast.error(getErrorMessage(err, "Failed to update appointment status."));
     }
   };
 
   // After a consultation is saved the appointment is completed, so it leaves the pending list
-  const handleConsultationSaved = (appointmentID) => {
-    if (viewType === "pending") {
+  const consultationSaved = (appointmentID) => {
+    if (view === "pending") {
       setAppointments((prev) => prev.filter((a) => a.appointmentID !== appointmentID));
       setConsulting(null);
-      alert("Consultation saved and appointment completed.");
+      toast.success("Consultation saved and appointment completed.");
     } else {
-      alert("Consultation updated.");
+      toast.success("Consultation updated.");
     }
   };
 
-  if (loading) {
-    return <div className="text-center mt-20">Loading appointments...</div>;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-[#0a1124]">
+    <>
+      <PageHeader
+        title="Appointments"
+        description="Start the consultation from a pending visit; completed visits keep their notes and prescription."
+      />
 
-      <div className="max-w-5xl animate-scaleUp mx-auto mt-10 p-6 bg-white dark:bg-[#111a3b] rounded-xl shadow-xl">
-        <h2 className="text-5xl text-center font-extrabold mb-4">
-           Doctor {" "}
-           <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">
-              Appointment
-           </span>
-        </h2>
-
-        <div className="flex justify-center gap-4 mb-6">
+      <div role="group" aria-label="Which appointments" className="mb-4 inline-flex rounded-lg border border-line bg-surface p-1 shadow-card">
+        {VIEWS.map(([value, label]) => (
           <button
-            onClick={() => setViewType("pending")}
-            className={`px-6 py-2 rounded-lg font-semibold ${
-              viewType === "pending"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-300 dark:bg-[#2c3558] dark:text-white"
+            key={value}
+            type="button"
+            aria-pressed={view === value}
+            onClick={() => setView(value)}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+              view === value ? "bg-primary text-white" : "text-ink-muted hover:text-ink"
             }`}
           >
-            Pending Appointments
+            {label}
           </button>
-
-          <button
-            onClick={() => setViewType("completed")}
-            className={`px-6 py-2 rounded-lg font-semibold ${
-              viewType === "completed"
-                ? "bg-green-600 text-white"
-                : "bg-gray-300 dark:bg-[#2c3558] dark:text-white"
-            }`}
-          >
-            Completed Appointments
-          </button>
-        </div>
-
-
-        {appointments.length === 0 ? (
-          <p className="text-center text-gray-600 dark:text-gray-300">
-            No appointments assigned.
-          </p>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-6">
-            {appointments.map((appt) => (
-              <div
-                key={appt.appointmentID}
-                className="p-5 bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF]
-                dark:from-[#111a3b] dark:to-[#0f172a] rounded-xl shadow-xl"
-              >
-                <p><strong>Appointment ID:</strong> {appt.appointmentID}</p>
-                <p><strong>Patient Name:</strong> {appt.patientName}</p>
-                <p><strong>Date:</strong> {appt.date}</p>
-                <p><strong>Shift:</strong> {appt.shift}</p>
-                <p><strong>Time:</strong> {appt.startTime ? `${String(appt.startTime).slice(0, 5)} - ${String(appt.endTime).slice(0, 5)}` : "N/A"}</p>
-                <p><strong>Message:</strong> {appt.message}</p>
-
-                {viewType === "pending" && (
-                  <>
-                    <button
-                      onClick={() => setConsulting(appt)}
-                      className="mt-4 w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg"
-                    >
-                      Start Consultation
-                    </button>
-                    <button
-                      onClick={() => handleMarkCompleted(appt.appointmentID)}
-                      className="mt-2 w-full text-sm text-gray-600 dark:text-gray-300 hover:underline"
-                    >
-                      Mark completed without notes
-                    </button>
-                  </>
-                )}
-
-                {viewType === "completed" && (
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      onClick={() => setConsulting(appt)}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg"
-                    >
-                      View / Edit Notes
-                    </button>
-                    <button
-                      onClick={() => downloadPrescription(appt.appointmentID)}
-                      className="flex-1 border border-blue-600 text-blue-700 dark:text-[#50d4f2] py-2 rounded-lg"
-                    >
-                      Prescription PDF
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        ))}
       </div>
-      {consulting && (
-        <ConsultationModal
-          appointment={consulting}
-          onClose={() => setConsulting(null)}
-          onSaved={handleConsultationSaved}
-        />
+
+      {loading ? (
+        <p className="text-ink-muted">Loading appointments...</p>
+      ) : appointments.length === 0 ? (
+        <Card padding="none">
+          <EmptyState icon={CalendarDays} title={view === "pending" ? "No pending appointments" : "No completed appointments yet"}>
+            {view === "pending" ? "New bookings appear here." : "Visits you complete appear here with their notes."}
+          </EmptyState>
+        </Card>
+      ) : (
+        <Table>
+          <thead>
+            <tr>
+              <Th>Date</Th>
+              <Th>Time</Th>
+              <Th>Patient</Th>
+              <Th>Reason</Th>
+              <Th align="right">Actions</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {appointments.map((appt) => (
+              <tr key={appt.appointmentID}>
+                <Td className="whitespace-nowrap">{appt.date ? formatDate(appt.date, true) : "—"}</Td>
+                <Td className="whitespace-nowrap tabular-nums">{timeRange(appt)}</Td>
+                <Td>
+                  <span className="font-medium">{appt.patientName}</span>
+                  {appt.age ? <span className="text-ink-muted"> · {appt.age} y</span> : null}
+                </Td>
+                <Td className="max-w-xs truncate text-ink-muted" title={appt.message ?? ""}>
+                  {appt.message || "—"}
+                </Td>
+                <Td align="right">
+                  <div className="flex justify-end gap-2">
+                    {view === "pending" ? (
+                      <>
+                        <Button size="sm" variant="ghost" onClick={() => markCompleted(appt)} aria-label={`Complete without notes: ${appt.patientName}`}>
+                          Complete without notes
+                        </Button>
+                        <Button size="sm" variant="success" onClick={() => setConsulting(appt)} aria-label={`Start consultation with ${appt.patientName}`}>
+                          Start consultation
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => downloadPrescription(appt.appointmentID, toast.error)}
+                          aria-label={`Prescription PDF of ${appt.patientName}`}
+                        >
+                          Prescription PDF
+                        </Button>
+                        <Button size="sm" onClick={() => setConsulting(appt)} aria-label={`View / edit notes of ${appt.patientName}`}>
+                          View / edit notes
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
       )}
-    </div>
+
+      {consulting && <ConsultationModal appointment={consulting} onClose={() => setConsulting(null)} onSaved={consultationSaved} />}
+    </>
   );
 }

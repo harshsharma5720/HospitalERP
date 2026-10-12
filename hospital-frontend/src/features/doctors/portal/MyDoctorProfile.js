@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { getUserIdFromToken } from "../../../shared/utils/jwtUtils";
+import { getErrorMessage } from "../../../shared/utils/apiError";
 import { API_BASE_URL } from "../../../app/config";
+import { specialityLabel } from "../../appointments/appointmentFormat";
 import * as doctorsApi from "../api";
+import { Button, Card, Field, Input, PageHeader, Select, useToast } from "../../../shared/ui";
 
 const SPECIALIST_OPTIONS = [
   "NOT_ASSIGNED",
@@ -13,48 +16,48 @@ const SPECIALIST_OPTIONS = [
   "DERMATOLOGY",
 ];
 
+const initials = (name) =>
+  (name || "?")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join("");
+
 // The logged-in doctor's own profile, editable (doctor portal)
 export default function MyDoctorProfile() {
+  const toast = useToast();
   const [doctor, setDoctor] = useState(null);
   const [formData, setFormData] = useState({});
   const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchDoctor();
-  }, []);
+    const doctorId = getUserIdFromToken(localStorage.getItem("jwtToken"));
+    doctorsApi
+      .getDoctor(doctorId)
+      .then((res) => {
+        setDoctor(res.data);
+        setFormData(res.data);
+      })
+      .catch((err) => toast.error(getErrorMessage(err, "Could not load your profile.")));
+  }, [toast]);
 
-  const fetchDoctor = async () => {
-    const token = localStorage.getItem("jwtToken");
-    const doctorId = getUserIdFromToken(token);
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-    try {
-      const res = await doctorsApi.getDoctor(doctorId);
+  const handleImageChange = (e) => setFormData({ ...formData, profileImage: e.target.files[0] });
 
-      setDoctor(res.data);
-      setFormData(res.data);
-    } catch (err) {
-      console.error("Failed to load doctor profile", err);
-    }
+  const cancel = () => {
+    setFormData(doctor);
+    setIsEditing(false);
   };
 
-  /* ---------- HANDLE INPUT CHANGE ---------- */
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  /* ---------- HANDLE IMAGE CHANGE ---------- */
-  const handleImageChange = (e) => {
-    setFormData({ ...formData, profileImage: e.target.files[0] });
-  };
-
-  /* ---------- SAVE PROFILE ---------- */
-  const handleSave = async () => {
-    const token = localStorage.getItem("jwtToken");
-    const userIdFromToken = getUserIdFromToken(token);
-
+  const handleSave = async (e) => {
+    e.preventDefault();
+    const userIdFromToken = getUserIdFromToken(localStorage.getItem("jwtToken"));
+    setSaving(true);
     try {
       const formDataToSend = new FormData();
-
       const doctorPayload = {
         id: doctor.id,
         userId: userIdFromToken,
@@ -63,19 +66,9 @@ export default function MyDoctorProfile() {
         email: formData.email,
         phoneNumber: formData.phoneNumber,
         userName: formData.userName,
-        profileImage:
-          formData.profileImage instanceof File
-            ? doctor.profileImage
-            : formData.profileImage,
+        profileImage: formData.profileImage instanceof File ? doctor.profileImage : formData.profileImage,
       };
-
-      formDataToSend.append(
-        "doctorDTO",
-        new Blob([JSON.stringify(doctorPayload)], {
-          type: "application/json",
-        })
-      );
-
+      formDataToSend.append("doctorDTO", new Blob([JSON.stringify(doctorPayload)], { type: "application/json" }));
       if (formData.profileImage instanceof File) {
         formDataToSend.append("profileImage", formData.profileImage);
       }
@@ -84,188 +77,106 @@ export default function MyDoctorProfile() {
 
       setDoctor(doctorPayload);
       setIsEditing(false);
-      alert("Profile updated successfully!");
+      toast.success("Profile updated.");
     } catch (err) {
-      console.error("Update failed:", err.response?.data);
-      alert("Failed to update profile.");
+      toast.error(getErrorMessage(err, "Failed to update profile."));
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (!doctor)
-    return (
-      <p className="text-center mt-20 text-gray-600 dark:text-gray-300">
-        Loading profile...
-      </p>
-    );
+  if (!doctor) return <p className="text-ink-muted">Loading profile...</p>;
+
+  const photo =
+    formData.profileImage instanceof File
+      ? URL.createObjectURL(formData.profileImage)
+      : formData.profileImage
+      ? `${API_BASE_URL}${formData.profileImage}`
+      : null;
 
   return (
-    <div className="min-h-screen dark:bg-[#0a1124] p-8">
+    <form onSubmit={handleSave} className="max-w-3xl">
+      <PageHeader
+        title="My profile"
+        actions={
+          isEditing ? (
+            <>
+              <Button variant="secondary" onClick={cancel}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="success" disabled={saving}>
+                {saving ? "Saving..." : "Save changes"}
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => setIsEditing(true)}>Edit profile</Button>
+          )
+        }
+      />
 
-      {/* HEADER */}
-      <div className="mb-10 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-            My Profile —
-            <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent ml-2">
-              {doctor.name}
+      <Card>
+        <div className="mb-6 flex flex-wrap items-center gap-5 border-b border-line pb-6">
+          {photo ? (
+            <img src={photo} alt="" className="h-20 w-20 rounded-full object-cover ring-4 ring-primary-ink/10" />
+          ) : (
+            <span aria-hidden="true" className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-ink/10 text-2xl font-semibold text-primary-ink">
+              {initials(doctor.name)}
             </span>
-          </h1>
-          <p className="text-gray-500 dark:text-[#8ddff8]">
-            {doctor.specialist}
-          </p>
-        </div>
-
-        {!isEditing ? (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-          >
-            Edit Profile
-          </button>
-        ) : (
-          <button
-            onClick={handleSave}
-            className="px-6 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
-          >
-            Save Changes
-          </button>
-        )}
-      </div>
-
-      {/* PROFILE CARD */}
-      <div className="bg-white dark:bg-[#111a3b] p-8 rounded-2xl shadow-xl grid md:grid-cols-2 gap-6">
-
-        {/* PROFILE IMAGE */}
-        <div className="col-span-2 flex justify-center">
-          <div className="text-center">
-            <img
-              src={
-                formData.profileImage instanceof File
-                  ? URL.createObjectURL(formData.profileImage)
-                  : formData.profileImage
-                  ? `${API_BASE_URL}${formData.profileImage}`
-                  : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
-              }
-              alt="Doctor"
-              className="h-32 w-32 rounded-full border-4 border-[#50d4f2] object-cover"
-            />
-
-            {isEditing && (
+          )}
+          <div className="min-w-0 flex-1">
+            <h2 className="text-xl font-semibold">Dr. {doctor.name}</h2>
+            <p className="text-ink-muted">{specialityLabel(doctor.specialist) || "No speciality set"}</p>
+          </div>
+          {isEditing && (
+            <Field label="New photo" htmlFor="profile-photo">
               <input
+                id="profile-photo"
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
-                className="mt-4"
+                className="text-sm text-ink-muted file:mr-3 file:rounded-lg file:border file:border-line file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-2"
               />
-            )}
-          </div>
-        </div>
-
-        {/* NAME */}
-        <ProfileField
-          label="Name"
-          name="name"
-          value={formData.name}
-          isEditing={false}
-        />
-
-        {/* USERNAME */}
-        <ProfileField
-          label="Username"
-          name="userName"
-          value={formData.userName}
-          isEditing={isEditing}
-          onChange={handleChange}
-        />
-
-        {/* EMAIL */}
-        <ProfileField
-          label="Email"
-          name="email"
-          value={formData.email}
-          isEditing={isEditing}
-          onChange={handleChange}
-        />
-
-        {/* PHONE */}
-        <ProfileField
-          label="Phone Number"
-          name="phoneNumber"
-          value={formData.phoneNumber}
-          isEditing={isEditing}
-          onChange={handleChange}
-        />
-
-        {/* SPECIALIST DROPDOWN */}
-        <div>
-          <p className="text-gray-500 dark:text-[#8ddff8] text-sm mb-1">
-            Specialization
-          </p>
-
-          {isEditing ? (
-            <select
-              name="specialist"
-              value={formData.specialist || "NOT_ASSIGNED"}
-              onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg border
-                         bg-white dark:bg-[#0f172a]
-                         text-gray-800 dark:text-white
-                         border-gray-300 dark:border-[#1f2a52]"
-            >
-              {SPECIALIST_OPTIONS.map((spec) => (
-                <option key={spec} value={spec}>
-                  {spec.replace("_", " ")}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <div className="bg-gray-50 dark:bg-[#0f172a]
-                            border border-gray-200 dark:border-[#1f2a52]
-                            rounded-lg px-4 py-3
-                            text-gray-800 dark:text-white font-semibold">
-              {formData.specialist?.replace("_", " ")}
-            </div>
+            </Field>
           )}
         </div>
 
-      </div>
-    </div>
+        <div className="grid gap-5 md:grid-cols-2">
+          <ProfileField label="Name" name="name" value={formData.name} />
+          <ProfileField label="Username" name="userName" value={formData.userName} isEditing={isEditing} onChange={handleChange} />
+          <ProfileField label="Email" name="email" value={formData.email} isEditing={isEditing} onChange={handleChange} />
+          <ProfileField label="Phone Number" name="phoneNumber" value={formData.phoneNumber} isEditing={isEditing} onChange={handleChange} />
+          {isEditing ? (
+            <Field label="Specialization" htmlFor="profile-specialist">
+              <Select id="profile-specialist" name="specialist" value={formData.specialist || "NOT_ASSIGNED"} onChange={handleChange}>
+                {SPECIALIST_OPTIONS.map((spec) => (
+                  <option key={spec} value={spec}>
+                    {specialityLabel(spec) || "Not assigned"}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : (
+            <ProfileField label="Specialization" value={specialityLabel(formData.specialist) || "Not assigned"} />
+          )}
+        </div>
+      </Card>
+    </form>
   );
 }
 
-/* ---------- FIELD COMPONENT ---------- */
-function ProfileField({
-  label,
-  name,
-  value,
-  isEditing,
-  onChange,
-}) {
+// A detail of the profile: its value, or a box to change it while editing
+function ProfileField({ label, name, value, isEditing = false, onChange }) {
+  if (isEditing) {
+    return (
+      <Field label={label} htmlFor={`profile-${name}`}>
+        <Input id={`profile-${name}`} name={name} value={value || ""} onChange={onChange} />
+      </Field>
+    );
+  }
   return (
     <div>
-      <p className="text-gray-500 dark:text-[#8ddff8] text-sm mb-1">
-        {label}
-      </p>
-
-      {isEditing ? (
-        <input
-          type="text"
-          name={name}
-          value={value || ""}
-          onChange={onChange}
-          className="w-full px-4 py-3 rounded-lg border
-                     bg-white dark:bg-[#0f172a]
-                     text-gray-800 dark:text-white
-                     border-gray-300 dark:border-[#1f2a52]"
-        />
-      ) : (
-        <div className="bg-gray-50 dark:bg-[#0f172a]
-                        border border-gray-200 dark:border-[#1f2a52]
-                        rounded-lg px-4 py-3
-                        text-gray-800 dark:text-white font-semibold">
-          {value}
-        </div>
-      )}
+      <p className="text-sm text-ink-muted">{label}</p>
+      <p className="mt-1 font-medium">{value || "—"}</p>
     </div>
   );
 }

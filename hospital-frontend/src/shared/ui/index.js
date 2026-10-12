@@ -8,5 +8,6 @@ export { Table, Th, Td, TableMessage } from "./Table";
 export { default as Pagination } from "./Pagination";
 export { default as Notice } from "./Notice";
 export { default as EmptyState } from "./EmptyState";
+export { default as Modal } from "./Modal";
 export { ToastProvider, useToast } from "./Toast";
 export { ConfirmProvider, useConfirm } from "./ConfirmDialog";

@@ -11,6 +11,7 @@
 | Where to start | **The staff portals** (admin, doctor, front desk): one app layout, shared components, toasts instead of `alert()`. The public site and the patient area follow in a later piece of work. |
 | Look | **Clean clinical:** white and soft-grey surfaces, one confident blue accent, the Inter font, generous spacing, subtle shadows; a calm dark mode (no neon). |
 | Way of working | Each finished, verified step is committed without asking; the branch is pushed at the end with the PR link. |
+| Home page (added 2026-10-12) | The public **home page** joins this piece of work as its own step: a professional landing page, better imagery, a cleaner welcome popup (no animation over the buttons) and scroll animations. |
 
 ## Design
 
@@ -28,7 +29,8 @@
 | U.3 | **Front-desk pages:** Appointments, Walk-in, Patients, patient page, Bills, bill page. | Existing tests; screenshots |
 | U.4 | **Doctor portal:** Dashboard, Today's queue, Appointments and the consultation form, Schedule, Leave, Profile; `alert()` → toasts / confirm. | Tests; screenshots |
 | U.5 | **Admin portal:** Dashboard, Users, Register user, Doctors, Leave approvals, a doctor's appointments, Audit log, Notifications, Fees; `alert()` → toasts / confirm. | Tests; screenshots |
-| U.6 | **Docs**, final check, push and PR link. | — |
+| U.6 | **Home page:** the public landing page rebuilt in the clean clinical look — hero, services, doctors, how booking works, contact — with better imagery, a cleaner welcome popup and scroll-reveal animations (off for people who ask for reduced motion). | Tests; screenshots light / dark and phone |
+| U.7 | **Docs**, final check, push and PR link. | — |
 
 ## Progress log
 
@@ -38,3 +40,4 @@
 | U.1 Design foundation | ✅ done | 2026-10-12 | Tokens (fill / hover / ink per tone, contrast checked in both modes), Inter, the shared components in `src/shared/ui/` with `ToastProvider` and `ConfirmProvider` around the app; 23 component tests, each of 5 mutations caught; screenshot sheet checked light and dark (first sheet showed white on light fills in dark mode, fixed). |
 | U.2 Staff layout | ✅ done | 2026-10-12 | `StaffLayout` + `staffMenus.js`; front-desk routes under one layout route, `AdminLayout` / `DoctorLayout` wrap their routes in it; `AdminSidebar`, `DoctorRightSidebar`, `SitePage` and the navbar's portal variant removed; the doctor portal no longer waits for the profile to show its pages. 17 layout tests (menus per role, active page incl. sub-pages, profile name / photo / fallback, log out, theme, phone drawer), each of 8 mutations caught; screenshots desktop light / dark and a 390 px phone with the drawer. |
 | U.3 Front-desk pages | ✅ done | 2026-10-12 | Appointments, Walk-in, Patients, patient page, Bills and bill page rebuilt from the shared components, texts and behaviour unchanged (all their tests pass as they were). Visit and bill states give a badge tone instead of colour classes (new tests: `appointmentFormat`, `billFormat`; 3 mutations caught). `Table plain` for tables inside a card. Bill page: items and payment side by side on wide screens. Screenshots of every page, light and dark. |
+| U.4 Doctor portal | ✅ done | 2026-10-12 | Dashboard (numbers, a completion bar instead of two charts of the same two numbers, quick links), Today's queue, Appointments (a table; confirm dialog and toasts instead of `confirm()` / `alert()`), the consultation form on the new shared `Modal`, Schedule, Leave (the made-up "Remaining: 12" and tab-dependent counts removed; the request form in a modal) and Profile (Cancel added). `downloadPrescription` reports errors to a toast in the portals. New tests for the modal, appointments, leave, dashboard and profile (153 frontend tests); 7 mutations caught; screenshots of every page. |
