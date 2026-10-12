@@ -1,464 +1,384 @@
-// Part 1 of 2 — AppointmentPage (neon dark theme) - TOP
-import React, { useState, useEffect } from "react";
-import PublicHeader from "../../shared/layout/PublicHeader";
-import { useLocation, useNavigate } from "react-router-dom";
-import { getUserIdFromToken } from "../../shared/utils/jwtUtils";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { CalendarCheck, CheckCircle2, Moon, Sun, UserPlus } from "lucide-react";
+import useAuthStore from "../auth/useAuthStore";
 import { calculateAgeFromDOB } from "../../shared/utils/calculateAgeFromDOB";
-import Loader from "../../shared/Loader";
-import { toLocalISODate, addDays } from "../../shared/utils/dateUtils";
+import { addDays, toLocalISODate } from "../../shared/utils/dateUtils";
 import { getErrorMessage } from "../../shared/utils/apiError";
-import { getAllDoctors } from "../doctors/api";
+import { PageIntro, PublicPage } from "../../shared/layout/PublicSections";
+import { Button, Card, Field, Input, Notice, Select, Textarea, useToast } from "../../shared/ui";
+import useDoctorDirectory from "../doctors/useDoctorDirectory";
 import { getPatientAccount, getRelatives } from "../patients/api";
+import { dayLabel, doctorLabel, formatDate, formatTime } from "./appointmentFormat";
 import * as appointmentsApi from "./api";
+
+// Booking an appointment, step by step on one page (docs/PATIENT_AREA_REFRESH_PLAN.md, P.2): who it is for (the
+// patient or a family member), the doctor, the day (today and the next 6) and a free time, the reason - with a
+// summary beside the steps. The same page reschedules (state.rescheduleAppointment: the person stays the same).
+
+const DAYS_AHEAD = 7;
+const SHIFTS = [
+  ["MORNING", "Morning", Sun],
+  ["EVENING", "Evening", Moon],
+];
+const GENDERS = [
+  ["FEMALE", "Female"],
+  ["MALE", "Male"],
+  ["OTHER", "Other"],
+];
+const RELATIONSHIP = (value) => (value ? value.charAt(0) + value.slice(1).toLowerCase() : "Family member");
+const CHOICE = "rounded-xl border px-4 py-3 text-left transition-colors focus-within:ring-2 focus-within:ring-primary/40";
+
+function Step({ number, title, children }) {
+  return (
+    <Card as="section" aria-labelledby={`step-${number}`}>
+      <div className="mb-4 flex items-center gap-3">
+        <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
+          {number}
+        </span>
+        <h2 id={`step-${number}`} className="text-lg font-semibold">
+          {title}
+        </h2>
+      </div>
+      {children}
+    </Card>
+  );
+}
+
+const nextDays = () => Array.from({ length: DAYS_AHEAD }, (_, i) => toLocalISODate(addDays(new Date(), i)));
 
 export default function AppointmentPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const doctorName = location.state?.doctorName || "";
-  const doctorId = location.state?.doctorId || "";
-  const rescheduleData = location.state?.rescheduleAppointment || null;
-  const [bookingStatus, setBookingStatus] = useState("idle");
+  const toast = useToast();
+  const userId = useAuthStore((s) => s.userId);
+  const reschedule = location.state?.rescheduleAppointment || null;
+  const wantedDoctor = { id: location.state?.doctorId ?? reschedule?.doctorId, name: location.state?.doctorName ?? reschedule?.doctorName };
 
-  const emptyForm = {
-    patientKey: "", // "USER-<patientId>" or "RELATIVE-<relativeId>"
-    patientName: "",
-    gender: "MALE",
-    age: "",
-    doctorId: doctorId,
-    doctorName: doctorName,
-    shift: "MORNING",
-    date: "",
-    message: "",
-    ptInfoId: "",
-    relativeId: "",
-  };
-  const [formData, setFormData] = useState(emptyForm);
-
-  const [doctors, setDoctors] = useState([]);
-  const [availableSlots, setAvailableSlots] = useState([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
+  const { doctors } = useDoctorDirectory();
+  const [people, setPeople] = useState(null); // the patient and their family members
+  const [peopleError, setPeopleError] = useState("");
+  const [personKey, setPersonKey] = useState("");
+  const [extra, setExtra] = useState({ gender: "", age: "" }); // when the profile doesn't say
+  const [doctorId, setDoctorId] = useState("");
+  const [date, setDate] = useState(toLocalISODate());
+  const [shift, setShift] = useState(reschedule?.shift || "MORNING");
+  const [slots, setSlots] = useState(null);
   const [slotError, setSlotError] = useState("");
-  const [selectedSlotId, setSelectedSlotId] = useState(null);
-  const [patientOptions, setPatientOptions] = useState([]);
+  const [slotId, setSlotId] = useState(null);
+  const [message, setMessage] = useState(reschedule?.message || "");
+  const [saving, setSaving] = useState(false);
+  const [booked, setBooked] = useState(null);
+  const [refresh, setRefresh] = useState(0);
 
-  // Dates are handled as local "yyyy-MM-dd" strings (toISOString would use UTC)
-  const todayStr = toLocalISODate();
-  const maxDateStr = toLocalISODate(addDays(new Date(), 6));
-  const [selectedDate, setSelectedDate] = useState(todayStr);
-
-  // Fetch doctors and prefill doctor if passed from DoctorPage
+  // Who the appointment can be for
   useEffect(() => {
-    const fetchDoctors = async () => {
+    if (reschedule || !userId) return;
+    let current = true;
+    (async () => {
       try {
-        const response = await getAllDoctors();
-        setDoctors(response.data);
-
-        // Prefill doctor if passed from DoctorPage
-        if (doctorName) {
-          const selectedDoctor = response.data.find(
-            (doc) => doc.name.toLowerCase() === doctorName.toLowerCase()
-          );
-          if (selectedDoctor) {
-            setFormData((prev) => ({
-              ...prev,
-              doctorId: selectedDoctor.id,
-              doctorName: selectedDoctor.name,
-            }));
-          }
-        }
-      } catch (error) {
-        alert(getErrorMessage(error, "Failed to load doctors. Please try again."));
-      }
-    };
-
-    fetchDoctors();
-  }, [doctorName]);
-
-  useEffect(() => {
-    const { doctorId, date, shift } = formData;
-    if (doctorId && date && shift) {
-      handleSlotFetch(); // auto trigger
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.doctorId, formData.date, formData.shift]);
-
-  useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      date: selectedDate,
-    }));
-  }, [selectedDate]);
-
-
-  // Prefill reschedule data if available
-  useEffect(() => {
-    if (rescheduleData) {
-      setFormData((prev) => ({
-        ...prev,
-        patientKey: rescheduleData.relativeId
-          ? `RELATIVE-${rescheduleData.relativeId}`
-          : `USER-${rescheduleData.ptInfoId}`,
-        patientName: rescheduleData.patientName || "",
-        gender: rescheduleData.gender || prev.gender,
-        age: rescheduleData.age || "",
-        doctorId: rescheduleData.doctorId || prev.doctorId,
-        doctorName: rescheduleData.doctorName || "",
-        message: rescheduleData.message || "",
-        ptInfoId: rescheduleData.ptInfoId || "",
-        relativeId: rescheduleData.relativeId || "",
-        shift: rescheduleData.shift || "MORNING",
-      }));
-    }
-  }, [rescheduleData]);
-
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const token = localStorage.getItem("jwtToken");
-        if (!token) return;
-        // 1. Fetch logged-in user
-        const userId = getUserIdFromToken(token);
-        const userRes = await getPatientAccount(userId);
-        const user = userRes.data;
-        // 2. Fetch all relatives of user
-        const relRes = await getRelatives(user.patientId);
-        const relatives = relRes.data;
-        // 3. Dropdown options = user + relatives
-        const options = [
-          {
-            key: `USER-${user.patientId}`,
-            patientId: user.patientId,
-            relativeId: null,
-            name: user.patientName,
-            gender: user.gender,
-            age: calculateAgeFromDOB(user.dob),
-          },
-          ...relatives.map((rel) => ({
-            key: `RELATIVE-${rel.id}`,
-            patientId: user.patientId,
-            relativeId: rel.id,
-            name: `${rel.name} (${rel.relationship?.toLowerCase() || "relative"})`,
-            gender: rel.gender,
-            age: calculateAgeFromDOB(rel.dob),
+        const { data: me } = await getPatientAccount(userId);
+        const { data: relatives } = await getRelatives(me.patientId);
+        if (!current) return;
+        const list = [
+          { key: "me", name: me.patientName, relation: "You", gender: me.gender, age: calculateAgeFromDOB(me.dob), relativeId: null, patientId: me.patientId },
+          ...relatives.map((r) => ({
+            key: `relative-${r.id}`, name: r.name, relation: RELATIONSHIP(r.relationship), gender: r.gender, age: calculateAgeFromDOB(r.dob),
+            relativeId: r.id, patientId: me.patientId,
           })),
         ];
-
-        setPatientOptions(options);
-      } catch (error) {
-        console.error("Error fetching patient list:", error);
+        setPeople(list);
+        setPersonKey((key) => key || "me");
+      } catch (err) {
+        if (current) setPeopleError(getErrorMessage(err, "Could not load your profile."));
       }
+    })();
+    return () => {
+      current = false;
     };
+  }, [userId, reschedule]);
 
-    fetchPatients();
-  }, []);
+  // The doctor asked for (from a doctor's page, Book again or the visit being rescheduled)
+  useEffect(() => {
+    if (!doctors || doctorId) return;
+    const match =
+      doctors.find((d) => wantedDoctor.id && String(d.id) === String(wantedDoctor.id)) ||
+      doctors.find((d) => wantedDoctor.name && d.name?.toLowerCase() === wantedDoctor.name.toLowerCase());
+    if (match) setDoctorId(String(match.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doctors]);
 
-
-  // Handle input changes
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  // Handle doctor dropdown
-  const handleDoctorChange = (e) => {
-    const selected = doctors.find((doc) => doc.id === Number(e.target.value));
-    if (selected) {
-      setFormData({
-        ...formData,
-        doctorId: selected.id,
-        doctorName: selected.name,
-      });
-    }
-  };
-
-  const handlePatientSelect = (key) => {
-    const selected = patientOptions.find((p) => p.key === key);
-    if (!selected) return;
-
-    setFormData((prev) => ({
-      ...prev,
-      patientKey: selected.key,
-      patientName: selected.name,
-      gender: selected.gender || prev.gender,
-      age: selected.age === "" ? prev.age : selected.age,
-      ptInfoId: selected.patientId,
-      relativeId: selected.relativeId || "",
-    }));
-  };
-
-  const changeDate = (direction) => {
-    const next = toLocalISODate(addDays(new Date(`${selectedDate}T00:00:00`), direction === "prev" ? -1 : 1));
-    if (next >= todayStr && next <= maxDateStr) {
-      setSelectedDate(next);
-    }
-  };
-
-
-
-  // Fetch available slots (the server creates them on first request)
-  const handleSlotFetch = async () => {
-    const { doctorId, date, shift } = formData;
-    if (!doctorId || !date || !shift) {
-      alert("Please select doctor, date, and shift first.");
-      return;
-    }
-
-    setLoadingSlots(true);
+  // The free times for the doctor, day and part of the day
+  useEffect(() => {
+    setSlotId(null);
     setSlotError("");
-    setSelectedSlotId(null);
-
-    try {
-      const response = await appointmentsApi.getAvailableSlots(doctorId, date, shift);
-      setAvailableSlots(response.data);
-    } catch (error) {
-      setAvailableSlots([]);
-      setSlotError(getErrorMessage(error, "Unable to load slots. Please try again."));
-    } finally {
-      setLoadingSlots(false);
+    if (!doctorId) {
+      setSlots(null);
+      return undefined;
     }
-  };
+    let current = true;
+    setSlots(null);
+    appointmentsApi
+      .getAvailableSlots(doctorId, date, shift)
+      .then((res) => current && setSlots(res.data))
+      .catch((err) => {
+        if (!current) return;
+        setSlots([]);
+        setSlotError(getErrorMessage(err, "Unable to load the free times. Please try again."));
+      });
+    return () => {
+      current = false;
+    };
+  }, [doctorId, date, shift, refresh]);
 
-  // Handle appointment booking / rescheduling
-  const handleSubmit = async (e) => {
+  const person = reschedule ? null : (people ?? []).find((p) => p.key === personKey);
+  const needsGender = person && !person.relativeId && !person.gender;
+  const needsAge = person && !person.relativeId && person.age === "";
+  const doctor = (doctors ?? []).find((d) => String(d.id) === String(doctorId));
+  const slot = (slots ?? []).find((s) => s.id === slotId);
+  const ready = Boolean(slot) && (reschedule || (person && (!needsGender || extra.gender) && (!needsAge || extra.age !== "")));
+
+  const confirm = async (e) => {
     e.preventDefault();
-
-    if (!selectedSlotId) {
-      alert("Please select a slot before submitting.");
-      return;
-    }
-
+    if (!ready) return;
+    setSaving(true);
     try {
-      setBookingStatus("loading");
-      if (rescheduleData) {
-        // Moves the existing appointment to the new slot (the old slot is released by the server)
-        await appointmentsApi.rescheduleAppointment(rescheduleData.appointmentID, {
-          slotId: selectedSlotId,
-          message: formData.message,
-        });
-      } else {
-        await appointmentsApi.bookAppointment({
-          patientName: formData.patientName,
-          gender: formData.gender,
-          age: Number(formData.age) || 0,
-          message: formData.message,
-          relativeId: formData.relativeId ? Number(formData.relativeId) : null,
-          slotId: selectedSlotId,
-        });
+      if (reschedule) {
+        // Moves the appointment to the new time (the server releases the old one)
+        await appointmentsApi.rescheduleAppointment(reschedule.appointmentID, { slotId, message: message.trim() });
+        toast.success(`Moved to ${formatDate(date)}, ${formatTime(slot.startTime)}.`);
+        navigate("/appointment-details");
+        return;
       }
-      setBookingStatus("success");
-
-      setTimeout(() => {
-        setBookingStatus("idle");
-        if (rescheduleData) {
-          navigate("/appointment-details");
-        }
-      }, 2000);
-
-      setFormData({ ...emptyForm, doctorId: "", doctorName: "", date: selectedDate });
-      setAvailableSlots([]);
-      setSelectedSlotId(null);
-    } catch (error) {
-      setBookingStatus("idle");
-      alert(getErrorMessage(error, "Failed to book appointment. Please try again."));
-      // The slot may have been taken meanwhile - refresh the list
-      handleSlotFetch();
+      await appointmentsApi.bookAppointment({
+        patientName: person.name,
+        gender: person.gender || extra.gender,
+        age: Number(needsAge ? extra.age : person.age) || 0,
+        message: message.trim(),
+        relativeId: person.relativeId,
+        slotId,
+      });
+      setBooked({ person: person.name, doctor, date, slot });
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to book the appointment. Please try again."));
+      setRefresh((n) => n + 1); // the time may have been taken meanwhile
+    } finally {
+      setSaving(false);
     }
   };
+
+  const bookAnother = () => {
+    setBooked(null);
+    setSlotId(null);
+    setMessage("");
+    setRefresh((n) => n + 1);
+  };
+
+  if (booked) {
+    return (
+      <PublicPage>
+        <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
+          <Card role="status" className="text-center sm:p-10">
+            <CheckCircle2 size={48} aria-hidden="true" className="mx-auto text-success-ink" />
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight">Appointment booked</h1>
+            <p className="mt-3 text-lg">
+              {booked.person} with <strong>Dr. {booked.doctor?.name}</strong>
+            </p>
+            <p className="mt-1 text-lg">
+              {formatDate(booked.date, true)}, {formatTime(booked.slot.startTime)}–{formatTime(booked.slot.endTime)}
+            </p>
+            <p className="mt-4 text-sm text-ink-muted">You'll get an SMS confirmation. Please check in at the front desk when you arrive.</p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Button as={Link} to="/appointment-details">
+                View my appointments
+              </Button>
+              <Button variant="secondary" onClick={bookAnother}>
+                Book another
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </PublicPage>
+    );
+  }
 
   return (
-  <>
-      {/* Booking Loader Overlay */}
-      {bookingStatus === "loading" && (
-        <Loader
-          type="heartbeat"
-          text={rescheduleData ? "Rescheduling your appointment..." : "Booking your appointment..."}
-        />
-      )}
+    <PublicPage>
+      <PageIntro eyebrow={reschedule ? "Reschedule" : "Book an appointment"} title={reschedule ? "Choose a new time" : "Book in a few steps"}>
+        {reschedule
+          ? `For ${reschedule.patientName}, now ${formatDate(reschedule.date, true)}${reschedule.startTime ? `, ${formatTime(reschedule.startTime)}` : ""}.`
+          : "Choose who it's for, the doctor and a free time. You'll get an SMS confirmation."}
+      </PageIntro>
 
-      {bookingStatus === "success" && (
-        <Loader
-          type="success"
-          text={rescheduleData ? "Your appointment has been rescheduled!" : "Your appointment is booked successfully!"}
-        />
-      )}
-    <div className="min-h-screen bg-white dark:bg-[#0a1124] text-gray-900 dark:text-[#50d4f2] transition-all">
-      <PublicHeader />
+      <form onSubmit={confirm} className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-12 sm:px-6 lg:grid-cols-3 lg:px-8">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
+          {!reschedule && (
+            <Step number={1} title="Who is the appointment for?">
+              <Notice tone="danger">{peopleError}</Notice>
+              {!people && !peopleError && <p className="text-sm text-ink-muted">Loading...</p>}
+              {people && (
+                <fieldset>
+                  <legend className="sr-only">Patient</legend>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {people.map((p) => (
+                      <label
+                        key={p.key}
+                        className={`${CHOICE} flex cursor-pointer items-center gap-3 ${
+                          personKey === p.key ? "border-primary bg-primary-ink/10" : "border-line hover:bg-surface-2"
+                        }`}
+                      >
+                        <input type="radio" name="person" value={p.key} checked={personKey === p.key} onChange={() => setPersonKey(p.key)} className="h-4 w-4 accent-primary" />
+                        <span className="min-w-0">
+                          <span className="block font-medium">{p.name}</span>
+                          <span className="block text-sm text-ink-muted">
+                            {[p.relation, p.age !== "" ? `${p.age} y` : null].filter(Boolean).join(" · ")}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+              {(needsGender || needsAge) && (
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  {needsGender && (
+                    <Field label="Gender" htmlFor="booking-gender">
+                      <Select id="booking-gender" value={extra.gender} onChange={(e) => setExtra({ ...extra, gender: e.target.value })}>
+                        <option value="">Choose</option>
+                        {GENDERS.map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  )}
+                  {needsAge && (
+                    <Field label="Age" htmlFor="booking-age" hint="Add your date of birth in My account to skip this next time.">
+                      <Input id="booking-age" type="number" min={0} max={130} value={extra.age} onChange={(e) => setExtra({ ...extra, age: e.target.value })} />
+                    </Field>
+                  )}
+                </div>
+              )}
+              <Link to="/add-relative" state={{ from: "/appointments" }} className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary-ink hover:underline">
+                <UserPlus size={16} aria-hidden="true" />
+                Add a family member
+              </Link>
+            </Step>
+          )}
 
-      <div className="flex justify-center items-start py-12 px-6 relative">
-        {/* subtle decorative background image with low opacity */}
-        <img
-          src="Shreyahospital.jpg"
-          alt="Hospital Background"
-          className="absolute top-0 left-0 w-full h-full object-cover opacity-10 dark:opacity-20 -z-10"
-        />
-
-        <div
-          className="bg-gradient-to-br from-[#E3FDFD] to-[#FEFFFF] animate-scaleUp dark:from-[#111a3b] dark:to-[#0a1330] shadow-2xl rounded-3xl p-8 md:p-10 w-full max-w-6xl relative z-10 grid md:grid-cols-2 gap-10 transition"
-        >
-          {/* Form Section */}
-          <div>
-            <h2 className="text-3xl font-bold text-center text-[#1E63DB] dark:text-[#50d4f2] mb-6">
-              {rescheduleData ? "Reschedule Appointment" : "Book an Appointment"}
-            </h2>
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-             <select
-               name="patientKey"
-               value={formData.patientKey}
-               onChange={(e) => handlePatientSelect(e.target.value)}
-               disabled={!!rescheduleData}
-               className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2]"
-               required
-             >
-               <option value="">Select Patient</option>
-               {patientOptions.map((p) => (
-                 <option key={p.key} value={p.key}>
-                   {p.name}
-                 </option>
-               ))}
-             </select>
-
-              <select
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                disabled={!!rescheduleData}
-                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
-                required
-              >
-                <option value="MALE">Male</option>
-                <option value="FEMALE">Female</option>
-                <option value="OTHER">Other</option>
-              </select>
-
-              <input
-                type="number"
-                name="age"
-                min="0"
-                max="120"
-                value={formData.age}
-                onChange={handleChange}
-                disabled={!!rescheduleData}
-                placeholder="Age"
-                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
-                required
-              />
-
-              <select
-                name="doctorId"
-                value={formData.doctorId}
-                onChange={handleDoctorChange}
-                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
-                required
-              >
-                <option value="">Select Doctor</option>
-                {doctors.map((doctor) => (
-                  <option key={doctor.id} value={doctor.id}>
-                    {doctor.name}
+          <Step number={reschedule ? 1 : 2} title="Choose the doctor">
+            <Field label="Doctor" htmlFor="booking-doctor">
+              <Select id="booking-doctor" value={doctorId} onChange={(e) => setDoctorId(e.target.value)}>
+                <option value="">{doctors ? "Choose a doctor" : "Loading doctors..."}</option>
+                {(doctors ?? []).map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {doctorLabel(d)}
                   </option>
                 ))}
-              </select>
+              </Select>
+            </Field>
+            <Link to="/doctors" className="mt-3 inline-block text-sm font-medium text-primary-ink hover:underline">
+              Not sure? See the doctors and their specialities
+            </Link>
+          </Step>
 
-              <select
-                name="shift"
-                value={formData.shift}
-                onChange={handleChange}
-                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
-                required
-              >
-                <option value="MORNING">Morning</option>
-                <option value="EVENING">Evening</option>
-              </select>
+          <Step number={reschedule ? 2 : 3} title="Day and time">
+            <div role="group" aria-label="Day" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+              {nextDays().map((day) => (
+                <button
+                  key={day}
+                  type="button"
+                  aria-pressed={date === day}
+                  onClick={() => setDate(day)}
+                  className={`whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                    date === day ? "border-primary bg-primary text-white" : "border-line text-ink-muted hover:text-ink"
+                  }`}
+                >
+                  {dayLabel(day)}
+                </button>
+              ))}
+            </div>
+            <div role="group" aria-label="Part of the day" className="mt-4 inline-flex rounded-lg border border-line bg-surface-2 p-1">
+              {SHIFTS.map(([value, label, Icon]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={shift === value}
+                  onClick={() => setShift(value)}
+                  className={`inline-flex items-center gap-2 rounded-md px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                    shift === value ? "bg-surface text-ink shadow-sm" : "text-ink-muted hover:text-ink"
+                  }`}
+                >
+                  <Icon size={16} aria-hidden="true" />
+                  {label}
+                </button>
+              ))}
+            </div>
 
-              <div className="space-y-1 relative">
-                <label className="block text-xs text-gray-600 font-medium">Date</label>
-                <div className="flex items-center gap-2 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a]">
-                  {/* Left Arrow */}
-                  <button
-                    type="button"
-                    onClick={() => changeDate("prev")}
-                    className="px-2 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a]"
-                  >
-                    ◀
-                  </button>
+            <div className="mt-5">
+              {!doctorId && <p className="text-sm text-ink-muted">Choose a doctor to see the free times.</p>}
+              {doctorId && slots === null && <p className="text-sm text-ink-muted">Loading free times...</p>}
+              <Notice tone="danger">{slotError}</Notice>
+              {slots && slots.length === 0 && !slotError && (
+                <Notice tone="info">No free times then. Try another day or the {shift === "MORNING" ? "evening" : "morning"}.</Notice>
+              )}
+              {slots && slots.length > 0 && (
+                <fieldset>
+                  <legend className="mb-2 text-sm font-medium">Free times</legend>
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+                    {slots.map((s) => (
+                      <label
+                        key={s.id}
+                        className={`cursor-pointer rounded-lg border px-2 py-2 text-center text-sm font-medium tabular-nums transition-colors focus-within:ring-2 focus-within:ring-primary/40 ${
+                          slotId === s.id ? "border-primary bg-primary text-white" : "border-line hover:bg-surface-2"
+                        }`}
+                      >
+                        <input type="radio" name="slot" value={s.id} checked={slotId === s.id} onChange={() => setSlotId(s.id)} className="sr-only" />
+                        {formatTime(s.startTime)}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+            </div>
+          </Step>
 
-                  {/* Date Input */}
-                  <input
-                    type="date"
-                    name="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    min={todayStr}
-                    max={maxDateStr}
-                    className="w-full bg-white p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4CAF50] dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a]"
-                  />
-
-                  {/* Right Arrow */}
-                  <button
-                    type="button"
-                    onClick={() => changeDate("next")}
-                    className="px-2 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a]"
-                  >
-                    ▶
-                  </button>
-
-                </div>
-              </div>
-
-              <textarea
-                name="message"
-                value={formData.message}
-                onChange={handleChange}
-                rows="3"
-                placeholder="Enter message (optional)"
-                className="w-full p-3 border border-gray-300 dark:border-[#16224a] rounded bg-white dark:bg-[#0f172a] text-black dark:text-[#50d4f2] focus:ring-2 focus:ring-[#50d4f2]"
-              ></textarea>
-
-
-              <button
-                type="submit"
-                className="w-full bg-green-600 text-white dark:bg-green-600 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
-              >
-                {rescheduleData ? "Reschedule Appointment" : "Book Appointment"}
-              </button>
-            </form>
-          </div>
-
-          {/* Slots Section */}
-          <div>
-            <h3 className="text-2xl font-semibold text-center text-[#1E63DB] dark:text-[#50d4f2] mb-4">
-              Available Slots
-            </h3>
-
-            {loadingSlots ? (
-              <p className="text-center text-[#1E63DB] font-semibold dark:text-[#50d4f2]">
-                Loading slots...
-              </p>
-            ) : availableSlots.length > 0 ? (
-              <div className="grid grid-cols-3 gap-3">
-                {availableSlots.map((slot) => (
-                  <button
-                    type="button"
-                    key={slot.id}
-                    onClick={() => setSelectedSlotId(slot.id)}
-                    className={`p-3 rounded-lg border text-sm font-medium transition ${
-                      selectedSlotId === slot.id
-                        ? "bg-[#1E63DB] text-white dark:bg-[#50d4f2] dark:text-black"
-                        : "bg-gray-100 hover:bg-[#e7f0ff] dark:bg-[#0f172a] dark:hover:bg-[#16224a] dark:text-[#50d4f2]"
-                    }`}
-                  >
-                    {slot.startTime} - {slot.endTime}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-gray-500 dark:text-[#8ddff8]">
-                {slotError || "No slots available. Please select doctor, date & shift."}
-              </p>
-            )}
-          </div>
+          <Step number={reschedule ? 3 : 4} title="Reason for the visit">
+            <Field label="What would you like to see the doctor about? (optional)" htmlFor="booking-message">
+              <Textarea id="booking-message" rows={3} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="e.g. Fever and cough for three days" />
+            </Field>
+          </Step>
         </div>
-      </div>
-    </div>
-    </>
+
+        <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
+          <Card aria-label="Summary">
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              <CalendarCheck size={20} aria-hidden="true" className="text-primary-ink" />
+              Summary
+            </h2>
+            <dl className="mt-4 space-y-3 text-sm">
+              <div>
+                <dt className="text-ink-muted">For</dt>
+                <dd className="font-medium">{reschedule ? reschedule.patientName : person?.name || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-ink-muted">Doctor</dt>
+                <dd className="font-medium">{doctor ? doctorLabel(doctor) : "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-ink-muted">When</dt>
+                <dd className="font-medium">
+                  {slot ? `${formatDate(date)}, ${formatTime(slot.startTime)}–${formatTime(slot.endTime)}` : "Choose a time"}
+                </dd>
+              </div>
+            </dl>
+            <Button type="submit" size="lg" className="mt-6 w-full" disabled={!ready || saving}>
+              {saving ? (reschedule ? "Moving..." : "Booking...") : reschedule ? "Move appointment" : "Confirm booking"}
+            </Button>
+          </Card>
+        </aside>
+      </form>
+    </PublicPage>
   );
 }

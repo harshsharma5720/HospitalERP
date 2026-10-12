@@ -21,7 +21,7 @@ const LINKS = [
 const STAFF = ["ROLE_ADMIN", "ROLE_DOCTOR", "ROLE_RECEPTIONIST"];
 
 const linkClass = ({ isActive }) =>
-  `rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+  `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
     isActive ? "text-primary-ink" : "text-ink-muted hover:text-ink hover:bg-surface-2"
   }`;
 
@@ -98,7 +98,9 @@ export default function PublicHeader() {
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
           <a
             href={phoneHref}
-            className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink hover:bg-surface-2 xl:flex"
+            className={`hidden items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-ink hover:bg-surface-2 ${
+              signedIn ? "2xl:flex" : "xl:flex"
+            }`}
           >
             <Phone size={16} aria-hidden="true" className="text-primary-ink" />
             {HOSPITAL.phone}
