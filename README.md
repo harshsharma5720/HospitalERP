@@ -241,7 +241,7 @@ The app will open at **http://localhost:3000**.
 |------|------------|--------|
 | **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log, notifications, consultation fees, and the front desk's pages (appointments, walk-in booking, patients, bills) |
 | **Doctor** | `/doctor/dashboard` | Today's queue (`/doctor/queue`), appointments, leave, profile |
-| **Patient** | `/` (public pages) | Book appointments, manage relatives |
+| **Patient** | `/` (public pages) | Book appointments, manage family members, see each visit's bill and download receipts (My appointments, My account) |
 | **Receptionist** | `/receptionist-appointments`, `/walk-in`, `/patients`, `/bills` | Appointment list with filters and check-in, walk-in booking, patient search, bills and payments |
 
 ---
@@ -432,7 +432,7 @@ The backend is a modular monolith: one application and one database, split into 
 | [`scheduling`](hospitalERP/scheduling/README.md) | Doctor weekly schedules and slots | common, identity, staff |
 | [`appointments`](hospitalERP/appointments/README.md) | Booking, reschedule, cancel, day-before reminders | common, identity, notifications, patients, staff, scheduling |
 | [`clinical`](hospitalERP/clinical/README.md) | Consultations, prescriptions, prescription PDF, medical history | common, identity, audit, patients, staff, appointments |
-| [`billing`](hospitalERP/billing/README.md) | Consultation fees per doctor, a bill per visit, payments, refunds and receipts at the front desk | common, identity, patients, staff, appointments |
+| [`billing`](hospitalERP/billing/README.md) | Consultation fees per doctor, a bill per visit, payments, refunds and receipts at the front desk; patients see their own bills and receipts | common, identity, patients, staff, appointments |
 | [`administration`](hospitalERP/administration/README.md) | Admin use cases across modules: create users, leave decisions, account deactivation / reactivation (and the guarded permanent delete) | all of the above |
 | `app` | Main class, `SecurityConfig`, `application.properties`, end-to-end tests | all modules |
 

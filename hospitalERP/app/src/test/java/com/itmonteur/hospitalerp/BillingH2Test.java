@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Billing (docs/BILLING_PLAN.md): consultation fees per doctor (step B.1), bills made and changed by the queue
- * (step B.2), the front desk's billing API (step B.3). Same configuration as FeatureFlowH2Test, so both share one application context; the phone numbers
+ * (step B.2), the front desk's billing API (step B.3), the patient's own bills (docs/PATIENT_BILLS_PLAN.md). Same configuration as FeatureFlowH2Test, so both share one application context; the phone numbers
  * 9000055xxx are used by no other test.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
@@ -408,6 +408,116 @@ class BillingH2Test {
                     .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         }
         assertThat(billFor(api.admin(), visit).get("id").asLong()).isEqualTo(billId);
+    }
+
+    // ------------------------------------------------------------------ the patient's own bills (PATIENT_BILLS_PLAN.md)
+
+    private static final String MY_BILLS = "/api/bills/my";
+
+    // A patient's own booking (or for a family member) with a doctor from TestApi.doctorWithSchedule: booked for
+    // tomorrow, then moved to today in the database so the front desk can check it in
+    private long bookedForToday(String patient, long slotId, Long relativeId) throws Exception {
+        ResponseEntity<String> booked = api.call(HttpMethod.POST, "/appointment/NewAppointment", patient,
+                "{\"slotId\":" + slotId + (relativeId == null ? "" : ",\"relativeId\":" + relativeId) + "}");
+        assertThat(booked.getStatusCode()).as(booked.getBody()).isEqualTo(HttpStatus.OK);
+        long appointmentId = json.readTree(booked.getBody()).get("appointmentID").asLong();
+        jdbc.update("UPDATE slots SET date = ? WHERE id = ?", LocalDate.now(), slotId);
+        jdbc.update("UPDATE appointments SET date = ? WHERE appointmentid = ?", LocalDate.now(), appointmentId);
+        return appointmentId;
+    }
+
+    private JsonNode freeSlots(String token, long doctorId, String shift) throws Exception {
+        return api.get(token, "/api/slots/available/" + doctorId + "?date=" + LocalDate.now().plusDays(1) + "&shift=" + shift);
+    }
+
+    private static List<Long> ids(JsonNode bills) {
+        List<Long> ids = new ArrayList<>();
+        bills.forEach(b -> ids.add(b.get("id").asLong()));
+        return ids;
+    }
+
+    private ResponseEntity<byte[]> pdf(String token, String url) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        return rest.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), byte[].class);
+    }
+
+    @Test
+    void patientsSeeTheirOwnAndTheirFamilysBillsAndDownloadTheReceipts() throws Exception {
+        String desk = api.staff("deskbill8", "RECEPTIONIST");
+        long doctorId = api.doctorWithSchedule("drbill8").id();
+        setFee(api.admin(), doctorId, "450");
+        String patient = api.registerPatient("billmine");
+        String other = api.registerPatient("billother");
+        long sonId = json.readTree(api.call(HttpMethod.POST, "/api/patient/relative/add", patient,
+                "{\"name\":\"Little Billy\",\"gender\":\"MALE\",\"dob\":\"2018-05-01\",\"relationship\":\"SON\"}")
+                .getBody()).get("id").asLong();
+        JsonNode evening = freeSlots(patient, doctorId, "EVENING");
+        long own = bookedForToday(patient, evening.get(0).get("id").asLong(), null);
+        long sons = bookedForToday(patient, evening.get(1).get("id").asLong(), sonId);
+        long others = bookedForToday(other, freeSlots(other, doctorId, "MORNING").get(0).get("id").asLong(), null);
+        assertThat(api.get(patient, MY_BILLS)).as("no bill before check-in").isEmpty();
+
+        for (long visit : List.of(own, sons, others)) {
+            checkIn(desk, visit);
+        }
+        long ownBill = billFor(desk, own).get("id").asLong();
+        long sonsBill = billFor(desk, sons).get("id").asLong();
+        long othersBill = billFor(desk, others).get("id").asLong();
+        change(desk, HttpMethod.POST, BILLS + "/" + ownBill + "/pay", "{\"method\":\"UPI\",\"reference\":\"UPI-77\"}", HttpStatus.OK);
+
+        JsonNode mine = api.get(patient, MY_BILLS);
+        assertThat(ids(mine)).as("their own and their son's, newest first").containsExactly(sonsBill, ownBill);
+        JsonNode sonsUnpaid = mine.get(0);
+        assertThat(sonsUnpaid.get("patientName").asText()).isEqualTo("Little Billy");
+        assertThat(sonsUnpaid.get("appointmentId").asLong()).isEqualTo(sons);
+        assertThat(sonsUnpaid.get("status").asText()).isEqualTo("UNPAID");
+        JsonNode paid = mine.get(1);
+        assertThat(paid.get("appointmentId").asLong()).isEqualTo(own);
+        assertThat(paid.get("billNumber").asText()).startsWith("B-");
+        assertThat(paid.get("doctorName").asText()).isEqualTo("drbill8");
+        assertThat(paid.get("visitDate").asText()).isEqualTo(LocalDate.now().toString());
+        assertThat(descriptions(paid)).containsExactly("Consultation — Dr. drbill8 450.00");
+        assertThat(amount(paid, "total")).isEqualByComparingTo("450");
+        assertThat(amount(paid, "discount")).isEqualByComparingTo("0");
+        assertThat(paid.get("status").asText()).isEqualTo("PAID");
+        assertThat(paid.get("paymentMethod").asText()).isEqualTo("UPI");
+        assertThat(paid.get("paymentReference").asText()).isEqualTo("UPI-77");
+        assertThat(paid.get("paidAt").isNull()).isFalse();
+        assertThat(paid.has("paidBy")).as("who took the money is the desk's business").isFalse();
+        assertThat(paid.has("patientId")).isFalse();
+        assertThat(paid.at("/items/0").has("id")).isFalse();
+
+        // The receipt once paid; another patient's bill is not found, paid or not
+        ResponseEntity<byte[]> receipt = pdf(patient, MY_BILLS + "/" + ownBill + "/receipt.pdf");
+        assertThat(receipt.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(receipt.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_PDF);
+        assertThat(receipt.getHeaders().getContentDisposition().getFilename())
+                .isEqualTo("receipt-" + paid.get("billNumber").asText() + ".pdf");
+        assertThat(new String(receipt.getBody(), 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
+        assertThat(api.call(HttpMethod.GET, MY_BILLS + "/" + sonsBill + "/receipt.pdf", patient, null).getStatusCode())
+                .as("not paid yet").isEqualTo(HttpStatus.CONFLICT);
+        change(desk, HttpMethod.POST, BILLS + "/" + othersBill + "/pay", "{\"method\":\"CASH\"}", HttpStatus.OK);
+        assertThat(api.call(HttpMethod.GET, MY_BILLS + "/" + othersBill + "/receipt.pdf", patient, null).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(ids(api.get(other, MY_BILLS))).containsExactly(othersBill);
+        assertThat(pdf(other, MY_BILLS + "/" + othersBill + "/receipt.pdf").getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // A cancelled bill was never paid: the son left the queue, so it is left out
+        undoCheckIn(desk, sons);
+        assertThat(ids(api.get(patient, MY_BILLS))).containsExactly(ownBill);
+        assertThat(api.call(HttpMethod.GET, MY_BILLS + "/" + sonsBill + "/receipt.pdf", patient, null).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void myBillsAreForPatientsOnly() throws Exception {
+        for (String token : List.of(api.staff("deskbill9", "RECEPTIONIST"), api.staff("drbill9", "DOCTOR"), api.admin())) {
+            assertThat(api.call(HttpMethod.GET, MY_BILLS, token, null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(api.call(HttpMethod.GET, MY_BILLS + "/1/receipt.pdf", token, null).getStatusCode())
+                    .isEqualTo(HttpStatus.FORBIDDEN);
+        }
+        assertThat(api.call(HttpMethod.GET, MY_BILLS, null, null).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     private static List<String> names(JsonNode page) {

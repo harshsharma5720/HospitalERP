@@ -22,6 +22,8 @@ GET /api/admin/fees
 GET /api/admin/notifications
 GET /api/admin/{id}
 GET /api/auth/otp-required
+GET /api/bills/my
+GET /api/bills/my/{billId}/receipt.pdf
 GET /api/consultations/appointment/{appointmentId}
 GET /api/consultations/appointment/{appointmentId}/prescription.pdf
 GET /api/consultations/my auth=hasRole('PATIENT')

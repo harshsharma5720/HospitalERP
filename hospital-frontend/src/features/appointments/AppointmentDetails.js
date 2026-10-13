@@ -1,17 +1,22 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CalendarPlus, ChevronRight, FileDown, WifiOff } from "lucide-react";
+import { CalendarPlus, ChevronRight, FileDown, Receipt, WifiOff } from "lucide-react";
 import { toLocalISODate } from "../../shared/utils/dateUtils";
 import { getErrorMessage } from "../../shared/utils/apiError";
+import { formatRupees } from "../../shared/utils/money";
 import { PageIntro, PublicPage } from "../../shared/layout/PublicSections";
 import { Badge, Button, Card, EmptyState, useConfirm, useToast } from "../../shared/ui";
 import { downloadPrescription } from "../clinical/downloadPrescription";
 import { getMyHistory } from "../clinical/api";
+import { getMyBills, getMyReceiptPdf } from "../billing/api";
+import { BillStatusBadge } from "../billing/billFormat";
+import { downloadReceipt } from "../billing/downloadReceipt";
+import MyBillDialog from "../billing/MyBillDialog";
 import { formatDate, timeRange, visitStatus } from "./appointmentFormat";
 import * as appointmentsApi from "./api";
 
 // The patient's appointments (docs/PATIENT_AREA_REFRESH_PLAN.md, P.3): upcoming ones to move or cancel, past ones
-// with the doctor's notes, the prescription and Book again
+// with the doctor's notes, the prescription and Book again; a checked-in visit's bill (docs/PATIENT_BILLS_PLAN.md)
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -85,7 +90,7 @@ function ConsultationSummary({ consultation }) {
   );
 }
 
-function AppointmentCard({ appointment, upcoming, consultation, onReschedule, onCancel, onBookAgain, onPrescription }) {
+function AppointmentCard({ appointment, upcoming, consultation, bill, onReschedule, onCancel, onBookAgain, onPrescription, onBill }) {
   const { label, tone } = visitStatus(appointment);
   return (
     <article aria-label={`${formatDate(appointment.date, true)} with Dr. ${appointment.doctorName}`} className="rounded-2xl border border-line bg-surface p-5 shadow-card">
@@ -107,7 +112,20 @@ function AppointmentCard({ appointment, upcoming, consultation, onReschedule, on
 
       {consultation && <ConsultationSummary consultation={consultation} />}
 
-      <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-line pt-4">
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-line pt-4">
+        {bill && (
+          <>
+            <p className="mr-auto flex w-full items-center gap-2 text-sm sm:w-auto">
+              <span className="text-ink-muted">Bill</span>
+              <span className="font-medium tabular-nums">{formatRupees(bill.total)}</span>
+              <BillStatusBadge status={bill.status} />
+            </p>
+            <Button size="sm" variant="secondary" onClick={onBill} aria-label={`Bill ${bill.billNumber}`}>
+              <Receipt size={16} aria-hidden="true" />
+              Bill
+            </Button>
+          </>
+        )}
         {upcoming ? (
           <>
             <Button size="sm" variant="danger-ghost" onClick={onCancel}>
@@ -143,6 +161,9 @@ export default function AppointmentDetails() {
   const [error, setError] = useState("");
   // Consultation notes by appointment id (only completed visits have one)
   const [consultations, setConsultations] = useState({});
+  // Bills by appointment id (made at check-in), and the one shown
+  const [bills, setBills] = useState({});
+  const [openBill, setOpenBill] = useState(null);
   const [tab, setTab] = useState("upcoming");
 
   const load = useCallback(async () => {
@@ -151,12 +172,10 @@ export default function AppointmentDetails() {
     try {
       const response = await appointmentsApi.getMyAppointments();
       setAppointments(response.data);
-      try {
-        const history = await getMyHistory();
-        setConsultations(Object.fromEntries(history.data.map((c) => [c.appointmentId, c])));
-      } catch {
-        setConsultations({});
-      }
+      // Notes and bills are extras: the appointments show without them
+      const [history, myBills] = await Promise.allSettled([getMyHistory(), getMyBills()]);
+      setConsultations(history.status === "fulfilled" ? Object.fromEntries(history.value.data.map((c) => [c.appointmentId, c])) : {});
+      setBills(myBills.status === "fulfilled" ? Object.fromEntries(myBills.value.data.map((b) => [b.appointmentId, b])) : {});
     } catch (err) {
       setError(getErrorMessage(err, "Could not load your appointments."));
     }
@@ -202,7 +221,7 @@ export default function AppointmentDetails() {
           </Button>
         }
       >
-        Move or cancel an upcoming visit, or see the doctor's notes and prescription of a past one.
+        Move or cancel an upcoming visit, or see the doctor's notes, prescription and bill of a past one.
       </PageIntro>
 
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -278,13 +297,22 @@ export default function AppointmentDetails() {
                 appointment={appointment}
                 upcoming={tab === "upcoming"}
                 consultation={consultations[appointment.appointmentID]}
+                bill={bills[appointment.appointmentID]}
                 onCancel={() => cancel(appointment)}
                 onReschedule={() => navigate("/appointments", { state: { rescheduleAppointment: appointment } })}
                 onBookAgain={() => navigate("/appointments", { state: { doctorName: appointment.doctorName, doctorId: appointment.doctorId } })}
                 onPrescription={() => downloadPrescription(appointment.appointmentID, toast.error)}
+                onBill={() => setOpenBill(bills[appointment.appointmentID])}
               />
             ))}
           </div>
+        )}
+        {openBill && (
+          <MyBillDialog
+            bill={openBill}
+            onClose={() => setOpenBill(null)}
+            onReceipt={(bill) => downloadReceipt(() => getMyReceiptPdf(bill.id), bill.billNumber, toast.error)}
+          />
         )}
         </div>
       </div>

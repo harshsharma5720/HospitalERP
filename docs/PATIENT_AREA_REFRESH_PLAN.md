@@ -48,5 +48,5 @@ The staff portals and the public site got a new look in the UI refresh ([UI_REFR
 
 - **`lottie-react` is no longer used** by any page. Removing it from `package.json` needs a matching `package-lock.json` change, which is kept out of these commits — do both together.
 - **Unused images in `public/`** (nothing in the app refers to them any more; they still ship with every build): `DoctorDashBoardBG.jpg`, `Treatments-Dermatology.jpg`, `Treatments-Neurology.jpg`, `Treatments-Orthopedics.png`, `Treatments-oncology.jpg`, `background.jpeg`, `doctorBlack.jpg`, `doctorInstrument.jpg`, `doctor_black_theam.jpg`, `doctor_black_theam2.jpg`, `doctor_black_theam3.jpg`, `doctors-image.jpg`, `doctors-image2.jpg` (looks like a watermarked stock preview), `doctors-image3.jpg`, `download.jpeg`, `register.jpeg`, `resumepic.jpg`, `treatment-Cardilogy.jpg`. Delete them if they aren't needed elsewhere.
-- **Patient "My bills"**: patients can't see their bills or download receipts yet (a separate idea).
+- ~~**Patient "My bills"**: patients can't see their bills or download receipts yet (a separate idea).~~ Done 2026-10-13 ([PATIENT_BILLS_PLAN.md](PATIENT_BILLS_PLAN.md)).
 - A click-through against the running app.

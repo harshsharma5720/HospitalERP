@@ -23,6 +23,8 @@ GET /api/admin/fees anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/notifications anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/{id} anonymous- patient- doctor- receptionist- admin+
 GET /api/auth/otp-required anonymous+ patient+ doctor+ receptionist+ admin+
+GET /api/bills/my anonymous- patient+ doctor- receptionist- admin-
+GET /api/bills/my/{billId}/receipt.pdf anonymous- patient+ doctor- receptionist- admin-
 GET /api/consultations/appointment/{appointmentId} anonymous- patient+ doctor+ receptionist- admin+
 GET /api/consultations/appointment/{appointmentId}/prescription.pdf anonymous- patient+ doctor+ receptionist- admin+
 GET /api/consultations/my anonymous- patient+ doctor+ receptionist- admin+

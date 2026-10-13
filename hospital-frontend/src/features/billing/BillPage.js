@@ -4,7 +4,8 @@ import { getErrorMessage } from "../../shared/utils/apiError";
 import { formatRupees } from "../../shared/utils/money";
 import useAreaBase from "../../shared/useAreaBase";
 import { formatDate } from "../appointments/appointmentFormat";
-import { BillStatusBadge, PAYMENT_METHODS, methodLabel } from "./billFormat";
+import { BillStatusBadge, PAYMENT_METHODS, formatDateTime, hasReceipt, methodLabel, referenceNote } from "./billFormat";
+import { downloadReceipt } from "./downloadReceipt";
 import * as billingApi from "./api";
 import { Download } from "lucide-react";
 import { Button, Card, CardHeader, Field, Input, Notice, PageHeader } from "../../shared/ui";
@@ -13,11 +14,6 @@ import { Button, Card, CardHeader, Field, Input, Notice, PageHeader } from "../.
 // (cash, card or UPI), the refund of a cancelled paid visit, and the receipt. /bills/:billId, or
 // /bills/visit/:appointmentId from the appointment list; under /admin for admins.
 
-
-// "2026-10-12T10:05:31" -> "Mon 12 Oct 2026, 10:05"
-const formatDateTime = (time) => (time ? `${formatDate(time.slice(0, 10), true)}, ${time.slice(11, 16)}` : "");
-
-const reference = (ref) => (ref ? ` (ref. ${ref})` : "");
 
 // Cash, card or UPI and an optional reference; used for the payment and for the refund
 function MoneyForm({ idPrefix, action, busy, onSubmit }) {
@@ -126,21 +122,9 @@ export default function BillPage() {
     if (added) setItem({ description: "", amount: "" });
   };
 
-  const downloadReceipt = async () => {
+  const saveReceipt = () => {
     setError("");
-    try {
-      const response = await billingApi.getReceiptPdf(bill.id);
-      const url = URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `receipt-${bill.billNumber}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (err) {
-      setError(getErrorMessage(err, "Could not download the receipt."));
-    }
+    downloadReceipt(() => billingApi.getReceiptPdf(bill.id), bill.billNumber, setError);
   };
 
   const backTo = location.state?.from || `${base}/bills`;
@@ -161,7 +145,6 @@ export default function BillPage() {
   }
 
   const unpaid = bill.status === "UNPAID";
-  const hasReceipt = ["PAID", "REFUND_DUE", "REFUNDED"].includes(bill.status);
 
   return (
     <div className="max-w-5xl">
@@ -185,8 +168,8 @@ export default function BillPage() {
           </>
         }
         actions={
-          hasReceipt && (
-            <Button variant="secondary" onClick={downloadReceipt}>
+          hasReceipt(bill.status) && (
+            <Button variant="secondary" onClick={saveReceipt}>
               <Download size={16} aria-hidden="true" />
               Download receipt
             </Button>
@@ -312,7 +295,7 @@ export default function BillPage() {
           {bill.paidAt && (
             <p className="text-sm">
               Paid {formatRupees(bill.total)} by {methodLabel(bill.paymentMethod)}
-              {reference(bill.paymentReference)} on {formatDateTime(bill.paidAt)}
+              {referenceNote(bill.paymentReference)} on {formatDateTime(bill.paidAt)}
               {bill.paidBy && `, received by ${bill.paidBy}`}.
             </p>
           )}
@@ -332,7 +315,7 @@ export default function BillPage() {
           {bill.refundedAt && (
             <p className="mt-2 text-sm font-semibold">
               Refunded {formatRupees(bill.total)} by {methodLabel(bill.refundMethod)}
-              {reference(bill.refundReference)} on {formatDateTime(bill.refundedAt)}
+              {referenceNote(bill.refundReference)} on {formatDateTime(bill.refundedAt)}
               {bill.refundedBy && `, by ${bill.refundedBy}`}.
             </p>
           )}

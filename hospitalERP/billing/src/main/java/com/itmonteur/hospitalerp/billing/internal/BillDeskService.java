@@ -173,7 +173,11 @@ public class BillDeskService {
     /** The receipt of a paid bill (also once due for refund, or refunded). */
     @Transactional(readOnly = true)
     public byte[] receipt(long billId) {
-        Bill bill = find(billId);
+        return receiptOf(find(billId));
+    }
+
+    /** The same rule for the patient's own receipts (MyBillService). */
+    byte[] receiptOf(Bill bill) {
         if (bill.getStatus() == BillStatus.UNPAID || bill.getStatus() == BillStatus.CANCELLED) {
             throw new ConflictException("This bill is " + label(bill.getStatus()) + ": there is no receipt");
         }
