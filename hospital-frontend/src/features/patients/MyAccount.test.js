@@ -1,14 +1,16 @@
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import MyAccount from "./MyAccount";
 import useAuthStore from "../auth/useAuthStore";
 import * as patientsApi from "./api";
 import { getMyAppointments } from "../appointments/api";
+import { getMyBills, getMyReceiptPdf } from "../billing/api";
 import { addDays, toLocalISODate } from "../../shared/utils/dateUtils";
 import { ConfirmProvider, ToastProvider } from "../../shared/ui";
 
 jest.mock("./api");
 jest.mock("../appointments/api");
+jest.mock("../billing/api");
 
 const ACCOUNT = {
   patientId: 41, patientName: "Asha Verma", userName: "asha", email: "asha@example.com", contactNo: "9876543210",
@@ -51,6 +53,7 @@ beforeEach(() => {
       { appointmentID: 3, date: day(-5), status: "COMPLETED", startTime: "10:00:00", endTime: "10:30:00", doctorName: "Anita Rao", patientName: "Asha Verma" },
     ],
   });
+  getMyBills.mockResolvedValue({ data: [] });
 });
 afterEach(() => jest.resetAllMocks());
 
@@ -116,4 +119,81 @@ test("removing a family member asks first", async () => {
   await waitFor(() => expect(within(family).queryByText("Mira Verma")).not.toBeInTheDocument());
   expect(patientsApi.deleteRelative).toHaveBeenCalledWith(6);
   expect(within(family).getByRole("link", { name: "Edit Ravi Verma" })).toHaveAttribute("href", "/edit-relative");
+});
+
+// ---- Bills (docs/PATIENT_BILLS_PLAN.md)
+
+const bill = (id, status, total, extra = {}) => ({
+  id, billNumber: `B-2026-0000${id}`, appointmentId: id + 100, patientName: "Asha Verma", doctorName: "Anita Rao", visitDate: day(-id), status,
+  items: [{ description: "Consultation — Dr. Anita Rao", amount: total }], subtotal: total, discount: 0, total,
+  paidAt: status === "UNPAID" ? null : `${day(-id)}T10:00:00`, paymentMethod: status === "UNPAID" ? null : "CASH", paymentReference: null,
+  refundedAt: null, refundMethod: null, refundReference: null, ...extra,
+});
+const BILLS = [
+  bill(11, "UNPAID", 800, { patientName: "Mira Verma" }),
+  bill(12, "UNPAID", 300.5),
+  bill(13, "PAID", 600),
+  bill(14, "REFUND_DUE", 450),
+  bill(15, "REFUNDED", 450),
+  bill(16, "PAID", 500),
+  bill(17, "PAID", 700),
+];
+
+test("the bills, newest first: what is still to pay, View opens one, Receipt downloads it, Show all shows the rest", async () => {
+  URL.createObjectURL = jest.fn(() => "blob:receipt");
+  URL.revokeObjectURL = jest.fn();
+  const click = jest.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  getMyBills.mockResolvedValue({ data: BILLS });
+  getMyReceiptPdf.mockResolvedValue({ data: "%PDF-" });
+  renderPage();
+  const bills = await screen.findByRole("region", { name: "Bills" });
+  expect(await within(bills).findByText("To pay at the front desk: ₹1,100.50 (2 bills)")).toBeInTheDocument();
+  let rows = within(bills).getAllByRole("listitem");
+  expect(rows).toHaveLength(5);
+  expect(rows[0]).toHaveTextContent("B-2026-000011 · for Mira Verma");
+  expect(rows[0]).toHaveTextContent("₹800.00Unpaid");
+  expect(within(rows[0]).queryByRole("button", { name: /Receipt/ })).not.toBeInTheDocument();
+  expect(within(rows[3]).getByRole("button", { name: "Receipt B-2026-000014" })).toBeInTheDocument();
+  expect(within(rows[4]).getByRole("button", { name: "Receipt B-2026-000015" })).toBeInTheDocument();
+
+  fireEvent.click(within(bills).getByRole("button", { name: "Show all 7 bills" }));
+  rows = within(bills).getAllByRole("listitem");
+  expect(rows).toHaveLength(7);
+  expect(rows[6]).toHaveTextContent("B-2026-000017");
+  fireEvent.click(within(bills).getByRole("button", { name: "Show fewer" }));
+  expect(within(bills).getAllByRole("listitem")).toHaveLength(5);
+
+  fireEvent.click(within(bills).getByRole("button", { name: "Receipt B-2026-000013" }));
+  await waitFor(() => expect(click).toHaveBeenCalled());
+  expect(getMyReceiptPdf).toHaveBeenCalledWith(13);
+  expect(click.mock.instances[0].download).toBe("receipt-B-2026-000013.pdf");
+
+  fireEvent.click(within(bills).getByRole("button", { name: "View bill B-2026-000011" }));
+  const dialog = screen.getByRole("dialog", { name: /Bill B-2026-000011/ });
+  expect(dialog).toHaveTextContent("For Mira Verma");
+  expect(dialog).toHaveTextContent("Please pay ₹800.00 at the front desk.");
+  fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  click.mockRestore();
+});
+
+test("one unpaid bill and no Show all for a few bills; no bills yet; bills that can't be loaded", async () => {
+  getMyBills.mockResolvedValueOnce({ data: [bill(12, "UNPAID", 300), bill(13, "PAID", 600)] });
+  const { unmount } = renderPage();
+  let bills = await screen.findByRole("region", { name: "Bills" });
+  expect(await within(bills).findByText("To pay at the front desk: ₹300.00")).toBeInTheDocument();
+  expect(within(bills).queryByRole("button", { name: /Show all/ })).not.toBeInTheDocument();
+  unmount();
+
+  renderPage();
+  bills = await screen.findByRole("region", { name: "Bills" });
+  expect(await within(bills).findByText("No bills yet")).toBeInTheDocument();
+  expect(bills).not.toHaveTextContent("To pay");
+  cleanup();
+
+  getMyBills.mockRejectedValue(new Error("offline"));
+  renderPage();
+  bills = await screen.findByRole("region", { name: "Bills" });
+  expect(await within(bills).findByText(/Your bills couldn't be loaded/)).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Your details" })).toHaveTextContent("asha@example.com");
 });

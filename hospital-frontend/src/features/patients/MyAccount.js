@@ -1,19 +1,24 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarCheck, CalendarPlus, UserPlus, Users } from "lucide-react";
+import { CalendarCheck, CalendarPlus, Download, Receipt, UserPlus, Users } from "lucide-react";
 import useAuthStore from "../auth/useAuthStore";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import { calculateAgeFromDOB } from "../../shared/utils/calculateAgeFromDOB";
 import { toLocalISODate } from "../../shared/utils/dateUtils";
+import { formatRupees } from "../../shared/utils/money";
 import { PageIntro, PublicPage } from "../../shared/layout/PublicSections";
 import ProfileDetails, { profileRequest } from "../../shared/ProfileDetails";
 import { Button, Card, CardHeader, EmptyState, Notice, useConfirm, useToast } from "../../shared/ui";
 import { formatDate, timeRange } from "../appointments/appointmentFormat";
 import { getMyAppointments } from "../appointments/api";
+import { getMyBills, getMyReceiptPdf } from "../billing/api";
+import { BillStatusBadge, hasReceipt } from "../billing/billFormat";
+import { downloadReceipt } from "../billing/downloadReceipt";
+import MyBillDialog from "../billing/MyBillDialog";
 import * as patientsApi from "./api";
 
 // The patient's account (docs/PATIENT_AREA_REFRESH_PLAN.md, P.4): their details, their family members (who they
-// can book for) and their next appointment
+// can book for), their next appointment, and their bills (docs/PATIENT_BILLS_PLAN.md)
 
 const GENDERS = [
   ["FEMALE", "Female"],
@@ -39,6 +44,69 @@ const FIELDS = [
 
 const isUpcoming = (a, today) => (a.status === "SCHEDULED" || a.status === "CONFIRMED") && a.date >= today;
 
+// Bills shown before "Show all"
+const FIRST_BILLS = 5;
+
+// The bills, newest first (as the server sends them), and what is still to pay at the desk
+function Bills({ bills, onOpen, onReceipt }) {
+  const [all, setAll] = useState(false);
+  const unpaid = (bills || []).filter((b) => b.status === "UNPAID");
+  const shown = all ? bills : (bills || []).slice(0, FIRST_BILLS);
+  return (
+    <Card aria-labelledby="account-bills">
+      <CardHeader id="account-bills" title="Bills" description="Your visits' bills, and your family members'. A bill is made when you check in." />
+      {bills === null && <p className="text-sm text-ink-muted">Loading...</p>}
+      {bills === false && <p className="text-sm text-ink-muted">Your bills couldn't be loaded. Please try again later.</p>}
+      {bills?.length === 0 && (
+        <EmptyState icon={Receipt} title="No bills yet">
+          Your visits' bills and receipts will show here.
+        </EmptyState>
+      )}
+      {unpaid.length > 0 && (
+        <p className="mb-4 rounded-lg bg-warning-ink/10 p-3 text-sm font-medium text-warning-ink">
+          To pay at the front desk: {formatRupees(unpaid.reduce((sum, b) => sum + Number(b.total), 0))}
+          {unpaid.length > 1 && ` (${unpaid.length} bills)`}
+        </p>
+      )}
+      {bills?.length > 0 && (
+        <ul className="divide-y divide-line">
+          {shown.map((bill) => (
+            <li key={bill.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0">
+              <div className="min-w-0">
+                <p className="font-medium">
+                  {formatDate(bill.visitDate, true)}
+                  {bill.doctorName && ` · Dr. ${bill.doctorName}`}
+                </p>
+                <p className="text-sm text-ink-muted">
+                  {bill.billNumber} · for {bill.patientName}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium tabular-nums">{formatRupees(bill.total)}</span>
+                <BillStatusBadge status={bill.status} />
+                <Button size="sm" variant="secondary" onClick={() => onOpen(bill)} aria-label={`View bill ${bill.billNumber}`}>
+                  View
+                </Button>
+                {hasReceipt(bill.status) && (
+                  <Button size="sm" variant="ghost" onClick={() => onReceipt(bill)} aria-label={`Receipt ${bill.billNumber}`}>
+                    <Download size={16} aria-hidden="true" />
+                    Receipt
+                  </Button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {bills?.length > FIRST_BILLS && (
+        <Button size="sm" variant="ghost" className="mt-3" onClick={() => setAll(!all)} aria-expanded={all}>
+          {all ? "Show fewer" : `Show all ${bills.length} bills`}
+        </Button>
+      )}
+    </Card>
+  );
+}
+
 export default function MyAccount() {
   const userId = useAuthStore((s) => s.userId);
   const toast = useToast();
@@ -47,6 +115,9 @@ export default function MyAccount() {
   const [error, setError] = useState("");
   const [relatives, setRelatives] = useState(null);
   const [upcoming, setUpcoming] = useState(null);
+  // null while loading, false when they couldn't be loaded
+  const [bills, setBills] = useState(null);
+  const [openBill, setOpenBill] = useState(null);
 
   const load = useCallback(async () => {
     setError("");
@@ -64,6 +135,9 @@ export default function MyAccount() {
     getMyAppointments()
       .then((res) => setUpcoming(res.data.filter((a) => isUpcoming(a, today)).sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`))))
       .catch(() => setUpcoming([]));
+    getMyBills()
+      .then((res) => setBills(res.data))
+      .catch(() => setBills(false));
   }, [userId]);
 
   useEffect(() => {
@@ -81,6 +155,8 @@ export default function MyAccount() {
       throw err;
     }
   };
+
+  const saveReceipt = (bill) => downloadReceipt(() => getMyReceiptPdf(bill.id), bill.billNumber, toast.error);
 
   const removeRelative = async (relative) => {
     const ok = await confirm({
@@ -125,7 +201,7 @@ export default function MyAccount() {
   return (
     <PublicPage>
       <PageIntro eyebrow="My account" title={`Hello, ${(account.patientName || account.userName || "").split(" ")[0]}`}>
-        Your details, the family members you book for, and your appointments.
+        Your details, the family members you book for, your appointments and your bills.
       </PageIntro>
 
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-12 sm:px-6 lg:grid-cols-3 lg:px-8">
@@ -175,6 +251,8 @@ export default function MyAccount() {
               </ul>
             )}
           </Card>
+
+          <Bills bills={bills} onOpen={setOpenBill} onReceipt={saveReceipt} />
         </div>
 
         <aside className="min-w-0 lg:self-start">
@@ -209,6 +287,7 @@ export default function MyAccount() {
           </Card>
         </aside>
       </div>
+      {openBill && <MyBillDialog bill={openBill} onClose={() => setOpenBill(null)} onReceipt={saveReceipt} />}
     </PublicPage>
   );
 }
