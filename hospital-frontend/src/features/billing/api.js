@@ -1,7 +1,8 @@
 import axios from "axios";
 import { API_BASE_URL } from "../../app/config";
 
-// Backend calls of the billing feature (docs/BILLING_PLAN.md): the front desk's bills. The login token is added by
+// Backend calls of the billing feature (docs/BILLING_PLAN.md): the front desk's bills, and the patient's own
+// (docs/PATIENT_BILLS_PLAN.md). The login token is added by
 // app/setupAxios. Every change answers the whole bill: { id, billNumber, appointmentId, patientId, patientName,
 // doctorName, visitDate, status, items: [{ id, description, amount, consultation }], subtotal, discount, total,
 // createdAt, paidAt, paymentMethod, paymentReference, paidBy, refundedAt, refundMethod, refundReference, refundedBy }.
@@ -31,3 +32,11 @@ export const payBill = (billId, payment) => axios.post(`${BILLS}/${billId}/pay`,
 export const refundBill = (billId, refund) => axios.post(`${BILLS}/${billId}/refund`, refund);
 
 export const getReceiptPdf = (billId) => axios.get(`${BILLS}/${billId}/receipt.pdf`, { responseType: "blob" });
+
+// ---- The logged-in patient's own bills: their visits' and their family members', newest first, cancelled ones left
+// out. Each bill as above, without patientId, paidBy, refundedBy, createdAt and the items' id and consultation.
+const MY_BILLS = `${API_BASE_URL}/api/bills/my`;
+
+export const getMyBills = () => axios.get(MY_BILLS);
+
+export const getMyReceiptPdf = (billId) => axios.get(`${MY_BILLS}/${billId}/receipt.pdf`, { responseType: "blob" });
