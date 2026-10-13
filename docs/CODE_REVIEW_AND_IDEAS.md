@@ -439,9 +439,9 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ---
 
-## 11. Feature Status (updated 2026-10-12)
+## 11. Feature Status (updated 2026-10-13)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12) and billing (branch `feature/billing`).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15) and patients' bills (branch `feature/patient-bills`).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
@@ -455,6 +455,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 - **Patient search and paged front-desk lists:** one search box (name, phone or patient ID), a patient's page, and the front-desk appointment list with filters (2026-10-11, see below).
 - **Today's queue:** check-in and tokens at the front desk, the doctor's queue with Call next, and a waiting-room screen (2026-10-12, see below).
 - **Billing at the front desk:** fees per doctor, a bill per visit made at check-in, payments and refunds at the desk, PDF receipts (2026-10-12, see below). Online payment is still open.
+- **Patients' bills in the app:** each visit's bill in My appointments and a Bills list in My account, with the PDF receipt (2026-10-13, see below).
 
 **Partly done**
 - **Paged lists:** patients and the front-desk appointments are paged; the admin users list and the doctor portal's lists still load everything.
@@ -681,7 +682,8 @@ From idea #18 above (first version: payment at the desk; online payment later). 
 **Not covered yet:**
 - **Online payment (Razorpay)** — the rest of idea #18.
 - A click-through against the real database.
-- No daily cash summary yet (what was taken by cash / card / UPI per day), and patients don't see their bills in the app.
+- No daily cash summary yet (what was taken by cash / card / UPI per day).
+- ~~Patients don't see their bills in the app~~ — done 2026-10-13, see Patient bills below.
 - Old doctor records without a login can still be deleted with their appointments; their bills would stay, without the visit (such doctors can't run a queue, so they have none).
 
 ### UI refresh: staff portals and home page (done 2026-10-12)
@@ -715,7 +717,33 @@ The patient's own pages and the login pages still had the old look: an animated 
 **Tests:** 226 frontend tests (was 193), new ones for every page above; mutation checks for each step (one put the old register bug back and was caught); screenshots in light and dark mode and on a phone. On the way the screenshots caught a booking page wider than a phone and a crowded header for logged-in patients — both fixed.
 
 **Not covered yet:**
-- Patients can't see their bills or download receipts in the app yet.
+- ~~Patients can't see their bills or download receipts in the app yet~~ — done, see below.
 - `lottie-react` and 18 images in `public/` are no longer used (listed in the plan) — remove them with a lockfile update.
+- A click-through against the running app.
+
+### Patient bills (done 2026-10-13)
+
+Billing gave every visit a bill and a PDF receipt, but only the front desk could see them; a patient who wanted a receipt had to ask at the desk. Decisions, design and steps: [PATIENT_BILLS_PLAN.md](PATIENT_BILLS_PLAN.md).
+
+**What it does**
+- **My appointments:** a visit with a bill shows its total and status ("Bill ₹700.00 · Paid") and a **Bill** button. That includes today's visit as soon as the patient checks in.
+- **The bill:** the lines, the discount, the total, and what happens next:
+  - pay at the front desk;
+  - paid by UPI on …;
+  - the front desk will refund it;
+  - refunded.
+
+  **Download receipt** appears once paid.
+- **My account:** a **Bills** list, newest first, with **View** and **Receipt**, and the total still to pay at the desk.
+- **Whose bills:** the patient's own and their family members' visits. Bills cancelled before payment are left out.
+- **Access:** patients only (`/api/bills/my`), and only their own bills. Another patient's receipt is "not found". The patient's view leaves out which staff member took the money.
+
+**Tests:**
+- Backend: end-to-end tests for whose bills a patient sees, the receipt rules, and other roles refused.
+- Frontend: 232 tests (was 226), covering the bill dialog, My appointments and My account.
+- Mutation checks for each step; screenshots in light and dark mode and on a phone.
+
+**Not covered yet:**
+- Paying online (Razorpay, idea #18); patients still pay at the desk.
 - A click-through against the running app.
 
