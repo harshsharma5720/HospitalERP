@@ -7,8 +7,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
@@ -39,6 +42,7 @@ class OnlinePaymentH2Test {
     private static final FakeRazorpay razorpay = new FakeRazorpay();
     private static final String MY = "/api/bills/my";
     private static final String BILLS = "/api/receptionist/bills";
+    private static final String WEBHOOK = "/api/payments/razorpay/webhook";
 
     @DynamicPropertySource
     static void razorpayUrl(DynamicPropertyRegistry registry) {
@@ -107,6 +111,25 @@ class OnlinePaymentH2Test {
 
     private Map<String, Object> attempt(String orderId) {
         return jdbc.queryForMap("SELECT * FROM online_payments WHERE order_id = ?", orderId);
+    }
+
+    // A Razorpay webhook event about a payment, signed with the secret (none: no signature header)
+    private ResponseEntity<String> webhook(String event, FakeRazorpay.Checkout payment, String secret) {
+        String body = "{\"entity\":\"event\",\"event\":\"" + event + "\",\"contains\":[\"payment\"],\"payload\":"
+                + "{\"payment\":{\"entity\":{\"id\":\"" + payment.paymentId() + "\",\"order_id\":\"" + payment.orderId()
+                + "\",\"amount\":50000,\"currency\":\"INR\",\"status\":\"captured\"}}},\"created_at\":1760000000}";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("x-razorpay-event-id", "evt_" + payment.paymentId());
+        if (secret != null) {
+            headers.set("X-Razorpay-Signature", FakeRazorpay.hmac(body, secret));
+        }
+        return rest.exchange(WEBHOOK, HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
+    }
+
+    private void cancel(String desk, Visit visit) {
+        assertThat(api.call(HttpMethod.DELETE, "/api/receptionist/deleteAppointment/" + visit.appointmentId(), desk, null)
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     private long refundCalls(String paymentId) {
@@ -192,7 +215,7 @@ class OnlinePaymentH2Test {
         assertThat(razorpay.orders.get(newOrder).amount()).isEqualTo(60000);
         FakeRazorpay.Checkout late = razorpay.pay(oldOrder, "captured");
         assertThat(confirm(changed, late, HttpStatus.CONFLICT).get("message").asText())
-                .startsWith("The bill changed after you started paying, so your payment of ₹500.00 is being refunded to you (refund rfnd_");
+                .startsWith("The bill changed after the payment was started, so your payment of ₹500.00 is being refunded to you (refund rfnd_");
         assertThat(razorpay.refunds).containsExactly(late.paymentId() + " 50000");
         assertThat(attempt(oldOrder)).containsEntry("status", "REFUNDED").containsEntry("payment_id", late.paymentId());
         assertThat((String) attempt(oldOrder).get("refund_id")).startsWith("rfnd_");
@@ -218,6 +241,16 @@ class OnlinePaymentH2Test {
         assertThat(attempt(stuckOrder)).containsEntry("status", "REFUND_FAILED");
         assertThat(confirm(stuck, lost, HttpStatus.CONFLICT).get("message").asText()).isEqualTo(message);
         assertThat(refundCalls(lost.paymentId())).isEqualTo(1);
+
+        // The desk sees the payments that couldn't be applied: refunded, or to refund by hand
+        JsonNode returned = atDesk(desk, changed).at("/unappliedPayments/0");
+        assertThat(returned.get("paymentId").asText()).isEqualTo(late.paymentId());
+        assertThat(returned.get("status").asText()).isEqualTo("REFUNDED");
+        assertThat(returned.get("note").asText()).isEqualTo("The bill changed after the payment was started");
+        assertThat(returned.get("refundId").asText()).startsWith("rfnd_");
+        assertThat(atDesk(desk, changed).get("unappliedPayments")).hasSize(1);
+        assertThat(atDesk(desk, stuck).at("/unappliedPayments/0/status").asText()).isEqualTo("REFUND_FAILED");
+        assertThat(atDesk(desk, stuck).at("/unappliedPayments/0/amount").decimalValue()).isEqualByComparingTo("500");
     }
 
     @Test
@@ -248,5 +281,92 @@ class OnlinePaymentH2Test {
         assertThat(start(visit.patient(), visit.billId(), HttpStatus.BAD_GATEWAY).get("message").asText())
                 .isEqualTo("The payment service couldn't be reached. Please try again in a moment.");
         assertThat(atDesk(desk, visit).get("status").asText()).isEqualTo("UNPAID");
+    }
+
+    // ------------------------------------------------------------------ webhook and refunds (step OP.2)
+
+    @Test
+    void razorpaysWebhookPaysABillTheAppNeverConfirmed() throws Exception {
+        String desk = api.staff("deskpay5", "RECEPTIONIST");
+        long doctorId = doctor("drpay5", "500");
+        Visit lost = visit("paypatient8", desk, doctorId, "MORNING");
+        Visit later = visit("paypatient9", desk, doctorId, "EVENING");
+
+        FakeRazorpay.Checkout paid = razorpay.pay(startOrder(lost), "captured");
+        assertThat(webhook("payment.captured", paid, null).getStatusCode()).as("no signature").isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(webhook("payment.captured", paid, FakeRazorpay.KEY_SECRET).getStatusCode()).as("signed with another secret")
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(atDesk(desk, lost).get("status").asText()).isEqualTo("UNPAID");
+
+        assertThat(webhook("payment.captured", paid, FakeRazorpay.WEBHOOK_SECRET).getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode bill = atDesk(desk, lost);
+        assertThat(bill.get("status").asText()).isEqualTo("PAID");
+        assertThat(bill.get("paymentMethod").asText()).isEqualTo("ONLINE");
+        assertThat(bill.get("paymentReference").asText()).isEqualTo(paid.paymentId());
+        assertThat(webhook("payment.captured", paid, FakeRazorpay.WEBHOOK_SECRET).getStatusCode()).as("sent again").isEqualTo(HttpStatus.OK);
+        assertThat(webhook("order.paid", paid, FakeRazorpay.WEBHOOK_SECRET).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(confirm(lost, paid, HttpStatus.OK).get("status").asText()).as("the app confirms afterwards").isEqualTo("PAID");
+        assertThat(razorpay.refunds).isEmpty();
+
+        // Other events and other orders are ignored
+        FakeRazorpay.Checkout failed = razorpay.pay(startOrder(later), "failed");
+        assertThat(webhook("payment.failed", failed, FakeRazorpay.WEBHOOK_SECRET).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(webhook("payment.captured", new FakeRazorpay.Checkout("order_not_ours", "pay_not_ours", ""),
+                FakeRazorpay.WEBHOOK_SECRET).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(atDesk(desk, later).get("status").asText()).isEqualTo("UNPAID");
+
+        // Razorpay can't be reached to check the payment: it is asked to send the event again
+        FakeRazorpay.Checkout retried = razorpay.pay(failed.orderId(), "captured");
+        razorpay.down = true;
+        assertThat(webhook("payment.captured", retried, FakeRazorpay.WEBHOOK_SECRET).getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(atDesk(desk, later).get("status").asText()).isEqualTo("UNPAID");
+        razorpay.down = false;
+        assertThat(webhook("payment.captured", retried, FakeRazorpay.WEBHOOK_SECRET).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(atDesk(desk, later).get("status").asText()).isEqualTo("PAID");
+    }
+
+    @Test
+    void theDeskRefundsACancelledVisitPaidOnlineAndSeesPaymentsThatCameTooLate() throws Exception {
+        String desk = api.staff("deskpay6", "RECEPTIONIST");
+        long doctorId = doctor("drpay6", "500");
+        Visit online = visit("paypatient10", desk, doctorId, "MORNING");
+        Visit cash = visit("paypatient11", desk, doctorId, "EVENING");
+        Visit tooLate = visit("paypatient12", desk, doctorId, "EVENING");
+        String refundOnline = BILLS + "/" + online.billId() + "/refund-online";
+
+        FakeRazorpay.Checkout paid = razorpay.pay(startOrder(online), "captured");
+        confirm(online, paid, HttpStatus.OK);
+        expect(api.call(HttpMethod.POST, refundOnline, desk, null), HttpStatus.CONFLICT); // not cancelled
+        cancel(desk, online);
+        assertThat(atDesk(desk, online).get("status").asText()).isEqualTo("REFUND_DUE");
+        assertThat(api.call(HttpMethod.POST, refundOnline, online.patient(), null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        JsonNode refunded = expect(api.call(HttpMethod.POST, refundOnline, desk, null), HttpStatus.OK);
+        assertThat(refunded.get("status").asText()).isEqualTo("REFUNDED");
+        assertThat(refunded.get("refundMethod").asText()).isEqualTo("ONLINE");
+        assertThat(refunded.get("refundReference").asText()).startsWith("rfnd_");
+        assertThat(refunded.get("refundedBy").asText()).isEqualTo("deskpay6");
+        assertThat(razorpay.refunds).containsExactly(paid.paymentId() + " 50000");
+        expect(api.call(HttpMethod.POST, refundOnline, desk, null), HttpStatus.CONFLICT);
+        assertThat(api.get(online.patient(), MY).at("/0/refundMethod").asText()).isEqualTo("ONLINE");
+
+        // Paid in cash: refunded at the desk, not online
+        expect(api.call(HttpMethod.POST, BILLS + "/" + cash.billId() + "/pay", desk, "{\"method\":\"CASH\"}"), HttpStatus.OK);
+        cancel(desk, cash);
+        assertThat(expect(api.call(HttpMethod.POST, BILLS + "/" + cash.billId() + "/refund-online", desk, null),
+                HttpStatus.CONFLICT).get("message").asText())
+                .isEqualTo("This bill was paid at the desk: record the refund given at the desk instead");
+
+        // The visit is cancelled while the patient pays: the payment is given back, and the desk sees why
+        String order = startOrder(tooLate);
+        cancel(desk, tooLate);
+        FakeRazorpay.Checkout landed = razorpay.pay(order, "captured");
+        assertThat(webhook("payment.captured", landed, FakeRazorpay.WEBHOOK_SECRET).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(razorpay.refunds).contains(landed.paymentId() + " 50000");
+        JsonNode seen = atDesk(desk, tooLate);
+        assertThat(seen.get("status").asText()).isEqualTo("CANCELLED");
+        assertThat(seen.at("/unappliedPayments/0/paymentId").asText()).isEqualTo(landed.paymentId());
+        assertThat(seen.at("/unappliedPayments/0/status").asText()).isEqualTo("REFUNDED");
+        assertThat(seen.at("/unappliedPayments/0/note").asText()).isEqualTo("This bill was cancelled");
     }
 }

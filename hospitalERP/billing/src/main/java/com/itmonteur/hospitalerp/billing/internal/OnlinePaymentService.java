@@ -3,6 +3,9 @@ package com.itmonteur.hospitalerp.billing.internal;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ConflictException;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.itmonteur.hospitalerp.identity.CurrentUserService;
 import com.itmonteur.hospitalerp.patients.PtInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,19 +15,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /**
  * Patients paying their bills online with Razorpay (docs/ONLINE_PAYMENT_PLAN.md). {@link #start} makes the Razorpay
  * order for an unpaid bill, Checkout takes the money, and {@link #confirm} checks Checkout's signature and applies the
- * payment. Applying is safe to repeat (the app and Razorpay's webhook may both do it) and locks the bill; a payment
- * that can't be applied any more (the bill was paid, changed or cancelled meanwhile) is refunded right away.
+ * payment; Razorpay's {@link #webhook} applies it too when the app never confirmed. Applying is safe to repeat and
+ * locks the bill; a payment that can't be applied any more (the bill was paid, changed or cancelled meanwhile) is
+ * refunded right away. The desk gives back a cancelled visit's online payment with {@link #refundOnline}.
  * Razorpay is called outside the database transactions.
  */
 @Service
@@ -45,22 +52,37 @@ public class OnlinePaymentService {
     record Outcome(boolean paid, String message) {
     }
 
+    /** The webhook's answer to Razorpay: handled or ignored (200), a wrong signature (400), try later (503). */
+    public enum WebhookResult {
+        ACCEPTED, REJECTED, RETRY
+    }
+
+    // The events that mean a payment was captured; the others (failed, authorized, refunds, ...) are ignored
+    private static final Set<String> CAPTURED_EVENTS = Set.of("payment.captured", "order.paid");
+
     private final RazorpayClient razorpay;
     private final OnlinePaymentRepository onlinePayments;
     private final BillRepository billRepository;
     private final MyBillService myBillService;
+    private final BillDeskService billDeskService;
+    private final CurrentUserService currentUserService;
+    private final ObjectMapper json;
     private final TransactionTemplate transactions;
     private final Clock clock;
     private final String hospitalName;
 
     public OnlinePaymentService(RazorpayClient razorpay, OnlinePaymentRepository onlinePayments,
                                 BillRepository billRepository, MyBillService myBillService,
-                                TransactionTemplate transactions, Clock clock,
+                                BillDeskService billDeskService, CurrentUserService currentUserService,
+                                ObjectMapper json, TransactionTemplate transactions, Clock clock,
                                 @Value("${app.hospital.name:Hospital ERP}") String hospitalName) {
         this.razorpay = razorpay;
         this.onlinePayments = onlinePayments;
         this.billRepository = billRepository;
         this.myBillService = myBillService;
+        this.billDeskService = billDeskService;
+        this.currentUserService = currentUserService;
+        this.json = json;
         this.transactions = transactions;
         this.clock = clock;
         this.hospitalName = hospitalName;
@@ -117,6 +139,95 @@ public class OnlinePaymentService {
             throw new ConflictException(outcome.message());
         }
         return transactions.execute(status -> myBillService.myBill(billId));
+    }
+
+    /**
+     * Razorpay's webhook: a captured payment of one of our orders is applied like the app's confirmation (the patient's
+     * phone may have lost the connection after paying). Other events and other orders are ignored; Razorpay may send
+     * an event more than once, which applying copes with. RETRY when Razorpay couldn't be reached to check it.
+     */
+    public WebhookResult webhook(byte[] body, String signature) {
+        String text = new String(body, StandardCharsets.UTF_8);
+        if (!razorpay.validWebhookSignature(text, signature)) {
+            logger.warn("Razorpay webhook refused: wrong or missing signature");
+            return WebhookResult.REJECTED;
+        }
+        JsonNode event;
+        try {
+            event = json.readTree(text);
+        } catch (IOException e) {
+            return WebhookResult.REJECTED;
+        }
+        String name = event.path("event").asText();
+        JsonNode payment = event.at("/payload/payment/entity");
+        String paymentId = payment.path("id").asText("");
+        String orderId = payment.path("order_id").asText("");
+        if (!CAPTURED_EVENTS.contains(name) || paymentId.isEmpty() || orderId.isEmpty()
+                || onlinePayments.findByOrderId(orderId).isEmpty()) {
+            logger.info("Razorpay webhook {} ignored (order {})", name, orderId);
+            return WebhookResult.ACCEPTED;
+        }
+        try {
+            Outcome outcome = apply(orderId, paymentId);
+            logger.info("Razorpay webhook {}: payment {} {}", name, paymentId, outcome.paid() ? "applied" : "refunded");
+            return WebhookResult.ACCEPTED;
+        } catch (ResponseStatusException e) {
+            return WebhookResult.RETRY; // Razorpay couldn't be reached: it sends the event again later
+        } catch (ConflictException | BadRequestException e) {
+            logger.warn("Razorpay webhook {}: payment {} not applied: {}", name, paymentId, e.getMessage());
+            return WebhookResult.ACCEPTED;
+        }
+    }
+
+    private record Refundable(String paymentId, long amount, String billNumber) {
+    }
+
+    /**
+     * The desk gives back the online payment of a cancelled visit (refund due), through Razorpay at normal speed
+     * (5-7 working days to the account it came from). Recorded like a refund at the desk: method ONLINE, the refund id,
+     * who and when.
+     */
+    public BillDTO refundOnline(long billId) {
+        Refundable refundable = transactions.execute(status -> {
+            Bill bill = billRepository.findById(billId).orElseThrow(() -> new ResourceNotFoundException("Bill", "id", billId));
+            if (bill.getStatus() != BillStatus.REFUND_DUE) {
+                throw new ConflictException("Only a bill due for refund can be refunded; this one is "
+                        + bill.getStatus().name().toLowerCase(Locale.ROOT).replace('_', ' '));
+            }
+            if (bill.getPaymentMethod() != PaymentMethod.ONLINE || bill.getPaymentReference() == null) {
+                throw new ConflictException("This bill was paid at the desk: record the refund given at the desk instead");
+            }
+            return new Refundable(bill.getPaymentReference(), paise(bill.total()), bill.getBillNumber());
+        });
+        if (!razorpay.enabled()) {
+            throw new ConflictException("Online payment isn't set up here, so it can't be refunded online. "
+                    + "Refund it from the Razorpay dashboard and record it as a refund at the desk.");
+        }
+        RazorpayClient.Refund refund;
+        try {
+            refund = razorpay.refund(refundable.paymentId(), refundable.amount(),
+                    Map.of("billNumber", refundable.billNumber()));
+        } catch (RazorpayClient.RazorpayException e) {
+            logger.error(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "The refund couldn't be made at Razorpay. Please try again, or refund it from the Razorpay dashboard.");
+        }
+        String by = currentUserService.getCurrentUser().getUsername();
+        transactions.executeWithoutResult(status -> {
+            Bill bill = billRepository.findByIdForUpdate(billId).orElseThrow();
+            if (bill.getStatus() != BillStatus.REFUND_DUE) {
+                logger.error("Bill {} was refunded at the desk while refund {} was made online", bill.getBillNumber(), refund.id());
+                return;
+            }
+            bill.setStatus(BillStatus.REFUNDED);
+            bill.setRefundMethod(PaymentMethod.ONLINE);
+            bill.setRefundReference(refund.id());
+            bill.setRefundedAt(now());
+            bill.setRefundedBy(by);
+            billRepository.saveAndFlush(bill);
+            logger.info("Bill {} refunded online: {} ({})", bill.getBillNumber(), bill.total(), refund.id());
+        });
+        return billDeskService.get(billId);
     }
 
     /**
@@ -192,7 +303,7 @@ public class OnlinePaymentService {
     private static String unappliable(Bill bill, OnlinePayment attempt) {
         return switch (bill.getStatus()) {
             case UNPAID -> bill.total().compareTo(attempt.getAmount()) == 0 ? null
-                    : "The bill changed after you started paying";
+                    : "The bill changed after the payment was started";
             case CANCELLED -> "This bill was cancelled";
             case PAID, REFUND_DUE, REFUNDED -> "This bill was already paid";
         };

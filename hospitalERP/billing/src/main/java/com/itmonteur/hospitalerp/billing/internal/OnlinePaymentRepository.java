@@ -23,5 +23,5 @@ public interface OnlinePaymentRepository extends JpaRepository<OnlinePayment, Lo
     Optional<OnlinePayment> findFirstByBillIdAndStatusAndAmountOrderByIdDesc(Long billId, OnlinePaymentStatus status,
                                                                             BigDecimal amount);
 
-    List<OnlinePayment> findByBillIdAndStatusIn(Long billId, List<OnlinePaymentStatus> statuses);
+    List<OnlinePayment> findByBillIdAndStatusInOrderById(Long billId, List<OnlinePaymentStatus> statuses);
 }
