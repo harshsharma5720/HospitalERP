@@ -24,7 +24,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.LocalTime;
 import java.util.Optional;
 
@@ -49,15 +52,29 @@ class AppointmentServiceTest {
     private PtInfo me;
     private Slot slot;
 
+    private static final String PHONE = "+91 92895 20303";
+
+    // The service as it is at that moment, with a cut-off of that many hours (docs/CANCELLATION_CUTOFF_PLAN.md)
+    private AppointmentService serviceAt(LocalDateTime now, int cutoffHours, String phone) {
+        ZoneId zone = ZoneId.systemDefault();
+        return new AppointmentService(appointmentRepository, ptInfoService, ptRelativeService, doctorService,
+                slotService, eventPublisher, currentUserService, Clock.fixed(now.atZone(zone).toInstant(), zone),
+                cutoffHours, phone);
+    }
+
+    // On the visit's day (tomorrow, 09:00) at that time
+    private LocalDateTime visitDayAt(int hour, int minute) {
+        return slot.getDate().atTime(hour, minute);
+    }
+
     @BeforeEach
     void setUp() {
-        service = new AppointmentService(appointmentRepository, ptInfoService, ptRelativeService,
-                doctorService, slotService, eventPublisher, currentUserService);
         me = patient(10L, 100L, "Asha");
         Doctor doctor = new Doctor();
         doctor.setId(7L);
         doctor.setName("Dr Rao");
         slot = new Slot(LocalDate.now().plusDays(1), LocalTime.of(9, 0), LocalTime.of(9, 10), doctor, Shift.MORNING);
+        service = serviceAt(visitDayAt(6, 0), 2, PHONE); // well before the 2-hour cut-off
         lenient().when(appointmentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -160,6 +177,81 @@ class AppointmentServiceTest {
         assertThatThrownBy(() -> service.updateAppointmentById(1L, request)).isInstanceOf(ConflictException.class);
         verify(slotService, never()).releaseSlot(any());
         assertThat(mine.getSlot()).isSameAs(slot);
+    }
+
+    // ---------------------------------------------------------------- the cut-off (docs/CANCELLATION_CUTOFF_PLAN.md)
+
+    private Appointment myAppointment() {
+        Appointment mine = appointmentOf(me);
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(mine));
+        when(currentUserService.getCurrentUserId()).thenReturn(100L);
+        return mine;
+    }
+
+    @Test
+    void aPatientCanCancelUntilTwoHoursBeforeTheVisitButNotFromThen() {
+        Appointment mine = myAppointment();
+        when(currentUserService.isStaff()).thenReturn(false);
+        assertThat(service.changeableUntil(mine)).isEqualTo(visitDayAt(7, 0));
+
+        assertThatThrownBy(() -> serviceAt(visitDayAt(7, 0), 2, PHONE).cancelAppointment(1L))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Less than 2 hours to go: this visit can't be cancelled or moved online any more. "
+                        + "Please call the hospital at +91 92895 20303.");
+        verify(slotService, never()).releaseSlot(any());
+        assertThat(mine.getStatus()).isNotEqualTo(AppointmentStatus.CANCELLED_BY_PATIENT);
+
+        assertThat(serviceAt(visitDayAt(6, 59), 2, PHONE).cancelAppointment(1L).getStatus())
+                .as("a minute before the deadline").isEqualTo(AppointmentStatus.CANCELLED_BY_PATIENT);
+    }
+
+    @Test
+    void insideTheCutOffAPatientCantMoveTheVisitButMayChangeTheReason() {
+        Appointment mine = myAppointment();
+        when(currentUserService.isStaff()).thenReturn(false);
+        AppointmentService atEight = serviceAt(visitDayAt(8, 0), 2, PHONE);
+        AppointmentDTO move = new AppointmentDTO();
+        move.setSlotId(56L);
+
+        assertThatThrownBy(() -> atEight.updateAppointmentById(1L, move)).isInstanceOf(ConflictException.class);
+        verify(slotService, never()).lockAndBook(any());
+        assertThat(mine.getSlot()).isSameAs(slot);
+
+        AppointmentDTO reason = new AppointmentDTO();
+        reason.setMessage("Bringing my reports");
+        AppointmentDTO updated = atEight.updateAppointmentById(1L, reason);
+        assertThat(mine.getMessage()).isEqualTo("Bringing my reports");
+        assertThat(updated.getChangeableUntil()).isEqualTo(visitDayAt(7, 0));
+    }
+
+    @Test
+    void theFrontDeskIsNotLimited() {
+        Appointment mine = appointmentOf(me);
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(mine));
+        when(currentUserService.isStaff()).thenReturn(true);
+
+        assertThat(serviceAt(visitDayAt(8, 55), 2, PHONE).cancelAppointment(1L).getStatus())
+                .isEqualTo(AppointmentStatus.CANCELLED_BY_PATIENT);
+        verify(slotService).releaseSlot(slot);
+    }
+
+    @Test
+    void noCutOffWhenItIsZeroOrTheVisitIsNoLongerUpcoming() {
+        Appointment mine = myAppointment();
+        when(currentUserService.isStaff()).thenReturn(false);
+        AppointmentService noCutOff = serviceAt(visitDayAt(8, 59), 0, PHONE);
+        assertThat(noCutOff.changeableUntil(mine)).isNull();
+        assertThat(noCutOff.cancelAppointment(1L).getStatus()).isEqualTo(AppointmentStatus.CANCELLED_BY_PATIENT);
+        assertThat(service.changeableUntil(mine)).as("cancelled").isNull();
+    }
+
+    @Test
+    void theMessageSaysOneHourAndLeavesOutAMissingPhoneNumber() {
+        myAppointment();
+        when(currentUserService.isStaff()).thenReturn(false);
+        assertThatThrownBy(() -> serviceAt(visitDayAt(8, 30), 1, "").cancelAppointment(1L))
+                .hasMessage("Less than 1 hour to go: this visit can't be cancelled or moved online any more. "
+                        + "Please call the hospital.");
     }
 
     private Appointment appointmentOf(PtInfo owner) {
