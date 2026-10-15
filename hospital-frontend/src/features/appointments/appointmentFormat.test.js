@@ -1,4 +1,4 @@
-import { dayLabel, doctorLabel, formatDate, formatTime, timeRange, visitStatus } from "./appointmentFormat";
+import { dayLabel, deadlineText, doctorLabel, formatDate, formatTime, timeRange, visitStatus } from "./appointmentFormat";
 
 test("dates read as today, tomorrow, or weekday day month", () => {
   const monday = new Date(2026, 9, 5); // Mon 5 Oct 2026
@@ -35,4 +35,11 @@ test("a past appointment that was never completed is missed", () => {
 test("doctors by name and speciality", () => {
   expect(doctorLabel({ name: "Anita Rao", specialist: "CARDIOLOGY" })).toBe("Dr. Anita Rao — Cardiology");
   expect(doctorLabel({ name: null, userName: "drnew", specialist: "NOT_ASSIGNED" })).toBe("Dr. drnew");
+});
+
+test("the change deadline reads as a time today or tomorrow, or a day and time", () => {
+  const monday = new Date(2026, 9, 5, 12, 0);
+  expect(deadlineText("2026-10-05T21:30:00", monday)).toBe("21:30 today");
+  expect(deadlineText("2026-10-06T08:00:00", monday)).toBe("08:00 tomorrow");
+  expect(deadlineText("2026-10-09T15:00:00", monday)).toBe("Fri 9 Oct, 15:00");
 });

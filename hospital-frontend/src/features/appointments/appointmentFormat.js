@@ -22,6 +22,14 @@ export const dayLabel = (isoDate, today = new Date()) => {
 // "10:00:00" -> "10:00"; "" when unknown
 export const formatTime = (time) => (time ? String(time).slice(0, 5) : "");
 
+// The patient's change deadline (docs/CANCELLATION_CUTOFF_PLAN.md), "2026-10-15T08:00:00" -> "08:00 today",
+// "08:00 tomorrow" or "Fri 9 Oct, 08:00"
+export const deadlineText = (dateTime, today = new Date()) => {
+  const [date, time] = dateTime.split("T");
+  const day = dayLabel(date, today);
+  return day === "Today" || day === "Tomorrow" ? `${formatTime(time)} ${day.toLowerCase()}` : `${day}, ${formatTime(time)}`;
+};
+
 // "10:00–10:30", or "—" for a visit without its slot (old data)
 export const timeRange = (appointment) =>
   appointment.startTime ? `${formatTime(appointment.startTime)}–${formatTime(appointment.endTime)}` : "—";
