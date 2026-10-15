@@ -16,7 +16,9 @@ export const PAYMENT_METHODS = [
   ["UPI", "UPI"],
 ];
 
-export const methodLabel = (method) => PAYMENT_METHODS.find(([value]) => value === method)?.[1] ?? method;
+// ONLINE: paid by the patient in the app through Razorpay (docs/ONLINE_PAYMENT_PLAN.md); the desk can't choose it
+export const methodLabel = (method) =>
+  method === "ONLINE" ? "online payment" : PAYMENT_METHODS.find(([value]) => value === method)?.[1] ?? method;
 
 export function BillStatusBadge({ status }) {
   const { label, tone } = BILL_STATUS[status] ?? { label: status, tone: "neutral" };
