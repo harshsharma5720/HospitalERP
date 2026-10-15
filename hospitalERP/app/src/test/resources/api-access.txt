@@ -89,6 +89,8 @@ POST /api/auth/register anonymous+ patient+ doctor+ receptionist+ admin+
 POST /api/auth/reset-password anonymous+ patient+ doctor+ receptionist+ admin+
 POST /api/auth/send-otp anonymous+ patient+ doctor+ receptionist+ admin+
 POST /api/auth/verify-otp anonymous+ patient+ doctor+ receptionist+ admin+
+POST /api/bills/my/{billId}/online-payment anonymous- patient+ doctor- receptionist- admin-
+POST /api/bills/my/{billId}/online-payment/confirm anonymous- patient+ doctor- receptionist- admin-
 POST /api/doctor/queue/next anonymous- patient- doctor+ receptionist- admin+
 POST /api/doctor/queue/{appointmentId}/call anonymous- patient- doctor+ receptionist- admin+
 POST /api/doctor/queue/{appointmentId}/not-here anonymous- patient- doctor+ receptionist- admin+

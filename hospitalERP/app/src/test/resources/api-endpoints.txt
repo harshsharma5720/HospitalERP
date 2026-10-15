@@ -85,6 +85,8 @@ POST /api/auth/register
 POST /api/auth/reset-password
 POST /api/auth/send-otp
 POST /api/auth/verify-otp
+POST /api/bills/my/{billId}/online-payment
+POST /api/bills/my/{billId}/online-payment/confirm
 POST /api/doctor/queue/next
 POST /api/doctor/queue/{appointmentId}/call
 POST /api/doctor/queue/{appointmentId}/not-here

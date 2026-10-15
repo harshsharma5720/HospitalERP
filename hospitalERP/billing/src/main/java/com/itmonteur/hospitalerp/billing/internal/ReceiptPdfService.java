@@ -129,6 +129,7 @@ public class ReceiptPdfService {
             case CASH -> "cash";
             case CARD -> "card";
             case UPI -> "UPI";
+            case ONLINE -> "online payment (Razorpay)";
         };
     }
 

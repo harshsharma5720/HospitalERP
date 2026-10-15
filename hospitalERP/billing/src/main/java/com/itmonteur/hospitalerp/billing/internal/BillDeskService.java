@@ -141,7 +141,7 @@ public class BillDeskService {
     /** The patient paid at the desk: cash, card or UPI, with an optional reference (e.g. the UPI transaction id). */
     @Transactional
     public BillDTO pay(long billId, String method, String reference) {
-        Bill bill = find(billId);
+        Bill bill = locked(billId);
         if (bill.getStatus() != BillStatus.UNPAID) {
             throw new ConflictException("This bill is " + label(bill.getStatus()) + "; it can't be paid");
         }
@@ -157,7 +157,7 @@ public class BillDeskService {
     /** The money of a cancelled, paid visit was given back. */
     @Transactional
     public BillDTO refund(long billId, String method, String reference) {
-        Bill bill = find(billId);
+        Bill bill = locked(billId);
         if (bill.getStatus() != BillStatus.REFUND_DUE) {
             throw new ConflictException("Only a bill due for refund can be refunded; this one is " + label(bill.getStatus()));
         }
@@ -194,8 +194,13 @@ public class BillDeskService {
         return billRepository.findById(billId).orElseThrow(() -> new ResourceNotFoundException("Bill", "id", billId));
     }
 
+    // For a change: an online payment may be applied to the same bill meanwhile (OnlinePaymentService)
+    private Bill locked(long billId) {
+        return billRepository.findByIdForUpdate(billId).orElseThrow(() -> new ResourceNotFoundException("Bill", "id", billId));
+    }
+
     private Bill unpaid(long billId) {
-        Bill bill = find(billId);
+        Bill bill = locked(billId);
         if (bill.getStatus() != BillStatus.UNPAID) {
             throw new ConflictException("This bill is " + label(bill.getStatus()) + "; it can't be changed");
         }
@@ -217,12 +222,17 @@ public class BillDeskService {
         }
     }
 
+    // At the desk: cash, card or UPI; ONLINE is only for payments made in the app (OnlinePaymentService)
     private static PaymentMethod methodOf(String method) {
         try {
-            return PaymentMethod.valueOf(method == null ? "" : method.trim().toUpperCase(Locale.ROOT));
+            PaymentMethod chosen = PaymentMethod.valueOf(method == null ? "" : method.trim().toUpperCase(Locale.ROOT));
+            if (chosen != PaymentMethod.ONLINE) {
+                return chosen;
+            }
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Please choose how the money was paid: CASH, CARD or UPI");
+            // the message below
         }
+        throw new BadRequestException("Please choose how the money was paid: CASH, CARD or UPI");
     }
 
     private static String referenceOf(String reference) {
