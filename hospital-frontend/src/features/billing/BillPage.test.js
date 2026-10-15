@@ -100,6 +100,7 @@ test("a cancelled paid visit: the refund is recorded", async () => {
 
   expect(await screen.findByText("Refund due: ₹500.00. The visit was cancelled.")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /Record payment/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /online/ })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Record refund of ₹500.00" }));
 
   await waitFor(() => expect(billingApi.refundBill).toHaveBeenCalledWith(7, { method: "CASH", reference: null }));
@@ -119,4 +120,57 @@ test("opened from the appointment list: the visit's bill, or why there is none",
   billingApi.getBillForAppointment.mockRejectedValueOnce({ response: { status: 404, data: { message: "Bill not found" } } });
   renderAt("/bills/visit/108");
   expect(await screen.findByRole("alert")).toHaveTextContent("This visit has no bill yet");
+});
+
+// ---- Online payments (docs/ONLINE_PAYMENT_PLAN.md)
+
+test("a cancelled visit paid online is refunded online, or at the desk", async () => {
+  const paidOnline = { status: "REFUND_DUE", paidAt: "2026-10-12T10:05:31", paymentMethod: "ONLINE", paymentReference: "pay_9" };
+  billingApi.getBill.mockResolvedValue({ data: bill(paidOnline) });
+  billingApi.refundBillOnline.mockResolvedValue({
+    data: bill({ ...paidOnline, status: "REFUNDED", refundedAt: "2026-10-13T09:30:00", refundMethod: "ONLINE", refundReference: "rfnd_3", refundedBy: "deskravi" }),
+  });
+  renderAt("/bills/7");
+
+  const payment = await screen.findByRole("region", { name: "Payment" });
+  expect(payment).toHaveTextContent("Paid ₹500.00 by online payment (ref. pay_9) on Mon 12 Oct 2026, 10:05.");
+  expect(payment).not.toHaveTextContent("received by");
+  expect(payment).toHaveTextContent("the refund goes back to the account the patient paid from");
+  expect(within(payment).getByRole("button", { name: "Record refund of ₹500.00" })).toBeInTheDocument();
+
+  fireEvent.click(within(payment).getByRole("button", { name: "Refund ₹500.00 online" }));
+  expect(await screen.findByText("Refunded online: ₹500.00 (rfnd_3).")).toBeInTheDocument();
+  expect(billingApi.refundBillOnline).toHaveBeenCalledWith(7);
+  expect(payment).toHaveTextContent("Refunded ₹500.00 by online payment (ref. rfnd_3) on Tue 13 Oct 2026, 09:30, by deskravi.");
+  expect(within(payment).queryByRole("button", { name: /Refund/ })).not.toBeInTheDocument();
+});
+
+test("a refused online refund says why", async () => {
+  billingApi.getBill.mockResolvedValue({ data: bill({ status: "REFUND_DUE", paidAt: "2026-10-12T10:05:31", paymentMethod: "ONLINE", paymentReference: "pay_9" }) });
+  billingApi.refundBillOnline.mockRejectedValue({ response: { data: { message: "The refund couldn't be made at Razorpay. Please try again, or refund it from the Razorpay dashboard." } } });
+  renderAt("/bills/7");
+  fireEvent.click(await screen.findByRole("button", { name: "Refund ₹500.00 online" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("The refund couldn't be made at Razorpay.");
+  expect(screen.getByRole("button", { name: "Refund ₹500.00 online" })).toBeEnabled();
+});
+
+test("online payments that came too late are listed: refunded automatically, or to refund by hand", async () => {
+  billingApi.getBill.mockResolvedValue({
+    data: bill({
+      status: "PAID", paidAt: "2026-10-12T10:05:31", paymentMethod: "CASH", paidBy: "deskmeena",
+      unappliedPayments: [
+        { paymentId: "pay_5", amount: 500, status: "REFUNDED", note: "This bill was already paid", refundId: "rfnd_6", createdAt: "2026-10-12T10:04:00" },
+        { paymentId: "pay_8", amount: 500, status: "REFUND_FAILED", note: "This bill was already paid", refundId: null, createdAt: "2026-10-12T10:06:00" },
+      ],
+    }),
+  });
+  renderAt("/bills/7");
+  expect(
+    await screen.findByText(
+      "An online payment of ₹500.00 (pay_5) on Mon 12 Oct 2026, 10:04 couldn't be applied: this bill was already paid. It was refunded automatically (refund rfnd_6)."
+    )
+  ).toBeInTheDocument();
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "An online payment of ₹500.00 (pay_8) on Mon 12 Oct 2026, 10:06 couldn't be applied: this bill was already paid. Its automatic refund failed: refund it from the Razorpay dashboard."
+  );
 });

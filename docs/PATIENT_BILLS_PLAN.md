@@ -59,5 +59,5 @@ Billing ([BILLING_PLAN.md](BILLING_PLAN.md)) gives every visit a bill at check-i
 
 ## Follow-ups
 
-- **Online payment (Razorpay)**, idea #18: patients could pay an unpaid bill from the same dialog.
+- ~~**Online payment (Razorpay)**, idea #18: patients could pay an unpaid bill from the same dialog.~~ Done 2026-10-15 ([ONLINE_PAYMENT_PLAN.md](ONLINE_PAYMENT_PLAN.md)).
 - A click-through against the running app with a real check-in, payment and receipt.

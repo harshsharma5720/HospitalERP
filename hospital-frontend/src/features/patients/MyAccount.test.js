@@ -4,7 +4,7 @@ import MyAccount from "./MyAccount";
 import useAuthStore from "../auth/useAuthStore";
 import * as patientsApi from "./api";
 import { getMyAppointments } from "../appointments/api";
-import { getMyBills, getMyReceiptPdf } from "../billing/api";
+import { confirmOnlinePayment, getMyBills, getMyReceiptPdf, startOnlinePayment } from "../billing/api";
 import { addDays, toLocalISODate } from "../../shared/utils/dateUtils";
 import { ConfirmProvider, ToastProvider } from "../../shared/ui";
 
@@ -196,4 +196,33 @@ test("one unpaid bill and no Show all for a few bills; no bills yet; bills that 
   bills = await screen.findByRole("region", { name: "Bills" });
   expect(await within(bills).findByText(/Your bills couldn't be loaded/)).toBeInTheDocument();
   expect(screen.getByRole("region", { name: "Your details" })).toHaveTextContent("asha@example.com");
+});
+
+test("Pay online from the list opens the bill and pays it; a payment service that can't be reached says so", async () => {
+  const unpaid = bill(11, "UNPAID", 800, { payOnline: true });
+  getMyBills.mockResolvedValue({ data: [unpaid, bill(12, "UNPAID", 300), bill(13, "PAID", 600)] });
+  startOnlinePayment.mockRejectedValueOnce({ response: { status: 502, data: { message: "The payment service couldn't be reached. Please try again in a moment." } } });
+  startOnlinePayment.mockResolvedValue({ data: { keyId: "rzp_test_x", orderId: "order_7", amount: 80000, currency: "INR", name: "Shreya Hospital", description: "Bill B-2026-000011", prefill: {} } });
+  confirmOnlinePayment.mockResolvedValue({ data: { ...unpaid, status: "PAID", paymentMethod: "ONLINE", paymentReference: "pay_7", paidAt: `${day(-11)}T12:00:00`, payOnline: false } });
+  window.Razorpay = jest.fn(function Razorpay(options) {
+    this.open = () => options.handler({ razorpay_payment_id: "pay_7", razorpay_order_id: "order_7", razorpay_signature: "sig7" });
+  });
+  renderPage();
+  const bills = await screen.findByRole("region", { name: "Bills" });
+  expect(await within(bills).findByText("Still to pay: ₹1,100.00 (2 bills). Pay online here, or at the front desk.")).toBeInTheDocument();
+  const rows = within(bills).getAllByRole("listitem");
+  expect(within(rows[1]).queryByRole("button", { name: /Pay bill/ })).not.toBeInTheDocument();
+
+  fireEvent.click(within(rows[0]).getByRole("button", { name: "Pay bill B-2026-000011 online" }));
+  const dialog = screen.getByRole("dialog", { name: /Bill B-2026-000011/ });
+  expect(await within(dialog).findByRole("alert")).toHaveTextContent("The payment service couldn't be reached.");
+  expect(window.Razorpay).not.toHaveBeenCalled();
+
+  fireEvent.click(within(dialog).getByRole("button", { name: "Pay ₹800.00 online" }));
+  await waitFor(() => expect(dialog).toHaveTextContent("Paid ₹800.00 by online payment (ref. pay_7)"));
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(confirmOnlinePayment).toHaveBeenCalledWith(11, { orderId: "order_7", paymentId: "pay_7", signature: "sig7" });
+  expect(within(bills).getAllByRole("listitem")[0]).toHaveTextContent("₹800.00Paid");
+  expect(within(bills).queryByRole("button", { name: /Pay bill/ })).not.toBeInTheDocument();
+  delete window.Razorpay;
 });

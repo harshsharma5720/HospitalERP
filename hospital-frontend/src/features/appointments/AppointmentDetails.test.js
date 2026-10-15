@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import AppointmentDetails from "./AppointmentDetails";
 import * as appointmentsApi from "./api";
 import { getMyHistory, getPrescriptionPdf } from "../clinical/api";
-import { getMyBills, getMyReceiptPdf } from "../billing/api";
+import { confirmOnlinePayment, getMyBills, getMyReceiptPdf, startOnlinePayment } from "../billing/api";
 import { addDays, toLocalISODate } from "../../shared/utils/dateUtils";
 import { ConfirmProvider, ToastProvider } from "../../shared/ui";
 
@@ -222,4 +222,85 @@ test("a receipt that can't be downloaded says so", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Bill B-2026-000021" }));
   fireEvent.click(screen.getByRole("button", { name: "Download receipt" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("This bill is unpaid: there is no receipt");
+});
+
+// ---- Paying online (docs/ONLINE_PAYMENT_PLAN.md); window.Razorpay plays Checkout
+
+const ORDER = {
+  keyId: "rzp_test_x", orderId: "order_1", amount: 60000, currency: "INR", name: "Shreya Hospital", description: "Bill B-2026-000030",
+  prefill: { name: "Asha Verma", email: "asha@example.com", contact: "9876543210" },
+};
+// Checkout that pays (answer), or is closed (null)
+const checkout = (answer) =>
+  jest.fn(function Razorpay(options) {
+    this.open = () => (answer ? options.handler(answer) : options.modal.ondismiss());
+  });
+const PAID_ANSWER = { razorpay_payment_id: "pay_9", razorpay_order_id: "order_1", razorpay_signature: "sig" };
+
+afterEach(() => {
+  delete window.Razorpay;
+});
+
+test("an unpaid bill is paid online: the order, Checkout, the confirmation; the bill then shows it paid", async () => {
+  const unpaid = bill(30, 8, "UNPAID", { visitDate: day(0), payOnline: true });
+  appointmentsApi.getMyAppointments.mockResolvedValue({ data: [visit(8, day(0), "CONFIRMED", { startTime: "23:00:00" })] });
+  getMyBills.mockResolvedValue({ data: [unpaid] });
+  startOnlinePayment.mockResolvedValue({ data: ORDER });
+  confirmOnlinePayment.mockResolvedValue({
+    data: { ...unpaid, status: "PAID", paymentMethod: "ONLINE", paymentReference: "pay_9", paidAt: `${day(0)}T09:30:00`, payOnline: false },
+  });
+  window.Razorpay = checkout(PAID_ANSWER);
+  renderPage();
+  await screen.findAllByRole("article");
+  fireEvent.click(within(cards()[0]).getByRole("button", { name: "Bill B-2026-000030" }));
+  const dialog = screen.getByRole("dialog", { name: /Bill B-2026-000030/ });
+  expect(dialog).toHaveTextContent("Pay ₹600.00 online now, or at the front desk.");
+
+  fireEvent.click(within(dialog).getByRole("button", { name: "Pay ₹600.00 online" }));
+  expect(await screen.findByText("Paid ₹600.00 online. Thank you!")).toBeInTheDocument();
+  expect(startOnlinePayment).toHaveBeenCalledWith(30);
+  expect(window.Razorpay).toHaveBeenCalledWith(
+    expect.objectContaining({ key: "rzp_test_x", order_id: "order_1", amount: 60000, currency: "INR", prefill: ORDER.prefill })
+  );
+  expect(confirmOnlinePayment).toHaveBeenCalledWith(30, { orderId: "order_1", paymentId: "pay_9", signature: "sig" });
+  expect(dialog).toHaveTextContent(/Paid ₹600\.00 by online payment \(ref\. pay_9\) on .+, 09:30\./);
+  expect(within(dialog).queryByRole("button", { name: /online/ })).not.toBeInTheDocument();
+  expect(within(dialog).getByRole("button", { name: "Download receipt" })).toBeInTheDocument();
+  expect(cards()[0]).toHaveTextContent("Bill₹600.00Paid");
+});
+
+test("closing Checkout changes nothing; a payment that couldn't be applied says why, and the bills are reloaded", async () => {
+  const unpaid = bill(30, 3, "UNPAID", { payOnline: true });
+  getMyBills.mockResolvedValueOnce({ data: [unpaid] });
+  getMyBills.mockResolvedValueOnce({ data: [{ ...unpaid, status: "PAID", paymentMethod: "CASH", paidAt: `${day(-10)}T11:00:00`, payOnline: false }] });
+  startOnlinePayment.mockResolvedValue({ data: ORDER });
+  confirmOnlinePayment.mockRejectedValue({
+    response: { status: 409, data: { message: "This bill was already paid, so your payment of ₹600.00 is being refunded to you (refund rfnd_1, 5-7 working days)." } },
+  });
+  window.Razorpay = checkout(null);
+  renderPage();
+  fireEvent.click(await screen.findByRole("button", { name: "Past (3)" }));
+  fireEvent.click(screen.getByRole("button", { name: "Bill B-2026-000030" }));
+  const dialog = screen.getByRole("dialog", { name: /Bill B-2026-000030/ });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Pay ₹600.00 online" }));
+  await waitFor(() => expect(within(dialog).getByRole("button", { name: "Pay ₹600.00 online" })).toBeEnabled());
+  expect(window.Razorpay).toHaveBeenCalledTimes(1);
+  expect(confirmOnlinePayment).not.toHaveBeenCalled();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+  window.Razorpay = checkout(PAID_ANSWER);
+  fireEvent.click(within(dialog).getByRole("button", { name: "Pay ₹600.00 online" }));
+  expect(await within(dialog).findByRole("alert")).toHaveTextContent("This bill was already paid, so your payment of ₹600.00 is being refunded");
+  await waitFor(() => expect(dialog).toHaveTextContent("Paid ₹600.00 by Cash"));
+  expect(getMyBills).toHaveBeenCalledTimes(2);
+});
+
+test("a bill without payOnline is paid at the desk only", async () => {
+  getMyBills.mockResolvedValue({ data: [bill(30, 3, "UNPAID", { payOnline: false })] });
+  renderPage();
+  fireEvent.click(await screen.findByRole("button", { name: "Past (3)" }));
+  fireEvent.click(screen.getByRole("button", { name: "Bill B-2026-000030" }));
+  const dialog = screen.getByRole("dialog");
+  expect(dialog).toHaveTextContent("Please pay ₹600.00 at the front desk.");
+  expect(within(dialog).queryByRole("button", { name: /online/ })).not.toBeInTheDocument();
 });

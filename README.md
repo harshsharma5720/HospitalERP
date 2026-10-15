@@ -165,6 +165,11 @@ HOSPITAL_PHONE=+91 20 5555 1234
 
 # Consultation fee in rupees for doctors without their own (set per doctor under Admin → Fees) — optional
 BILLING_DEFAULT_FEE=0
+
+# Online payment with Razorpay — optional; off while the key id or secret is empty (see "Trying online payment")
+RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxxxx
+RAZORPAY_KEY_SECRET=your-razorpay-key-secret
+RAZORPAY_WEBHOOK_SECRET=your-webhook-secret
 ```
 
 > **Note:** Twilio and email settings are optional. Without Twilio, SMS is skipped (a warning is logged) and you should set `OTP_REQUIRED=false`, otherwise nobody can sign up. Without SMTP, emails are skipped.
@@ -241,7 +246,7 @@ The app will open at **http://localhost:3000**.
 |------|------------|--------|
 | **Admin** | `/admin/dashboard` | Dashboard with real figures, user management, doctors, leave approval, audit log, notifications, consultation fees, and the front desk's pages (appointments, walk-in booking, patients, bills) |
 | **Doctor** | `/doctor/dashboard` | Today's queue (`/doctor/queue`), appointments, leave, profile |
-| **Patient** | `/` (public pages) | Book appointments, manage family members, see each visit's bill and download receipts (My appointments, My account) |
+| **Patient** | `/` (public pages) | Book appointments, manage family members, see each visit's bill, pay it online and download receipts (My appointments, My account) |
 | **Receptionist** | `/receptionist-appointments`, `/walk-in`, `/patients`, `/bills` | Appointment list with filters and check-in, walk-in booking, patient search, bills and payments |
 
 ---
@@ -279,6 +284,7 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 | Waiting-room screen for a TV — per doctor, the token being served and the next ones; tokens only, no names, no login ([details](docs/TODAYS_QUEUE_PLAN.md)) | Everyone | `/queue-screen` |
 | Consultation fees — one per doctor; doctors without one use `BILLING_DEFAULT_FEE` ([details](docs/BILLING_PLAN.md)) | Admin | `/admin/fees` |
 | Bills at the front desk — a bill per visit, made at check-in with the doctor's fee; extra items and a discount; payment by cash, card or UPI; PDF receipt; a paid visit that is cancelled (e.g. by the doctor's leave) is marked "refund due" and the refund recorded ([details](docs/BILLING_PLAN.md)) | Receptionist, Admin | `/bills`, `/admin/bills`, **Bill** in the appointment list |
+| Patients' bills — each visit's bill with its receipt, for the patient and their family members ([details](docs/PATIENT_BILLS_PLAN.md)); **paid online** with Razorpay (UPI, cards, net banking) after check-in; a payment that comes too late is refunded automatically; the desk refunds a cancelled visit paid online with one click ([details](docs/ONLINE_PAYMENT_PLAN.md), set-up below) | Patient, Receptionist | My appointments → **Bill**, My account → **Bills** |
 
 Medical records (consultations, prescriptions) are visible only to the patient, their doctor(s) and admins — receptionists cannot read them.
 
@@ -300,6 +306,7 @@ The database schema is owned by the migration scripts in `hospitalERP/app/src/ma
 | `patients/V2026_10_08_1__patients_walk_in.sql` | Makes `patient.email` optional and adds `patient.created_at`, for walk-in patients registered at the front desk without a login ([walk-in registration](docs/WALK_IN_REGISTRATION_PLAN.md)). |
 | `appointments/V2026_10_11_1__appointments_queue.sql` | Adds `appointments.checked_in_at`, `token_number` and `called_at` (all empty for existing appointments), for today's queue: check-in at the front desk, tokens, the doctor calling the next patient ([today's queue](docs/TODAYS_QUEUE_PLAN.md)). |
 | `billing/V2026_10_12_1__billing.sql` | Creates the empty `doctor_fees`, `bills` and `bill_items` tables ([billing](docs/BILLING_PLAN.md)). |
+| `billing/V2026_10_15_1__online_payments.sql` | Creates the empty `online_payments` table: the Razorpay orders made for bills, with their payment or refund ([online payment](docs/ONLINE_PAYMENT_PLAN.md)). |
 
 **Changing the schema:** add a new file to the owning module's folder, e.g. `db/migration/appointments/V2026_10_05_1__appointments_add_room.sql`, with the next date-based version. Never edit a migration that has already run anywhere — Flyway checks their checksums and refuses to start. Hibernate then validates the entities against the result, so an entity change without a migration stops the app with a clear "Schema-validation" message.
 
@@ -322,6 +329,25 @@ If it stops with `Schema-validation: missing column / wrong column type …`, yo
 The migrations are tested on a real MySQL 8 in `DatabaseMigrationMySqlTest` (an upgrade of a pre-Flyway database with data, and a fresh install giving the identical schema). It needs Docker and is skipped without it; CI runs it.
 
 ---
+
+## Online payment (Razorpay)
+
+Patients can pay an unpaid bill online from **My appointments** (Bill) or **My account** (Pay online). The payment window is Razorpay Checkout, so card and UPI details never reach this server. Online payment is **off** until both keys are set; without them, patients pay at the desk as before. Details: [docs/ONLINE_PAYMENT_PLAN.md](docs/ONLINE_PAYMENT_PLAN.md).
+
+**Trying it without real money (test mode):**
+1. Create a Razorpay account and stay in **Test Mode**. Under **Account & Settings → API Keys**, generate a test key.
+2. Put the key id (`rzp_test_…`) and the key secret in your `.env` as `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`. Never commit them. Then restart the backend.
+3. Check a patient in at the front desk, so their visit has a bill. Log in as that patient: the unpaid bill shows **Pay ₹… online**.
+4. In Checkout, use one of Razorpay's test cards or test UPI ids (Razorpay's docs: "Test Card Details"). The bill turns **Paid** and the receipt can be downloaded.
+
+**Webhook (recommended in production):** if a patient's phone loses the connection right after paying, Razorpay's webhook still marks the bill paid. Set it up as follows:
+1. In the dashboard, under **Webhooks**, add `https://<your-server>/api/payments/razorpay/webhook`.
+2. Choose the event `payment.captured` and choose a secret.
+3. Put that secret in `RAZORPAY_WEBHOOK_SECRET`.
+
+Razorpay must be able to reach the URL. On a laptop that needs a tunnel; without the webhook, the app's own confirmation still works.
+
+**Going live:** complete Razorpay's activation (KYC), then generate live keys and put them in the server's `.env`.
 
 ## Backups
 
@@ -504,6 +530,8 @@ npm test        # Run tests
 | `TWILIO_ACCOUNT_SID` | No* | Twilio Account SID |
 | `TWILIO_AUTH_TOKEN` | No* | Twilio Auth Token |
 | `TWILIO_TRIAL_NUMBER` | No* | Twilio phone number for sending SMS |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | No | Razorpay API keys; online payment is off while either is empty |
+| `RAZORPAY_WEBHOOK_SECRET` | No | Secret of the Razorpay webhook (`/api/payments/razorpay/webhook`); without it the webhook is refused |
 
 \* Required only if using OTP verification on registration.
 

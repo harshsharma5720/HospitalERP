@@ -37,13 +37,15 @@ public class BillDeskService {
     private static final Pattern BILL_NUMBER = Pattern.compile("(?i)B-\\d{4}-\\d+");
 
     private final BillRepository billRepository;
+    private final OnlinePaymentRepository onlinePayments;
     private final ReceiptPdfService receiptPdfService;
     private final CurrentUserService currentUserService;
     private final Clock clock;
 
-    public BillDeskService(BillRepository billRepository, ReceiptPdfService receiptPdfService,
-                           CurrentUserService currentUserService, Clock clock) {
+    public BillDeskService(BillRepository billRepository, OnlinePaymentRepository onlinePayments,
+                           ReceiptPdfService receiptPdfService, CurrentUserService currentUserService, Clock clock) {
         this.billRepository = billRepository;
+        this.onlinePayments = onlinePayments;
         this.receiptPdfService = receiptPdfService;
         this.currentUserService = currentUserService;
         this.clock = clock;
@@ -84,13 +86,13 @@ public class BillDeskService {
 
     @Transactional(readOnly = true)
     public BillDTO get(long billId) {
-        return BillDTO.of(find(billId));
+        return dto(find(billId));
     }
 
     /** The bill of a visit (made at check-in); 404 when it has none yet. */
     @Transactional(readOnly = true)
     public BillDTO forAppointment(long appointmentId) {
-        return billRepository.findByAppointmentId(appointmentId).map(BillDTO::of)
+        return billRepository.findByAppointmentId(appointmentId).map(this::dto)
                 .orElseThrow(() -> new ResourceNotFoundException("Bill", "appointmentId", appointmentId));
     }
 
@@ -107,7 +109,7 @@ public class BillDeskService {
             throw new BadRequestException("The amount must be more than 0");
         }
         bill.addItem(text, money, false);
-        return BillDTO.of(billRepository.saveAndFlush(bill));
+        return dto(billRepository.saveAndFlush(bill));
     }
 
     /** Removes an extra line from an unpaid bill; the consultation fee stays (give a discount instead). */
@@ -123,7 +125,7 @@ public class BillDeskService {
         if (bill.getDiscount().compareTo(bill.subtotal()) > 0) {
             bill.setDiscount(bill.subtotal()); // never more than the bill
         }
-        return BillDTO.of(billRepository.saveAndFlush(bill));
+        return dto(billRepository.saveAndFlush(bill));
     }
 
     /** The discount on an unpaid bill: 0 up to the bill's subtotal. */
@@ -135,13 +137,13 @@ public class BillDeskService {
             throw new BadRequestException("The discount can't be more than the bill (Rs. " + bill.subtotal() + ")");
         }
         bill.setDiscount(money);
-        return BillDTO.of(billRepository.saveAndFlush(bill));
+        return dto(billRepository.saveAndFlush(bill));
     }
 
     /** The patient paid at the desk: cash, card or UPI, with an optional reference (e.g. the UPI transaction id). */
     @Transactional
     public BillDTO pay(long billId, String method, String reference) {
-        Bill bill = find(billId);
+        Bill bill = locked(billId);
         if (bill.getStatus() != BillStatus.UNPAID) {
             throw new ConflictException("This bill is " + label(bill.getStatus()) + "; it can't be paid");
         }
@@ -151,13 +153,13 @@ public class BillDeskService {
         bill.setPaidBy(currentUserService.getCurrentUser().getUsername());
         bill.setStatus(BillStatus.PAID);
         logger.info("Bill {} paid: {} by {}", bill.getBillNumber(), bill.total(), bill.getPaymentMethod());
-        return BillDTO.of(billRepository.saveAndFlush(bill));
+        return dto(billRepository.saveAndFlush(bill));
     }
 
     /** The money of a cancelled, paid visit was given back. */
     @Transactional
     public BillDTO refund(long billId, String method, String reference) {
-        Bill bill = find(billId);
+        Bill bill = locked(billId);
         if (bill.getStatus() != BillStatus.REFUND_DUE) {
             throw new ConflictException("Only a bill due for refund can be refunded; this one is " + label(bill.getStatus()));
         }
@@ -167,7 +169,7 @@ public class BillDeskService {
         bill.setRefundedBy(currentUserService.getCurrentUser().getUsername());
         bill.setStatus(BillStatus.REFUNDED);
         logger.info("Bill {} refunded: {} by {}", bill.getBillNumber(), bill.total(), bill.getRefundMethod());
-        return BillDTO.of(billRepository.saveAndFlush(bill));
+        return dto(billRepository.saveAndFlush(bill));
     }
 
     /** The receipt of a paid bill (also once due for refund, or refunded). */
@@ -190,12 +192,23 @@ public class BillDeskService {
         return find(billId).getBillNumber();
     }
 
+    // The bill with the online payments that couldn't pay it (docs/ONLINE_PAYMENT_PLAN.md)
+    private BillDTO dto(Bill bill) {
+        return BillDTO.of(bill, onlinePayments.findByBillIdAndStatusInOrderById(bill.getId(), List.of(
+                OnlinePaymentStatus.REFUNDING, OnlinePaymentStatus.REFUNDED, OnlinePaymentStatus.REFUND_FAILED)));
+    }
+
     private Bill find(long billId) {
         return billRepository.findById(billId).orElseThrow(() -> new ResourceNotFoundException("Bill", "id", billId));
     }
 
+    // For a change: an online payment may be applied to the same bill meanwhile (OnlinePaymentService)
+    private Bill locked(long billId) {
+        return billRepository.findByIdForUpdate(billId).orElseThrow(() -> new ResourceNotFoundException("Bill", "id", billId));
+    }
+
     private Bill unpaid(long billId) {
-        Bill bill = find(billId);
+        Bill bill = locked(billId);
         if (bill.getStatus() != BillStatus.UNPAID) {
             throw new ConflictException("This bill is " + label(bill.getStatus()) + "; it can't be changed");
         }
@@ -217,12 +230,17 @@ public class BillDeskService {
         }
     }
 
+    // At the desk: cash, card or UPI; ONLINE is only for payments made in the app (OnlinePaymentService)
     private static PaymentMethod methodOf(String method) {
         try {
-            return PaymentMethod.valueOf(method == null ? "" : method.trim().toUpperCase(Locale.ROOT));
+            PaymentMethod chosen = PaymentMethod.valueOf(method == null ? "" : method.trim().toUpperCase(Locale.ROOT));
+            if (chosen != PaymentMethod.ONLINE) {
+                return chosen;
+            }
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Please choose how the money was paid: CASH, CARD or UPI");
+            // the message below
         }
+        throw new BadRequestException("Please choose how the money was paid: CASH, CARD or UPI");
     }
 
     private static String referenceOf(String reference) {

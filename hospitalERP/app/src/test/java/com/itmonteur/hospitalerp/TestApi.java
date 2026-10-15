@@ -129,6 +129,25 @@ final class TestApi {
         return ids;
     }
 
+    /** The free slots of a doctor from {@link #doctorWithSchedule} tomorrow; {@code shift}: MORNING or EVENING. */
+    JsonNode freeSlotsTomorrow(String token, long doctorId, String shift) throws Exception {
+        return get(token, "/api/slots/available/" + doctorId + "?date=" + LocalDate.now().plusDays(1) + "&shift=" + shift);
+    }
+
+    /**
+     * A patient's own booking (or for a family member: {@code relativeId}) of a slot from {@link #freeSlotsTomorrow},
+     * then moved to today in the database so the front desk can check it in. Returns the appointment id.
+     */
+    long bookedForToday(String patient, long slotId, Long relativeId, JdbcTemplate jdbc) throws Exception {
+        ResponseEntity<String> booked = call(HttpMethod.POST, "/appointment/NewAppointment", patient,
+                "{\"slotId\":" + slotId + (relativeId == null ? "" : ",\"relativeId\":" + relativeId) + "}");
+        assertThat(booked.getStatusCode()).as(booked.getBody()).isEqualTo(HttpStatus.OK);
+        long appointmentId = json.readTree(booked.getBody()).get("appointmentID").asLong();
+        jdbc.update("UPDATE slots SET date = ? WHERE id = ?", LocalDate.now(), slotId);
+        jdbc.update("UPDATE appointments SET date = ? WHERE appointmentid = ?", LocalDate.now(), appointmentId);
+        return appointmentId;
+    }
+
     private static String scheduleEntry(DayOfWeek day, String shift, String hours) {
         String start = "{\"dayOfWeek\":\"" + day + "\",\"shift\":\"" + shift + "\",";
         if (hours == null) {

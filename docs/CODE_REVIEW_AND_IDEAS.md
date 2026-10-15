@@ -439,9 +439,9 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ---
 
-## 11. Feature Status (updated 2026-10-13)
+## 11. Feature Status (updated 2026-10-15)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15) and patients' bills (branch `feature/patient-bills`).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15), patients' bills (PR #16) and online payment (branch `feature/online-payment`).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
@@ -454,8 +454,9 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 - **Walk-in registration at the front desk:** found by phone or registered without a login, and booked in one step (2026-10-08, see below).
 - **Patient search and paged front-desk lists:** one search box (name, phone or patient ID), a patient's page, and the front-desk appointment list with filters (2026-10-11, see below).
 - **Today's queue:** check-in and tokens at the front desk, the doctor's queue with Call next, and a waiting-room screen (2026-10-12, see below).
-- **Billing at the front desk:** fees per doctor, a bill per visit made at check-in, payments and refunds at the desk, PDF receipts (2026-10-12, see below). Online payment is still open.
+- **Billing at the front desk:** fees per doctor, a bill per visit made at check-in, payments and refunds at the desk, PDF receipts (2026-10-12, see below).
 - **Patients' bills in the app:** each visit's bill in My appointments and a Bills list in My account, with the PDF receipt (2026-10-13, see below).
+- **Online payment with Razorpay:** patients pay an unpaid bill in the app; a webhook as a safety net; late payments refunded automatically; the desk refunds a cancelled visit paid online (2026-10-15, see below).
 
 **Partly done**
 - **Paged lists:** patients and the front-desk appointments are paged; the admin users list and the doctor portal's lists still load everything.
@@ -483,7 +484,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 15 | Lab report upload, served only to authorised users | clinical | 3 days |
 | 16 | Doctor ratings and feedback (the stars on the doctor page are only decoration) | patients | 2 days |
 | 17 | Departments table instead of the fixed specialist list | admin | 2 days |
-| 18 | Billing: invoices, ~~PDF receipt, refunds on doctor leave~~ ✅ first version done 2026-10-12 (bills, payment at the desk, receipts, refunds); still open: **online payment (Razorpay)** | ERP | 3–5 days for Razorpay |
+| 18 | ~~Billing: invoices, PDF receipt, refunds on doctor leave, online payment (Razorpay)~~ ✅ done 2026-10-12 (bills, payment at the desk, receipts, refunds) and 2026-10-15 (online payment) | ERP | — |
 | 19 | Pharmacy / inventory, lab management, in-patient wards, HR and payroll, supply chain | ERP | weeks each |
 | 20 | Hindi language option | platform | 3–4 days |
 | 21 | Telemedicine (video consultation link) | platform | 3–5 days |
@@ -492,7 +493,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** the smaller ones: the cancellation cut-off rule (9) and doctor analytics (8 — the queue now records when patients arrive and are called in, billing what visits earned); then online payment (18) or safer login tokens (3). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
+**Suggested order:** the smaller ones: the cancellation cut-off rule (9) and doctor analytics (8 — the queue now records when patients arrive and are called in, billing what visits earned); then safer login tokens (3). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
 
 ### Account deactivation (done 2026-10-01)
 
@@ -680,7 +681,7 @@ From idea #18 above (first version: payment at the desk; online payment later). 
 **Tests:** end-to-end HTTP tests (fees; bills made, cancelled, reopened and marked for refund by the queue, the front desk and a doctor's leave; items, discount, payment, refund, receipt, the list's filters, access), the receipt PDF read back as text, the MySQL migration test, and frontend tests for the three pages; mutation checks for each. On the way they found two timing bugs (two queue calls within one clock tick; an outbox message rounded into the future) and a dashboard test that depended on other tests' data — all fixed.
 
 **Not covered yet:**
-- **Online payment (Razorpay)** — the rest of idea #18.
+- ~~**Online payment (Razorpay)** — the rest of idea #18~~ — done 2026-10-15, see Online payment below.
 - A click-through against the real database.
 - No daily cash summary yet (what was taken by cash / card / UPI per day).
 - ~~Patients don't see their bills in the app~~ — done 2026-10-13, see Patient bills below.
@@ -744,6 +745,35 @@ Billing gave every visit a bill and a PDF receipt, but only the front desk could
 - Mutation checks for each step; screenshots in light and dark mode and on a phone.
 
 **Not covered yet:**
-- Paying online (Razorpay, idea #18); patients still pay at the desk.
+- ~~Paying online (Razorpay, idea #18)~~ — done, see below.
 - A click-through against the running app.
+
+### Online payment (done 2026-10-15)
+
+The rest of idea #18. Patients could see their bills in the app but still had to queue at the desk to pay. Decisions, design and steps: [ONLINE_PAYMENT_PLAN.md](ONLINE_PAYMENT_PLAN.md).
+
+**What it does**
+- **Pay online:** after check-in, an unpaid bill (₹1 or more) has **Pay ₹… online**, in the bill window and in My account. It opens **Razorpay Checkout** (UPI, cards, net banking, wallets), so card and UPI details never reach our server.
+- **Confirmation:** the server checks Checkout's signature, fetches the payment from Razorpay, captures it if needed, and marks the bill paid (method "online payment", the Razorpay payment id as reference).
+- **Webhook:** if the patient's phone loses the connection after paying, Razorpay's signed webhook marks the bill paid anyway. Applying a payment is safe to repeat and locks the bill.
+- **Payments that come too late:** when the bill was paid in cash, changed, or the visit was cancelled meanwhile, the payment is refunded at once. The patient is told why, and the desk sees it on the bill. If the automatic refund fails, the desk is told to refund it in the Razorpay dashboard.
+- **Refund at the desk:** a cancelled visit paid online gets **Refund ₹… online**, so the money goes back to the account it came from.
+- **Off until configured:** online payment stays off until `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` are set. Test keys take no real money. How to try it, and how to set up the webhook: README, "Online payment (Razorpay)".
+- **Database:** `online_payments` (Flyway `billing/V2026_10_15_1__online_payments.sql`).
+
+**Tests:**
+- Backend:
+  - unit tests for the signatures and for the Razorpay client against a local HTTP server;
+  - end-to-end tests against a fake Razorpay: paying, capturing, failed payments, the webhook, payments refunded because the bill changed, was paid or was cancelled, a failing refund, the desk's online refund, and other patients and roles refused;
+  - the migration on a real MySQL 8;
+  - 192 backend tests.
+- Frontend: Checkout played by a fake; 241 tests.
+- Mutation checks for every step; screenshots in light and dark mode and on a phone.
+
+**Found on the way:** the backend mutation script ran Maven in WSL's bash, where it found no Java. Every run failed before testing, so the checks reported "killed" without proof; that includes the patient-bills checks of 2026-10-13. The script now uses Git Bash, runs a baseline first, and counts only a named failing test. All checks were run again that way, and all were caught.
+
+**Not covered yet:**
+- A real test payment with Razorpay test keys. Needs a Razorpay account; steps in the README.
+- The webhook needs a public address; on a laptop that means a tunnel.
+- Paying when booking (prepaying) was left out on purpose.
 

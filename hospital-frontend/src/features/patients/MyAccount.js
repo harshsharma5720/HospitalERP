@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarCheck, CalendarPlus, Download, Receipt, UserPlus, Users } from "lucide-react";
+import { CalendarCheck, CalendarPlus, CreditCard, Download, Receipt, UserPlus, Users } from "lucide-react";
 import useAuthStore from "../auth/useAuthStore";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import { calculateAgeFromDOB } from "../../shared/utils/calculateAgeFromDOB";
@@ -15,6 +15,7 @@ import { getMyBills, getMyReceiptPdf } from "../billing/api";
 import { BillStatusBadge, hasReceipt } from "../billing/billFormat";
 import { downloadReceipt } from "../billing/downloadReceipt";
 import MyBillDialog from "../billing/MyBillDialog";
+import useOnlinePayment from "../billing/useOnlinePayment";
 import * as patientsApi from "./api";
 
 // The patient's account (docs/PATIENT_AREA_REFRESH_PLAN.md, P.4): their details, their family members (who they
@@ -47,8 +48,9 @@ const isUpcoming = (a, today) => (a.status === "SCHEDULED" || a.status === "CONF
 // Bills shown before "Show all"
 const FIRST_BILLS = 5;
 
-// The bills, newest first (as the server sends them), and what is still to pay at the desk
-function Bills({ bills, onOpen, onReceipt }) {
+// The bills, newest first (as the server sends them), and what is still to pay: at the desk, or online when the bill
+// has payOnline (docs/ONLINE_PAYMENT_PLAN.md)
+function Bills({ bills, onOpen, onReceipt, onPay }) {
   const [all, setAll] = useState(false);
   const unpaid = (bills || []).filter((b) => b.status === "UNPAID");
   const shown = all ? bills : (bills || []).slice(0, FIRST_BILLS);
@@ -64,8 +66,10 @@ function Bills({ bills, onOpen, onReceipt }) {
       )}
       {unpaid.length > 0 && (
         <p className="mb-4 rounded-lg bg-warning-ink/10 p-3 text-sm font-medium text-warning-ink">
-          To pay at the front desk: {formatRupees(unpaid.reduce((sum, b) => sum + Number(b.total), 0))}
+          {unpaid.some((b) => b.payOnline) ? "Still to pay: " : "To pay at the front desk: "}
+          {formatRupees(unpaid.reduce((sum, b) => sum + Number(b.total), 0))}
           {unpaid.length > 1 && ` (${unpaid.length} bills)`}
+          {unpaid.some((b) => b.payOnline) && ". Pay online here, or at the front desk."}
         </p>
       )}
       {bills?.length > 0 && (
@@ -84,6 +88,12 @@ function Bills({ bills, onOpen, onReceipt }) {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium tabular-nums">{formatRupees(bill.total)}</span>
                 <BillStatusBadge status={bill.status} />
+                {bill.payOnline && (
+                  <Button size="sm" onClick={() => onPay(bill)} aria-label={`Pay bill ${bill.billNumber} online`}>
+                    <CreditCard size={16} aria-hidden="true" />
+                    Pay online
+                  </Button>
+                )}
                 <Button size="sm" variant="secondary" onClick={() => onOpen(bill)} aria-label={`View bill ${bill.billNumber}`}>
                   View
                 </Button>
@@ -118,6 +128,25 @@ export default function MyAccount() {
   // null while loading, false when they couldn't be loaded
   const [bills, setBills] = useState(null);
   const [openBill, setOpenBill] = useState(null);
+  // After an online payment: the paid bill in place, or all bills again when it couldn't be applied
+  const payment = useOnlinePayment({
+    onPaid: (paid) => {
+      setBills((list) => (list || []).map((b) => (b.id === paid.id ? paid : b)));
+      setOpenBill((open) => (open?.id === paid.id ? paid : open));
+    },
+    onStale: () =>
+      getMyBills()
+        .then((res) => {
+          setBills(res.data);
+          setOpenBill((open) => (open && res.data.find((b) => b.id === open.id)) || open);
+        })
+        .catch(() => {}),
+  });
+  // Pay online from the list: the bill opens, so the outcome shows with it
+  const payOnline = (bill) => {
+    setOpenBill(bill);
+    payment.pay(bill);
+  };
 
   const load = useCallback(async () => {
     setError("");
@@ -252,7 +281,7 @@ export default function MyAccount() {
             )}
           </Card>
 
-          <Bills bills={bills} onOpen={setOpenBill} onReceipt={saveReceipt} />
+          <Bills bills={bills} onOpen={setOpenBill} onReceipt={saveReceipt} onPay={payOnline} />
         </div>
 
         <aside className="min-w-0 lg:self-start">
@@ -287,7 +316,16 @@ export default function MyAccount() {
           </Card>
         </aside>
       </div>
-      {openBill && <MyBillDialog bill={openBill} onClose={() => setOpenBill(null)} onReceipt={saveReceipt} />}
+      {openBill && (
+        <MyBillDialog
+          bill={openBill}
+          onClose={() => setOpenBill(null)}
+          onReceipt={saveReceipt}
+          onPay={payment.pay}
+          paying={payment.paying === openBill.id}
+          error={payment.errorFor(openBill.id)}
+        />
+      )}
     </PublicPage>
   );
 }

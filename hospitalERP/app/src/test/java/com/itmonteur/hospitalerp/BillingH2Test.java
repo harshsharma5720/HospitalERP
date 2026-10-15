@@ -414,20 +414,12 @@ class BillingH2Test {
 
     private static final String MY_BILLS = "/api/bills/my";
 
-    // A patient's own booking (or for a family member) with a doctor from TestApi.doctorWithSchedule: booked for
-    // tomorrow, then moved to today in the database so the front desk can check it in
     private long bookedForToday(String patient, long slotId, Long relativeId) throws Exception {
-        ResponseEntity<String> booked = api.call(HttpMethod.POST, "/appointment/NewAppointment", patient,
-                "{\"slotId\":" + slotId + (relativeId == null ? "" : ",\"relativeId\":" + relativeId) + "}");
-        assertThat(booked.getStatusCode()).as(booked.getBody()).isEqualTo(HttpStatus.OK);
-        long appointmentId = json.readTree(booked.getBody()).get("appointmentID").asLong();
-        jdbc.update("UPDATE slots SET date = ? WHERE id = ?", LocalDate.now(), slotId);
-        jdbc.update("UPDATE appointments SET date = ? WHERE appointmentid = ?", LocalDate.now(), appointmentId);
-        return appointmentId;
+        return api.bookedForToday(patient, slotId, relativeId, jdbc);
     }
 
     private JsonNode freeSlots(String token, long doctorId, String shift) throws Exception {
-        return api.get(token, "/api/slots/available/" + doctorId + "?date=" + LocalDate.now().plusDays(1) + "&shift=" + shift);
+        return api.freeSlotsTomorrow(token, doctorId, shift);
     }
 
     private static List<Long> ids(JsonNode bills) {
@@ -472,6 +464,9 @@ class BillingH2Test {
         assertThat(sonsUnpaid.get("patientName").asText()).isEqualTo("Little Billy");
         assertThat(sonsUnpaid.get("appointmentId").asLong()).isEqualTo(sons);
         assertThat(sonsUnpaid.get("status").asText()).isEqualTo("UNPAID");
+        assertThat(sonsUnpaid.get("payOnline").asBoolean()).as("no Razorpay keys here").isFalse();
+        assertThat(api.call(HttpMethod.POST, MY_BILLS + "/" + sonsBill + "/online-payment", patient, null).getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT);
         JsonNode paid = mine.get(1);
         assertThat(paid.get("appointmentId").asLong()).isEqualTo(own);
         assertThat(paid.get("billNumber").asText()).startsWith("B-");

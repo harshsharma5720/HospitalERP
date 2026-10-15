@@ -53,7 +53,7 @@ Every visit now has a **bill**: made when the patient checks in, with the doctor
 **When merging:** the migration `billing/V2026_10_12_1__billing.sql` creates three empty tables on the next start (Flyway). For the real database, follow the [MySQL runbook](MYSQL_FLYWAY_UPGRADE.md) (copy first). Optionally set `BILLING_DEFAULT_FEE`. Then click through once: as admin, **Fees** → set a doctor's fee; as the front desk, **Appointments** → today → **Check in** → **Bill** → add an item, give a discount → **Record payment** (UPI with a reference) → **Download receipt**; cancel that visit → the bill says **Refund due** → **Record refund**.
 
 **Possible follow-ups:**
-- Online payment with Razorpay (patients paying in the app; a webhook marks the bill paid).
+- ~~Online payment with Razorpay (patients paying in the app; a webhook marks the bill paid).~~ Done 2026-10-15 ([ONLINE_PAYMENT_PLAN.md](ONLINE_PAYMENT_PLAN.md)).
 - A daily cash summary for the front desk (cash / card / UPI per day, refunds) — and bill figures on the admin dashboard.
 - ~~Patients seeing their bills and receipts in the app.~~ Done 2026-10-13 ([PATIENT_BILLS_PLAN.md](PATIENT_BILLS_PLAN.md)).
 - GST, if the hospital ever bills taxable services (consultations are exempt).

@@ -31,6 +31,10 @@ export const payBill = (billId, payment) => axios.post(`${BILLS}/${billId}/pay`,
 // A cancelled visit's money given back: { method, reference }
 export const refundBill = (billId, refund) => axios.post(`${BILLS}/${billId}/refund`, refund);
 
+// A cancelled visit paid online (paymentMethod ONLINE): refunded through Razorpay to the account it came from
+// (docs/ONLINE_PAYMENT_PLAN.md)
+export const refundBillOnline = (billId) => axios.post(`${BILLS}/${billId}/refund-online`);
+
 export const getReceiptPdf = (billId) => axios.get(`${BILLS}/${billId}/receipt.pdf`, { responseType: "blob" });
 
 // ---- The logged-in patient's own bills: their visits' and their family members', newest first, cancelled ones left
@@ -40,3 +44,10 @@ const MY_BILLS = `${API_BASE_URL}/api/bills/my`;
 export const getMyBills = () => axios.get(MY_BILLS);
 
 export const getMyReceiptPdf = (billId) => axios.get(`${MY_BILLS}/${billId}/receipt.pdf`, { responseType: "blob" });
+
+// Paying one of them online (docs/ONLINE_PAYMENT_PLAN.md; bills have payOnline). First the Razorpay order for Checkout:
+// { keyId, orderId, amount (paise), currency, name, description, prefill: { name, email, contact } }; then Checkout's
+// answer { orderId, paymentId, signature } → the paid bill (409 with the reason when it couldn't be applied).
+export const startOnlinePayment = (billId) => axios.post(`${MY_BILLS}/${billId}/online-payment`);
+
+export const confirmOnlinePayment = (billId, answer) => axios.post(`${MY_BILLS}/${billId}/online-payment/confirm`, answer);

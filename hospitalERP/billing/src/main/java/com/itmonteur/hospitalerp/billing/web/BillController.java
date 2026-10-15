@@ -2,6 +2,7 @@ package com.itmonteur.hospitalerp.billing.web;
 
 import com.itmonteur.hospitalerp.billing.internal.BillDTO;
 import com.itmonteur.hospitalerp.billing.internal.BillDeskService;
+import com.itmonteur.hospitalerp.billing.internal.OnlinePaymentService;
 import com.itmonteur.hospitalerp.billing.internal.BillSummaryDTO;
 import com.itmonteur.hospitalerp.common.PageResult;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -33,9 +34,11 @@ public class BillController {
     }
 
     private final BillDeskService billDeskService;
+    private final OnlinePaymentService onlinePaymentService;
 
-    public BillController(BillDeskService billDeskService) {
+    public BillController(BillDeskService billDeskService, OnlinePaymentService onlinePaymentService) {
         this.billDeskService = billDeskService;
+        this.onlinePaymentService = onlinePaymentService;
     }
 
     // Newest first; every filter optional. patient: part of the name, or a bill number
@@ -84,6 +87,12 @@ public class BillController {
     @PostMapping("/{billId}/refund")
     public ResponseEntity<BillDTO> refund(@PathVariable long billId, @RequestBody PaymentRequest request) {
         return ResponseEntity.ok(billDeskService.refund(billId, request.method(), request.reference()));
+    }
+
+    // A cancelled visit paid online: refunded through Razorpay (docs/ONLINE_PAYMENT_PLAN.md)
+    @PostMapping("/{billId}/refund-online")
+    public ResponseEntity<BillDTO> refundOnline(@PathVariable long billId) {
+        return ResponseEntity.ok(onlinePaymentService.refundOnline(billId));
     }
 
     @GetMapping(value = "/{billId}/receipt.pdf", produces = MediaType.APPLICATION_PDF_VALUE)

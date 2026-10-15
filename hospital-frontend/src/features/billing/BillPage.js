@@ -7,12 +7,32 @@ import { formatDate } from "../appointments/appointmentFormat";
 import { BillStatusBadge, PAYMENT_METHODS, formatDateTime, hasReceipt, methodLabel, referenceNote } from "./billFormat";
 import { downloadReceipt } from "./downloadReceipt";
 import * as billingApi from "./api";
-import { Download } from "lucide-react";
+import { Download, Undo2 } from "lucide-react";
 import { Button, Card, CardHeader, Field, Input, Notice, PageHeader } from "../../shared/ui";
 
 // One bill at the front desk (docs/BILLING_PLAN.md): its lines, extra items and a discount while unpaid, the payment
 // (cash, card or UPI), the refund of a cancelled paid visit, and the receipt. /bills/:billId, or
-// /bills/visit/:appointmentId from the appointment list; under /admin for admins.
+// /bills/visit/:appointmentId from the appointment list; under /admin for admins. A bill the patient paid online is
+// refunded online, and online payments that came too late are listed (docs/ONLINE_PAYMENT_PLAN.md).
+
+const lowerFirst = (text) => (text ? text.charAt(0).toLowerCase() + text.slice(1) : "");
+
+// An online payment that couldn't pay this bill (it was paid, changed or cancelled meanwhile) and was given back
+function UnappliedPayment({ payment }) {
+  const what = `An online payment of ${formatRupees(payment.amount)} (${payment.paymentId}) on ${formatDateTime(payment.createdAt)} couldn't be applied: ${lowerFirst(payment.note)}.`;
+  if (payment.status === "REFUND_FAILED") {
+    return (
+      <Notice tone="danger" className="mb-4">
+        {what} Its automatic refund failed: refund it from the Razorpay dashboard.
+      </Notice>
+    );
+  }
+  return (
+    <Notice tone="info" className="mb-4">
+      {what} {payment.status === "REFUNDED" ? `It was refunded automatically (refund ${payment.refundId}).` : "It is being refunded."}
+    </Notice>
+  );
+}
 
 
 // Cash, card or UPI and an optional reference; used for the payment and for the refund
@@ -179,6 +199,9 @@ export default function BillPage() {
 
       <Notice tone="success" className="mb-4">{notice}</Notice>
       <Notice tone="danger" className="mb-4">{error}</Notice>
+      {(bill.unappliedPayments ?? []).map((payment) => (
+        <UnappliedPayment key={payment.paymentId} payment={payment} />
+      ))}
 
       <div className="grid items-start gap-5 lg:grid-cols-5">
         <Card aria-labelledby="bill-lines" className="lg:col-span-3">
@@ -302,6 +325,21 @@ export default function BillPage() {
           {bill.status === "REFUND_DUE" && (
             <div className="mt-4 rounded-lg border border-danger-ink/30 bg-danger-ink/5 p-4">
               <p className="mb-3 font-semibold text-danger-ink">Refund due: {formatRupees(bill.total)}. The visit was cancelled.</p>
+              {bill.paymentMethod === "ONLINE" && (
+                <>
+                  <p className="mb-3 text-sm">Paid online: the refund goes back to the account the patient paid from (5-7 working days).</p>
+                  <Button
+                    disabled={busy}
+                    onClick={() =>
+                      run(() => billingApi.refundBillOnline(bill.id), (b) => `Refunded online: ${formatRupees(b.total)} (${b.refundReference}).`)
+                    }
+                  >
+                    <Undo2 size={16} aria-hidden="true" />
+                    Refund {formatRupees(bill.total)} online
+                  </Button>
+                  <p className="mb-2 mt-4 text-sm text-ink-muted">Or record a refund given at the desk:</p>
+                </>
+              )}
               <MoneyForm
                 idPrefix="refund"
                 action={`Record refund of ${formatRupees(bill.total)}`}

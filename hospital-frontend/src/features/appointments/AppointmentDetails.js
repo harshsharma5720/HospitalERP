@@ -12,6 +12,7 @@ import { getMyBills, getMyReceiptPdf } from "../billing/api";
 import { BillStatusBadge } from "../billing/billFormat";
 import { downloadReceipt } from "../billing/downloadReceipt";
 import MyBillDialog from "../billing/MyBillDialog";
+import useOnlinePayment from "../billing/useOnlinePayment";
 import { formatDate, timeRange, visitStatus } from "./appointmentFormat";
 import * as appointmentsApi from "./api";
 
@@ -24,6 +25,8 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // Compares dates only, so an appointment later today is still upcoming
 const isUpcoming = (a, today) => (a.status === "SCHEDULED" || a.status === "CONFIRMED") && a.date >= today;
 const when = (a) => `${a.date} ${a.startTime ?? ""}`;
+// Bills by the visit (appointment id) they are for
+const byVisit = (bills) => Object.fromEntries(bills.map((b) => [b.appointmentId, b]));
 
 function DateBlock({ date }) {
   const [year, month, day] = date.split("-").map(Number);
@@ -164,6 +167,20 @@ export default function AppointmentDetails() {
   // Bills by appointment id (made at check-in), and the one shown
   const [bills, setBills] = useState({});
   const [openBill, setOpenBill] = useState(null);
+  // After an online payment: the paid bill in place, or all bills again when it couldn't be applied
+  const payment = useOnlinePayment({
+    onPaid: (paid) => {
+      setBills((map) => ({ ...map, [paid.appointmentId]: paid }));
+      setOpenBill((open) => (open?.id === paid.id ? paid : open));
+    },
+    onStale: () =>
+      getMyBills()
+        .then((res) => {
+          setBills(byVisit(res.data));
+          setOpenBill((open) => (open && res.data.find((b) => b.id === open.id)) || open);
+        })
+        .catch(() => {}),
+  });
   const [tab, setTab] = useState("upcoming");
 
   const load = useCallback(async () => {
@@ -175,7 +192,7 @@ export default function AppointmentDetails() {
       // Notes and bills are extras: the appointments show without them
       const [history, myBills] = await Promise.allSettled([getMyHistory(), getMyBills()]);
       setConsultations(history.status === "fulfilled" ? Object.fromEntries(history.value.data.map((c) => [c.appointmentId, c])) : {});
-      setBills(myBills.status === "fulfilled" ? Object.fromEntries(myBills.value.data.map((b) => [b.appointmentId, b])) : {});
+      setBills(myBills.status === "fulfilled" ? byVisit(myBills.value.data) : {});
     } catch (err) {
       setError(getErrorMessage(err, "Could not load your appointments."));
     }
@@ -312,6 +329,9 @@ export default function AppointmentDetails() {
             bill={openBill}
             onClose={() => setOpenBill(null)}
             onReceipt={(bill) => downloadReceipt(() => getMyReceiptPdf(bill.id), bill.billNumber, toast.error)}
+            onPay={payment.pay}
+            paying={payment.paying === openBill.id}
+            error={payment.errorFor(openBill.id)}
           />
         )}
         </div>
