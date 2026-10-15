@@ -304,3 +304,59 @@ test("a bill without payOnline is paid at the desk only", async () => {
   expect(dialog).toHaveTextContent("Please pay ₹600.00 at the front desk.");
   expect(within(dialog).queryByRole("button", { name: /online/ })).not.toBeInTheDocument();
 });
+
+// ---- The cut-off (docs/CANCELLATION_CUTOFF_PLAN.md): the server sends changeableUntil
+
+const pad = (n) => String(n).padStart(2, "0");
+// A Date as the server's local date-time "2026-10-15T08:00:00"
+const localDateTime = (d) => `${toLocalISODate(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+
+test("before the deadline the visit says until when it can be changed; from it, the patient is asked to call", async () => {
+  const start = new Date(Date.now() + 60 * 60 * 1000); // in an hour
+  start.setSeconds(0, 0);
+  const deadline = new Date(start.getTime() - 2 * 60 * 60 * 1000);
+  appointmentsApi.getMyAppointments.mockResolvedValue({
+    data: [
+      visit(21, day(1), "CONFIRMED", { startTime: "10:00:00", changeableUntil: `${day(1)}T08:00:00` }),
+      visit(22, toLocalISODate(start), "CONFIRMED", {
+        startTime: `${pad(start.getHours())}:${pad(start.getMinutes())}:00`, endTime: "23:59:00", changeableUntil: localDateTime(deadline), doctorName: "Sunil Iyer",
+      }),
+    ],
+  });
+  getMyBills.mockResolvedValue({ data: [bill(40, 22, "UNPAID", { visitDate: toLocalISODate(start) })] });
+  renderPage();
+  await screen.findAllByRole("article");
+  const soon = screen.getByRole("article", { name: /with Dr\. Sunil Iyer/ });
+  const later = screen.getByRole("article", { name: /with Dr\. Anita Rao/ });
+
+  expect(later).toHaveTextContent("You can cancel or move it until 08:00 tomorrow.");
+  expect(within(later).getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+  expect(within(later).getByRole("button", { name: "Reschedule" })).toBeInTheDocument();
+
+  expect(soon).toHaveTextContent("Less than 2 hours to go: to cancel or move it, please call +91 92895 20303.");
+  expect(within(soon).getByRole("link", { name: "+91 92895 20303" })).toHaveAttribute("href", "tel:+919289520303");
+  expect(within(soon).queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
+  expect(within(soon).queryByRole("button", { name: "Reschedule" })).not.toBeInTheDocument();
+  expect(soon).not.toHaveTextContent("You can cancel or move it");
+  expect(within(soon).getByRole("button", { name: "Bill B-2026-000040" })).toBeInTheDocument();
+});
+
+test("a visit with no deadline (no cut-off) offers the changes without a hint", async () => {
+  appointmentsApi.getMyAppointments.mockResolvedValue({ data: [visit(23, day(1), "CONFIRMED", { changeableUntil: null })] });
+  renderPage();
+  await screen.findAllByRole("article");
+  expect(cards()[0]).not.toHaveTextContent("You can cancel or move it");
+  expect(within(cards()[0]).getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+});
+
+test("a page left open past the deadline: the server's refusal is shown", async () => {
+  appointmentsApi.getMyAppointments.mockResolvedValue({ data: [visit(24, day(1), "CONFIRMED", { changeableUntil: `${day(1)}T08:00:00` })] });
+  appointmentsApi.cancelAppointment.mockRejectedValue({
+    response: { status: 409, data: { message: "Less than 2 hours to go: this visit can't be cancelled or moved online any more. Please call the hospital at +91 92895 20303." } },
+  });
+  renderPage();
+  await screen.findAllByRole("article");
+  fireEvent.click(within(cards()[0]).getByRole("button", { name: "Cancel" }));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel appointment" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Less than 2 hours to go: this visit can't be cancelled or moved online any more.");
+});

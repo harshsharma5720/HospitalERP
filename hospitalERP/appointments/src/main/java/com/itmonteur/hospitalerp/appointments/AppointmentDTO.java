@@ -27,6 +27,9 @@ public class AppointmentDTO {
     private LocalDateTime checkedInAt; // Read-only: today's queue - arrival, token, called in (docs/TODAYS_QUEUE_PLAN.md)
     private Integer tokenNumber;
     private LocalDateTime calledAt;
+    // Read-only: until when the patient may cancel or move it themselves; null when they can't anyway
+    // (docs/CANCELLATION_CUTOFF_PLAN.md)
+    private LocalDateTime changeableUntil;
 
     public AppointmentDTO() {}
 
@@ -104,4 +107,6 @@ public class AppointmentDTO {
 
     public LocalDateTime getCalledAt() { return calledAt; }
     public void setCalledAt(LocalDateTime calledAt) { this.calledAt = calledAt; }
+    public LocalDateTime getChangeableUntil() { return changeableUntil; }
+    public void setChangeableUntil(LocalDateTime changeableUntil) { this.changeableUntil = changeableUntil; }
 }

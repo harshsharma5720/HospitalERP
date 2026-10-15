@@ -3,6 +3,7 @@ package com.itmonteur.hospitalerp.appointments;
 import java.util.Optional;
 import com.itmonteur.hospitalerp.appointments.internal.AppointmentMapper;
 import com.itmonteur.hospitalerp.common.BadRequestException;
+import com.itmonteur.hospitalerp.common.ConflictException;
 import com.itmonteur.hospitalerp.common.ForbiddenException;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
 import com.itmonteur.hospitalerp.appointments.internal.AppointmentRepository;
@@ -20,11 +21,14 @@ import com.itmonteur.hospitalerp.scheduling.Slot;
 import com.itmonteur.hospitalerp.scheduling.SlotService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.List;
 import java.util.Objects;
@@ -41,11 +45,18 @@ public class AppointmentService {
     private final SlotService slotService;
     private final ApplicationEventPublisher eventPublisher;
     private final CurrentUserService currentUserService;
+    private final Clock clock;
+    // Patients can't cancel or move a visit this many hours before it starts; 0: no cut-off
+    // (docs/CANCELLATION_CUTOFF_PLAN.md)
+    private final int changeCutoffHours;
+    private final String hospitalPhone;
 
     public AppointmentService(AppointmentRepository appointmentRepository, PtInfoService ptInfoService,
                               PtRelativeService ptRelativeService, DoctorService doctorService,
                               SlotService slotService, ApplicationEventPublisher eventPublisher,
-                              CurrentUserService currentUserService) {
+                              CurrentUserService currentUserService, Clock clock,
+                              @Value("${app.appointments.change-cutoff-hours:2}") int changeCutoffHours,
+                              @Value("${app.hospital.phone:}") String hospitalPhone) {
         this.appointmentRepository = appointmentRepository;
         this.ptInfoService = ptInfoService;
         this.ptRelativeService = ptRelativeService;
@@ -53,6 +64,9 @@ public class AppointmentService {
         this.slotService = slotService;
         this.eventPublisher = eventPublisher;
         this.currentUserService = currentUserService;
+        this.clock = clock;
+        this.changeCutoffHours = Math.max(0, changeCutoffHours);
+        this.hospitalPhone = hospitalPhone == null ? "" : hospitalPhone.trim();
     }
 
     // ---------------------------------------------------------------- queries
@@ -70,7 +84,7 @@ public class AppointmentService {
     public AppointmentDTO getAppointmentByID(long appointmentID) {
         Appointment appointment = findAppointment(appointmentID);
         requireCanView(appointment);
-        return AppointmentMapper.toDTO(appointment);
+        return toDTO(appointment);
     }
 
     public List<AppointmentDTO> getAllPatientCompletedAppointments(Long userId) {
@@ -144,7 +158,7 @@ public class AppointmentService {
         // Sent after commit by AppointmentNotificationListener
         eventPublisher.publishEvent(new AppointmentNotificationEvent(
                 AppointmentNotificationEvent.Kind.BOOKED, notificationInfo(saved)));
-        return AppointmentMapper.toDTO(saved);
+        return toDTO(saved);
     }
 
     /** Soft-cancels: the record is kept for history and the slot becomes bookable again. */
@@ -155,6 +169,7 @@ public class AppointmentService {
         if (!appointment.isActive()) {
             throw new BadRequestException("Only upcoming appointments can be cancelled");
         }
+        requireBeforeCutoff(appointment);
         appointment.setStatus(AppointmentStatus.CANCELLED_BY_PATIENT);
         slotService.releaseSlot(appointment.getSlot());
         Appointment saved = appointmentRepository.save(appointment);
@@ -162,7 +177,7 @@ public class AppointmentService {
         eventPublisher.publishEvent(new AppointmentCancelledEvent(appointmentID));
         eventPublisher.publishEvent(new AppointmentNotificationEvent(
                 AppointmentNotificationEvent.Kind.CANCELLED, notificationInfo(saved)));
-        return AppointmentMapper.toDTO(saved);
+        return toDTO(saved);
     }
 
     /** Reschedules (when slotId changes) and/or updates the note and patient details. */
@@ -188,6 +203,7 @@ public class AppointmentService {
 
         Slot oldSlot = appointment.getSlot();
         if (dto.getSlotId() != null && (oldSlot == null || !Objects.equals(oldSlot.getId(), dto.getSlotId()))) {
+            requireBeforeCutoff(appointment); // the reason or the patient's details may still change
             // Book the new slot first; the old one is released only once the new one is secured
             Slot newSlot = slotService.lockAndBook(dto.getSlotId());
             slotService.releaseSlot(oldSlot);
@@ -202,7 +218,7 @@ public class AppointmentService {
             appointment.clearQueueState(); // another time: checked in again on that day
             logger.info("Appointment {} rescheduled to slot {}", appointmentID, newSlot.getId());
         }
-        return AppointmentMapper.toDTO(appointmentRepository.save(appointment));
+        return toDTO(appointmentRepository.save(appointment));
     }
 
     // ---------------------------------------------------------------- doctor views
@@ -411,8 +427,41 @@ public class AppointmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", appointmentID));
     }
 
-    private static List<AppointmentDTO> toDTOs(List<Appointment> appointments) {
-        return appointments.stream().map(AppointmentMapper::toDTO).toList();
+    private List<AppointmentDTO> toDTOs(List<Appointment> appointments) {
+        return appointments.stream().map(this::toDTO).toList();
+    }
+
+    // With the patient's change deadline
+    private AppointmentDTO toDTO(Appointment appointment) {
+        AppointmentDTO dto = AppointmentMapper.toDTO(appointment);
+        dto.setChangeableUntil(changeableUntil(appointment));
+        return dto;
+    }
+
+    /**
+     * Until when a patient may cancel the visit or move it to another time (docs/CANCELLATION_CUTOFF_PLAN.md): its
+     * start (the slot's date and time) minus the cut-off. Null when it can't be changed anyway (cancelled, done) or
+     * there is no cut-off.
+     */
+    LocalDateTime changeableUntil(Appointment appointment) {
+        Slot slot = appointment.getSlot();
+        if (changeCutoffHours == 0 || !appointment.isActive() || slot == null) {
+            return null;
+        }
+        return slot.getDate().atTime(slot.getStartTime()).minusHours(changeCutoffHours);
+    }
+
+    // Patients can't cancel or move a visit from its deadline on; the front desk and admins can
+    private void requireBeforeCutoff(Appointment appointment) {
+        if (currentUserService.isStaff()) {
+            return;
+        }
+        LocalDateTime until = changeableUntil(appointment);
+        if (until != null && !LocalDateTime.now(clock).isBefore(until)) {
+            throw new ConflictException("Less than " + (changeCutoffHours == 1 ? "1 hour" : changeCutoffHours + " hours")
+                    + " to go: this visit can't be cancelled or moved online any more. Please call the hospital"
+                    + (hospitalPhone.isEmpty() ? "." : " at " + hospitalPhone + "."));
+        }
     }
 
     public static NotificationService.AppointmentInfo notificationInfo(Appointment appointment) {

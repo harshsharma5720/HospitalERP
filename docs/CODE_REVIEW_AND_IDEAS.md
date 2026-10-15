@@ -441,7 +441,7 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ## 11. Feature Status (updated 2026-10-15)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15), patients' bills (PR #16) and online payment (branch `feature/online-payment`).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15), patients' bills (PR #16), online payment (PR #17) and the cancellation cut-off (branch `feature/cancellation-cutoff`).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
@@ -457,11 +457,11 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 - **Billing at the front desk:** fees per doctor, a bill per visit made at check-in, payments and refunds at the desk, PDF receipts (2026-10-12, see below).
 - **Patients' bills in the app:** each visit's bill in My appointments and a Bills list in My account, with the PDF receipt (2026-10-13, see below).
 - **Online payment with Razorpay:** patients pay an unpaid bill in the app; a webhook as a safety net; late payments refunded automatically; the desk refunds a cancelled visit paid online (2026-10-15, see below).
+- **Cancellation cut-off:** patients can't cancel or move a visit less than 2 hours before it (configurable); the front desk can (2026-10-15, see below).
 
 **Partly done**
 - **Paged lists:** patients and the front-desk appointments are paged; the admin users list and the doctor portal's lists still load everything.
 - **Doctor dashboard:** real counts of pending and completed appointments, but no analytics (patients per day, no-show rate).
-- **Cancel and reschedule:** both work, but there's no cut-off rule, so a patient can cancel 5 minutes before the appointment.
 
 ### Not implemented yet
 
@@ -475,7 +475,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 6 | In-app notification centre (bell icon) | platform | 3 days |
 | 7 | ~~Real admin dashboard KPIs (replacing the fake chart data)~~ ✅ done 2026-10-07 | admin | — |
 | 8 | Doctor analytics (patients per day, no-show rate, busy hours) | doctor | 2 days |
-| 9 | Cancellation / reschedule cut-off rule | patients | 1 day |
+| 9 | ~~Cancellation / reschedule cut-off rule~~ ✅ done 2026-10-15 | patients | — |
 | 10 | ~~Walk-in patient registration at the front desk~~ ✅ done 2026-10-08 | front desk | — |
 | 11 | ~~Today's queue: check-in, token numbers, live "now serving" screen~~ ✅ done 2026-10-12 | front desk | — |
 | 12 | ~~Patient search (phone / name / ID) and pagination on all lists~~ ✅ done 2026-10-11 (patients and front-desk appointments; the admin users list and the doctor portal's lists not yet) | front desk / platform | — |
@@ -493,7 +493,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** the smaller ones: the cancellation cut-off rule (9) and doctor analytics (8 — the queue now records when patients arrive and are called in, billing what visits earned); then safer login tokens (3). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
+**Suggested order:** doctor analytics (8 — the queue now records when patients arrive and are called in, billing what visits earned); then safer login tokens (3). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
 
 ### Account deactivation (done 2026-10-01)
 
@@ -776,4 +776,21 @@ The rest of idea #18. Patients could see their bills in the app but still had to
 - A real test payment with Razorpay test keys. Needs a Razorpay account; steps in the README.
 - The webhook needs a public address; on a laptop that means a tunnel.
 - Paying when booking (prepaying) was left out on purpose.
+
+### Cancellation cut-off (done 2026-10-15)
+
+From idea #9. Patients could cancel or move a visit up to the last minute, too late for the front desk to give the doctor's time to someone else. Decisions, design and steps: [CANCELLATION_CUTOFF_PLAN.md](CANCELLATION_CUTOFF_PLAN.md).
+
+**What it does**
+- **The rule:** from **2 hours** before a visit starts (`APPOINTMENT_CHANGE_CUTOFF_HOURS`, 0 = no limit), a patient can no longer cancel it or move it to another time. The server refuses with a plain message and the hospital's phone number. Changing only the reason for the visit stays possible.
+- **Who it applies to:** only patients. The front desk and admins can still change any visit; doctors use leave as before.
+- **In My appointments:** an upcoming visit says until when it can be changed ("You can cancel or move it until 08:00 tomorrow"). After that, Cancel / Reschedule give way to "Less than 2 hours to go: to cancel or move it, please call +91 …" with a tap-to-call link.
+
+**Tests:**
+- Backend: unit tests with a frozen clock (the deadline to the minute, moving versus changing the reason, the front desk, a cut-off of 0, the wording); an end-to-end test (a visit in 1 hour refused, in 3 hours allowed, the desk allowed, the deadline in the app's data).
+- Frontend: the hint, the call note, a refusal after the page was left open.
+- Mutation checks for each step; screenshots.
+
+**Not covered yet:**
+- Booking a visit that starts within the cut-off is still allowed (a patient can book a slot 30 minutes ahead), but can then not cancel it online. That is consistent, but worth knowing.
 

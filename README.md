@@ -163,6 +163,9 @@ HOSPITAL_NAME=Shreya Hospital
 HOSPITAL_ADDRESS=12 MG Road, Pune
 HOSPITAL_PHONE=+91 20 5555 1234
 
+# Patients can't cancel or move a visit this many hours before it starts (the front desk can); 0 = no limit — optional
+APPOINTMENT_CHANGE_CUTOFF_HOURS=2
+
 # Consultation fee in rupees for doctors without their own (set per doctor under Admin → Fees) — optional
 BILLING_DEFAULT_FEE=0
 
@@ -265,7 +268,7 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 
 | Feature | Who | Where |
 |---------|-----|-------|
-| Book / reschedule / cancel appointments (also for relatives) | Patient | `/appointments`, `/appointment-details` |
+| Book / reschedule / cancel appointments (also for relatives) — up to 2 hours before the visit (`APPOINTMENT_CHANGE_CUTOFF_HOURS`); after that the visit shows the hospital's number to call, and only the front desk can change it ([details](docs/CANCELLATION_CUTOFF_PLAN.md)) | Patient | `/appointments`, `/appointment-details` |
 | Appointment reminders the day before (SMS + email) | Automatic | runs hourly (`REMINDERS_CRON`) |
 | Consultation notes, vitals and e-prescription | Doctor | Appointments → **Start Consultation** |
 | Medical history and prescription PDF download | Patient | `/appointment-details` (completed visits) |
@@ -531,6 +534,7 @@ npm test        # Run tests
 | `TWILIO_AUTH_TOKEN` | No* | Twilio Auth Token |
 | `TWILIO_TRIAL_NUMBER` | No* | Twilio phone number for sending SMS |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | No | Razorpay API keys; online payment is off while either is empty |
+| `APPOINTMENT_CHANGE_CUTOFF_HOURS` | No | Hours before a visit from which patients can't cancel or move it themselves (default 2; 0 = no limit) |
 | `RAZORPAY_WEBHOOK_SECRET` | No | Secret of the Razorpay webhook (`/api/payments/razorpay/webhook`); without it the webhook is refused |
 
 \* Required only if using OTP verification on registration.

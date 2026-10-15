@@ -13,7 +13,8 @@ import { BillStatusBadge } from "../billing/billFormat";
 import { downloadReceipt } from "../billing/downloadReceipt";
 import MyBillDialog from "../billing/MyBillDialog";
 import useOnlinePayment from "../billing/useOnlinePayment";
-import { formatDate, timeRange, visitStatus } from "./appointmentFormat";
+import { HOSPITAL, phoneHref } from "../../shared/hospitalInfo";
+import { deadlineText, formatDate, timeRange, visitStatus } from "./appointmentFormat";
 import * as appointmentsApi from "./api";
 
 // The patient's appointments (docs/PATIENT_AREA_REFRESH_PLAN.md, P.3): upcoming ones to move or cancel, past ones
@@ -25,6 +26,14 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // Compares dates only, so an appointment later today is still upcoming
 const isUpcoming = (a, today) => (a.status === "SCHEDULED" || a.status === "CONFIRMED") && a.date >= today;
 const when = (a) => `${a.date} ${a.startTime ?? ""}`;
+// Patients can't cancel or move a visit from its deadline on (docs/CANCELLATION_CUTOFF_PLAN.md); the server sends it
+// as changeableUntil (none: no cut-off). The cut-off itself is the time from the deadline to the visit's start.
+const pastDeadline = (a, now = new Date()) => Boolean(a.changeableUntil) && new Date(a.changeableUntil) <= now;
+const cutoffText = (a) => {
+  const hours = Math.round((new Date(`${a.date}T${a.startTime}`) - new Date(a.changeableUntil)) / 3600000);
+  return hours === 1 ? "1 hour" : `${hours} hours`;
+};
+
 // Bills by the visit (appointment id) they are for
 const byVisit = (bills) => Object.fromEntries(bills.map((b) => [b.appointmentId, b]));
 
@@ -95,6 +104,7 @@ function ConsultationSummary({ consultation }) {
 
 function AppointmentCard({ appointment, upcoming, consultation, bill, onReschedule, onCancel, onBookAgain, onPrescription, onBill }) {
   const { label, tone } = visitStatus(appointment);
+  const locked = upcoming && pastDeadline(appointment);
   return (
     <article aria-label={`${formatDate(appointment.date, true)} with Dr. ${appointment.doctorName}`} className="rounded-2xl border border-line bg-surface p-5 shadow-card">
       <div className="flex gap-4">
@@ -110,48 +120,65 @@ function AppointmentCard({ appointment, upcoming, consultation, bill, onReschedu
             <Badge tone={tone}>{label}</Badge>
           </div>
           {appointment.message && <p className="mt-2 text-sm text-ink-muted">“{appointment.message}”</p>}
+          {upcoming && !locked && appointment.changeableUntil && (
+            <p className="mt-2 text-xs text-ink-muted">You can cancel or move it until {deadlineText(appointment.changeableUntil)}.</p>
+          )}
         </div>
       </div>
 
+      {locked && (
+        <p className="mt-4 rounded-lg bg-surface-2 p-3 text-sm">
+          Less than {cutoffText(appointment)} to go: to cancel or move it, please call{" "}
+          <a href={phoneHref} className="font-medium text-primary-ink hover:underline">
+            {HOSPITAL.phone}
+          </a>
+          .
+        </p>
+      )}
+
       {consultation && <ConsultationSummary consultation={consultation} />}
 
-      <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-line pt-4">
-        {bill && (
-          <>
-            <p className="mr-auto flex w-full items-center gap-2 text-sm sm:w-auto">
-              <span className="text-ink-muted">Bill</span>
-              <span className="font-medium tabular-nums">{formatRupees(bill.total)}</span>
-              <BillStatusBadge status={bill.status} />
-            </p>
-            <Button size="sm" variant="secondary" onClick={onBill} aria-label={`Bill ${bill.billNumber}`}>
-              <Receipt size={16} aria-hidden="true" />
-              Bill
-            </Button>
-          </>
-        )}
-        {upcoming ? (
-          <>
-            <Button size="sm" variant="danger-ghost" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button size="sm" variant="secondary" onClick={onReschedule}>
-              Reschedule
-            </Button>
-          </>
-        ) : (
-          <>
-            {consultation && (
-              <Button size="sm" variant="secondary" onClick={onPrescription}>
-                <FileDown size={16} aria-hidden="true" />
-                Prescription
+      {(bill || !locked) && (
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-line pt-4">
+          {bill && (
+            <>
+              <p className="mr-auto flex w-full items-center gap-2 text-sm sm:w-auto">
+                <span className="text-ink-muted">Bill</span>
+                <span className="font-medium tabular-nums">{formatRupees(bill.total)}</span>
+                <BillStatusBadge status={bill.status} />
+              </p>
+              <Button size="sm" variant="secondary" onClick={onBill} aria-label={`Bill ${bill.billNumber}`}>
+                <Receipt size={16} aria-hidden="true" />
+                Bill
               </Button>
-            )}
-            <Button size="sm" onClick={onBookAgain}>
-              Book again
-            </Button>
-          </>
-        )}
-      </div>
+            </>
+          )}
+          {upcoming ? (
+            !locked && (
+              <>
+                <Button size="sm" variant="danger-ghost" onClick={onCancel}>
+                  Cancel
+                </Button>
+                <Button size="sm" variant="secondary" onClick={onReschedule}>
+                  Reschedule
+                </Button>
+              </>
+            )
+          ) : (
+            <>
+              {consultation && (
+                <Button size="sm" variant="secondary" onClick={onPrescription}>
+                  <FileDown size={16} aria-hidden="true" />
+                  Prescription
+                </Button>
+              )}
+              <Button size="sm" onClick={onBookAgain}>
+                Book again
+              </Button>
+            </>
+          )}
+        </div>
+      )}
     </article>
   );
 }
