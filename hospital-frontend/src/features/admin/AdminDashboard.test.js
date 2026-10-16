@@ -5,8 +5,8 @@ import * as adminApi from "./api";
 
 jest.mock("./api");
 // The chart itself is tested in AppointmentTrendChart.test.js
-jest.mock("./AppointmentTrendChart", () => {
-  const actual = jest.requireActual("./AppointmentTrendChart");
+jest.mock("../../shared/dashboard/AppointmentTrendChart", () => {
+  const actual = jest.requireActual("../../shared/dashboard/AppointmentTrendChart");
   return {
     __esModule: true,
     SERIES: actual.SERIES,

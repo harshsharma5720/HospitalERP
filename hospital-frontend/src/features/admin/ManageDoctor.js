@@ -5,7 +5,7 @@ import { getAllDoctors } from "../doctors/api";
 import * as adminApi from "./api";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import { toLocalISODate } from "../../shared/utils/dateUtils";
-import { formatSpecialization } from "./dashboardFormat";
+import { formatSpecialization } from "../../shared/dashboard/dashboardFormat";
 import { Badge, Button, Card, Input, PageHeader, Table, TableMessage, Td, Th, useConfirm, useToast } from "../../shared/ui";
 
 // The doctors, ranked by completed appointments, who is on leave today, and deactivation for a doctor who has

@@ -1,8 +1,10 @@
 import React from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
 import { formatDay, formatShortDay } from "./dashboardFormat";
+import FittedXAxis from "./FittedXAxis";
 
-// The stack, bottom to top. Colors come from AdminDashboard.css (the order matters - see the note there).
+// The stack, bottom to top. Colors come from dashboard.css (the order matters - see the note there).
+// Used by the admin dashboard and a doctor's analytics.
 export const SERIES = [
   { key: "completed", label: "Completed", className: "series-completed" },
   { key: "missed", label: "Missed", className: "series-missed" },
@@ -49,14 +51,14 @@ function TrendTooltip({ active, payload }) {
   );
 }
 
-// Appointments per day, stacked by outcome. The legend and the table view are in AdminDashboard.
+// Appointments per day, stacked by outcome. The legend and the table view are on the page.
 export default function AppointmentTrendChart({ trend }) {
   return (
     <div className="h-72">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={trend} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
           <CartesianGrid vertical={false} />
-          <XAxis dataKey="date" tickFormatter={formatShortDay} tickLine={false} minTickGap={16} />
+          <FittedXAxis count={trend.length} dataKey="date" tickFormatter={formatShortDay} tickLine={false} />
           <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
           <Tooltip content={<TrendTooltip />} />
           {SERIES.map((s) => (
