@@ -439,9 +439,9 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ---
 
-## 11. Feature Status (updated 2026-10-15)
+## 11. Feature Status (updated 2026-10-16)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15), patients' bills (PR #16), online payment (PR #17) and the cancellation cut-off (branch `feature/cancellation-cutoff`).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15), patients' bills (PR #16), online payment (PR #17), the cancellation cut-off (PR #18) and doctor analytics (branch `feature/doctor-analytics`). How to test each of them by hand: [END_TO_END_TEST_GUIDE.md](END_TO_END_TEST_GUIDE.md).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
@@ -458,10 +458,10 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 - **Patients' bills in the app:** each visit's bill in My appointments and a Bills list in My account, with the PDF receipt (2026-10-13, see below).
 - **Online payment with Razorpay:** patients pay an unpaid bill in the app; a webhook as a safety net; late payments refunded automatically; the desk refunds a cancelled visit paid online (2026-10-15, see below).
 - **Cancellation cut-off:** patients can't cancel or move a visit less than 2 hours before it (configurable); the front desk can (2026-10-15, see below).
+- **Doctor analytics:** visits per day, no-show and cancellation rates, busy hours and weekdays, waiting time and earnings, for the doctor and for admins (2026-10-16, see below).
 
 **Partly done**
 - **Paged lists:** patients and the front-desk appointments are paged; the admin users list and the doctor portal's lists still load everything.
-- **Doctor dashboard:** real counts of pending and completed appointments, but no analytics (patients per day, no-show rate).
 
 ### Not implemented yet
 
@@ -474,7 +474,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 5 | ~~Notifications that aren't lost when SMS/email is down~~ ✅ done 2026-10-07 (an outbox instead of the Modulith event registry) | reliability | — |
 | 6 | In-app notification centre (bell icon) | platform | 3 days |
 | 7 | ~~Real admin dashboard KPIs (replacing the fake chart data)~~ ✅ done 2026-10-07 | admin | — |
-| 8 | Doctor analytics (patients per day, no-show rate, busy hours) | doctor | 2 days |
+| 8 | ~~Doctor analytics (patients per day, no-show rate, busy hours)~~ ✅ done 2026-10-16 (also waiting time and earnings) | doctor | — |
 | 9 | ~~Cancellation / reschedule cut-off rule~~ ✅ done 2026-10-15 | patients | — |
 | 10 | ~~Walk-in patient registration at the front desk~~ ✅ done 2026-10-08 | front desk | — |
 | 11 | ~~Today's queue: check-in, token numbers, live "now serving" screen~~ ✅ done 2026-10-12 | front desk | — |
@@ -493,7 +493,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** doctor analytics (8 — the queue now records when patients arrive and are called in, billing what visits earned); then safer login tokens (3). Doctor analytics (8) is now cheaper: it can reuse the dashboard's per-doctor count queries.
+**Suggested order:** safer login tokens (3) — the app now takes payments, so a stolen token matters more; then a daily cash summary for the desk (a follow-up of billing), the in-app notification centre (6) or the family view (14).
 
 ### Account deactivation (done 2026-10-01)
 
@@ -793,4 +793,29 @@ From idea #9. Patients could cancel or move a visit up to the last minute, too l
 
 **Not covered yet:**
 - Booking a visit that starts within the cut-off is still allowed (a patient can book a slot 30 minutes ahead), but can then not cancel it online. That is consistent, but worth knowing.
+
+### Doctor analytics (done 2026-10-16)
+
+From idea #8. The doctor's dashboard showed three counts, for which the browser downloaded every appointment the doctor ever had. Meanwhile the hospital records when patients arrive and are called in, which visits were missed or cancelled, and what each visit brought in. Decisions, design and steps: [DOCTOR_ANALYTICS_PLAN.md](DOCTOR_ANALYTICS_PLAN.md).
+
+**What it does**
+- **On the doctor's dashboard**, for the last 7, 30 or 90 days:
+  - tiles for visits, no-shows, cancellations, the average wait and what was earned;
+  - charts: visits per day (stacked like the admin dashboard), busy hours and weekdays, waiting time per day, and earnings per day with refunds and unpaid bills.
+
+  Every chart has a tooltip and a table view; the colours are checked in light and dark mode; on a phone the labels thin out.
+- **For admins:** **Analytics** on the Doctors page opens any doctor's figures.
+- **The same rules as the admin dashboard**, so the two agree: an open visit is missed after its day. The no-show rate is missed ÷ past visits that weren't cancelled.
+- **Behind it:** grouped queries in the appointments module (visits) and in billing (earnings), so appointments still knows nothing about money; four endpoints (the doctor's own under `/api/doctor/…`, any doctor's under `/api/admin/doctors/{id}/…`); no database change. The admin dashboard's chart pieces are now shared (`shared/dashboard/`).
+
+**Tests:**
+- Backend: end-to-end tests with visits and bills set up on known days, another doctor not counted, periods and access; 202 backend tests.
+- Frontend: the analytics, the charts (labels by width), the dashboard and the admin page; 257 tests.
+- Mutation checks for every step; screenshots on desktop and phone, light and dark.
+
+**Found on the way:** recharts 3 hands a chart its measured width through context, not props, so the first try at spacing the labels never got a width. The screenshot preview hid it; a test caught it.
+
+**Not covered yet:**
+- Waiting times exist only since today's queue (2026-10-12), so older periods measure fewer visits.
+- No comparison with the previous period, and no export (CSV / PDF).
 
