@@ -5,7 +5,7 @@ import { getAllDoctors } from "../doctors/api";
 import * as adminApi from "./api";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import { toLocalISODate } from "../../shared/utils/dateUtils";
-import { formatSpecialization } from "./dashboardFormat";
+import { formatSpecialization } from "../../shared/dashboard/dashboardFormat";
 import { Badge, Button, Card, Input, PageHeader, Table, TableMessage, Td, Th, useConfirm, useToast } from "../../shared/ui";
 
 // The doctors, ranked by completed appointments, who is on leave today, and deactivation for a doctor who has
@@ -172,6 +172,9 @@ export default function ManageDoctor() {
               <Td align="right" className="tabular-nums">{doc.pendingAppointmentsCount || 0}</Td>
               <Td align="right">
                 <div className="flex flex-wrap justify-end gap-2">
+                  <Button as={Link} to={`/admin/doctor/${doc.id}/analytics`} size="sm" variant="secondary" aria-label={`Analytics of Dr. ${doc.name}`}>
+                    Analytics
+                  </Button>
                   {doc.userId && (
                     <Button as={Link} to={`/admin/doctor/${doc.userId}/appointments`} size="sm" variant="secondary" aria-label={`Appointments of Dr. ${doc.name}`}>
                       Appointments

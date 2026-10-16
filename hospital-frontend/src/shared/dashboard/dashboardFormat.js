@@ -1,4 +1,4 @@
-// Formatting for the admin dashboard. Dates arrive as "yyyy-MM-dd" (server's day) and are formatted without
+// Formatting for the dashboards (admin, a doctor's analytics). Dates arrive as "yyyy-MM-dd" (server's day) and are formatted without
 // time zones, so a day never shifts.
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -20,6 +20,13 @@ export const formatShortDay = (isoDay) => {
   const { year, month, day } = parts(isoDay);
   const weekday = WEEKDAYS[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
   return `${weekday} ${day} ${MONTHS[month - 1]}`;
+};
+
+// How many axis labels to skip between two shown ones (recharts' "interval") for n bars on a chart that wide, when a
+// label needs labelWidth px: as many as fit, evenly. Without a width (not measured yet): all up to 10, then about 8.
+export const tickInterval = (n, width, labelWidth = 80) => {
+  const fit = width ? Math.max(2, Math.floor((width - 40) / labelWidth)) : 8;
+  return n <= (width ? fit : 10) ? 0 : Math.ceil(n / fit) - 1;
 };
 
 // 1234567 -> "12,34,567" (Indian grouping)

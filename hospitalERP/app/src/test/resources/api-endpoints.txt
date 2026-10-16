@@ -18,6 +18,8 @@ GET /api/admin/dashboard
 GET /api/admin/doctorAppointmentCount/{doctorId}
 GET /api/admin/doctorCompletedAppointments/{userId}
 GET /api/admin/doctorPendingAppointments/{userId}
+GET /api/admin/doctors/{doctorId}/analytics
+GET /api/admin/doctors/{doctorId}/earnings
 GET /api/admin/fees
 GET /api/admin/notifications
 GET /api/admin/{id}
@@ -28,8 +30,10 @@ GET /api/consultations/appointment/{appointmentId}
 GET /api/consultations/appointment/{appointmentId}/prescription.pdf
 GET /api/consultations/my auth=hasRole('PATIENT')
 GET /api/consultations/patient/{patientId} auth=hasAnyRole('DOCTOR', 'ADMIN')
+GET /api/doctor/analytics
 GET /api/doctor/doctorCompletedAppointments/{userId}
 GET /api/doctor/doctorPendingAppointments/{userId}
+GET /api/doctor/earnings
 GET /api/doctor/get/{id}
 GET /api/doctor/getAll
 GET /api/doctor/getAllBySpecialization

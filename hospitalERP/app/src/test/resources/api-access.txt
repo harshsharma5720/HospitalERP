@@ -19,6 +19,8 @@ GET /api/admin/dashboard anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorAppointmentCount/{doctorId} anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorCompletedAppointments/{userId} anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorPendingAppointments/{userId} anonymous- patient- doctor- receptionist- admin+
+GET /api/admin/doctors/{doctorId}/analytics anonymous- patient- doctor- receptionist- admin+
+GET /api/admin/doctors/{doctorId}/earnings anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/fees anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/notifications anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/{id} anonymous- patient- doctor- receptionist- admin+
@@ -29,8 +31,10 @@ GET /api/consultations/appointment/{appointmentId} anonymous- patient+ doctor+ r
 GET /api/consultations/appointment/{appointmentId}/prescription.pdf anonymous- patient+ doctor+ receptionist- admin+
 GET /api/consultations/my anonymous- patient+ doctor+ receptionist- admin+
 GET /api/consultations/patient/{patientId} anonymous- patient+ doctor+ receptionist- admin+
+GET /api/doctor/analytics anonymous- patient- doctor+ receptionist- admin+
 GET /api/doctor/doctorCompletedAppointments/{userId} anonymous- patient- doctor+ receptionist- admin+
 GET /api/doctor/doctorPendingAppointments/{userId} anonymous- patient- doctor+ receptionist- admin+
+GET /api/doctor/earnings anonymous- patient- doctor+ receptionist- admin+
 GET /api/doctor/get/{id} anonymous- patient- doctor+ receptionist- admin+
 GET /api/doctor/getAll anonymous+ patient+ doctor+ receptionist+ admin+
 GET /api/doctor/getAllBySpecialization anonymous+ patient+ doctor+ receptionist+ admin+

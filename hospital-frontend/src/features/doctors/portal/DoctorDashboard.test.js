@@ -7,15 +7,12 @@ import * as appointmentsApi from "../../appointments/api";
 
 jest.mock("../api");
 jest.mock("../../appointments/api");
-
-const list = (n) => ({ data: Array.from({ length: n }, (_, i) => ({ appointmentID: i })) });
+// The analytics are tested in DoctorAnalytics.test.js
+jest.mock("../analytics/DoctorAnalytics", () => ({ __esModule: true, default: (props) => <div data-testid="analytics" data-doctor={props.doctorId ?? "me"} /> }));
 
 beforeEach(() => {
   useAuthStore.setState({ token: "t", role: "ROLE_DOCTOR", userId: 5 });
   getDoctor.mockResolvedValue({ data: { name: "Anita Rao", specialist: "CARDIOLOGY" } });
-  appointmentsApi.getDoctorAppointments.mockResolvedValue(list(12));
-  appointmentsApi.getDoctorCompletedAppointments.mockResolvedValue(list(6));
-  appointmentsApi.getDoctorPendingAppointments.mockResolvedValue(list(2));
 });
 afterEach(() => jest.resetAllMocks());
 
@@ -26,23 +23,23 @@ const renderDashboard = () =>
     </MemoryRouter>
   );
 
-test("greets the doctor and shows their appointments in numbers", async () => {
+test("greets the doctor, links to the day's work and shows their own analytics", async () => {
   renderDashboard();
   expect(await screen.findByRole("heading", { name: "Hello, Dr. Anita Rao" })).toBeInTheDocument();
+  expect(getDoctor).toHaveBeenCalledWith(5);
   expect(screen.getByText("Cardiology")).toBeInTheDocument();
-  expect(appointmentsApi.getDoctorPendingAppointments).toHaveBeenCalledWith(5);
-  expect(screen.getByText("Total appointments").nextSibling).toHaveTextContent("12");
-  expect(screen.getByText("6 of 8 visits assigned to you")).toBeInTheDocument();
-  expect(screen.getByRole("img", { name: "75% of your visits are completed" })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Today's queue" })).toHaveAttribute("href", "/doctor/queue");
-  expect(screen.getByRole("navigation", { name: "Quick links" })).toHaveTextContent("Ask for days off");
+  const links = screen.getByRole("navigation", { name: "Quick links" });
+  expect(links).toHaveTextContent("Ask for days off");
+  expect(screen.getAllByRole("link", { name: /Today's queue/ })[0]).toHaveAttribute("href", "/doctor/queue");
+  expect(screen.getByTestId("analytics")).toHaveAttribute("data-doctor", "me");
+  // The figures come from the analytics now: the full appointment lists aren't downloaded
+  expect(appointmentsApi.getDoctorAppointments).not.toHaveBeenCalled();
+  expect(appointmentsApi.getDoctorCompletedAppointments).not.toHaveBeenCalled();
 });
 
-test("a list that can't be loaded counts as empty; nothing assigned is 0%", async () => {
-  appointmentsApi.getDoctorAppointments.mockRejectedValue(new Error("offline"));
-  appointmentsApi.getDoctorCompletedAppointments.mockResolvedValue(list(0));
-  appointmentsApi.getDoctorPendingAppointments.mockResolvedValue(list(0));
+test("a doctor whose profile can't be loaded is still greeted", async () => {
+  getDoctor.mockRejectedValue(new Error("offline"));
   renderDashboard();
-  expect(await screen.findByRole("img", { name: "0% of your visits are completed" })).toBeInTheDocument();
-  expect(screen.getByText("Total appointments").nextSibling).toHaveTextContent("0");
+  expect(await screen.findByRole("heading", { name: "Hello" })).toBeInTheDocument();
+  expect(screen.getByTestId("analytics")).toBeInTheDocument();
 });

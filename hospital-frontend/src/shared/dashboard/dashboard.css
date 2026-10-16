@@ -1,5 +1,6 @@
 /*
- * Admin dashboard colors (docs/ADMIN_DASHBOARD_PLAN.md).
+ * Dashboard colors (docs/ADMIN_DASHBOARD_PLAN.md), shared by the admin dashboard and a doctor's analytics
+ * (docs/DOCTOR_ANALYTICS_PLAN.md): put "dash" on the page's root.
  * Series: the dataviz reference palette, in a fixed order. "Missed" (past days) and "upcoming" (today) never
  * share a bar, so the only colors that touch in a stack are completed/missed/upcoming next to cancelled and
  * completed - those pairs were validated (colorblind separation, contrast) on the white card and, with the
@@ -7,7 +8,7 @@
  * yellow are below 3:1 on white, so the numbers are also in the table view under the chart.
  * The chart's chrome (grid, axis, text) uses the design tokens of src/index.css.
  */
-.admin-dash {
+.dash {
   --dash-muted: rgb(var(--ink-muted));
   --dash-grid: rgb(var(--line));
   --dash-axis: rgb(var(--line));
@@ -18,7 +19,7 @@
   --dash-cancelled: #1baf7a;
 }
 
-.dark .admin-dash {
+.dark .dash {
   --dash-completed: #3987e5;
   --dash-missed: #d95926;
   --dash-upcoming: #c98500;
@@ -26,12 +27,12 @@
 }
 
 /* A series' marks and swatches take their color from here (fill="currentColor") */
-.admin-dash .series-completed { color: var(--dash-completed); }
-.admin-dash .series-missed { color: var(--dash-missed); }
-.admin-dash .series-upcoming { color: var(--dash-upcoming); }
-.admin-dash .series-cancelled { color: var(--dash-cancelled); }
+.dash .series-completed { color: var(--dash-completed); }
+.dash .series-missed { color: var(--dash-missed); }
+.dash .series-upcoming { color: var(--dash-upcoming); }
+.dash .series-cancelled { color: var(--dash-cancelled); }
 
-.admin-dash .dash-swatch {
+.dash .dash-swatch {
   display: inline-block;
   width: 10px;
   height: 10px;
@@ -41,13 +42,17 @@
 }
 
 /* Recessive chrome: solid hairline grid, quiet axis */
-.admin-dash .recharts-cartesian-grid-horizontal line { stroke: var(--dash-grid); }
-.admin-dash .recharts-cartesian-axis-line { stroke: var(--dash-axis); }
-.admin-dash .recharts-cartesian-axis-tick-line { stroke: var(--dash-axis); }
-.admin-dash .recharts-cartesian-axis-tick-value { fill: var(--dash-muted); font-size: 12px; }
-.admin-dash .recharts-tooltip-cursor { fill: var(--dash-hover); }
+.dash .recharts-cartesian-grid-horizontal line { stroke: var(--dash-grid); }
+.dash .recharts-cartesian-axis-line { stroke: var(--dash-axis); }
+.dash .recharts-cartesian-axis-tick-line { stroke: var(--dash-axis); }
+.dash .recharts-cartesian-axis-tick-value { fill: var(--dash-muted); font-size: 12px; }
+.dash .recharts-tooltip-cursor { fill: var(--dash-hover); }
+
+/* One measure (busiest lists, a doctor's busy hours, waiting, earnings): one hue, the completed blue - 4.4:1 on
+   the white card, 4.9:1 on the dark card #111827 (a mark needs 3:1) */
+.dash .series-single { color: var(--dash-completed); }
 
 /* Busiest lists: one hue, a thin bar per row */
-.admin-dash .dash-rank-bar { background: var(--dash-completed); height: 8px; border-radius: 0 4px 4px 0; }
+.dash .dash-rank-bar { background: var(--dash-completed); height: 8px; border-radius: 0 4px 4px 0; }
 
-.admin-dash .dash-num { font-variant-numeric: tabular-nums; }
+.dash .dash-num { font-variant-numeric: tabular-nums; }

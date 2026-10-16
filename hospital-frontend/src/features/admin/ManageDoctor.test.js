@@ -50,6 +50,12 @@ test("ranks the doctors by completed appointments and marks who is on leave toda
     "href",
     "/admin/doctor/12/appointments"
   );
+  // Analytics by the doctor's id (docs/DOCTOR_ANALYTICS_PLAN.md), also for a deactivated doctor's past figures
+  expect(within(rowOf("Sunil Iyer")).getByRole("link", { name: "Analytics of Dr. Sunil Iyer" })).toHaveAttribute(
+    "href",
+    "/admin/doctor/2/analytics"
+  );
+  expect(within(rowOf("Vikram Shah")).getByRole("link", { name: "Analytics of Dr. Vikram Shah" })).toBeInTheDocument();
 });
 
 test("today's filter shows the doctors working or on leave; search narrows the list", async () => {

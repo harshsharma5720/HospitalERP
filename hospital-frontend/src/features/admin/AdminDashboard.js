@@ -2,25 +2,15 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import * as adminApi from "./api";
-import AppointmentTrendChart, { SERIES } from "./AppointmentTrendChart";
-import { formatCount, formatDay, formatPercent, formatSpecialization } from "./dashboardFormat";
-import "./AdminDashboard.css";
+import AppointmentTrendChart, { SERIES } from "../../shared/dashboard/AppointmentTrendChart";
+import { formatCount, formatDay, formatPercent, formatSpecialization } from "../../shared/dashboard/dashboardFormat";
+import PeriodSwitch from "../../shared/dashboard/PeriodSwitch";
+import StatTile from "../../shared/dashboard/StatTile";
+import "../../shared/dashboard/dashboard.css";
 import { Notice, PageHeader } from "../../shared/ui";
 
 // The admin dashboard: real figures from GET /api/admin/dashboard (docs/ADMIN_DASHBOARD_PLAN.md).
-const PERIODS = [7, 30, 90];
-
 const CARD = "rounded-xl border border-line bg-surface shadow-card";
-
-function StatTile({ label, value, note }) {
-  return (
-    <div className={`${CARD} p-5`}>
-      <p className="text-sm text-ink-muted">{label}</p>
-      <p className="dash-num mt-1 text-3xl font-semibold text-ink">{value}</p>
-      {note && <p className="mt-1 text-sm text-ink-muted">{note}</p>}
-    </div>
-  );
-}
 
 // A ranked list with a thin bar per row (one hue) and the value at the bar's end
 function RankedList({ title, rows }) {
@@ -75,26 +65,12 @@ export default function AdminDashboard() {
   const cancellations = data?.cancellations;
 
   return (
-    <div className="admin-dash w-full">
+    <div className="dash w-full">
       <PageHeader
         title="Dashboard"
         description="Today at the hospital, and how the last days went."
         actions={
-          <div role="group" aria-label="Period" className="inline-flex rounded-lg border border-line bg-surface p-1 shadow-card">
-            {PERIODS.map((period) => (
-              <button
-                key={period}
-                type="button"
-                aria-pressed={days === period}
-                onClick={() => setDays(period)}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-                  days === period ? "bg-primary text-white" : "text-ink-muted hover:text-ink"
-                }`}
-              >
-                {period} days
-              </button>
-            ))}
-          </div>
+          <PeriodSwitch days={days} onChange={setDays} />
         }
       />
 

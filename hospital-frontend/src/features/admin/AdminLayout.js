@@ -7,6 +7,7 @@ import ManageUsers from "./ManageUsers";
 import RegisterUser from "./RegisterUser";
 import ManageDoctor from "./ManageDoctor";
 import AdminDoctorAppointments from "./AdminDoctorAppointments";
+import AdminDoctorAnalytics from "./AdminDoctorAnalytics";
 import AuditLog from "./AuditLog";
 import Notifications from "./Notifications";
 import Fees from "./Fees";
@@ -28,6 +29,7 @@ export default function AdminLayout() {
         <Route path="register-user" element={<RegisterUser />} />
         <Route path="manage-doctor" element={<ManageDoctor />} />
         <Route path="doctor/:userId/appointments" element={<AdminDoctorAppointments />} />
+        <Route path="doctor/:doctorId/analytics" element={<AdminDoctorAnalytics />} />
         <Route path="audit-log" element={<AuditLog />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="fees" element={<Fees />} />

@@ -28,11 +28,21 @@ public class AppointmentStatistics {
 
     /** One entry per day from {@code from} to {@code to} (both included), days without appointments as zeros. */
     public List<DailyAppointmentCounts> perDay(LocalDate from, LocalDate to) {
+        return countsPerDay(appointmentRepository.countPerDayStatusAndCompletedFlag(from, to), from, to);
+    }
+
+    /** The same for one doctor (DoctorAnalytics). */
+    List<DailyAppointmentCounts> perDayForDoctor(long doctorId, LocalDate from, LocalDate to) {
+        return countsPerDay(appointmentRepository.countPerDayStatusAndCompletedFlagForDoctor(doctorId, from, to), from, to);
+    }
+
+    // Rows of [date, status, isCompleted, count] as outcomes per day, every day of the period
+    private static List<DailyAppointmentCounts> countsPerDay(List<Object[]> rows, LocalDate from, LocalDate to) {
         Map<LocalDate, long[]> days = new TreeMap<>(); // completed, open, cancelled by patient, cancelled by doctor
         for (LocalDate day = from; !day.isAfter(to); day = day.plusDays(1)) {
             days.put(day, new long[4]);
         }
-        for (Object[] row : appointmentRepository.countPerDayStatusAndCompletedFlag(from, to)) {
+        for (Object[] row : rows) {
             long[] counts = days.get((LocalDate) row[0]);
             AppointmentStatus status = (AppointmentStatus) row[1];
             boolean completedFlag = Boolean.TRUE.equals(row[2]);

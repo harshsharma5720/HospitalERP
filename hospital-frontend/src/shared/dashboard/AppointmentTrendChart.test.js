@@ -36,7 +36,7 @@ const TREND = [
 test("draws one stacked column per day; only each day's top segment has the rounded end", () => {
   const { container } = render(<AppointmentTrendChart trend={TREND} />);
 
-  // Every series layer carries its color class (the colors come from AdminDashboard.css)
+  // Every series layer carries its color class (the colors come from dashboard.css)
   ["completed", "missed", "upcoming", "cancelled"].forEach((key) =>
     expect(container.querySelector(`.recharts-bar.series-${key}`)).not.toBeNull()
   );
@@ -48,3 +48,14 @@ test("draws one stacked column per day; only each day's top segment has the roun
   expect(container.querySelector(".series-upcoming path")).not.toBeNull();
   tops.forEach((top) => expect(top.getAttribute("fill")).toBe("currentColor"));
 });
+
+const MONTH = Array.from({ length: 30 }, (_, i) => `2026-09-${String(i + 1).padStart(2, "0")}`);
+
+test("30 days on a 600 px chart: as many day labels as fit, evenly (every 5th day)", () => {
+  const trend = MONTH.map((date) => ({ date, completed: 1, missed: 0, upcoming: 0, cancelled: 0 }));
+  const { container } = render(<AppointmentTrendChart trend={trend} />);
+  const labels = [...container.querySelectorAll(".recharts-cartesian-axis-tick-value")].map((t) => t.textContent).filter((t) => t.includes("Sep"));
+  // (recharts draws each word as its own piece, so the spaces aren't in the text)
+  expect(labels).toEqual(["Tue 1 Sep", "Sun 6 Sep", "Fri 11 Sep", "Wed 16 Sep", "Mon 21 Sep", "Sat 26 Sep"].map((l) => l.replace(/ /g, "")));
+});
+
