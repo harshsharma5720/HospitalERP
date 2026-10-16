@@ -133,4 +133,24 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long>,
             + "GROUP BY d.id, d.name, d.specialist ORDER BY COUNT(a) DESC, d.name")
     List<DoctorAppointmentCount> countPerDoctor(@Param("from") LocalDate from, @Param("to") LocalDate to,
                                                 Pageable pageable);
+
+    // ------------------------------------------------------------------ one doctor's analytics (DoctorAnalytics)
+
+    /** Like countPerDayStatusAndCompletedFlag, for one doctor. */
+    @Query("SELECT a.date, a.status, a.isCompleted, COUNT(a) FROM Appointment a WHERE a.doctor.id = :doctorId "
+            + "AND a.date BETWEEN :from AND :to GROUP BY a.date, a.status, a.isCompleted")
+    List<Object[]> countPerDayStatusAndCompletedFlagForDoctor(@Param("doctorId") Long doctorId,
+                                                              @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /** Rows of [date, slot start time, count]; cancelled visits and visits without their slot left out. */
+    @Query("SELECT a.date, s.startTime, COUNT(a) FROM Appointment a JOIN a.slot s WHERE a.doctor.id = :doctorId "
+            + "AND a.date BETWEEN :from AND :to AND" + NOT_CANCELLED + "GROUP BY a.date, s.startTime")
+    List<Object[]> countPerDayAndStartTimeForDoctor(@Param("doctorId") Long doctorId,
+                                                    @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /** Rows of [date, checked in at, called in at] of the visits that have both (today's queue). */
+    @Query("SELECT a.date, a.checkedInAt, a.calledAt FROM Appointment a WHERE a.doctor.id = :doctorId "
+            + "AND a.date BETWEEN :from AND :to AND a.checkedInAt IS NOT NULL AND a.calledAt IS NOT NULL")
+    List<Object[]> queueTimesForDoctor(@Param("doctorId") Long doctorId,
+                                       @Param("from") LocalDate from, @Param("to") LocalDate to);
 }

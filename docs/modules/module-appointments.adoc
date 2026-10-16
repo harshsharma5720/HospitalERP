@@ -7,6 +7,7 @@
 
 * `c.i.h.a.AppointmentService`
 * `c.i.h.a.AppointmentStatistics`
+* `c.i.h.a.DoctorAnalytics`
 |Bean references
 |* `c.i.h.p.PtInfoService` (in Patients)
 * `c.i.h.p.PtRelativeService` (in Patients)
