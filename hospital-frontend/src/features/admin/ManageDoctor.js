@@ -172,6 +172,9 @@ export default function ManageDoctor() {
               <Td align="right" className="tabular-nums">{doc.pendingAppointmentsCount || 0}</Td>
               <Td align="right">
                 <div className="flex flex-wrap justify-end gap-2">
+                  <Button as={Link} to={`/admin/doctor/${doc.id}/analytics`} size="sm" variant="secondary" aria-label={`Analytics of Dr. ${doc.name}`}>
+                    Analytics
+                  </Button>
                   {doc.userId && (
                     <Button as={Link} to={`/admin/doctor/${doc.userId}/appointments`} size="sm" variant="secondary" aria-label={`Appointments of Dr. ${doc.name}`}>
                       Appointments
