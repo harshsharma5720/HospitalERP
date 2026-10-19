@@ -25,7 +25,7 @@ public class JWTService {
     private final long expirationMs;
 
     public JWTService(@Value("${jwt.secret:}") String secret,
-                      @Value("${jwt.expiration-ms:36000000}") long expirationMs) {
+                      @Value("${jwt.expiration-ms:900000}") long expirationMs) {
         this.expirationMs = expirationMs;
         if (secret == null || secret.isBlank()) {
             logger.warn("JWT_SECRET is not set - using a random key. All tokens become invalid on every restart. "

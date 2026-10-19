@@ -89,6 +89,8 @@ POST /api/admin/receptionist anonymous- patient- doctor- receptionist- admin+
 POST /api/admin/users anonymous- patient- doctor- receptionist- admin+
 POST /api/auth/forgot-password anonymous+ patient+ doctor+ receptionist+ admin+
 POST /api/auth/login anonymous+ patient+ doctor+ receptionist+ admin+
+POST /api/auth/logout anonymous+ patient+ doctor+ receptionist+ admin+
+POST /api/auth/refresh anonymous+ patient+ doctor+ receptionist+ admin+
 POST /api/auth/register anonymous+ patient+ doctor+ receptionist+ admin+
 POST /api/auth/reset-password anonymous+ patient+ doctor+ receptionist+ admin+
 POST /api/auth/send-otp anonymous+ patient+ doctor+ receptionist+ admin+

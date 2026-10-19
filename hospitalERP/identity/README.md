@@ -1,6 +1,6 @@
 # identity (`hospital-identity`)
 
-Who is using the system: user accounts and roles, registration, login with JWT, phone OTP, forgot/reset password, login throttling, looking up the current user, and creating the first admin at startup.
+Who is using the system: user accounts and roles, registration, login with a short JWT and a refresh cookie (login sessions, [docs/SAFER_LOGIN_TOKENS_PLAN.md](../../docs/SAFER_LOGIN_TOKENS_PLAN.md)), phone OTP, forgot/reset password, login throttling, looking up the current user, and creating the first admin at startup.
 
 It does **not** create patient or staff profiles: it publishes `UserRegisteredEvent` and the patients and staff modules create their own profiles.
 
@@ -13,7 +13,7 @@ It does **not** create patient or staff profiles: it publishes `UserRegisteredEv
 | `User`, `Role` | The account entity (`users` table) and the roles `ADMIN`, `DOCTOR`, `PATIENT`, `RECEPTIONIST`. `active` / `deactivatedAt` mark a deactivated account (see [Deactivated accounts](#deactivated-accounts)); `createdAt` is set by `AuthService.createUser` (empty for accounts older than 2026-10-06). |
 | `UserService` | Other modules use this instead of the repository: `findUser`, `getAllUsers`, `updateContactDetails(user, email, phone)` (keeps the login account in sync when a profile's contact data changes), `deactivate(user)` / `reactivate(user)` (only set the flag; the use case is in administration), `deleteUser`, `deleteUserById` (permanent delete); for the admin dashboard `countActiveAccountsPerRole`, `countNewAccountsPerDay(role, from, to)` (by `createdAt`) and `firstAccountCreationTime` (since when new accounts are counted). |
 | `CurrentUserService` | The logged-in user: `getCurrentUser`, `getCurrentUserId`, `hasRole`, `hasAnyRole`, `isStaff`, `requireSelfOrRole`. |
-| `AuthService` | `register` (self sign-up, always a patient), `createUser(request, role)` (used by administration), `login`, `isOtpRequired`, `parseRole`. |
+| `AuthService` | `register` (self sign-up, always a patient; logged in at once), `createUser(request, role)` (used by administration), `login`, `refresh`, `logout`, `isOtpRequired`, `parseRole`. A login is a `Session`: the access token for the response body and the refresh token for the cookie, with its lifetime. |
 | `UserRegisteredEvent` | Published when an account is created. |
 | `CustomUserDetailsService`, `JWTAuthenticationFilter` | Spring Security wiring, used by `SecurityConfig` in `app`. A deactivated account is a *disabled* user, and the filter ignores its tokens. |
 | `ModuleSecurityRules` | Interface for a module's URL access rules (`endpointRules`, `areaRules`); every module with endpoints has one bean, `SecurityConfig` combines them. |
@@ -26,13 +26,19 @@ It does **not** create patient or staff profiles: it publishes `UserRegisteredEv
 
 ## Endpoints — `identity.web`
 
-`AuthController`, all public, under `/api/auth`: `register`, `login`, `send-otp`, `verify-otp`, `otp-required`, `forgot-password`, `reset-password`.
+`AuthController`, all public, under `/api/auth`: `register`, `login`, `refresh`, `logout`, `send-otp`, `verify-otp`, `otp-required`, `forgot-password`, `reset-password`.
+
+**Login sessions:**
+- `login` and `register` answer `{token}`, the access token, and set the cookie `hospital_refresh`: `HttpOnly`, `SameSite=Strict`, `Path=/api/auth`, `Max-Age` the session's lifetime, and `Secure` with `AUTH_COOKIE_SECURE`.
+- `POST /refresh` replaces the cookie's refresh token and answers a new access token. When the token is missing, unknown, ended or expired, it answers 401 with the cookie cleared.
+- `POST /logout` ends the session and clears the cookie.
+- Both need `X-Requested-With: XMLHttpRequest` (403 otherwise); with `SameSite=Strict` that blocks cross-site forms.
 
 Access rules (`identity.web.IdentitySecurityRules`, a `ModuleSecurityRules` bean): `/api/auth/**` is public.
 
 ## Internal — `identity.internal`
 
-`UserRepository`, `JWTService` (sign/verify tokens), `OtpService` (6-digit codes), `LoginAttemptService` (locks a username for 15 minutes after 5 failed logins), `PasswordResetService`, `AdminBootstrap` (creates the first admin from `ADMIN_*` settings if it doesn't exist).
+`UserRepository`, `JWTService` (sign/verify the access tokens, 15 minutes by default), `RefreshTokenService` (login sessions: a 256-bit refresh token kept only as its SHA-256 hash in `refresh_tokens`, replaced on every use; an old one used again more than 30 seconds after it was replaced ends the session — within them it is two tabs; patients 7 days after the last use and at most 90 days, staff 12 hours after the login; a deactivated account can't refresh), `RefreshToken`, `RefreshTokenRepository`, `SessionEndReason`, `OtpService` (6-digit codes), `LoginAttemptService` (locks a username for 15 minutes after 5 failed logins), `PasswordResetService`, `AdminBootstrap` (creates the first admin from `ADMIN_*` settings if it doesn't exist).
 
 ## Deactivated accounts
 
@@ -46,14 +52,17 @@ Accounts are deactivated, not deleted ([docs/ACCOUNT_DEACTIVATION_PLAN.md](../..
 
 | Env variable | Default | Meaning |
 |---|---|---|
-| `JWT_SECRET` | random per start | Base64 key, 32+ bytes. Without it everyone is logged out on restart. |
+| `JWT_SECRET` | random per start | Base64 key, 32+ bytes. Without it, access tokens stop working on restart (the app gets new ones through the refresh cookie). |
+| `JWT_EXPIRATION_MS` | `900000` (15 minutes) | The access token's lifetime. |
+| `AUTH_COOKIE_SECURE` | `false` | Mark the refresh cookie `Secure`; set it to `true` behind HTTPS. |
+| `AUTH_PATIENT_IDLE_DAYS`, `AUTH_PATIENT_MAX_DAYS` | `7`, `90` | A patient's login: days after the last use, and at most after logging in. |
+| `AUTH_STAFF_HOURS` | `12` | A staff login (admin, doctor, front desk), from logging in, used or not. |
 | `OTP_REQUIRED` | `true` | Require phone verification on sign-up (needs Twilio). |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL`, `ADMIN_PHONE` | empty | First admin account, created once at startup. |
 
-`jwt.expiration-ms` (default 10 hours) sets the token lifetime.
 
 ## Tests
 
-`OtpServiceTest`, `PasswordResetServiceTest`; login/registration flows, including a deactivated account, are also covered by the end-to-end tests in `app`.
+`OtpServiceTest`, `PasswordResetServiceTest`, `RefreshTokenServiceTest` (a clock moved by hand: hashing and replacement, the patient and staff lifetimes, reuse within and after the grace, a deactivated account, logout, the other logins of a user); `LoginSessionsH2Test` in `app` (the cookie's attributes, the 15-minute access token, refresh and reuse, the header, logout, a deactivated account); login/registration flows, including a deactivated account, are also covered by the end-to-end tests in `app`.
 
 Module diagram: [docs/modules/module-identity.puml](../../docs/modules/module-identity.puml).

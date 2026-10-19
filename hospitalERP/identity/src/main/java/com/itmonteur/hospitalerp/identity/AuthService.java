@@ -2,27 +2,30 @@ package com.itmonteur.hospitalerp.identity;
 
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ConflictException;
-import com.itmonteur.hospitalerp.identity.internal.UserRepository;
 import com.itmonteur.hospitalerp.identity.internal.JWTService;
 import com.itmonteur.hospitalerp.identity.internal.LoginAttemptService;
 import com.itmonteur.hospitalerp.identity.internal.OtpService;
+import com.itmonteur.hospitalerp.identity.internal.RefreshTokenService;
+import com.itmonteur.hospitalerp.identity.internal.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.transaction.annotation.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 public class AuthService {
@@ -37,11 +40,19 @@ public class AuthService {
     private final LoginAttemptService loginAttemptService;
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
+    private final RefreshTokenService refreshTokenService;
+
+    /**
+     * A login's two tokens (docs/SAFER_LOGIN_TOKENS_PLAN.md): the short access token (JWT) for the response body, and
+     * the refresh token for the httpOnly cookie, with how long the cookie lives.
+     */
+    public record Session(String accessToken, String refreshToken, Duration refreshMaxAge) {
+    }
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JWTService jwtService,
                        AuthenticationManager authenticationManager, OtpService otpService,
                        LoginAttemptService loginAttemptService, ApplicationEventPublisher eventPublisher,
-                       Clock clock) {
+                       Clock clock, RefreshTokenService refreshTokenService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -50,6 +61,7 @@ public class AuthService {
         this.loginAttemptService = loginAttemptService;
         this.eventPublisher = eventPublisher;
         this.clock = clock;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @Value("${app.otp.required:true}")
@@ -64,7 +76,7 @@ public class AuthService {
      * doctors, receptionists and admins are created by an admin via /api/admin/**.
      */
     @Transactional
-    public AuthResponseDTO register(RegisterRequestDTO request) {
+    public Session register(RegisterRequestDTO request) {
         if (otpRequired && !otpService.isPhoneVerified(request.getPhoneNumber())) {
             throw new BadRequestException("Phone number not verified. Please verify it with the OTP first.");
         }
@@ -72,8 +84,8 @@ public class AuthService {
         if (otpRequired) {
             otpService.consumeVerification(request.getPhoneNumber());
         }
-        // Issue a token right away so the user does not have to log in after registering
-        return new AuthResponseDTO(jwtService.generateToken(toUserDetails(savedUser), savedUser.getId()));
+        // Logged in right away, so the user does not have to log in after registering
+        return session(savedUser);
     }
 
     /**
@@ -104,7 +116,7 @@ public class AuthService {
     }
 
     /** Throws BadCredentialsException (→ 401) when the username/password is wrong. */
-    public AuthResponseDTO login(LoginRequestDTO request) {
+    public Session login(LoginRequestDTO request) {
         loginAttemptService.checkNotLocked(request.getUsername());
         Authentication authentication;
         try {
@@ -123,9 +135,30 @@ public class AuthService {
         loginAttemptService.loginSucceeded(request.getUsername());
         User user = this.userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new BadRequestException("User not found"));
-        String token = jwtService.generateToken((UserDetails) authentication.getPrincipal(), user.getId());
         logger.info("User {} logged in", request.getUsername());
-        return new AuthResponseDTO(token);
+        return session(user);
+    }
+
+    /** A new access token and a replaced refresh token; empty when the refresh token is no good. */
+    public Optional<Session> refresh(String refreshToken) {
+        try {
+            RefreshTokenService.Refreshed refreshed = refreshTokenService.refresh(refreshToken);
+            User user = refreshed.user();
+            return Optional.of(new Session(jwtService.generateToken(toUserDetails(user), user.getId()),
+                    refreshed.next().token(), refreshed.next().maxAge()));
+        } catch (RefreshTokenService.InvalidRefreshTokenException e) {
+            return Optional.empty();
+        }
+    }
+
+    /** Ends the refresh token's session (logout on this device). */
+    public void logout(String refreshToken) {
+        refreshTokenService.end(refreshToken);
+    }
+
+    private Session session(User user) {
+        RefreshTokenService.Issued refresh = refreshTokenService.start(user);
+        return new Session(jwtService.generateToken(toUserDetails(user), user.getId()), refresh.token(), refresh.maxAge());
     }
 
     public static Role parseRole(String role) {
