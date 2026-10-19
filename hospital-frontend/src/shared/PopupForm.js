@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { CalendarCheck, HeartPulse } from "lucide-react";
 import { Button, Modal } from "./ui";
 import { HOSPITAL } from "./hospitalInfo";
+import useAuthStore from "../features/auth/useAuthStore";
 
 const SEEN_KEY = "welcomeSeen";
 
@@ -28,12 +29,13 @@ const markSeen = () => {
 export default function PopupForm({ onClose, delay = 2000 }) {
   const onDemand = Boolean(onClose);
   const [open, setOpen] = useState(onDemand);
+  const loggedIn = useAuthStore((s) => Boolean(s.token));
 
   useEffect(() => {
-    if (onDemand || localStorage.getItem("jwtToken") || seenThisVisit()) return undefined;
+    if (onDemand || loggedIn || seenThisVisit()) return undefined;
     const timer = setTimeout(() => setOpen(true), delay);
     return () => clearTimeout(timer);
-  }, [onDemand, delay]);
+  }, [onDemand, delay, loggedIn]);
 
   if (!open) return null;
 

@@ -92,7 +92,7 @@ test("visitors get the welcome after a moment, once per visit", async () => {
 
 test("logged-in users get no welcome", async () => {
   jest.useFakeTimers();
-  localStorage.setItem("jwtToken", "x.e30.y");
+  useAuthStore.setState({ token: "x.e30.y", role: "ROLE_PATIENT", userId: 1 });
   renderHome();
   await act(async () => jest.advanceTimersByTime(5000));
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

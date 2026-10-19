@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarOff, Plus } from "lucide-react";
-import { getRoleFromToken, getUserIdFromToken } from "../../../shared/utils/jwtUtils";
+import useAuthStore from "../../auth/useAuthStore";
 import { getErrorMessage } from "../../../shared/utils/apiError";
 import { toLocalISODate } from "../../../shared/utils/dateUtils";
 import { formatDate } from "../../appointments/appointmentFormat";
@@ -35,9 +35,9 @@ export default function LeaveManagementPage() {
   const [applying, setApplying] = useState(false);
 
   const navigate = useNavigate();
-  const token = localStorage.getItem("jwtToken");
-  const role = getRoleFromToken(token);
-  const userId = getUserIdFromToken(token);
+  const token = useAuthStore((s) => s.token);
+  const role = useAuthStore((s) => s.role);
+  const userId = useAuthStore((s) => s.userId);
 
   // Stable between renders; only changes with the tab (viewType) or the user
   const fetchLeaves = useCallback(async () => {

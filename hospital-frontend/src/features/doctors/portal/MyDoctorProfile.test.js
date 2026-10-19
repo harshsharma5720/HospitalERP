@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import MyDoctorProfile from "./MyDoctorProfile";
 import * as doctorsApi from "../api";
 import { ToastProvider } from "../../../shared/ui";
+import useAuthStore from "../../auth/useAuthStore";
 
 jest.mock("../api");
 
@@ -24,11 +25,11 @@ const renderProfile = () =>
   );
 
 beforeEach(() => {
-  localStorage.setItem("jwtToken", token);
+  useAuthStore.setState({ token, role: "ROLE_DOCTOR", userId: 5 });
   doctorsApi.getDoctor.mockResolvedValue({ data: DOCTOR });
 });
 afterEach(() => {
-  localStorage.clear();
+  useAuthStore.setState({ token: null, role: null, userId: null });
   jest.resetAllMocks();
 });
 

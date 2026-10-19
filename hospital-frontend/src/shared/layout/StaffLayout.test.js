@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import StaffLayout from "./StaffLayout";
+import axios from "axios";
 import useAuthStore from "../../features/auth/useAuthStore";
 import useAppStore from "../useAppStore";
 import { getOwnProfile } from "../profileApi";
@@ -19,7 +20,6 @@ function Address() {
 
 const renderLayout = (role, path, { username = "asha", userId = 7 } = {}) => {
   const token = tokenFor(username, role, userId);
-  localStorage.setItem("jwtToken", token);
   useAuthStore.setState({ token, role, userId });
   render(
     <MemoryRouter initialEntries={[path]}>
@@ -164,11 +164,14 @@ describe("the user in the top bar", () => {
   });
 
   test("Log out ends the session and goes to the login page", () => {
+    const post = jest.spyOn(axios, "post").mockResolvedValue({ data: {} });
     renderLayout("ROLE_DOCTOR", "/doctor/dashboard");
     fireEvent.click(screen.getByRole("button", { name: "Log out" }));
     expect(screen.getByText("login page")).toBeInTheDocument();
-    expect(localStorage.getItem("jwtToken")).toBeNull();
+    expect(useAuthStore.getState().token).toBeNull();
     expect(useAuthStore.getState().role).toBeNull();
+    expect(post).toHaveBeenCalledWith(expect.stringMatching(/\/api\/auth\/logout$/), null, expect.objectContaining({ withCredentials: true }));
+    post.mockRestore();
   });
 
   test("the light / dark switch changes the page and remembers it", () => {

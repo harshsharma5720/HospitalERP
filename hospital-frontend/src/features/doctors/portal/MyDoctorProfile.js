@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getUserIdFromToken } from "../../../shared/utils/jwtUtils";
+import useAuthStore from "../../auth/useAuthStore";
 import { getErrorMessage } from "../../../shared/utils/apiError";
 import { API_BASE_URL } from "../../../app/config";
 import { specialityLabel } from "../../appointments/appointmentFormat";
@@ -27,21 +27,21 @@ const initials = (name) =>
 // The logged-in doctor's own profile, editable (doctor portal)
 export default function MyDoctorProfile() {
   const toast = useToast();
+  const userId = useAuthStore((s) => s.userId);
   const [doctor, setDoctor] = useState(null);
   const [formData, setFormData] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const doctorId = getUserIdFromToken(localStorage.getItem("jwtToken"));
     doctorsApi
-      .getDoctor(doctorId)
+      .getDoctor(userId)
       .then((res) => {
         setDoctor(res.data);
         setFormData(res.data);
       })
       .catch((err) => toast.error(getErrorMessage(err, "Could not load your profile.")));
-  }, [toast]);
+  }, [toast, userId]);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -54,13 +54,12 @@ export default function MyDoctorProfile() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const userIdFromToken = getUserIdFromToken(localStorage.getItem("jwtToken"));
     setSaving(true);
     try {
       const formDataToSend = new FormData();
       const doctorPayload = {
         id: doctor.id,
-        userId: userIdFromToken,
+        userId,
         name: formData.name,
         specialist: formData.specialist,
         email: formData.email,
@@ -73,7 +72,7 @@ export default function MyDoctorProfile() {
         formDataToSend.append("profileImage", formData.profileImage);
       }
 
-      await doctorsApi.updateDoctor(userIdFromToken, formDataToSend);
+      await doctorsApi.updateDoctor(userId, formDataToSend);
 
       setDoctor(doctorPayload);
       setIsEditing(false);

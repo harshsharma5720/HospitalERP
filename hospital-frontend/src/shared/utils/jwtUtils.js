@@ -39,6 +39,15 @@ export const getUsernameFromToken = (token) => {
   }
 };
 
+// When the token runs out, in milliseconds since 1970 (null when unreadable)
+export const getExpiryMs = (token) => {
+  try {
+    return decodePayload(token).exp * 1000;
+  } catch (e) {
+    return null;
+  }
+};
+
 export const isTokenExpired = (token) => {
   try {
     return Date.now() > decodePayload(token).exp * 1000;

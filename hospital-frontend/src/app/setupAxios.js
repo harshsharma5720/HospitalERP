@@ -2,9 +2,10 @@ import axios from "axios";
 import { API_BASE_URL } from "./config";
 import useAuthStore from "../features/auth/useAuthStore";
 
-// Global axios behaviour, installed once from index.js:
-//  - attaches the JWT to every request to our API (if the caller didn't set one)
-//  - on 401 (expired/invalid session) logs the user out and sends them to the login page
+// Global axios behaviour, installed once from index.js (docs/SAFER_LOGIN_TOKENS_PLAN.md):
+//  - attaches the access token to every request to our API (if the caller didn't set one)
+//  - on 401 the access token has run out: one refresh (shared by requests failing at the same time), then the request
+//    is tried once more; when the login itself has ended, the user is sent to the login page
 axios.interceptors.request.use((config) => {
   const { token } = useAuthStore.getState();
   const url = config.url || "";
@@ -18,11 +19,17 @@ axios.interceptors.request.use((config) => {
 
 axios.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const status = error?.response?.status;
-    const url = error?.config?.url || "";
-    if (status === 401 && !url.includes("/api/auth/")) {
-      useAuthStore.getState().logout();
+    const config = error?.config;
+    const url = config?.url || "";
+    if (status === 401 && config && !url.includes("/api/auth/") && !config.retriedAfterRefresh) {
+      const token = await useAuthStore.getState().refresh();
+      if (token) {
+        config.retriedAfterRefresh = true;
+        config.headers = { ...config.headers, Authorization: `Bearer ${token}` };
+        return axios(config);
+      }
       if (!window.location.pathname.startsWith("/login")) {
         window.location.assign("/login?expired=1");
       }
