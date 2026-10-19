@@ -36,6 +36,11 @@ public class UserService {
         return userRepository.findById(userId);
     }
 
+    /** The ids of a role's accounts that aren't deactivated, e.g. every receptionist (docs/NOTIFICATION_CENTRE_PLAN.md). */
+    public List<Long> activeUserIds(Role role) {
+        return userRepository.findActiveIdsByRole(role);
+    }
+
     // ---------- admin dashboard (docs/ADMIN_DASHBOARD_PLAN.md) ----------
 
     /** Accounts that aren't deactivated, per role; every role is present (0 when there are none). */

@@ -17,6 +17,10 @@ include::module-identity.adoc[]
 plantuml::module-audit.puml[,,format=svg]
 include::module-audit.adoc[]
 
+== Inbox
+plantuml::module-inbox.puml[,,format=svg]
+include::module-inbox.adoc[]
+
 == Staff
 plantuml::module-staff.puml[,,format=svg]
 include::module-staff.adoc[]

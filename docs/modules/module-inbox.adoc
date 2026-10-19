@@ -1,0 +1,12 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`com.itmonteur.hospitalerp.inbox`
+|Spring components
+|_Services_
+
+* `c.i.h.i.Inbox`
+|Bean references
+|* `c.i.h.i.UserService` (in Identity)
+* `c.i.h.i.CurrentUserService` (in Identity)
+|===
