@@ -173,6 +173,14 @@ describe("the user in the top bar", () => {
     expect(screen.getByRole("button", { name: "Log out of all devices" })).toBeInTheDocument();
   });
 
+  test("every role has the notifications bell", () => {
+    for (const role of ["ROLE_DOCTOR", "ROLE_RECEPTIONIST", "ROLE_ADMIN"]) {
+      renderLayout(role, "/somewhere");
+      expect(screen.getByRole("button", { name: "Notifications" })).toBeInTheDocument();
+      cleanup();
+    }
+  });
+
   test("Log out ends the session and goes to the login page", () => {
     const post = jest.spyOn(axios, "post").mockResolvedValue({ data: {} });
     renderLayout("ROLE_DOCTOR", "/doctor/dashboard");

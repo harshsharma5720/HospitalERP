@@ -5,6 +5,7 @@ import useAuthStore, { homePathForRole } from "../../features/auth/useAuthStore"
 import { getUsernameFromToken } from "../utils/jwtUtils";
 import { HOSPITAL, phoneHref } from "../hospitalInfo";
 import { Button, ThemeButton } from "../ui";
+import InboxBell from "../../features/inbox/InboxBell";
 
 // The header of the public site and the patient pages (docs/UI_REFRESH_PLAN.md, U.6): the hospital, the site's
 // pages, the phone number, the light / dark switch and the visitor's way in - Log in / Register, or for a logged-in
@@ -105,6 +106,7 @@ export default function PublicHeader() {
             <Phone size={16} aria-hidden="true" className="text-primary-ink" />
             {HOSPITAL.phone}
           </a>
+          <InboxBell /> {/* only with a login */}
           <ThemeButton />
           <div className="hidden items-center gap-2 md:flex">{accountLinks}</div>
           <button
