@@ -54,6 +54,6 @@ Every visit now has a **bill**: made when the patient checks in, with the doctor
 
 **Possible follow-ups:**
 - ~~Online payment with Razorpay (patients paying in the app; a webhook marks the bill paid).~~ Done 2026-10-15 ([ONLINE_PAYMENT_PLAN.md](ONLINE_PAYMENT_PLAN.md)).
-- A daily cash summary for the front desk (cash / card / UPI per day, refunds) — and bill figures on the admin dashboard.
+- ~~A daily cash summary for the front desk (cash / card / UPI per day, refunds)~~ Done 2026-10-19, with closing the day ([DAILY_CASH_SUMMARY_PLAN.md](DAILY_CASH_SUMMARY_PLAN.md)). Bill figures on the admin dashboard: not yet.
 - ~~Patients seeing their bills and receipts in the app.~~ Done 2026-10-13 ([PATIENT_BILLS_PLAN.md](PATIENT_BILLS_PLAN.md)).
 - GST, if the hospital ever bills taxable services (consultations are exempt).

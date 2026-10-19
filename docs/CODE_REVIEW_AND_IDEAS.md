@@ -441,7 +441,7 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ## 11. Feature Status (updated 2026-10-19)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15), patients' bills (PR #16), online payment (PR #17), the cancellation cut-off (PR #18), doctor analytics (PR #19) and safer login tokens (branch `feature/safer-login-tokens`). How to test each of them by hand: [END_TO_END_TEST_GUIDE.md](END_TO_END_TEST_GUIDE.md).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15), patients' bills (PR #16), online payment (PR #17), the cancellation cut-off (PR #18), doctor analytics (PR #19), safer login tokens (PR #20) and the daily cash summary (branch `feature/daily-cash-summary`). How to test each of them by hand: [END_TO_END_TEST_GUIDE.md](END_TO_END_TEST_GUIDE.md).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
@@ -459,6 +459,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 - **Online payment with Razorpay:** patients pay an unpaid bill in the app; a webhook as a safety net; late payments refunded automatically; the desk refunds a cancelled visit paid online (2026-10-15, see below).
 - **Cancellation cut-off:** patients can't cancel or move a visit less than 2 hours before it (configurable); the front desk can (2026-10-15, see below).
 - **Doctor analytics:** visits per day, no-show and cancellation rates, busy hours and weekdays, waiting time and earnings, for the doctor and for admins (2026-10-16, see below).
+- **Daily cash summary and closing the day:** what the desk took and gave back per method and person, every payment and refund; the desk counts the cash and closes the day, a difference needs a note; a PDF; admins any day or up to 31 days (2026-10-19, see below).
 - **Safer login tokens:** a 15-minute access token kept in memory, the login kept by a refresh token in an `httpOnly` cookie; patients 7 days after the last use (at most 90), staff 12 hours; "Log out of all devices", also after a password reset or a deactivation (2026-10-19, see below).
 
 **Partly done**
@@ -494,7 +495,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** a daily cash summary for the desk (a follow-up of billing: what was taken in cash, card, UPI and online, per day); then the in-app notification centre (6) or the family view (14).
+**Suggested order:** the in-app notification centre (6) — booking, cancellation and bill messages inside the app, not only by SMS / email; then the family view (14) or the waitlist (13). Bill figures on the admin dashboard are a small follow-up of the daily cash summary.
 
 ### Account deactivation (done 2026-10-01)
 
@@ -845,3 +846,28 @@ From idea #3 and the review's item 2.7. A login used to be one token valid for 1
 - `DatabaseMigrationMySqlTest` hasn't run the two new migrations on MySQL: Docker Desktop didn't answer on 2026-10-19. Run it before merging, or right after.
 - No list of the logged-in devices (which browser, when); only "log out of all of them".
 - A role change takes effect on the next request, but the access token still shows the old role in the app until it is renewed (at most 15 minutes).
+
+### Daily cash summary and closing the day (done 2026-10-19)
+
+A follow-up of billing, and the first item of the suggested order after safer login tokens. The desk recorded every payment and refund on its bill, but nothing added them up: nobody could say what the drawer should hold at the end of a day. Decisions, design and steps: [DAILY_CASH_SUMMARY_PLAN.md](DAILY_CASH_SUMMARY_PLAN.md).
+
+**What it does**
+- **Day summary** (under Bills): today's payments and refunds per method (cash, card, UPI, online) and per person who took them (online payments: the patient), every payment and refund in order with its bill, and the day's visits still unpaid. A payment counts on the day it was made, also when the visit is cancelled later; a refund on the day it was given.
+- **Closing the day:** the desk sees what the drawer should hold since the last close, counts the cash and enters it. The difference shows as it is typed ("Matches", "₹50.00 short", "₹20.00 over"); when it isn't zero a note is needed. The close is kept, can't be changed, and goes into the audit log. A day that wasn't closed rolls into the next close; two closes at the same moment can't cover the same cash.
+- **A PDF of the day** in the receipts' style, to hand over or file.
+- **Admins:** any day up to today, or up to 31 days — a row per day with the cash and the closes, the range's totals, and the closes that didn't match.
+- **Behind it:** billing computes it from the bills (no new figures stored except the closes): `cash_closes` (Flyway), five endpoints under `/api/receptionist/` and `/api/admin/`, the audit action `CASH_DAY_CLOSED`. Billing now uses the audit module.
+
+**Tests:**
+- Backend: end-to-end tests with payments and refunds on known days (boundaries at midnight, a visit refunded the next day, online, unpaid), closes (the first, after a close, a note, two at once, audit, access), the PDF read back as text; 220 (1 skipped; the 4 MySQL tests not run, see below) backend tests.
+- Frontend: the day's page, closing, the admins' days, the audit label; 292 tests.
+- Mutation checks for every step (63, all caught by a named test); screenshots on desktop and phone, light and dark.
+
+**Found on the way:**
+- A mutation that counted the next day's first moment survived at first: the query already left such bills out, and no test bill had one payment in the day and its refund at midnight. One does now.
+- Two full backend runs failed in clinical with `NoClassDefFoundError`: the editor had rebuilt classes against old jars after the audit module changed, and Maven reused them. A clean build fixed it.
+
+**Not covered yet:**
+- `DatabaseMigrationMySqlTest` hasn't run the new migration on MySQL (Docker Desktop didn't answer on 2026-10-19).
+- One drawer for the whole desk; separate drawers per receptionist or a change float aren't modelled.
+- Card, UPI and online totals aren't matched against the card machine's or the bank's statements; a CSV export; bill figures on the admin dashboard.

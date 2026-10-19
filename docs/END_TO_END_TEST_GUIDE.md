@@ -1,6 +1,6 @@
 # End-to-end test guide
 
-Every feature built so far, and how to check it by hand in the running app: where it is, who uses it, what to set up, the steps, and what you should see. It is kept up to date after each feature (last update: 2026-10-19, safer logins).
+Every feature built so far, and how to check it by hand in the running app: where it is, who uses it, what to set up, the steps, and what you should see. It is kept up to date after each feature (last update: 2026-10-19, daily cash summary).
 
 Tick the **Tested** column in the overview as you go. Each section links to the feature's plan for the details.
 
@@ -38,8 +38,9 @@ Tick the **Tested** column in the overview as you go. Each section links to the 
 7. Bill and payment (at the desk, then online).
 8. Patient's bills.
 9. Cancellations and refunds.
-10. Dashboards and analytics.
-11. Admin tools.
+10. The day's summary and closing the day.
+11. Dashboards and analytics.
+12. Admin tools.
 
 ## Overview
 
@@ -69,6 +70,7 @@ Tick the **Tested** column in the overview as you go. Each section links to the 
 | 22 | Audit log | Admin | `/admin/audit-log` | ☐ |
 | 23 | Automatic backups | Operator | `backups/` (Docker) or the Windows task | ☐ |
 | 24 | Safer logins: staying logged in, log out of all devices | Everyone | My account / Profile → **Logged-in devices**; admins: top bar | ☐ |
+| 25 | Daily cash summary and closing the day | Front desk, admin | **Day summary**: `/cash-summary`, `/admin/cash-summary` | ☐ |
 
 ---
 
@@ -235,3 +237,15 @@ Plan: [SAFER_LOGIN_TOKENS_PLAN.md](SAFER_LOGIN_TOKENS_PLAN.md). You need two bro
 8. **Deactivation:** an admin deactivates a patient who is logged in, then reactivates them. Expect: in the patient's open browser the next action leads to the login page, also after the reactivation; logging in again works.
 9. **Staff limit (optional):** with `AUTH_STAFF_HOURS=1`, log in as the receptionist. Expect: an hour later, however busy, "Your session ended…".
 10. **After the upgrade:** a browser that was logged in with the old version is logged out once (its old token is dropped); logging in works as usual.
+
+## 25. Daily cash summary and closing the day
+Plan: [DAILY_CASH_SUMMARY_PLAN.md](DAILY_CASH_SUMMARY_PLAN.md). Best after a few payments today (16, 18): cash, card and UPI at the desk, one paid online, and one refund.
+1. Front desk → **Day summary**. Expect: today's taken, given back and net; **By method** (cash, card, UPI, online, with how many) adding up to the total; **Payments and refunds** in time order, each bill a link, refunds marked "Refund" and minus; **Who took it** per receptionist, online payments as "Online (the patient)"; "Still unpaid: … bills of today's visits" with **See them** when some aren't paid.
+2. Compare with **Bills** and your own notes: every payment you recorded is there, by the method and the person; a paid visit you cancelled and refunded counts once as taken and once as given back.
+3. **Close the day…**. Expect: what the drawer should hold since the last close (the first time: since midnight), with the cash taken and given back. Enter exactly that: "Matches", no note; **Close the day** → "The day is closed: the cash matches." and the close listed with its time and your name.
+4. Take one more cash payment, then **Close the day…** again. Expect: only the new cash. Enter a little less: "₹… short", and **Close the day** asks why. Write a note → the close shows the badge and the note.
+5. Admin → **Audit log**, action "Closed the day (cash)". Expect: both closes, by the receptionist, with "expected …, counted …, difference …" and "Day close #…".
+6. **Download PDF**. Expect: the day on one or more A4 pages, with the hospital's letterhead, the methods, who took it, the closes with their differences, the unpaid bills and every payment and refund.
+7. Two people close at the same moment (two browsers, the dialog open in both, **Close the day** in both): the second gets "Someone has just closed the day…".
+8. Admin → **Day summary**: today, plus **One day** (pick an earlier day: its closes, no close button, its PDF) and **Several days** (**Last 7 days**, or From / To up to 31 days): a row per day, newest first, with the cash, "Not closed" for a day with money and no close, the closes' differences; **Cash that didn't match** with the notes; a day opens its own summary. More than 31 days or a day in the future: refused with a message.
+9. The receptionist sees only today (no day choice); patients and doctors have no way in.
