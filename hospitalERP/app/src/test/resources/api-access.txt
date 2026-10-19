@@ -15,6 +15,9 @@ GET /api/admin/allPending anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/allRejected anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/allUsers anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/audit-log anonymous- patient- doctor- receptionist- admin+
+GET /api/admin/cash-summary anonymous- patient- doctor- receptionist- admin+
+GET /api/admin/cash-summary/pdf anonymous- patient- doctor- receptionist- admin+
+GET /api/admin/cash-summary/range anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/dashboard anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorAppointmentCount/{doctorId} anonymous- patient- doctor- receptionist- admin+
 GET /api/admin/doctorCompletedAppointments/{userId} anonymous- patient- doctor- receptionist- admin+
@@ -59,6 +62,8 @@ GET /api/receptionist/bills anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/bills/by-appointment/{appointmentId} anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/bills/{billId} anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/bills/{billId}/receipt.pdf anonymous- patient- doctor- receptionist+ admin+
+GET /api/receptionist/cash-summary anonymous- patient- doctor- receptionist+ admin+
+GET /api/receptionist/cash-summary/today.pdf anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/doctorCompletedAppointments/{userId} anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/doctorPendingAppointments/{userId} anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/doctors/{doctorId}/next-free-slots anonymous- patient- doctor- receptionist+ admin+
@@ -110,6 +115,7 @@ POST /api/receptionist/bills/{billId}/items anonymous- patient- doctor- receptio
 POST /api/receptionist/bills/{billId}/pay anonymous- patient- doctor- receptionist+ admin+
 POST /api/receptionist/bills/{billId}/refund anonymous- patient- doctor- receptionist+ admin+
 POST /api/receptionist/bills/{billId}/refund-online anonymous- patient- doctor- receptionist+ admin+
+POST /api/receptionist/cash-closes anonymous- patient- doctor- receptionist+ admin+
 POST /api/receptionist/walk-in anonymous- patient- doctor- receptionist+ admin+
 POST /api/slots/generate/{doctorId} anonymous- patient- doctor- receptionist- admin+
 POST /appointment/NewAppointment anonymous- patient+ doctor+ receptionist+ admin+

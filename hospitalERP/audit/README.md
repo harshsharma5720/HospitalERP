@@ -4,14 +4,14 @@ The audit log: **who viewed or changed which patient record, and when** ([docs/A
 
 It records what other modules tell it to; it knows nothing about consultations or patients itself.
 
-**Depends on:** common, identity · **Used by:** clinical (medical records), patients (profiles), administration (account actions), app
+**Depends on:** common, identity · **Used by:** clinical (medical records), patients (profiles), administration (account actions), billing (closing the day at the front desk), app
 
 ## Public API — `com.itmonteur.hospitalerp.audit`
 
 | Class | Purpose |
 |---|---|
 | `AuditLog` | `record(action, patientId, targetId, details)`: records that the logged-in user did something; `search(filter, page, size)`: entries newest first, at most 100 per page. |
-| `AuditAction` | What happened, e.g. `CONSULTATION_VIEWED`, `PATIENT_PROFILE_UPDATED`, `ACCOUNT_DEACTIVATED`. Each action says what its target id points to (`APPOINTMENT`, `PATIENT`, `USER` or `NONE`). |
+| `AuditAction` | What happened, e.g. `CONSULTATION_VIEWED`, `PATIENT_PROFILE_UPDATED`, `ACCOUNT_DEACTIVATED`. Each action says what its target id points to (`APPOINTMENT`, `PATIENT`, `USER`, `CASH_CLOSE` or `NONE`). `CASH_DAY_CLOSED` (billing): a day closed at the front desk, its target the close, the amounts in `details`. |
 | `AuditFilter` | Search filters: patient, username, action, from / to day; each optional. |
 | `AuditEntryDTO` | One entry as the admin sees it; `patientName` is filled in by administration. |
 

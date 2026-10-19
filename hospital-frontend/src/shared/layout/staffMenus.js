@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, CalendarDays, UserPlus, Users, Receipt, MonitorPlay, ListOrdered, Clock, CalendarOff, UserRound,
-  UserCog, Stethoscope, CalendarCheck, IndianRupee, ScrollText, Bell,
+  UserCog, Stethoscope, CalendarCheck, IndianRupee, ScrollText, Bell, Banknote,
 } from "lucide-react";
 
 // The staff portals' menus (docs/UI_REFRESH_PLAN.md), per role. An item is a page in the app (to; also lit on the
@@ -12,6 +12,7 @@ const frontDesk = (base) => [
   { label: "Walk-in", to: `${base}/walk-in`, icon: UserPlus },
   { label: "Patients", to: `${base}/patients`, icon: Users },
   { label: "Bills", to: `${base}/bills`, icon: Receipt },
+  { label: "Day summary", to: `${base}/cash-summary`, icon: Banknote },
   { label: "Queue screen", href: "/queue-screen", icon: MonitorPlay },
 ];
 

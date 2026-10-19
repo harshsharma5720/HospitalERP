@@ -18,6 +18,7 @@ export const ACTION_LABELS = {
   ACCOUNT_DEACTIVATED: "Deactivated account",
   ACCOUNT_REACTIVATED: "Reactivated account",
   ACCOUNT_DELETED: "Deleted account",
+  CASH_DAY_CLOSED: "Closed the day (cash)",
 };
 
 const PAGE_SIZE = 50;
@@ -30,6 +31,7 @@ const targetLabel = (entry) => {
   if (entry.targetId == null) return "";
   if (entry.targetType === "APPOINTMENT") return `Appointment #${entry.targetId}`;
   if (entry.targetType === "USER") return `User #${entry.targetId}`;
+  if (entry.targetType === "CASH_CLOSE") return `Day close #${entry.targetId}`;
   return ""; // a patient target is shown in the Patient column
 };
 

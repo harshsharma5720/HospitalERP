@@ -12,6 +12,7 @@ import AuditLog from "./AuditLog";
 import Notifications from "./Notifications";
 import Fees from "./Fees";
 import BillsPage from "../billing/BillsPage";
+import CashSummaryPage from "../billing/CashSummaryPage";
 import BillPage from "../billing/BillPage";
 import WalkInBooking from "../appointments/WalkInBooking";
 import FrontDeskAppointments from "../appointments/FrontDeskAppointments";
@@ -36,6 +37,7 @@ export default function AdminLayout() {
         <Route path="bills" element={<BillsPage />} />
         <Route path="bills/:billId" element={<BillPage />} />
         <Route path="bills/visit/:appointmentId" element={<BillPage />} />
+        <Route path="cash-summary" element={<CashSummaryPage />} />
         <Route path="walk-in" element={<WalkInBooking />} />
         <Route path="appointments" element={<FrontDeskAppointments />} />
         <Route path="patients" element={<PatientSearch />} />

@@ -150,20 +150,20 @@ public class ReceiptPdfService {
         return cell;
     }
 
-    private static PdfPCell headerCell(String text, Font font) {
+    static PdfPCell headerCell(String text, Font font) {
         PdfPCell cell = new PdfPCell(new Phrase(text, font));
         cell.setBackgroundColor(LIGHT);
         cell.setPadding(5);
         return cell;
     }
 
-    private static PdfPCell textCell(String text, Font font) {
+    static PdfPCell textCell(String text, Font font) {
         PdfPCell cell = new PdfPCell(new Phrase(text, font));
         cell.setPadding(5);
         return cell;
     }
 
-    private static PdfPCell amountCell(String text, Font font, Color background) {
+    static PdfPCell amountCell(String text, Font font, Color background) {
         PdfPCell cell = new PdfPCell(new Phrase(text, font));
         cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
         cell.setPadding(5);

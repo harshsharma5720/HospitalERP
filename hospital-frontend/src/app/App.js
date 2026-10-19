@@ -20,6 +20,7 @@ import ReceptionistProfile from "../features/receptionist/ReceptionistProfile";
 import FrontDeskAppointments from "../features/appointments/FrontDeskAppointments";
 import QueueScreen from "../features/appointments/QueueScreen";
 import BillsPage from "../features/billing/BillsPage";
+import CashSummaryPage from "../features/billing/CashSummaryPage";
 import BillPage from "../features/billing/BillPage";
 import WalkInBooking from "../features/appointments/WalkInBooking";
 import PatientSearch from "../features/patients/PatientSearch";
@@ -114,6 +115,7 @@ function App() {
               <Route path="/bills" element={<BillsPage />} />
               <Route path="/bills/:billId" element={<BillPage />} />
               <Route path="/bills/visit/:appointmentId" element={<BillPage />} />
+              <Route path="/cash-summary" element={<CashSummaryPage />} />
               <Route path="/my-profile" element={<ProtectedRoute roles={["ROLE_RECEPTIONIST"]}><ReceptionistProfile /></ProtectedRoute>} />
             </Route>
 

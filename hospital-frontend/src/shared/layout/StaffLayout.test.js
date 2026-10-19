@@ -60,6 +60,7 @@ describe("the menu of each role", () => {
     expect(menuLink("Walk-in")).toHaveAttribute("href", "/walk-in");
     expect(menuLink("Patients")).toHaveAttribute("href", "/patients");
     expect(menuLink("Bills")).toHaveAttribute("href", "/bills");
+    expect(menuLink("Day summary")).toHaveAttribute("href", "/cash-summary");
     const queueScreen = menuLink(/Queue screen/);
     expect(queueScreen).toHaveAttribute("href", "/queue-screen");
     expect(queueScreen).toHaveAttribute("target", "_blank");
@@ -94,6 +95,7 @@ describe("the menu of each role", () => {
       "Walk-in": "/admin/walk-in",
       Patients: "/admin/patients",
       Bills: "/admin/bills",
+      "Day summary": "/admin/cash-summary",
       Users: "/admin/manage-users",
       Doctors: "/admin/manage-doctor",
       "Leave approvals": "/admin/leave-approval",
