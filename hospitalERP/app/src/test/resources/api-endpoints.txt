@@ -43,6 +43,8 @@ GET /api/doctor/getAllBySpecialization
 GET /api/doctor/getDoctor/{id}
 GET /api/doctor/queue
 GET /api/doctor/{userId}/schedule
+GET /api/inbox
+GET /api/inbox/unread-count
 GET /api/leaves/all auth=hasRole('ADMIN')
 GET /api/leaves/approved/{userId}
 GET /api/leaves/pending/{userId}
@@ -102,6 +104,8 @@ POST /api/bills/my/{billId}/online-payment/confirm
 POST /api/doctor/queue/next
 POST /api/doctor/queue/{appointmentId}/call
 POST /api/doctor/queue/{appointmentId}/not-here
+POST /api/inbox/read-all
+POST /api/inbox/{messageId}/read
 POST /api/leaves/apply
 POST /api/patient/relative/add
 POST /api/payments/razorpay/webhook

@@ -14,10 +14,10 @@ Container_Boundary("HospitalErpApplication.HospitalErpApplication_boundary", "Ho
   Component(HospitalErpApplication.HospitalErpApplication.Staff, "Staff", $techn="Module", $descr="", $tags="", $link="")
 }
 
-Rel(HospitalErpApplication.HospitalErpApplication.Identity, HospitalErpApplication.HospitalErpApplication.Common, "depends on", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Staff, HospitalErpApplication.HospitalErpApplication.Identity, "listens to", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Staff, HospitalErpApplication.HospitalErpApplication.Identity, "uses", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Staff, HospitalErpApplication.HospitalErpApplication.Common, "uses", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Identity, HospitalErpApplication.HospitalErpApplication.Common, "depends on", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 @enduml

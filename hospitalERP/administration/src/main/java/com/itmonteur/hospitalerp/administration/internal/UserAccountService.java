@@ -254,8 +254,8 @@ public class UserAccountService {
     public void deleteDoctorProfile(Doctor doctor) {
         Long doctorId = doctor.getId();
         List<Appointment> upcoming = appointmentService.findUpcomingForDoctor(doctorId);
-        upcoming.forEach(a -> eventPublisher.publishEvent(new AppointmentNotificationEvent(
-                AppointmentNotificationEvent.Kind.CANCELLED, AppointmentService.notificationInfo(a))));
+        upcoming.forEach(a -> eventPublisher.publishEvent(AppointmentService.notificationEvent(
+                AppointmentNotificationEvent.Kind.CANCELLED, a)));
         writeAndForgetLoadedEntities();
         consultationService.deleteAllForDoctor(doctorId);
         appointmentService.deleteAllForDoctor(doctorId);

@@ -33,7 +33,8 @@ SOURCE_ROOTS = sorted(glob.glob(os.path.join(BACKEND, '*', 'src', 'main', 'java'
 TARGET_ROOT_PACKAGE = 'com.itmonteur.hospitalerp'
 
 # Plan section 2.1: which modules each module may use. (audit added with docs/AUDIT_LOG_PLAN.md, billing with
-# docs/BILLING_PLAN.md, billing's use of audit with docs/DAILY_CASH_SUMMARY_PLAN.md)
+# docs/BILLING_PLAN.md, billing's use of audit with docs/DAILY_CASH_SUMMARY_PLAN.md, inbox with
+# docs/NOTIFICATION_CENTRE_PLAN.md)
 ALLOWED = {
     'common': set(),
     'notifications': {'common'},
@@ -47,8 +48,9 @@ ALLOWED = {
     'billing': {'common', 'identity', 'audit', 'patients', 'staff', 'appointments'},
     'administration': {'common', 'notifications', 'identity', 'audit', 'patients', 'staff', 'scheduling',
                        'appointments', 'clinical'},
+    'inbox': {'common', 'notifications', 'identity', 'staff', 'appointments', 'billing'},
     'app': {'common', 'notifications', 'identity', 'audit', 'patients', 'staff', 'scheduling', 'appointments',
-            'clinical', 'billing', 'administration'},
+            'clinical', 'billing', 'administration', 'inbox'},
 }
 
 def strip_comments(src):

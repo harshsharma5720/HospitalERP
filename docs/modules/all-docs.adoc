@@ -45,3 +45,7 @@ include::module-clinical.adoc[]
 plantuml::module-administration.puml[,,format=svg]
 include::module-administration.adoc[]
 
+== Inbox
+plantuml::module-inbox.puml[,,format=svg]
+include::module-inbox.adoc[]
+

@@ -41,6 +41,7 @@
 		<module>clinical</module>
 		<module>billing</module>
 		<module>administration</module>
+		<module>inbox</module>
 		<module>app</module>
 	</modules>
 
@@ -119,6 +120,11 @@
 			<dependency>
 				<groupId>${project.groupId}</groupId>
 				<artifactId>hospital-billing</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>hospital-inbox</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>

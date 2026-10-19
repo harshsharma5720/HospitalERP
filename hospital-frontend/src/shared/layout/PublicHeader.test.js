@@ -42,6 +42,7 @@ test("everyone sees the hospital, the site's pages and the phone number; visitor
   expect(screen.getByRole("link", { name: "Register" })).toHaveAttribute("href", "/register");
   expect(screen.queryByRole("link", { name: "My account" })).not.toBeInTheDocument();
   expect(screen.queryByRole("link", { name: /Staff portal/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Notifications/ })).not.toBeInTheDocument(); // no inbox without a login
 });
 
 test("the page you're on is marked", () => {
@@ -66,6 +67,7 @@ test("a patient gets their appointments and their account, and no staff portal",
   expect(screen.getByRole("link", { name: "My appointments" })).toHaveAttribute("href", "/appointment-details");
   expect(screen.getByRole("link", { name: "My account" })).toHaveAttribute("href", "/edit-profile");
   expect(screen.queryByRole("link", { name: "Staff portal" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Notifications" })).toBeInTheDocument(); // the bell (docs/NOTIFICATION_CENTRE_PLAN.md)
 });
 
 test("Log out ends the session and goes to the home page", () => {

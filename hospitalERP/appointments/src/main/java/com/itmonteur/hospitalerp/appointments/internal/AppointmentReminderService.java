@@ -54,8 +54,8 @@ public class AppointmentReminderService {
         LocalDate tomorrow = LocalDate.now(clock).plusDays(1);
         List<Appointment> due = appointmentRepository.findDueForReminder(tomorrow);
         for (Appointment appointment : due) {
-            eventPublisher.publishEvent(new AppointmentNotificationEvent(
-                    AppointmentNotificationEvent.Kind.REMINDER, AppointmentService.notificationInfo(appointment)));
+            eventPublisher.publishEvent(AppointmentService.notificationEvent(
+                    AppointmentNotificationEvent.Kind.REMINDER, appointment));
             appointment.setReminderSent(true);
         }
         appointmentRepository.saveAll(due);

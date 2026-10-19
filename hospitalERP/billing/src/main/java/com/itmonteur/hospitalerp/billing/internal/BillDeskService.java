@@ -1,5 +1,6 @@
 package com.itmonteur.hospitalerp.billing.internal;
 
+import com.itmonteur.hospitalerp.billing.BillNotificationEvent;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ConflictException;
 import com.itmonteur.hospitalerp.common.LikePattern;
@@ -40,14 +41,17 @@ public class BillDeskService {
     private final OnlinePaymentRepository onlinePayments;
     private final ReceiptPdfService receiptPdfService;
     private final CurrentUserService currentUserService;
+    private final BillNotifications notifications;
     private final Clock clock;
 
     public BillDeskService(BillRepository billRepository, OnlinePaymentRepository onlinePayments,
-                           ReceiptPdfService receiptPdfService, CurrentUserService currentUserService, Clock clock) {
+                           ReceiptPdfService receiptPdfService, CurrentUserService currentUserService,
+                           BillNotifications notifications, Clock clock) {
         this.billRepository = billRepository;
         this.onlinePayments = onlinePayments;
         this.receiptPdfService = receiptPdfService;
         this.currentUserService = currentUserService;
+        this.notifications = notifications;
         this.clock = clock;
     }
 
@@ -153,6 +157,7 @@ public class BillDeskService {
         bill.setPaidBy(currentUserService.getCurrentUser().getUsername());
         bill.setStatus(BillStatus.PAID);
         logger.info("Bill {} paid: {} by {}", bill.getBillNumber(), bill.total(), bill.getPaymentMethod());
+        notifications.publish(BillNotificationEvent.Kind.PAID, bill);
         return dto(billRepository.saveAndFlush(bill));
     }
 
@@ -169,6 +174,7 @@ public class BillDeskService {
         bill.setRefundedBy(currentUserService.getCurrentUser().getUsername());
         bill.setStatus(BillStatus.REFUNDED);
         logger.info("Bill {} refunded: {} by {}", bill.getBillNumber(), bill.total(), bill.getRefundMethod());
+        notifications.publish(BillNotificationEvent.Kind.REFUNDED, bill);
         return dto(billRepository.saveAndFlush(bill));
     }
 

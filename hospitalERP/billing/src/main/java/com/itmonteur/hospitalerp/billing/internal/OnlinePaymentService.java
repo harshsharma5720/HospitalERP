@@ -1,5 +1,6 @@
 package com.itmonteur.hospitalerp.billing.internal;
 
+import com.itmonteur.hospitalerp.billing.BillNotificationEvent;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ConflictException;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
@@ -68,14 +69,15 @@ public class OnlinePaymentService {
     private final CurrentUserService currentUserService;
     private final ObjectMapper json;
     private final TransactionTemplate transactions;
+    private final BillNotifications notifications;
     private final Clock clock;
     private final String hospitalName;
 
     public OnlinePaymentService(RazorpayClient razorpay, OnlinePaymentRepository onlinePayments,
                                 BillRepository billRepository, MyBillService myBillService,
                                 BillDeskService billDeskService, CurrentUserService currentUserService,
-                                ObjectMapper json, TransactionTemplate transactions, Clock clock,
-                                @Value("${app.hospital.name:Hospital ERP}") String hospitalName) {
+                                ObjectMapper json, TransactionTemplate transactions, BillNotifications notifications,
+                                Clock clock, @Value("${app.hospital.name:Hospital ERP}") String hospitalName) {
         this.razorpay = razorpay;
         this.onlinePayments = onlinePayments;
         this.billRepository = billRepository;
@@ -84,6 +86,7 @@ public class OnlinePaymentService {
         this.currentUserService = currentUserService;
         this.json = json;
         this.transactions = transactions;
+        this.notifications = notifications;
         this.clock = clock;
         this.hospitalName = hospitalName;
     }
@@ -225,6 +228,7 @@ public class OnlinePaymentService {
             bill.setRefundedAt(now());
             bill.setRefundedBy(by);
             billRepository.saveAndFlush(bill);
+            notifications.publish(BillNotificationEvent.Kind.REFUNDED, bill);
             logger.info("Bill {} refunded online: {} ({})", bill.getBillNumber(), bill.total(), refund.id());
         });
         return billDeskService.get(billId);
@@ -295,6 +299,7 @@ public class OnlinePaymentService {
         attempt.setPaidAt(now);
         billRepository.saveAndFlush(bill);
         onlinePayments.saveAndFlush(attempt);
+        notifications.publish(BillNotificationEvent.Kind.PAID, bill);
         logger.info("Bill {} paid online: {} ({})", bill.getBillNumber(), bill.total(), payment.id());
         return new Decision(new Outcome(true, "Paid " + rupees(attempt.getAmount()) + "."), null, null);
     }

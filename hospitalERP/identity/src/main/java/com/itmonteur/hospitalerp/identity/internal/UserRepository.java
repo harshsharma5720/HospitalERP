@@ -18,6 +18,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // ---------- admin dashboard (docs/ADMIN_DASHBOARD_PLAN.md) ----------
 
+    // The accounts of a role that aren't deactivated (the notification centre writes to all of them)
+    @Query("SELECT u.id FROM User u WHERE u.role = :role AND u.active = true ORDER BY u.id")
+    List<Long> findActiveIdsByRole(@Param("role") Role role);
+
     /** Rows of [role, count] for accounts that aren't deactivated. */
     @Query("SELECT u.role, COUNT(u) FROM User u WHERE u.active = true GROUP BY u.role")
     List<Object[]> countActivePerRole();

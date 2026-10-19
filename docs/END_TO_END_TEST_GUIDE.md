@@ -1,6 +1,6 @@
 # End-to-end test guide
 
-Every feature built so far, and how to check it by hand in the running app: where it is, who uses it, what to set up, the steps, and what you should see. It is kept up to date after each feature (last update: 2026-10-19, daily cash summary).
+Every feature built so far, and how to check it by hand in the running app: where it is, who uses it, what to set up, the steps, and what you should see. It is kept up to date after each feature (last update: 2026-10-19, notification centre).
 
 Tick the **Tested** column in the overview as you go. Each section links to the feature's plan for the details.
 
@@ -71,6 +71,7 @@ Tick the **Tested** column in the overview as you go. Each section links to the 
 | 23 | Automatic backups | Operator | `backups/` (Docker) or the Windows task | ☐ |
 | 24 | Safer logins: staying logged in, log out of all devices | Everyone | My account / Profile → **Logged-in devices**; admins: top bar | ☐ |
 | 25 | Daily cash summary and closing the day | Front desk, admin | **Day summary**: `/cash-summary`, `/admin/cash-summary` | ☐ |
+| 26 | Notification centre (the bell) | Everyone logged in | The bell in the top bar / header | ☐ |
 
 ---
 
@@ -249,3 +250,15 @@ Plan: [DAILY_CASH_SUMMARY_PLAN.md](DAILY_CASH_SUMMARY_PLAN.md). Best after a few
 7. Two people close at the same moment (two browsers, the dialog open in both, **Close the day** in both): the second gets "Someone has just closed the day…".
 8. Admin → **Day summary**: today, plus **One day** (pick an earlier day: its closes, no close button, its PDF) and **Several days** (**Last 7 days**, or From / To up to 31 days): a row per day, newest first, with the cash, "Not closed" for a day with money and no close, the closes' differences; **Cash that didn't match** with the notes; a day opens its own summary. More than 31 days or a day in the future: refused with a message.
 9. The receptionist sees only today (no day choice); patients and doctors have no way in.
+
+## 26. Notification centre (the bell)
+Plan: [NOTIFICATION_CENTRE_PLAN.md](NOTIFICATION_CENTRE_PLAN.md). Best with three browsers (or private windows): a patient, a doctor, the front desk; an admin in a fourth or later. Messages arrive within 30 seconds; switching back to a tab asks at once.
+1. **Patient** books with the doctor. Expect: the patient's bell "Appointment booked" (Dr. …, the day, the time, for whom); the doctor's bell "New appointment" (the patient's name, the day, the time). The badge counts unread ones ("9+" above 9).
+2. **Patient** moves the visit to another slot, then cancels another booking. Expect: "Appointment moved" (the new time) and "Appointment cancelled", for both the patient and the doctor. A family member's visit says "for <their name>" and goes to the account holder.
+3. Click a message. Expect: it opens its page (My appointments, the doctor's appointments, My account…) and stops being unread; **Mark all as read** clears the rest. Escape or a click beside the panel closes it.
+4. **Front desk** checks the patient in. Expect: the patient's "Your bill is ready" (the bill number, the doctor, the amount, "Pay at the front desk, or online"). Pay it (at the desk or online). Expect: "Payment received" with the method.
+5. **Front desk** cancels that paid visit. Expect: the patient's "Refund due"; every receptionist's "Refund due: B-…" with the patient, the amount and how it was paid, opening the bill. Record the refund. Expect: the patient's "Refund given".
+6. **Doctor** applies for leave on a day with a booking. Expect: every admin's "Leave request: <doctor>" with the days and the reason, opening Leave approvals. **Admin** approves. Expect: the doctor's "Your leave is approved"; the booked patient's "Appointment cancelled: the doctor is away". Reject another request. Expect: the doctor's "Your leave was not approved".
+7. The day before a visit (or with `REMINDERS_CRON` every minute): the patient's "Your appointment is tomorrow".
+8. A walk-in at the desk (no login): only the doctor gets "New appointment"; nobody gets the bill's messages, until a refund is due (the desk).
+9. On a phone the panel spans the screen under the header; dark mode reads well. Logged out: no bell.

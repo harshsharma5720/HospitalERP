@@ -27,6 +27,7 @@ public class AppointmentNotificationListener {
             case CANCELLED -> notificationService.appointmentCancelled(event.info());
             case CANCELLED_BY_DOCTOR_LEAVE -> notificationService.appointmentCancelledByDoctorLeave(event.info());
             case REMINDER -> notificationService.appointmentReminder(event.info());
+            case MOVED -> { } // in the app only (the inbox module) for now
         }
     }
 }

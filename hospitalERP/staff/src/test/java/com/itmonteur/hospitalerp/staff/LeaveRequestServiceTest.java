@@ -37,6 +37,7 @@ class LeaveRequestServiceTest {
         service = new LeaveRequestService(leaveRequestRepository, doctorRepository, currentUserService, eventPublisher);
         doctorUser = new User();
         doctorUser.setId(5L);
+        doctorUser.setUsername("drrao");
         doctorUser.setRole(Role.DOCTOR);
     }
 
@@ -57,6 +58,9 @@ class LeaveRequestServiceTest {
         assertThat(result.getUserId()).isEqualTo(5L);
         assertThat(result.getRole()).isEqualTo("ROLE_DOCTOR");
         assertThat(result.getStatus()).isEqualTo(LeaveStatus.PENDING);
+        // The admins are told (docs/NOTIFICATION_CENTRE_PLAN.md); without a doctor profile, by the user name
+        verify(eventPublisher).publishEvent(new LeaveRequestedEvent(null, "drrao", request.getStartDate(),
+                request.getEndDate(), "Conference"));
     }
 
     @Test
@@ -83,10 +87,11 @@ class LeaveRequestServiceTest {
         assertThat(leave.getStatus()).isEqualTo(LeaveStatus.APPROVED);
         verify(eventPublisher).publishEvent(
                 new DoctorLeaveApprovedEvent(7L, leave.getStartDate(), leave.getEndDate()));
+        verify(eventPublisher).publishEvent(new LeaveDecidedEvent(null, 5L, true, leave.getStartDate(), leave.getEndDate()));
     }
 
     @Test
-    void rejectingOrNonDoctorLeavePublishesNothing() {
+    void rejectingOrNonDoctorLeaveBlocksNoDoctorsDaysButIsStillTold() {
         LeaveRequest rejected = pendingLeave(doctorUser);
         when(leaveRequestRepository.findById(1L)).thenReturn(Optional.of(rejected));
         service.updateLeaveStatus(1L, LeaveStatus.REJECTED);
@@ -98,7 +103,10 @@ class LeaveRequestServiceTest {
         when(leaveRequestRepository.findById(2L)).thenReturn(Optional.of(receptionistLeave));
         service.updateLeaveStatus(2L, LeaveStatus.APPROVED);
 
-        verifyNoInteractions(eventPublisher);
+        verify(eventPublisher, never()).publishEvent(any(DoctorLeaveApprovedEvent.class));
+        verify(eventPublisher).publishEvent(new LeaveDecidedEvent(null, 5L, false, rejected.getStartDate(), rejected.getEndDate()));
+        verify(eventPublisher).publishEvent(new LeaveDecidedEvent(null, 6L, true, receptionistLeave.getStartDate(),
+                receptionistLeave.getEndDate()));
     }
 
     @Test

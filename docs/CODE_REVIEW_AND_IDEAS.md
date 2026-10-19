@@ -441,7 +441,7 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ## 11. Feature Status (updated 2026-10-19)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15), patients' bills (PR #16), online payment (PR #17), the cancellation cut-off (PR #18), doctor analytics (PR #19), safer login tokens (PR #20) and the daily cash summary (branch `feature/daily-cash-summary`). How to test each of them by hand: [END_TO_END_TEST_GUIDE.md](END_TO_END_TEST_GUIDE.md).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15), patients' bills (PR #16), online payment (PR #17), the cancellation cut-off (PR #18), doctor analytics (PR #19), safer login tokens (PR #20), the daily cash summary (PR #21) and the notification centre (branch `feature/notification-centre`). How to test each of them by hand: [END_TO_END_TEST_GUIDE.md](END_TO_END_TEST_GUIDE.md).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
@@ -459,6 +459,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 - **Online payment with Razorpay:** patients pay an unpaid bill in the app; a webhook as a safety net; late payments refunded automatically; the desk refunds a cancelled visit paid online (2026-10-15, see below).
 - **Cancellation cut-off:** patients can't cancel or move a visit less than 2 hours before it (configurable); the front desk can (2026-10-15, see below).
 - **Doctor analytics:** visits per day, no-show and cancellation rates, busy hours and weekdays, waiting time and earnings, for the doctor and for admins (2026-10-16, see below).
+- **Notification centre:** a bell with each user's messages — visits, bills and payments, leave — for patients, doctors, the desk and admins; new ones within 30 seconds (2026-10-19, see below).
 - **Daily cash summary and closing the day:** what the desk took and gave back per method and person, every payment and refund; the desk counts the cash and closes the day, a difference needs a note; a PDF; admins any day or up to 31 days (2026-10-19, see below).
 - **Safer login tokens:** a 15-minute access token kept in memory, the login kept by a refresh token in an `httpOnly` cookie; patients 7 days after the last use (at most 90), staff 12 hours; "Log out of all devices", also after a password reset or a deactivation (2026-10-19, see below).
 
@@ -474,7 +475,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 3 | ~~Safer login tokens (short access token + refresh token in an `httpOnly` cookie)~~ ✅ done 2026-10-19 (also "Log out of all devices") | security | — |
 | 4 | ~~Automatic MySQL backups (backup container in docker-compose)~~ ✅ done 2026-10-08 (Docker and Windows) | operations | — |
 | 5 | ~~Notifications that aren't lost when SMS/email is down~~ ✅ done 2026-10-07 (an outbox instead of the Modulith event registry) | reliability | — |
-| 6 | In-app notification centre (bell icon) | platform | 3 days |
+| 6 | ~~In-app notification centre (bell icon)~~ ✅ done 2026-10-19 (visits, bills and payments, leave) | platform | — |
 | 7 | ~~Real admin dashboard KPIs (replacing the fake chart data)~~ ✅ done 2026-10-07 | admin | — |
 | 8 | ~~Doctor analytics (patients per day, no-show rate, busy hours)~~ ✅ done 2026-10-16 (also waiting time and earnings) | doctor | — |
 | 9 | ~~Cancellation / reschedule cut-off rule~~ ✅ done 2026-10-15 | patients | — |
@@ -495,7 +496,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** the in-app notification centre (6) — booking, cancellation and bill messages inside the app, not only by SMS / email; then the family view (14) or the waitlist (13). Bill figures on the admin dashboard are a small follow-up of the daily cash summary.
+**Suggested order:** the family view (14) — each family member's visits, prescriptions and bills under them —; then the waitlist (13), which the notification centre can now tell about a freed slot. Small follow-ups: bill figures on the admin dashboard, and an SMS / email when a visit is moved.
 
 ### Account deactivation (done 2026-10-01)
 
@@ -871,3 +872,29 @@ A follow-up of billing, and the first item of the suggested order after safer lo
 - `DatabaseMigrationMySqlTest` hasn't run the new migration on MySQL (Docker Desktop didn't answer on 2026-10-19).
 - One drawer for the whole desk; separate drawers per receptionist or a change float aren't modelled.
 - Card, UPI and online totals aren't matched against the card machine's or the bank's statements; a CSV export; bill figures on the admin dashboard.
+
+### Notification centre (done 2026-10-19)
+
+From idea #6. The app told people what happened only by email and SMS, only for visits, and only with Twilio or a mail server set up. Moving a visit, a bill, a payment, a refund, a leave decision or a leave request to decide reached nobody unless they looked. Decisions, design and steps: [NOTIFICATION_CENTRE_PLAN.md](NOTIFICATION_CENTRE_PLAN.md).
+
+**What it does**
+- **A bell** in the staff top bar and the patients' header with the number unread; its panel lists the newest messages, unread ones marked, opens a message's page and marks it read, and has **Mark all as read**. New ones appear within 30 seconds, and at once when the tab is opened again. On a phone the panel spans the screen.
+- **Patients:** a visit booked, moved, cancelled (also by the doctor's leave) and the reminder; a bill made at check-in, a payment received (also online), a refund due and given. For a family member's visit, the account holder.
+- **Doctors:** bookings, moves and cancellations of their visits; their leave approved or rejected. **Admins:** every new leave request. **The front desk:** every refund to give.
+- Messages are kept 90 days. A walk-in without a login gets nothing (no account to show it in).
+- **Behind it:** a new module **`inbox`** that listens to the other modules' events — appointments (the existing notification event, now with who to tell and a new kind "moved"), staff (leave requested, decided) and billing (its first public API, `BillNotificationEvent`) — and writes in the same transaction, so a change that rolls back leaves no message. `inbox_messages` (Flyway), four endpoints under `/api/inbox`.
+
+**Tests:**
+- Backend: the inbox's own rules (own messages only, read, 50 / 90 days, roles), visits and leave and bills from the real flows, online payments, the text helpers; 228 (1 skipped; the 4 MySQL tests not run, see below) backend tests.
+- Frontend: the bell (the count and its polling, the panel, reading, closing), the headers; 297 tests; every test gets an empty inbox, so none calls the server.
+- Mutation checks for every step (53, all caught by a named test); screenshots on desktop and phone, light and dark.
+
+**Found on the way:**
+- The leave events took the leave's id as a number; the staff module's unit tests have leaves without one, and the first full run failed. They take `Long` now.
+- Java's currency format can't group rupees the Indian way ("₹125,000.00"), so the inbox writes "₹1,25,000.00" itself, like the app.
+- On a phone the first panel hung from the bell and ran off the left edge; it now spans the screen under the header.
+
+**Not covered yet:**
+- `DatabaseMigrationMySqlTest` hasn't run the new migration on MySQL (Docker Desktop didn't answer on 2026-10-19).
+- No SMS / email for a moved visit yet; no message settings per user; no messages for undelivered emails or a day closed short (left out on purpose).
+- Polling, not push: a message can take up to 30 seconds to show.
