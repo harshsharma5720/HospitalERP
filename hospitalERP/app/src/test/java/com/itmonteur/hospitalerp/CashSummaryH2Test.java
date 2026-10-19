@@ -2,15 +2,22 @@ package com.itmonteur.hospitalerp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lowagie.text.pdf.PdfReader;
+import com.lowagie.text.pdf.parser.PdfTextExtractor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -70,6 +77,27 @@ class CashSummaryH2Test {
 
     private String billNumber(String desk, long billId) throws Exception {
         return api.get(desk, BILLS + "/" + billId).get("billNumber").asText();
+    }
+
+    private ResponseEntity<byte[]> pdf(String token, String url) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        return rest.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), byte[].class);
+    }
+
+    // The PDF's text; it must be a PDF named day-summary-{day}.pdf
+    private static String pdfText(ResponseEntity<byte[]> res, LocalDate day) throws Exception {
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_PDF);
+        assertThat(res.getHeaders().getContentDisposition().getFilename()).isEqualTo("day-summary-" + day + ".pdf");
+        byte[] body = res.getBody();
+        assertThat(new String(body, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
+        PdfReader reader = new PdfReader(body);
+        StringBuilder text = new StringBuilder();
+        for (int page = 1; page <= reader.getNumberOfPages(); page++) {
+            text.append(new PdfTextExtractor(reader).getTextFromPage(page)).append('\n');
+        }
+        return text.toString();
     }
 
     private static void money(JsonNode node, String field, String expected) {
@@ -183,6 +211,10 @@ class CashSummaryH2Test {
         money(range.get("totals"), "net", "2100");
         method(range.get("methods").get(0), "CASH", 2, "1100", 1, "500", "600");
         method(range.get("methods").get(2), "UPI", 1, "500", 0, "0", "500");
+
+        // The day as a PDF, for admins
+        assertThat(pdfText(pdf(admin, ADMIN_SUMMARY + "/pdf?date=" + DAY), DAY))
+                .contains("Day summary: Monday, 15 Mar 2021", "deskcash1", "Online (the patient)", "Rs. 2,100.00", "Cashone 1");
     }
 
     @Test
@@ -218,6 +250,13 @@ class CashSummaryH2Test {
         assertThat(status(null, DESK_SUMMARY)).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(status(desk, ADMIN_SUMMARY + "?date=" + today)).as("the desk: today only").isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(status(desk, ADMIN_SUMMARY + "/range?from=" + today + "&to=" + today)).isEqualTo(HttpStatus.FORBIDDEN);
+
+        // Today's PDF for the desk; any day's only for admins
+        assertThat(pdfText(pdf(desk, DESK_SUMMARY + "/today.pdf"), today)).contains("deskcash3");
+        assertThat(pdf(desk, ADMIN_SUMMARY + "/pdf?date=" + today).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(pdf(api.login("drcash3", "doctor-123"), DESK_SUMMARY + "/today.pdf").getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(pdf(admin, ADMIN_SUMMARY + "/pdf?date=" + today.plusDays(1)).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         // Which days
         assertThat(status(admin, ADMIN_SUMMARY + "?date=" + today.plusDays(1))).isEqualTo(HttpStatus.BAD_REQUEST);

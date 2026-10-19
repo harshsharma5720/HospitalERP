@@ -15,6 +15,7 @@ GET /api/admin/allRejected
 GET /api/admin/allUsers
 GET /api/admin/audit-log
 GET /api/admin/cash-summary
+GET /api/admin/cash-summary/pdf
 GET /api/admin/cash-summary/range
 GET /api/admin/dashboard
 GET /api/admin/doctorAppointmentCount/{doctorId}
@@ -61,6 +62,7 @@ GET /api/receptionist/bills/by-appointment/{appointmentId}
 GET /api/receptionist/bills/{billId}
 GET /api/receptionist/bills/{billId}/receipt.pdf
 GET /api/receptionist/cash-summary
+GET /api/receptionist/cash-summary/today.pdf
 GET /api/receptionist/doctorCompletedAppointments/{userId}
 GET /api/receptionist/doctorPendingAppointments/{userId}
 GET /api/receptionist/doctors/{doctorId}/next-free-slots
