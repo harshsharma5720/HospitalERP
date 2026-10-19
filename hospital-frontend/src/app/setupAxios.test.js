@@ -60,6 +60,13 @@ test("a request still refused after the refresh isn't tried again and again", as
   expect(answers).toEqual(["Bearer old-token", "Bearer still-bad"]);
 });
 
+test("log out of all devices is an ordinary call: its 401 refreshes and tries again", async () => {
+  refresh.mockResolvedValue("new-token");
+  const res = await axios.post(`${API_BASE_URL}/api/auth/logout-all`, null);
+  expect(res.data).toBe("ok");
+  expect(refresh).toHaveBeenCalledTimes(1);
+});
+
 test("the login endpoints' own 401s are left alone", async () => {
   await expect(axios.post(`${API_BASE_URL}/api/auth/login`, {})).rejects.toMatchObject({ response: { status: 401 } });
   expect(refresh).not.toHaveBeenCalled();

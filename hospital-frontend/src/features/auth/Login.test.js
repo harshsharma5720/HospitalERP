@@ -57,9 +57,14 @@ test("wrong credentials say so and stay on the page", async () => {
   expect(screen.getByRole("button", { name: "Log in" })).toBeEnabled();
 });
 
+test("after logging out of all devices, the login page says so", () => {
+  renderAt("/login?loggedOut=everywhere");
+  expect(screen.getByRole("status")).toHaveTextContent("You're logged out of all devices.");
+});
+
 test("an expired session is explained; the other ways are links, and no button that does nothing", () => {
   renderAt("/login?expired=1");
-  expect(screen.getByRole("status")).toHaveTextContent("Your session has expired");
+  expect(screen.getByRole("status")).toHaveTextContent("Your session ended. Please log in again.");
   expect(screen.getByRole("link", { name: "Forgot password?" })).toHaveAttribute("href", "/forgot-password");
   expect(screen.getByRole("link", { name: "Create an account" })).toHaveAttribute("href", "/register");
   expect(screen.queryByRole("button", { name: /Sign in with other/ })).not.toBeInTheDocument();

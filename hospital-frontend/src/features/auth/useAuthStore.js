@@ -76,6 +76,14 @@ const useAuthStore = create((set) => ({
     return axios.post(`${AUTH}/logout`, null, FROM_THE_APP).catch(() => {});
   },
 
+  // "Log out of all devices": the server first, as it needs the access token; rejects when it couldn't (still logged in)
+  logoutEverywhere: async () => {
+    await axios.post(`${AUTH}/logout-all`, null, FROM_THE_APP);
+    clearTimeout(timer);
+    set({ ...signedOut, ready: true });
+    channel?.postMessage("logout");
+  },
+
   // The other tabs' news: a logout drops this tab's token, a login fetches this tab's own
   heard: (message) => {
     if (message === "logout") {

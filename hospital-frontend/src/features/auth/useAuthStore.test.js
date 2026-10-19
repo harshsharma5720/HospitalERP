@@ -94,6 +94,24 @@ test("logout clears the login here, tells the other tabs and the server", async 
   expect(post()).toHaveBeenCalledWith(expect.stringMatching(/\/api\/auth\/logout$/), null, expect.objectContaining({ withCredentials: true }));
 });
 
+test("log out of all devices: the server first, then signed out here and in the other tabs", async () => {
+  post().mockResolvedValue({ data: {} });
+  store.getState().login(tokenFor("ROLE_PATIENT", 7, inMinutes(15)));
+  await store.getState().logoutEverywhere();
+  expect(post()).toHaveBeenCalledWith(expect.stringMatching(/\/api\/auth\/logout-all$/), null, expect.objectContaining({ withCredentials: true }));
+  expect(store.getState()).toMatchObject({ token: null, role: null, userId: null, ready: true });
+  expect(posted).toEqual(["login", "logout"]);
+});
+
+test("when the server couldn't log out everywhere, this device stays logged in", async () => {
+  const token = tokenFor("ROLE_PATIENT", 7, inMinutes(15));
+  store.getState().login(token);
+  post().mockRejectedValue(new Error("down"));
+  await expect(store.getState().logoutEverywhere()).rejects.toThrow("down");
+  expect(store.getState().token).toBe(token);
+  expect(posted).toEqual(["login"]);
+});
+
 test("news from another tab: a logout drops this tab's token, a login fetches its own", async () => {
   store.getState().login(tokenFor("ROLE_PATIENT", 7, inMinutes(15)));
   store.getState().heard("logout");

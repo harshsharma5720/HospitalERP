@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import MyDoctorProfile from "./MyDoctorProfile";
 import * as doctorsApi from "../api";
 import { ToastProvider } from "../../../shared/ui";
@@ -20,7 +21,9 @@ const readBlob = (blob) =>
 const renderProfile = () =>
   render(
     <ToastProvider>
-      <MyDoctorProfile />
+      <MemoryRouter>
+        <MyDoctorProfile />
+      </MemoryRouter>
     </ToastProvider>
   );
 
@@ -51,6 +54,12 @@ test("shows the profile; editing and saving sends it and says so", async () => {
   expect(sent).toMatchObject({ id: 9, phoneNumber: "9000011111", name: "Anita Rao" });
   expect(screen.queryByLabelText("Phone Number")).not.toBeInTheDocument(); // back to viewing
   expect(screen.getByText("9000011111")).toBeInTheDocument();
+});
+
+test("Log out of all devices is on the profile page, outside the form", async () => {
+  renderProfile();
+  const button = await screen.findByRole("button", { name: "Log out of all devices" });
+  expect(button.closest("form")).toBeNull();
 });
 
 test("Cancel drops the changes", async () => {

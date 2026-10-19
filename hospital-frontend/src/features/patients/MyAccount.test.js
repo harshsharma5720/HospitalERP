@@ -71,6 +71,9 @@ test("shows the patient's details (the Aadhaar number masked), family members an
   const appointments = screen.getByRole("region", { name: "Your appointments" });
   expect(await within(appointments).findByText(/Dr\. Anita Rao · for Mira Verma/)).toBeInTheDocument();
   expect(appointments).toHaveTextContent("and 1 more upcoming");
+  expect(screen.getByRole("region", { name: "Logged-in devices" })).toContainElement(
+    screen.getByRole("button", { name: "Log out of all devices" })
+  );
 });
 
 test("editing the details sends them as the profile endpoint expects; an empty Aadhaar number is sent as none", async () => {

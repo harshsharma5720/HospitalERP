@@ -17,13 +17,17 @@ axios.interceptors.request.use((config) => {
   return config;
 });
 
+// The login endpoints' own 401s are answers (a wrong password, an ended login), not an access token that ran out;
+// "log out of all devices" needs the access token like any other call
+const isLoginEndpoint = (url) => url.includes("/api/auth/") && !url.endsWith("/api/auth/logout-all");
+
 axios.interceptors.response.use(
   (response) => response,
   async (error) => {
     const status = error?.response?.status;
     const config = error?.config;
     const url = config?.url || "";
-    if (status === 401 && config && !url.includes("/api/auth/") && !config.retriedAfterRefresh) {
+    if (status === 401 && config && !isLoginEndpoint(url) && !config.retriedAfterRefresh) {
       const token = await useAuthStore.getState().refresh();
       if (token) {
         config.retriedAfterRefresh = true;

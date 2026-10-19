@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { cleanup, render, screen, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import StaffLayout from "./StaffLayout";
 import axios from "axios";
@@ -161,6 +161,14 @@ describe("the user in the top bar", () => {
     expect(screen.getByText("flowadmin")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /My profile/ })).not.toBeInTheDocument();
     expect(getOwnProfile).not.toHaveBeenCalled();
+  });
+
+  test("an admin, who has no profile page, gets Log out of all devices in the top bar; the others on their profile", () => {
+    renderLayout("ROLE_DOCTOR", "/doctor/dashboard");
+    expect(screen.queryByRole("button", { name: "Log out of all devices" })).not.toBeInTheDocument();
+    cleanup();
+    renderLayout("ROLE_ADMIN", "/admin/fees", { username: "flowadmin" });
+    expect(screen.getByRole("button", { name: "Log out of all devices" })).toBeInTheDocument();
   });
 
   test("Log out ends the session and goes to the login page", () => {
