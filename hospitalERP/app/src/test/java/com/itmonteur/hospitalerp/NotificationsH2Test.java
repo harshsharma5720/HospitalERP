@@ -51,6 +51,9 @@ import static org.mockito.Mockito.*;
 })
 class NotificationsH2Test {
 
+    // These events test the emails and SMS: nobody to tell in the app (docs/NOTIFICATION_CENTRE_PLAN.md)
+    private static final AppointmentNotificationEvent.Who NO_ONE = null;
+
     @Autowired private TestRestTemplate rest;
     @Autowired private ObjectMapper json;
     @Autowired private ApplicationEventPublisher publisher;
@@ -119,7 +122,7 @@ class NotificationsH2Test {
         doThrow(new MessagingException("SMTP server unreachable")).doNothing()
                 .when(emailService).sendHtml(anyString(), anyString(), anyString());
         inTransaction(() -> publisher.publishEvent(new AppointmentNotificationEvent(
-                AppointmentNotificationEvent.Kind.CANCELLED_BY_DOCTOR_LEAVE, info("Mail Down", "maildown@example.com"))));
+                AppointmentNotificationEvent.Kind.CANCELLED_BY_DOCTOR_LEAVE, info("Mail Down", "maildown@example.com"), NO_ONE)));
 
         sender.sendDueMessages();
         OutboxMessage mail = mailTo("maildown@example.com");
@@ -142,11 +145,11 @@ class NotificationsH2Test {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
         transaction.executeWithoutResult(status -> {
             publisher.publishEvent(new AppointmentNotificationEvent(
-                    AppointmentNotificationEvent.Kind.BOOKED, info("Rolled Back", "rolledback@example.com")));
+                    AppointmentNotificationEvent.Kind.BOOKED, info("Rolled Back", "rolledback@example.com"), NO_ONE));
             status.setRollbackOnly();
         });
         inTransaction(() -> publisher.publishEvent(new AppointmentNotificationEvent(
-                AppointmentNotificationEvent.Kind.BOOKED, info("Committed", "committed@example.com"))));
+                AppointmentNotificationEvent.Kind.BOOKED, info("Committed", "committed@example.com"), NO_ONE)));
 
         assertThat(outbox.findAll()).extracting(OutboxMessage::getRecipient)
                 .doesNotContain("rolledback@example.com").contains("committed@example.com");
@@ -181,7 +184,7 @@ class NotificationsH2Test {
         inTransaction(() -> publisher.publishEvent(new AppointmentNotificationEvent(
                 AppointmentNotificationEvent.Kind.CANCELLED_BY_DOCTOR_LEAVE,
                 new NotificationService.AppointmentInfo("Late Patient", null, "+919800000077", "Dr Test", null, null,
-                        LocalDate.now().minusDays(1).toString(), "09:00 - 09:10"))));
+                        LocalDate.now().minusDays(1).toString(), "09:00 - 09:10"), NO_ONE)));
         sender.sendDueMessages();
 
         JsonNode failedPage = adminGet(admin, "/api/admin/notifications?status=FAILED&size=100");

@@ -47,7 +47,8 @@ public class LeaveRequestService {
         return leaveRequestRepository.countDoctorsOnApprovedLeave(date);
     }
 
-    /** Applies for leave as the logged-in user (the userId/role in the request are ignored). */
+    /** Applies for leave as the logged-in user (the userId/role in the request are ignored); the admins are told. */
+    @Transactional
     public LeaveRequestDTO createLeaveRequest(LeaveRequestDTO dto) {
         User user = currentUserService.getCurrentUser();
         validateDates(dto.getStartDate(), dto.getEndDate());
@@ -62,6 +63,10 @@ public class LeaveRequestService {
         leaveRequest.setReason(dto.getReason());
         leaveRequest.setStatus(LeaveStatus.PENDING);
         LeaveRequest savedRequest = leaveRequestRepository.save(leaveRequest);
+        String requester = doctorRepository.findByUserId(user.getId()).map(Doctor::getName)
+                .filter(name -> !name.isBlank()).orElse(user.getUsername());
+        eventPublisher.publishEvent(new LeaveRequestedEvent(savedRequest.getId(), requester, savedRequest.getStartDate(),
+                savedRequest.getEndDate(), savedRequest.getReason()));
         logger.info("Leave request {} created for user {}", savedRequest.getId(), user.getId());
         return toDto(savedRequest);
     }
@@ -128,6 +133,8 @@ public class LeaveRequestService {
                     .ifPresent(doctor -> eventPublisher.publishEvent(
                             new DoctorLeaveApprovedEvent(doctor.getId(), leave.getStartDate(), leave.getEndDate())));
         }
+        eventPublisher.publishEvent(new LeaveDecidedEvent(leave.getId(), leave.getUser().getId(),
+                status == LeaveStatus.APPROVED, leave.getStartDate(), leave.getEndDate()));
         logger.info("Leave request {} {}", id, status);
         return toDto(leave);
     }

@@ -14,9 +14,9 @@ Container_Boundary("HospitalErpApplication.HospitalErpApplication_boundary", "Ho
   Component(HospitalErpApplication.HospitalErpApplication.Identity, "Identity", $techn="Module", $descr="", $tags="", $link="")
 }
 
-Rel(HospitalErpApplication.HospitalErpApplication.Notifications, HospitalErpApplication.HospitalErpApplication.Common, "depends on", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Identity, HospitalErpApplication.HospitalErpApplication.Common, "depends on", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Identity, HospitalErpApplication.HospitalErpApplication.Notifications, "uses", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Notifications, HospitalErpApplication.HospitalErpApplication.Common, "depends on", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 @enduml

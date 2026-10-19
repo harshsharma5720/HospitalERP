@@ -9,4 +9,8 @@
 |Bean references
 |* `c.i.h.i.UserService` (in Identity)
 * `c.i.h.i.CurrentUserService` (in Identity)
+|Events listened to
+|* `c.i.h.s.LeaveDecidedEvent` 
+* `c.i.h.s.LeaveRequestedEvent` 
+* `c.i.h.a.AppointmentNotificationEvent` 
 |===

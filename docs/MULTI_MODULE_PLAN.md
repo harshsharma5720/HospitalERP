@@ -41,7 +41,7 @@
 | `appointments` | Booking, reschedule, cancel, lists, day-before reminders | common, identity, notifications, patients, staff, scheduling |
 | `clinical` | Consultations, prescriptions, prescription PDF, medical history | common, identity, audit, patients, staff, appointments |
 | `billing` | Fees, bills, payments and refunds at the desk and online, receipts, doctors' earnings, the daily cash summary and closing the day (added 2026-10-12, [BILLING_PLAN.md](BILLING_PLAN.md); audit since [DAILY_CASH_SUMMARY_PLAN.md](DAILY_CASH_SUMMARY_PLAN.md)) | common, identity, audit, patients, staff, appointments |
-| `inbox` | The notification centre: each user's messages in the app, from the other modules' events (added 2026-10-19, [NOTIFICATION_CENTRE_PLAN.md](NOTIFICATION_CENTRE_PLAN.md)) | common, identity, staff, appointments, billing |
+| `inbox` | The notification centre: each user's messages in the app, from the other modules' events (added 2026-10-19, [NOTIFICATION_CENTRE_PLAN.md](NOTIFICATION_CENTRE_PLAN.md)) | common, notifications (the appointment event's details), identity, staff, appointments, billing |
 | `administration` | Admin use cases that span modules: create users of any role, leave decisions, **account deletion** | all of the above |
 | `app` | `main()` class, `SecurityConfig`, beans (`Clock`, `ModelMapper`), `application.properties`, end-to-end tests | all of the above |
 

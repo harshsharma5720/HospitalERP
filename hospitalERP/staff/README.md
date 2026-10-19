@@ -15,10 +15,11 @@ Hospital staff: doctor and receptionist profiles, and leave requests. This is wh
 | `LeaveRequestService` | Apply, list, update and decide leaves (`updateLeaveStatus`), `isOnApprovedLeave` (used by scheduling), `countDoctorsOnLeave(date)` (active doctors with an approved leave that day, each once — admin dashboard), `deleteAllForUser`. |
 | `DoctorDTO`, `ReceptionistDTO`, `LeaveRequestDTO`, `DoctorMapper` | Response objects and mapping. |
 | `DoctorLeaveApprovedEvent` | Published when a doctor's leave is approved. |
+| `LeaveRequestedEvent`, `LeaveDecidedEvent` | A leave applied for (the requester's doctor name, or user name), and approved or rejected (the user who asked); for the notification centre ([docs/NOTIFICATION_CENTRE_PLAN.md](../../docs/NOTIFICATION_CENTRE_PLAN.md)). |
 
 ## Events
 
-- **Publishes:** `DoctorLeaveApprovedEvent(doctorId, startDate, endDate)`, inside the approval transaction. Scheduling blocks the slots and appointments cancels the bookings in those dates — all in one transaction.
+- **Publishes:** `LeaveRequestedEvent` when leave is applied for, and `LeaveDecidedEvent` when it is approved or rejected — the inbox module tells the admins and the one who asked; `DoctorLeaveApprovedEvent(doctorId, startDate, endDate)`, inside the approval transaction. Scheduling blocks the slots and appointments cancels the bookings in those dates — all in one transaction.
 - **Listens to:** `UserRegisteredEvent` (identity) — `StaffProfileCreator` creates the doctor or receptionist profile for a new staff account.
 
 ## Endpoints — `staff.web`

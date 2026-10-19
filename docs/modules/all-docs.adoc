@@ -17,10 +17,6 @@ include::module-identity.adoc[]
 plantuml::module-audit.puml[,,format=svg]
 include::module-audit.adoc[]
 
-== Inbox
-plantuml::module-inbox.puml[,,format=svg]
-include::module-inbox.adoc[]
-
 == Staff
 plantuml::module-staff.puml[,,format=svg]
 include::module-staff.adoc[]
@@ -44,6 +40,10 @@ include::module-billing.adoc[]
 == Clinical
 plantuml::module-clinical.puml[,,format=svg]
 include::module-clinical.adoc[]
+
+== Inbox
+plantuml::module-inbox.puml[,,format=svg]
+include::module-inbox.adoc[]
 
 == Administration
 plantuml::module-administration.puml[,,format=svg]

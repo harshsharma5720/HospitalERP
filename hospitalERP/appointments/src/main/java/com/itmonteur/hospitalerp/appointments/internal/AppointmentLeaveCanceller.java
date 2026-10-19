@@ -45,9 +45,8 @@ public class AppointmentLeaveCanceller {
             }
             appointment.setStatus(AppointmentStatus.CANCELLED_BY_DOCTOR);
             appointmentRepository.save(appointment);
-            eventPublisher.publishEvent(new AppointmentNotificationEvent(
-                    AppointmentNotificationEvent.Kind.CANCELLED_BY_DOCTOR_LEAVE,
-                    AppointmentService.notificationInfo(appointment)));
+            eventPublisher.publishEvent(AppointmentService.notificationEvent(
+                    AppointmentNotificationEvent.Kind.CANCELLED_BY_DOCTOR_LEAVE, appointment));
             eventPublisher.publishEvent(new AppointmentCancelledEvent(appointment.getAppointmentID()));
             cancelled++;
         }

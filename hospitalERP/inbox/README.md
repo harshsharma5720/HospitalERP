@@ -19,7 +19,7 @@ It writes messages for what other modules tell it through their events; none of 
 
 ## Internal — `inbox.internal`
 
-`InboxStore` (adding, the newest, the unread count, marking read, deleting old ones), `InboxMessage` / `InboxMessageRepository`, `InboxMessageDTO`, `InboxDTO`, `InboxCleanup` (every night at 04:15, `app.inbox.cleanup-cron`: deletes messages older than 90 days).
+The listeners, each writing in the event's transaction: `VisitMessages` (`AppointmentNotificationEvent`: booked, moved and cancelled to the patient and the doctor; cancelled by the doctor's leave and the reminder to the patient; an event without recipients is skipped), `LeaveMessages` (`LeaveRequestedEvent` to every admin, `LeaveDecidedEvent` to the one who asked); `Texts` ("Tue 21 Oct", "10:00–10:30", "15–17 Oct"). `InboxStore` (adding, the newest, the unread count, marking read, deleting old ones), `InboxMessage` / `InboxMessageRepository`, `InboxMessageDTO`, `InboxDTO`, `InboxCleanup` (every night at 04:15, `app.inbox.cleanup-cron`: deletes messages older than 90 days).
 
 ## Database
 
@@ -27,4 +27,4 @@ Flyway `inbox/V2026_10_19_2__inbox_messages.sql`: `inbox_messages` (the user —
 
 ## Tests
 
-End-to-end in `app`: `InboxH2Test` (each user's own messages, newest first; another user's can't be marked; one read, all read; anonymous refused; the newest 50, long texts cut, a long link dropped; 90 days: older ones not shown or counted, deleted at night; a role message to every active account of the role, not a deactivated one).
+End-to-end in `app`: `InboxVisitsH2Test` (a visit booked, moved, reminded and cancelled — the patient and the doctor; a family member's visit to the account holder; walk-ins without a login: the doctor only; a leave request to the admins, its approval to the doctor and the cancelled patient, a rejection); `InboxH2Test` (each user's own messages, newest first; another user's can't be marked; one read, all read; anonymous refused; the newest 50, long texts cut, a long link dropped; 90 days: older ones not shown or counted, deleted at night; a role message to every active account of the role, not a deactivated one).

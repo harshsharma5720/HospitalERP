@@ -156,8 +156,7 @@ public class AppointmentService {
         Appointment saved = appointmentRepository.save(appointment);
         logger.info("Appointment {} booked for slot {}", saved.getAppointmentID(), slot.getId());
         // Sent after commit by AppointmentNotificationListener
-        eventPublisher.publishEvent(new AppointmentNotificationEvent(
-                AppointmentNotificationEvent.Kind.BOOKED, notificationInfo(saved)));
+        eventPublisher.publishEvent(notificationEvent(AppointmentNotificationEvent.Kind.BOOKED, saved));
         return toDTO(saved);
     }
 
@@ -175,8 +174,7 @@ public class AppointmentService {
         Appointment saved = appointmentRepository.save(appointment);
         logger.info("Appointment {} cancelled", appointmentID);
         eventPublisher.publishEvent(new AppointmentCancelledEvent(appointmentID));
-        eventPublisher.publishEvent(new AppointmentNotificationEvent(
-                AppointmentNotificationEvent.Kind.CANCELLED, notificationInfo(saved)));
+        eventPublisher.publishEvent(notificationEvent(AppointmentNotificationEvent.Kind.CANCELLED, saved));
         return toDTO(saved);
     }
 
@@ -217,6 +215,7 @@ public class AppointmentService {
             }
             appointment.clearQueueState(); // another time: checked in again on that day
             logger.info("Appointment {} rescheduled to slot {}", appointmentID, newSlot.getId());
+            eventPublisher.publishEvent(notificationEvent(AppointmentNotificationEvent.Kind.MOVED, appointment));
         }
         return toDTO(appointmentRepository.save(appointment));
     }
@@ -324,8 +323,7 @@ public class AppointmentService {
             appointment.setStatus(status);
             slotService.releaseSlot(appointment.getSlot());
             Appointment saved = appointmentRepository.save(appointment);
-            eventPublisher.publishEvent(new AppointmentNotificationEvent(
-                    AppointmentNotificationEvent.Kind.CANCELLED, notificationInfo(saved)));
+            eventPublisher.publishEvent(notificationEvent(AppointmentNotificationEvent.Kind.CANCELLED, saved));
             eventPublisher.publishEvent(new AppointmentCancelledEvent(saved.getAppointmentID()));
             cancelled++;
         }
@@ -462,6 +460,16 @@ public class AppointmentService {
                     + " to go: this visit can't be cancelled or moved online any more. Please call the hospital"
                     + (hospitalPhone.isEmpty() ? "." : " at " + hospitalPhone + "."));
         }
+    }
+
+    /** The notification of an appointment: what to say, and to whom (docs/NOTIFICATION_CENTRE_PLAN.md). */
+    public static AppointmentNotificationEvent notificationEvent(AppointmentNotificationEvent.Kind kind, Appointment appointment) {
+        PtInfo patient = appointment.getPtInfo();
+        Doctor doctor = appointment.getDoctor();
+        return new AppointmentNotificationEvent(kind, notificationInfo(appointment), new AppointmentNotificationEvent.Who(
+                appointment.getAppointmentID(),
+                patient != null && patient.getUser() != null ? patient.getUser().getId() : null,
+                doctor != null && doctor.getUser() != null ? doctor.getUser().getId() : null));
     }
 
     public static NotificationService.AppointmentInfo notificationInfo(Appointment appointment) {

@@ -48,7 +48,7 @@ ALLOWED = {
     'billing': {'common', 'identity', 'audit', 'patients', 'staff', 'appointments'},
     'administration': {'common', 'notifications', 'identity', 'audit', 'patients', 'staff', 'scheduling',
                        'appointments', 'clinical'},
-    'inbox': {'common', 'identity', 'staff', 'appointments', 'billing'},
+    'inbox': {'common', 'notifications', 'identity', 'staff', 'appointments', 'billing'},
     'app': {'common', 'notifications', 'identity', 'audit', 'patients', 'staff', 'scheduling', 'appointments',
             'clinical', 'billing', 'administration', 'inbox'},
 }
