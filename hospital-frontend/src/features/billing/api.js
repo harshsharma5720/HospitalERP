@@ -37,6 +37,28 @@ export const refundBillOnline = (billId) => axios.post(`${BILLS}/${billId}/refun
 
 export const getReceiptPdf = (billId) => axios.get(`${BILLS}/${billId}/receipt.pdf`, { responseType: "blob" });
 
+// ---- The daily cash summary (docs/DAILY_CASH_SUMMARY_PLAN.md): { date, methods: [{ method, payments, taken, refunds,
+// refunded, net }] (CASH, CARD, UPI, ONLINE), totals: { payments, taken, refunds, refunded, net }, people: [{ by (null:
+// online, by the patient), payments, taken, refunds, refunded }], lines: [{ at, kind: PAYMENT | REFUND, billId,
+// billNumber, patientName, doctorName, method, reference, by, amount }], unpaid: { bills, amount }, closes: [close],
+// sinceLastClose (today only): { from, payments, cashIn, refunds, cashOut, expected } }. A close: { id, periodStart,
+// closedAt, closedBy, cashIn, cashOut, expected, counted, difference (counted - expected), note }.
+const DESK_CASH = `${API_BASE_URL}/api/receptionist`;
+
+export const getCashSummaryToday = () => axios.get(`${DESK_CASH}/cash-summary`);
+
+export const getCashSummaryPdfToday = () => axios.get(`${DESK_CASH}/cash-summary/today.pdf`, { responseType: "blob" });
+
+// close: { counted, note } - a note is needed when the count isn't what was expected; the close made
+export const closeTheDay = (close) => axios.post(`${DESK_CASH}/cash-closes`, close);
+
+// Admins: any day up to today (yyyy-MM-dd)
+const ADMIN_CASH = `${API_BASE_URL}/api/admin/cash-summary`;
+
+export const getCashSummaryFor = (date) => axios.get(ADMIN_CASH, { params: { date } });
+
+export const getCashSummaryPdfFor = (date) => axios.get(`${ADMIN_CASH}/pdf`, { params: { date }, responseType: "blob" });
+
 // ---- The logged-in patient's own bills: their visits' and their family members', newest first, cancelled ones left
 // out. Each bill as above, without patientId, paidBy, refundedBy, createdAt and the items' id and consultation.
 const MY_BILLS = `${API_BASE_URL}/api/bills/my`;
