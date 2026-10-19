@@ -10,7 +10,8 @@
 |* `c.i.h.i.UserService` (in Identity)
 * `c.i.h.i.CurrentUserService` (in Identity)
 |Events listened to
-|* `c.i.h.s.LeaveDecidedEvent` 
+|* `c.i.h.b.BillNotificationEvent` 
 * `c.i.h.s.LeaveRequestedEvent` 
+* `c.i.h.s.LeaveDecidedEvent` 
 * `c.i.h.a.AppointmentNotificationEvent` 
 |===

@@ -2,11 +2,11 @@
 
 Billing at the front desk ([docs/BILLING_PLAN.md](../../docs/BILLING_PLAN.md)): a consultation fee per doctor, one bill per visit (made at check-in), payments and refunds recorded at the desk, PDF receipts. Patients see their own bills and download the receipts ([docs/PATIENT_BILLS_PLAN.md](../../docs/PATIENT_BILLS_PLAN.md)), and pay them online with Razorpay ([docs/ONLINE_PAYMENT_PLAN.md](../../docs/ONLINE_PAYMENT_PLAN.md)).
 
-**Depends on:** common, identity, audit (closing the day), patients, staff, appointments · **Used by:** app
+**Depends on:** common, identity, audit (closing the day), patients, staff, appointments · **Used by:** inbox (its events), app
 
 ## Public API — `com.itmonteur.hospitalerp.billing`
 
-None: no other module uses billing. It learns about visits from the appointments module's events.
+`BillNotificationEvent` (`BILL_READY`, `PAID`, `REFUND_DUE`, `REFUNDED`): a bill made (or reopened) at check-in, paid at the desk or online, due for refund, refunded at the desk or online — with the bill, its patient account's user id (null for a walk-in without a login), names, visit date, total and method; published inside the change's transaction by `BillNotifications`, for the notification centre ([docs/NOTIFICATION_CENTRE_PLAN.md](../../docs/NOTIFICATION_CENTRE_PLAN.md)). Billing itself learns about visits from the appointments module's events.
 
 ## Events
 

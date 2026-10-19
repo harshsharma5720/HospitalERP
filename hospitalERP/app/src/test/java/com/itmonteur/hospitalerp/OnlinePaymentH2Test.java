@@ -18,6 +18,7 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -132,6 +133,12 @@ class OnlinePaymentH2Test {
                 .getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
+    // The patient's messages in the notification centre (docs/NOTIFICATION_CENTRE_PLAN.md) of one kind
+    private List<String> inbox(String username, String kind) {
+        return jdbc.queryForList("SELECT m.body FROM inbox_messages m JOIN users u ON u.id = m.user_id "
+                + "WHERE u.username = ? AND m.kind = ? ORDER BY m.id", String.class, username, kind);
+    }
+
     private long refundCalls(String paymentId) {
         return razorpay.calls.stream().filter(c -> c.equals("POST /v1/payments/" + paymentId + "/refund")).count();
     }
@@ -163,6 +170,8 @@ class OnlinePaymentH2Test {
         assertThat(bill.get("paymentReference").asText()).isEqualTo(paid.paymentId());
         assertThat(bill.get("payOnline").asBoolean()).isFalse();
         assertThat(confirm(visit, paid, HttpStatus.OK).get("status").asText()).as("confirmed twice").isEqualTo("PAID");
+        assertThat(inbox("paypatient1", "PAYMENT_RECEIVED")).as("told once").containsExactly(
+                "₹500.00 for " + visit.billNumber() + ", by online payment. The receipt is in My account.");
         assertThat(razorpay.refunds).isEmpty();
         assertThat(attempt(orderId)).containsEntry("status", "PAID").containsEntry("payment_id", paid.paymentId());
 
@@ -347,6 +356,8 @@ class OnlinePaymentH2Test {
         assertThat(refunded.get("refundReference").asText()).startsWith("rfnd_");
         assertThat(refunded.get("refundedBy").asText()).isEqualTo("deskpay6");
         assertThat(razorpay.refunds).containsExactly(paid.paymentId() + " 50000");
+        assertThat(inbox("paypatient10", "REFUND_GIVEN")).containsExactly(
+                "₹500.00 for " + online.billNumber() + ", by online payment.");
         expect(api.call(HttpMethod.POST, refundOnline, desk, null), HttpStatus.CONFLICT);
         assertThat(api.get(online.patient(), MY).at("/0/refundMethod").asText()).isEqualTo("ONLINE");
 

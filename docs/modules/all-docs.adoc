@@ -41,11 +41,11 @@ include::module-billing.adoc[]
 plantuml::module-clinical.puml[,,format=svg]
 include::module-clinical.adoc[]
 
-== Inbox
-plantuml::module-inbox.puml[,,format=svg]
-include::module-inbox.adoc[]
-
 == Administration
 plantuml::module-administration.puml[,,format=svg]
 include::module-administration.adoc[]
+
+== Inbox
+plantuml::module-inbox.puml[,,format=svg]
+include::module-inbox.adoc[]
 

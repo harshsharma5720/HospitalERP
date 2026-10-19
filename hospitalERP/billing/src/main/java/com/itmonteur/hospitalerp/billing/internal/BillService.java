@@ -2,6 +2,7 @@ package com.itmonteur.hospitalerp.billing.internal;
 
 import com.itmonteur.hospitalerp.appointments.Appointment;
 import com.itmonteur.hospitalerp.appointments.AppointmentService;
+import com.itmonteur.hospitalerp.billing.BillNotificationEvent;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
 import com.itmonteur.hospitalerp.staff.Doctor;
 import org.slf4j.Logger;
@@ -25,13 +26,15 @@ public class BillService {
     private final BillRepository billRepository;
     private final FeeService feeService;
     private final AppointmentService appointmentService;
+    private final BillNotifications notifications;
     private final Clock clock;
 
     public BillService(BillRepository billRepository, FeeService feeService, AppointmentService appointmentService,
-                       Clock clock) {
+                       BillNotifications notifications, Clock clock) {
         this.billRepository = billRepository;
         this.feeService = feeService;
         this.appointmentService = appointmentService;
+        this.notifications = notifications;
         this.clock = clock;
     }
 
@@ -43,6 +46,7 @@ public class BillService {
             if (existing.getStatus() == BillStatus.CANCELLED) {
                 existing.setStatus(BillStatus.UNPAID);
                 logger.info("Bill {} reopened", existing.getBillNumber());
+                notifications.publish(BillNotificationEvent.Kind.BILL_READY, existing);
             }
             return;
         }
@@ -67,6 +71,7 @@ public class BillService {
         // The number needs the id, so it is set right after the insert (in the same transaction)
         saved.setBillNumber("B-%d-%06d".formatted(saved.getVisitDate().getYear(), saved.getId()));
         logger.info("Bill {} made for appointment {}", saved.getBillNumber(), appointmentId);
+        notifications.publish(BillNotificationEvent.Kind.BILL_READY, saved);
     }
 
     /** The checked-in patient left the queue (check-in undone, or rescheduled): an unpaid bill is cancelled. */
@@ -90,6 +95,7 @@ public class BillService {
             } else if (bill.getStatus() == BillStatus.PAID) {
                 bill.setStatus(BillStatus.REFUND_DUE);
                 logger.info("Bill {} due for refund: its visit was cancelled", bill.getBillNumber());
+                notifications.publish(BillNotificationEvent.Kind.REFUND_DUE, bill);
             }
         });
     }
