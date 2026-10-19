@@ -34,6 +34,19 @@ beforeEach(() => {
 
 afterEach(() => jest.resetAllMocks());
 
+test("a day closed at the front desk is named, with its close and the amounts", async () => {
+  adminApi.getAuditLog.mockResolvedValue(pageOf([{
+    id: 4, occurredAt: "2026-10-19T18:30:00", actorUsername: "deskmeena", actorRole: "RECEPTIONIST",
+    action: "CASH_DAY_CLOSED", targetType: "CASH_CLOSE", targetId: 7, patientId: null,
+    details: "expected Rs. 600.00, counted Rs. 550.00, difference Rs. -50.00",
+  }]));
+  render(<AuditLog />);
+  const closed = (await within(table()).findByText("Closed the day (cash)")).closest("tr");
+  expect(within(closed).getByText("Day close #7")).toBeInTheDocument();
+  expect(within(closed).getByText(/difference Rs. -50.00/)).toBeInTheDocument();
+  expect(screen.getByRole("option", { name: "Closed the day (cash)" })).toBeInTheDocument(); // in the action filter
+});
+
 test("shows the newest entries in a readable form", async () => {
   render(<AuditLog />);
   await within(table()).findByText("Viewed consultation");

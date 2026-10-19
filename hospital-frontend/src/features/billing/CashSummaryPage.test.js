@@ -1,9 +1,10 @@
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import CashSummaryPage, { differenceOf } from "./CashSummaryPage";
+import CashSummaryPage from "./CashSummaryPage";
+import { differenceOf } from "./cashParts";
 import * as billingApi from "./api";
 import { ToastProvider } from "../../shared/ui";
-import { toLocalISODate } from "../../shared/utils/dateUtils";
+import { addDays, toLocalISODate } from "../../shared/utils/dateUtils";
 
 jest.mock("./api");
 
@@ -189,6 +190,92 @@ test("admins pick any day: a past day shows its closes but can't be closed any m
   fireEvent.click(screen.getByRole("button", { name: "Today" }));
   await screen.findByText("The day wasn't closed.");
   expect(billingApi.getCashSummaryFor).toHaveBeenLastCalledWith(TODAY);
+});
+
+const day = (date, extra = {}) => ({
+  date, payments: 0, taken: 0, refunds: 0, refunded: 0, net: 0, cashNet: 0, closes: 0, difference: null, ...extra,
+});
+const RANGE = {
+  from: "2026-10-10",
+  to: "2026-10-12",
+  days: [
+    day("2026-10-10"),
+    day("2026-10-11", { payments: 3, taken: 1500, net: 1500, cashNet: 1000 }),
+    day("2026-10-12", { payments: 4, taken: 2100, refunds: 1, refunded: 500, net: 1600, cashNet: 600, closes: 2, difference: -50 }),
+  ],
+  methods: SUMMARY.methods,
+  totals: { payments: 7, taken: 3600, refunds: 1, refunded: 500, net: 3100 },
+  closes: [
+    { ...SUMMARY.closes[0], id: 7, closedAt: "2026-10-12T13:00:00" },
+    { ...SUMMARY.closes[0], id: 8, closedAt: "2026-10-12T19:00:00", closedBy: "deskravi", counted: 600, difference: 0, note: null },
+  ],
+};
+const lastDays = (n) => toLocalISODate(addDays(new Date(), 1 - n));
+
+test("admins see several days: a row per day newest first, the closes that didn't match, and a day opens its own", async () => {
+  billingApi.getCashRange.mockResolvedValue({ data: RANGE });
+  billingApi.getCashSummaryFor.mockResolvedValue({ data: { ...SUMMARY, date: "2026-10-12", sinceLastClose: null } });
+  renderAt("/admin/cash-summary?from=2026-10-10&to=2026-10-12");
+  const days = await screen.findByRole("region", { name: "Day by day" });
+  expect(billingApi.getCashRange).toHaveBeenCalledWith("2026-10-10", "2026-10-12");
+  expect(billingApi.getCashSummaryFor).not.toHaveBeenCalled();
+  expect(screen.getByText(/Sat 10 Oct 2026 to Mon 12 Oct 2026/)).toBeInTheDocument();
+  expect(screen.getAllByText("₹3,600.00")).toHaveLength(2); // the tile and the total
+  expect(screen.queryByRole("button", { name: "Download PDF" })).not.toBeInTheDocument(); // one day at a time
+  expect(screen.getByRole("button", { name: "Several days" })).toHaveAttribute("aria-pressed", "true");
+
+  const rows = within(days).getAllByRole("row").slice(1).map((row) => row.textContent);
+  expect(rows).toEqual([
+    "Mon 12 Oct 2026₹2,100.00₹500.00₹1,600.00₹600.002 closes₹50.00 short",
+    "Sun 11 Oct 2026₹1,500.00₹0.00₹1,500.00₹1,000.00Not closed",
+    "Sat 10 Oct 2026₹0.00₹0.00₹0.00₹0.00—",
+  ]);
+  const mismatched = screen.getByRole("region", { name: "Cash that didn't match" });
+  expect(mismatched).toHaveTextContent("Mon 12 Oct, 13:00 · deskmeena₹50.00 short");
+  expect(mismatched).toHaveTextContent("Change given twice");
+  expect(mismatched).not.toHaveTextContent("deskravi");
+
+  fireEvent.click(within(days).getByRole("link", { name: "Mon 12 Oct 2026" }));
+  expect(await screen.findByText("Closed at 13:00 by deskmeena")).toBeInTheDocument();
+  expect(billingApi.getCashSummaryFor).toHaveBeenCalledWith("2026-10-12");
+  expect(screen.getByRole("button", { name: "One day" })).toHaveAttribute("aria-pressed", "true");
+});
+
+test("admins choose several days: the last 7 or 30, or any from and to; a refused choice says why", async () => {
+  billingApi.getCashSummaryFor.mockResolvedValue({ data: { ...SUMMARY, sinceLastClose: null } });
+  billingApi.getCashRange.mockResolvedValue({ data: RANGE });
+  renderAt("/admin/cash-summary");
+  await screen.findAllByText("₹2,100.00");
+  fireEvent.click(screen.getByRole("button", { name: "Several days" }));
+  expect(screen.getByLabelText("From")).toHaveValue(lastDays(7));
+  expect(screen.getByLabelText("To")).toHaveValue(TODAY);
+  expect(billingApi.getCashRange).not.toHaveBeenCalled();
+
+  fireEvent.click(screen.getByRole("button", { name: "Last 30 days" }));
+  await screen.findByRole("region", { name: "Day by day" });
+  expect(billingApi.getCashRange).toHaveBeenLastCalledWith(lastDays(30), TODAY);
+
+  fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-10-01" } });
+  fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-10-05" } });
+  fireEvent.click(screen.getByRole("button", { name: "Show" }));
+  await waitFor(() => expect(billingApi.getCashRange).toHaveBeenLastCalledWith("2026-10-01", "2026-10-05"));
+
+  billingApi.getCashRange.mockRejectedValueOnce({ response: { status: 400, data: { message: "Choose at most 31 days" } } });
+  fireEvent.click(screen.getByRole("button", { name: "Last 7 days" }));
+  await waitFor(() => expect(billingApi.getCashRange).toHaveBeenLastCalledWith(lastDays(7), TODAY));
+  expect(await screen.findByText("Choose at most 31 days")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "One day" }));
+  fireEvent.click(screen.getByRole("button", { name: "Today" }));
+  expect(await screen.findAllByText("₹2,100.00")).toHaveLength(2);
+  expect(billingApi.getCashSummaryFor).toHaveBeenLastCalledWith(TODAY);
+});
+
+test("the desk has no other days to choose", async () => {
+  renderAt("/cash-summary");
+  await screen.findAllByText("₹2,100.00");
+  expect(screen.queryByRole("button", { name: "Several days" })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Day")).not.toBeInTheDocument();
 });
 
 test("a close's difference is named, not shown by colour alone", () => {

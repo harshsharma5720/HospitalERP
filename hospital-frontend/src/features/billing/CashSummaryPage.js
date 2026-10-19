@@ -2,12 +2,14 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Download, LockKeyhole } from "lucide-react";
 import { getErrorMessage } from "../../shared/utils/apiError";
-import { toLocalISODate } from "../../shared/utils/dateUtils";
+import { addDays, toLocalISODate } from "../../shared/utils/dateUtils";
 import { formatRupees } from "../../shared/utils/money";
 import useAreaBase from "../../shared/useAreaBase";
 import { formatDate } from "../appointments/appointmentFormat";
 import { downloadPdf } from "./downloadReceipt";
 import { methodLabel } from "./billFormat";
+import { METHOD_NAMES, Methods, Totals, differenceOf, plural, time } from "./cashParts";
+import CashRange from "./CashRange";
 import * as billingApi from "./api";
 import {
   Badge, Button, Card, CardHeader, Field, Input, Modal, Notice, PageHeader, Table, TableMessage, Td, Textarea, Th, useToast,
@@ -15,20 +17,11 @@ import {
 
 // The daily cash summary (docs/DAILY_CASH_SUMMARY_PLAN.md): what the desk took and gave back on a day, per method and
 // per person, every payment and refund, the visits still unpaid, and closing the day: the cash counted against what
-// the drawer should hold since the last close. The desk sees today (/cash-summary); admins any day (/admin/cash-summary).
+// the drawer should hold since the last close. The desk sees today (/cash-summary); admins any day, or several days
+// (?from=&to=, at most 31), at /admin/cash-summary.
 
-const METHOD_NAMES = { CASH: "Cash", CARD: "Card", UPI: "UPI", ONLINE: "Online" };
-const time = (iso) => (iso ? iso.slice(11, 16) : "");
-const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
-
-// A close's difference (counted - expected) as the desk reads it, never by colour alone
-export const differenceOf = (difference) => {
-  const amount = Number(difference);
-  if (amount === 0) return { label: "Matches", tone: "success" };
-  return amount < 0
-    ? { label: `${formatRupees(-amount)} short`, tone: "danger" }
-    : { label: `${formatRupees(amount)} over`, tone: "warning" };
-};
+// The first of the last n days, today included
+const lastDays = (n) => toLocalISODate(addDays(new Date(), 1 - n));
 
 // "since 09:30" today, "since Mon 18 Oct, 19:05" on an earlier day
 const sinceLabel = (from, today) => (from.slice(0, 10) === today ? `since ${time(from)}` : `since ${formatDate(from.slice(0, 10))}, ${time(from)}`);
@@ -40,17 +33,27 @@ export default function CashSummaryPage() {
   const [params, setParams] = useSearchParams();
   const today = toLocalISODate();
   const date = (admin && params.get("date")) || today;
+  const from = admin ? params.get("from") : null;
+  const to = admin ? params.get("to") : null;
+  const severalDays = Boolean(from && to);
 
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState("");
   const [closing, setClosing] = useState(false);
   const [pickedDay, setPickedDay] = useState(date);
+  const [mode, setMode] = useState(severalDays ? "days" : "day");
+  const [pickedDays, setPickedDays] = useState({ from: from || lastDays(7), to: to || today });
 
   useEffect(() => setPickedDay(date), [date]);
+  useEffect(() => {
+    setMode(severalDays ? "days" : "day");
+    if (severalDays) setPickedDays({ from, to });
+  }, [severalDays, from, to]);
 
   const load = useCallback(() => {
     let current = true;
     setError("");
+    if (severalDays) return undefined;
     (admin ? billingApi.getCashSummaryFor(date) : billingApi.getCashSummaryToday())
       .then((res) => current && setSummary(res.data))
       .catch((err) => {
@@ -61,7 +64,7 @@ export default function CashSummaryPage() {
     return () => {
       current = false;
     };
-  }, [admin, date]);
+  }, [admin, date, severalDays]);
 
   useEffect(() => load(), [load]);
 
@@ -78,6 +81,10 @@ export default function CashSummaryPage() {
     if (pickedDay) setParams(pickedDay === today ? {} : { date: pickedDay });
   };
 
+  const showDays = (days) => {
+    if (days.from && days.to) setParams({ from: days.from, to: days.to });
+  };
+
   const closed = (close) => {
     setClosing(false);
     const { label } = differenceOf(close.difference);
@@ -89,30 +96,71 @@ export default function CashSummaryPage() {
     <>
       <PageHeader
         title="Day summary"
-        description={`${date === today ? "Today, " : ""}${formatDate(date, true)}: what came in and went out at the desk.`}
+        description={
+          severalDays
+            ? `${formatDate(from, true)} to ${formatDate(to, true)}: what came in and went out at the desk.`
+            : `${date === today ? "Today, " : ""}${formatDate(date, true)}: what came in and went out at the desk.`
+        }
         actions={
-          <Button variant="secondary" onClick={downloadSummary} disabled={!summary}>
-            <Download size={16} aria-hidden="true" />
-            Download PDF
-          </Button>
+          !severalDays && (
+            <Button variant="secondary" onClick={downloadSummary} disabled={!summary}>
+              <Download size={16} aria-hidden="true" />
+              Download PDF
+            </Button>
+          )
         }
       />
 
       {admin && (
         <Card className="mb-6">
-          <form onSubmit={showDay} className="flex flex-wrap items-end gap-3">
-            <Field label="Day" htmlFor="cash-day">
-              <Input id="cash-day" type="date" max={today} value={pickedDay} onChange={(e) => setPickedDay(e.target.value)} />
-            </Field>
-            <Button type="submit">Show</Button>
-            {date !== today && (
-              <Button variant="secondary" onClick={() => setParams({})}>
-                Today
+          <div className="mb-4 flex gap-2" role="group" aria-label="Show">
+            <Button size="sm" variant={mode === "day" ? "primary" : "secondary"} aria-pressed={mode === "day"} onClick={() => setMode("day")}>
+              One day
+            </Button>
+            <Button size="sm" variant={mode === "days" ? "primary" : "secondary"} aria-pressed={mode === "days"} onClick={() => setMode("days")}>
+              Several days
+            </Button>
+          </div>
+          {mode === "day" ? (
+            <form onSubmit={showDay} className="flex flex-wrap items-end gap-3">
+              <Field label="Day" htmlFor="cash-day">
+                <Input id="cash-day" type="date" max={today} value={pickedDay} onChange={(e) => setPickedDay(e.target.value)} />
+              </Field>
+              <Button type="submit">Show</Button>
+              {(date !== today || severalDays) && (
+                <Button variant="secondary" onClick={() => setParams({})}>
+                  Today
+                </Button>
+              )}
+            </form>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                showDays(pickedDays);
+              }}
+              className="flex flex-wrap items-end gap-3"
+            >
+              <Field label="From" htmlFor="cash-from">
+                <Input id="cash-from" type="date" max={today} value={pickedDays.from} onChange={(e) => setPickedDays({ ...pickedDays, from: e.target.value })} />
+              </Field>
+              <Field label="To" htmlFor="cash-to">
+                <Input id="cash-to" type="date" max={today} value={pickedDays.to} onChange={(e) => setPickedDays({ ...pickedDays, to: e.target.value })} />
+              </Field>
+              <Button type="submit">Show</Button>
+              <Button variant="secondary" onClick={() => showDays({ from: lastDays(7), to: today })}>
+                Last 7 days
               </Button>
-            )}
-          </form>
+              <Button variant="secondary" onClick={() => showDays({ from: lastDays(30), to: today })}>
+                Last 30 days
+              </Button>
+              <p className="w-full text-sm text-ink-muted">At most 31 days.</p>
+            </form>
+          )}
         </Card>
       )}
+
+      {severalDays && <CashRange from={from} to={to} />}
 
       {error && (
         <div className="mb-6">
@@ -122,9 +170,9 @@ export default function CashSummaryPage() {
           </Button>
         </div>
       )}
-      {!summary && !error && <p className="text-ink-muted">Loading the day's summary...</p>}
+      {!severalDays && !summary && !error && <p className="text-ink-muted">Loading the day's summary...</p>}
 
-      {summary && (
+      {!severalDays && summary && (
         <div className="space-y-6">
           <Totals totals={summary.totals} />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -153,63 +201,6 @@ export default function CashSummaryPage() {
         <CloseDialog since={summary.sinceLastClose} today={today} onClosed={closed} onCancel={() => setClosing(false)} />
       )}
     </>
-  );
-}
-
-function Totals({ totals }) {
-  const tiles = [
-    { label: "Taken", value: formatRupees(totals.taken), note: plural(totals.payments, "payment") },
-    { label: "Given back", value: formatRupees(totals.refunded), note: plural(totals.refunds, "refund") },
-    { label: "Net", value: formatRupees(totals.net), note: "taken less given back" },
-  ];
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      {tiles.map((tile) => (
-        <div key={tile.label} className="rounded-xl border border-line bg-surface p-5 shadow-card">
-          <p className="text-sm text-ink-muted">{tile.label}</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">{tile.value}</p>
-          <p className="mt-1 text-sm text-ink-muted">{tile.note}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function Methods({ methods, totals }) {
-  return (
-    <Card aria-labelledby="cash-methods" padding="none">
-      <CardHeader id="cash-methods" title="By method" className="px-5 pt-5" />
-      <Table plain>
-        <thead>
-          <tr>
-            <Th>Method</Th>
-            <Th align="right">Taken</Th>
-            <Th align="right">Given back</Th>
-            <Th align="right">Net</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {methods.map((m) => (
-            <tr key={m.method}>
-              <Td className="font-medium">{METHOD_NAMES[m.method] ?? m.method}</Td>
-              <Td align="right" className="whitespace-nowrap tabular-nums">
-                {formatRupees(m.taken)} <span className="text-ink-muted">({m.payments})</span>
-              </Td>
-              <Td align="right" className="whitespace-nowrap tabular-nums">
-                {formatRupees(m.refunded)} <span className="text-ink-muted">({m.refunds})</span>
-              </Td>
-              <Td align="right" className="whitespace-nowrap font-medium tabular-nums">{formatRupees(m.net)}</Td>
-            </tr>
-          ))}
-          <tr className="bg-surface-2">
-            <Td className="font-semibold">Total</Td>
-            <Td align="right" className="whitespace-nowrap font-semibold tabular-nums">{formatRupees(totals.taken)}</Td>
-            <Td align="right" className="whitespace-nowrap font-semibold tabular-nums">{formatRupees(totals.refunded)}</Td>
-            <Td align="right" className="whitespace-nowrap font-semibold tabular-nums">{formatRupees(totals.net)}</Td>
-          </tr>
-        </tbody>
-      </Table>
-    </Card>
   );
 }
 

@@ -59,6 +59,10 @@ export const getCashSummaryFor = (date) => axios.get(ADMIN_CASH, { params: { dat
 
 export const getCashSummaryPdfFor = (date) => axios.get(`${ADMIN_CASH}/pdf`, { params: { date }, responseType: "blob" });
 
+// Several days (both included, at most 31): { from, to, days: [{ date, payments, taken, refunds, refunded, net, cashNet,
+// closes, difference (null without a close) }] oldest first, methods, totals, closes }
+export const getCashRange = (from, to) => axios.get(`${ADMIN_CASH}/range`, { params: { from, to } });
+
 // ---- The logged-in patient's own bills: their visits' and their family members', newest first, cancelled ones left
 // out. Each bill as above, without patientId, paidBy, refundedBy, createdAt and the items' id and consultation.
 const MY_BILLS = `${API_BASE_URL}/api/bills/my`;
