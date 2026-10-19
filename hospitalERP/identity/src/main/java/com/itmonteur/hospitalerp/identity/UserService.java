@@ -1,5 +1,7 @@
 package com.itmonteur.hospitalerp.identity;
 
+import com.itmonteur.hospitalerp.identity.internal.RefreshTokenService;
+import com.itmonteur.hospitalerp.identity.internal.SessionEndReason;
 import com.itmonteur.hospitalerp.identity.internal.UserRepository;
 import org.springframework.stereotype.Service;
 
@@ -19,9 +21,11 @@ import java.util.TreeMap;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RefreshTokenService refreshTokenService;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, RefreshTokenService refreshTokenService) {
         this.userRepository = userRepository;
+        this.refreshTokenService = refreshTokenService;
     }
 
     public List<User> getAllUsers() {
@@ -73,11 +77,15 @@ public class UserService {
         userRepository.save(user);
     }
 
-    /** No login any more, hidden from directories; all history stays (docs/ACCOUNT_DEACTIVATION_PLAN.md). */
+    /**
+     * No login any more, hidden from directories; all history stays (docs/ACCOUNT_DEACTIVATION_PLAN.md). Every login
+     * ends, so a reactivation doesn't bring back the old ones (docs/SAFER_LOGIN_TOKENS_PLAN.md).
+     */
     public void deactivate(User user) {
         user.setActive(false);
         user.setDeactivatedAt(LocalDateTime.now());
         userRepository.save(user);
+        refreshTokenService.endEverywhere(user, SessionEndReason.DEACTIVATED);
     }
 
     public void reactivate(User user) {

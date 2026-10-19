@@ -36,6 +36,11 @@ public class User {
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
+    // Moved on by "log out of all devices", a password reset and a deactivation: access tokens carry it, and the ones
+    // of an older version are refused at once (docs/SAFER_LOGIN_TOKENS_PLAN.md)
+    @Column(nullable = false)
+    private int tokenVersion;
+
     public Long getId() {
         return id;
     }
@@ -106,5 +111,13 @@ public class User {
 
     public void setDeactivatedAt(LocalDateTime deactivatedAt) {
         this.deactivatedAt = deactivatedAt;
+    }
+
+    public int getTokenVersion() {
+        return tokenVersion;
+    }
+
+    public void setTokenVersion(int tokenVersion) {
+        this.tokenVersion = tokenVersion;
     }
 }

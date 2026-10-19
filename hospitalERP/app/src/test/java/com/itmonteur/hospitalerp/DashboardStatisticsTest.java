@@ -10,6 +10,7 @@ import com.itmonteur.hospitalerp.common.Gender;
 import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.identity.User;
 import com.itmonteur.hospitalerp.identity.UserService;
+import com.itmonteur.hospitalerp.identity.internal.RefreshTokenService;
 import com.itmonteur.hospitalerp.patients.PtInfo;
 import com.itmonteur.hospitalerp.scheduling.Shift;
 import com.itmonteur.hospitalerp.scheduling.Slot;
@@ -25,6 +26,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -49,6 +51,8 @@ class DashboardStatisticsTest {
     @Autowired private AppointmentStatistics statistics;
     @Autowired private UserService userService;
     @Autowired private LeaveRequestRepository leaveRequestRepository;
+    // UserService needs it (a deactivation ends the logins); the counts here don't
+    @MockitoBean private RefreshTokenService refreshTokenService;
 
     private final LocalDate today = LocalDate.now();
     private Doctor rao;    // cardiology

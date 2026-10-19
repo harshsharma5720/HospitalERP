@@ -2,6 +2,7 @@ package com.itmonteur.hospitalerp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.itmonteur.hospitalerp.identity.internal.RefreshTokenCleanup;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +27,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Login sessions (docs/SAFER_LOGIN_TOKENS_PLAN.md) over HTTP: the refresh cookie, rotation, reuse, logout, a
- * deactivated account. Same configuration as FeatureFlowH2Test, so both share one application context.
+ * deactivated account, log out everywhere, the nightly clean-up. Same configuration as FeatureFlowH2Test, so both share one application
+ * context.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "DB_URL=jdbc:h2:mem:flows;DB_CLOSE_DELAY=-1", "DB_USERNAME=sa", "DB_PASSWORD=",
@@ -43,6 +45,7 @@ class LoginSessionsH2Test {
     @Autowired private TestRestTemplate rest;
     @Autowired private ObjectMapper json;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private RefreshTokenCleanup cleanup;
     private TestApi api;
 
     @BeforeEach
@@ -160,5 +163,80 @@ class LoginSessionsH2Test {
         assertThat(api.call(HttpMethod.PUT, "/api/admin/users/" + userId + "/deactivate", api.admin(), null).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
         assertThat(refresh(cookieValue(again)).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    private HttpStatus myAppointments(String accessToken) {
+        return HttpStatus.valueOf(api.call(HttpMethod.GET, "/appointment/getPatientAppointments", accessToken, null)
+                .getStatusCode().value());
+    }
+
+    @Test
+    void logOutOfAllDevicesEndsEveryLoginAndRefusesTheAccessTokensAtOnce() throws Exception {
+        api.registerPatient("sessioneverywhere");
+        ResponseEntity<String> phone = login("sessioneverywhere", "secret-123");
+        ResponseEntity<String> laptop = login("sessioneverywhere", "secret-123");
+        assertThat(myAppointments(accessToken(phone))).isEqualTo(HttpStatus.OK);
+        assertThat(myAppointments(accessToken(laptop))).isEqualTo(HttpStatus.OK);
+        assertThat(post("/api/auth/logout-all", null, null, true).getStatusCode()).as("needs a login")
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        ResponseEntity<String> out = api.call(HttpMethod.POST, "/api/auth/logout-all", accessToken(phone), null);
+        assertThat(out.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(setCookie(out)).contains("Max-Age=0");
+        assertThat(myAppointments(accessToken(phone))).as("not after 15 minutes: at once").isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(myAppointments(accessToken(laptop))).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(refresh(cookieValue(phone)).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(refresh(cookieValue(laptop)).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(jdbc.queryForList("SELECT DISTINCT end_reason FROM refresh_tokens WHERE user_id = ?", String.class,
+                claims(phone).get("userId").asLong())).containsExactly("LOGOUT_ALL");
+
+        ResponseEntity<String> back = login("sessioneverywhere", "secret-123");
+        assertThat(myAppointments(accessToken(back))).as("a new login works").isEqualTo(HttpStatus.OK);
+        ResponseEntity<String> refreshed = refresh(cookieValue(back));
+        assertThat(myAppointments(accessToken(refreshed))).as("its refreshed token too").isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void aReactivatedAccountDoesntGetItsOldLoginsBack() throws Exception {
+        api.registerPatient("sessionreturner");
+        ResponseEntity<String> before = login("sessionreturner", "secret-123");
+        long userId = claims(before).get("userId").asLong();
+        String admin = api.admin();
+        assertThat(api.call(HttpMethod.PUT, "/api/admin/users/" + userId + "/deactivate", admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        assertThat(api.call(HttpMethod.PUT, "/api/admin/users/" + userId + "/reactivate", admin, null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+
+        assertThat(myAppointments(accessToken(before))).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(refresh(cookieValue(before)).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(myAppointments(accessToken(login("sessionreturner", "secret-123")))).isEqualTo(HttpStatus.OK);
+    }
+
+    private boolean stored(String refreshToken) throws Exception {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM refresh_tokens WHERE token_hash = ?", Integer.class,
+                sha256(refreshToken)) == 1;
+    }
+
+    @Test
+    void theNightlyCleanUpDeletesTokensExpiredOrEndedOverThirtyDaysAgo() throws Exception {
+        api.registerPatient("sessionsweeper");
+        String expired = cookieValue(login("sessionsweeper", "secret-123"));
+        String ended = cookieValue(login("sessionsweeper", "secret-123"));
+        String endedLately = cookieValue(login("sessionsweeper", "secret-123"));
+        String live = cookieValue(login("sessionsweeper", "secret-123"));
+        LocalDateTime overAMonthAgo = LocalDateTime.now().minusDays(31);
+        jdbc.update("UPDATE refresh_tokens SET created_at = ?, expires_at = ? WHERE token_hash = ?",
+                overAMonthAgo.minusDays(7), overAMonthAgo, sha256(expired));
+        jdbc.update("UPDATE refresh_tokens SET ended_at = ?, end_reason = 'LOGOUT' WHERE token_hash = ?", overAMonthAgo, sha256(ended));
+        jdbc.update("UPDATE refresh_tokens SET ended_at = ?, end_reason = 'LOGOUT' WHERE token_hash = ?",
+                LocalDateTime.now().minusDays(29), sha256(endedLately));
+
+        cleanup.deleteOldTokens();
+
+        assertThat(stored(expired)).isFalse();
+        assertThat(stored(ended)).isFalse();
+        assertThat(stored(endedLately)).as("kept for 30 days").isTrue();
+        assertThat(stored(live)).isTrue();
+        assertThat(refresh(live).getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }

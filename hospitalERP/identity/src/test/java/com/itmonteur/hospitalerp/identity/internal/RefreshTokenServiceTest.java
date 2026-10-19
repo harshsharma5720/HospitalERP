@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -20,11 +21,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
  * Login sessions (docs/SAFER_LOGIN_TOKENS_PLAN.md) with a clock moved by hand and the tokens kept in a list: the
- * lifetimes of patients and staff, rotation, reuse within and after the grace, deactivation, logout.
+ * lifetimes of patients and staff, rotation, reuse within and after the grace, deactivation, logout, log out
+ * everywhere, the clean-up.
  */
 class RefreshTokenServiceTest {
 
@@ -45,6 +48,8 @@ class RefreshTokenServiceTest {
     private final HandClock clock = new HandClock();
     private final User patient = user(1L, Role.PATIENT);
     private final User doctor = user(2L, Role.DOCTOR);
+    private RefreshTokenRepository tokens;
+    private UserRepository users;
     private RefreshTokenService service;
 
     private static User user(long id, Role role) {
@@ -57,7 +62,7 @@ class RefreshTokenServiceTest {
 
     @BeforeEach
     void setUp() {
-        RefreshTokenRepository tokens = mock(RefreshTokenRepository.class);
+        tokens = mock(RefreshTokenRepository.class);
         when(tokens.save(any())).thenAnswer(inv -> {
             rows.add(inv.getArgument(0));
             return inv.getArgument(0);
@@ -68,7 +73,7 @@ class RefreshTokenServiceTest {
                 .filter(t -> t.getSessionId().equals(inv.getArgument(0)) && t.getEndedAt() == null).toList());
         when(tokens.findByUserIdAndEndedAtIsNull(anyLong())).thenAnswer(inv -> rows.stream()
                 .filter(t -> t.getUserId().equals(inv.getArgument(0)) && t.getEndedAt() == null).toList());
-        UserRepository users = mock(UserRepository.class);
+        users = mock(UserRepository.class);
         when(users.findById(1L)).thenReturn(Optional.of(patient));
         when(users.findById(2L)).thenReturn(Optional.of(doctor));
         service = new RefreshTokenService(tokens, users, clock, 7, 90, 12);
@@ -170,5 +175,34 @@ class RefreshTokenServiceTest {
 
         refused(null);
         refused("");
+    }
+
+    @Test
+    void endingEverywhereMovesTheTokenVersionOnAndEndsEveryLoginOfTheUser() {
+        String phone = service.start(patient).token();
+        String laptop = service.start(patient).token();
+        String doctors = service.start(doctor).token();
+        assertThat(patient.getTokenVersion()).isZero();
+
+        service.endEverywhere(patient, SessionEndReason.LOGOUT_ALL);
+        assertThat(patient.getTokenVersion()).as("the access tokens given out are refused").isEqualTo(1);
+        verify(users).save(patient);
+        refused(phone);
+        refused(laptop);
+        assertThat(rows.stream().filter(t -> t.getUserId() == 1L).map(RefreshToken::getEndReason))
+                .containsOnly(SessionEndReason.LOGOUT_ALL);
+        assertThat(service.refresh(doctors).user()).as("other users keep theirs").isSameAs(doctor);
+        assertThat(doctor.getTokenVersion()).isZero();
+
+        service.endEverywhere(patient, SessionEndReason.PASSWORD_RESET);
+        assertThat(patient.getTokenVersion()).isEqualTo(2);
+        assertThat(service.refresh(service.start(patient).token()).user()).as("a new login works").isSameAs(patient);
+    }
+
+    @Test
+    void theCleanUpDeletesTokensExpiredOrEndedThirtyDaysAgo() {
+        when(tokens.deleteExpiredOrEndedBefore(any())).thenReturn(4);
+        assertThat(service.deleteOld()).isEqualTo(4);
+        verify(tokens).deleteExpiredOrEndedBefore(LocalDateTime.parse("2026-09-16T09:00:00"));
     }
 }

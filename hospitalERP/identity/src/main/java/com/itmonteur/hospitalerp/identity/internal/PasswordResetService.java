@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -29,16 +30,18 @@ public class PasswordResetService {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final LoginAttemptService loginAttemptService;
+    private final RefreshTokenService refreshTokenService;
 
     public PasswordResetService(UserRepository userRepository, OtpService otpService, SmsService smsService,
                                 EmailService emailService, PasswordEncoder passwordEncoder,
-                                LoginAttemptService loginAttemptService) {
+                                LoginAttemptService loginAttemptService, RefreshTokenService refreshTokenService) {
         this.userRepository = userRepository;
         this.otpService = otpService;
         this.smsService = smsService;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.loginAttemptService = loginAttemptService;
+        this.refreshTokenService = refreshTokenService;
     }
 
     /** Sends a reset code if the username/email exists; silently does nothing otherwise. */
@@ -78,7 +81,11 @@ public class PasswordResetService {
         }
     }
 
-    /** Sets a new password when the code is valid. Also lifts any failed-login lock. */
+    /**
+     * Sets a new password when the code is valid. Also lifts any failed-login lock, and every login of the account
+     * ends: whoever knew the old password is out (docs/SAFER_LOGIN_TOKENS_PLAN.md).
+     */
+    @Transactional
     public void resetPassword(String identifier, String code, String newPassword) {
         User user = findUser(identifier).orElseThrow(() -> new BadRequestException(INVALID_CODE));
         if (!otpService.checkCode(key(user), code)) {
@@ -86,6 +93,7 @@ public class PasswordResetService {
         }
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+        refreshTokenService.endEverywhere(user, SessionEndReason.PASSWORD_RESET);
         loginAttemptService.loginSucceeded(user.getUsername());
         logger.info("Password reset completed for user {}", user.getId());
     }

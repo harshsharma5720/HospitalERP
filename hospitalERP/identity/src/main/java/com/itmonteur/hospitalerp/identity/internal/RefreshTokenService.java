@@ -31,6 +31,8 @@ public class RefreshTokenService {
     private static final Logger logger = LoggerFactory.getLogger(RefreshTokenService.class);
 
     public static final Duration REUSE_GRACE = Duration.ofSeconds(30);
+    /** How long tokens are kept after they expired or their session ended (the clean-up, RefreshTokenCleanup). */
+    static final Duration KEEP_ENDED = Duration.ofDays(30);
 
     /** A new refresh token and how long its cookie should live. */
     public record Issued(String token, Duration maxAge) {
@@ -115,11 +117,29 @@ public class RefreshTokenService {
         tokens.findByTokenHash(hash(presented)).ifPresent(token -> endSession(token.getSessionId(), SessionEndReason.LOGOUT, now()));
     }
 
-    /** Every session of the user ends (log out everywhere, a password reset, a deactivation). */
+    /** Every session of the user ends. */
     @Transactional
     public void endAll(long userId, SessionEndReason reason) {
         LocalDateTime now = now();
         tokens.findByUserIdAndEndedAtIsNull(userId).forEach(token -> token.end(now, reason));
+    }
+
+    /**
+     * Every session of the user ends and the access tokens already given out are refused at once, as the account's
+     * token version moves on: "log out of all devices", a password reset, a deactivation.
+     */
+    @Transactional
+    public void endEverywhere(User user, SessionEndReason reason) {
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        users.save(user);
+        endAll(user.getId(), reason);
+        logger.info("Every login of user {} ended ({})", user.getId(), reason);
+    }
+
+    /** Deletes the tokens that expired, or whose session ended, more than {@link #KEEP_ENDED} ago; how many. */
+    @Transactional
+    public int deleteOld() {
+        return tokens.deleteExpiredOrEndedBefore(now().minus(KEEP_ENDED));
     }
 
     private void endSession(String sessionId, SessionEndReason reason, LocalDateTime now) {

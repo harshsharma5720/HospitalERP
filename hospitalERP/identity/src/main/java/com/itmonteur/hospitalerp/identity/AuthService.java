@@ -6,6 +6,7 @@ import com.itmonteur.hospitalerp.identity.internal.JWTService;
 import com.itmonteur.hospitalerp.identity.internal.LoginAttemptService;
 import com.itmonteur.hospitalerp.identity.internal.OtpService;
 import com.itmonteur.hospitalerp.identity.internal.RefreshTokenService;
+import com.itmonteur.hospitalerp.identity.internal.SessionEndReason;
 import com.itmonteur.hospitalerp.identity.internal.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,7 @@ public class AuthService {
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
     private final RefreshTokenService refreshTokenService;
+    private final CurrentUserService currentUserService;
 
     /**
      * A login's two tokens (docs/SAFER_LOGIN_TOKENS_PLAN.md): the short access token (JWT) for the response body, and
@@ -52,7 +54,7 @@ public class AuthService {
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JWTService jwtService,
                        AuthenticationManager authenticationManager, OtpService otpService,
                        LoginAttemptService loginAttemptService, ApplicationEventPublisher eventPublisher,
-                       Clock clock, RefreshTokenService refreshTokenService) {
+                       Clock clock, RefreshTokenService refreshTokenService, CurrentUserService currentUserService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -62,6 +64,7 @@ public class AuthService {
         this.eventPublisher = eventPublisher;
         this.clock = clock;
         this.refreshTokenService = refreshTokenService;
+        this.currentUserService = currentUserService;
     }
 
     @Value("${app.otp.required:true}")
@@ -144,8 +147,7 @@ public class AuthService {
         try {
             RefreshTokenService.Refreshed refreshed = refreshTokenService.refresh(refreshToken);
             User user = refreshed.user();
-            return Optional.of(new Session(jwtService.generateToken(toUserDetails(user), user.getId()),
-                    refreshed.next().token(), refreshed.next().maxAge()));
+            return Optional.of(new Session(accessToken(user), refreshed.next().token(), refreshed.next().maxAge()));
         } catch (RefreshTokenService.InvalidRefreshTokenException e) {
             return Optional.empty();
         }
@@ -156,9 +158,20 @@ public class AuthService {
         refreshTokenService.end(refreshToken);
     }
 
+    /** "Log out of all devices": every login of the current user ends, and its access tokens are refused at once. */
+    @Transactional
+    public void logoutEverywhere() {
+        User user = currentUserService.getCurrentUser();
+        refreshTokenService.endEverywhere(user, SessionEndReason.LOGOUT_ALL);
+    }
+
     private Session session(User user) {
         RefreshTokenService.Issued refresh = refreshTokenService.start(user);
-        return new Session(jwtService.generateToken(toUserDetails(user), user.getId()), refresh.token(), refresh.maxAge());
+        return new Session(accessToken(user), refresh.token(), refresh.maxAge());
+    }
+
+    private String accessToken(User user) {
+        return jwtService.generateToken(toUserDetails(user), user.getId(), user.getTokenVersion());
     }
 
     public static Role parseRole(String role) {

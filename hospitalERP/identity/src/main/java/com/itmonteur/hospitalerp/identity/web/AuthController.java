@@ -81,6 +81,15 @@ public class AuthController {
                 .body(Map.of("success", true, "message", "Logged out"));
     }
 
+    // "Log out of all devices" (it needs the access token, see IdentitySecurityRules): every login of the account ends,
+    // its access tokens are refused at once, and this device's cookie is cleared
+    @PostMapping("/logout-all")
+    public ResponseEntity<Map<String, Object>> logoutAll() {
+        authService.logoutEverywhere();
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, refreshCookie("", Duration.ZERO))
+                .body(Map.of("success", true, "message", "Logged out of all devices"));
+    }
+
     private ResponseEntity<AuthResponseDTO> withSession(AuthService.Session session) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, refreshCookie(session.refreshToken(), session.refreshMaxAge()))
