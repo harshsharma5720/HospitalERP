@@ -22,6 +22,7 @@ class PasswordResetServiceTest {
 
     private UserRepository userRepository;
     private SmsService smsService;
+    private RefreshTokenService refreshTokenService;
     private PasswordResetService service;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
     private User user;
@@ -39,9 +40,10 @@ class PasswordResetServiceTest {
         user.setRole(Role.PATIENT);
         user.setPassword(encoder.encode("old-password"));
         when(userRepository.findByUsername("asha")).thenReturn(Optional.of(user));
+        refreshTokenService = mock(RefreshTokenService.class);
         // A real OtpService, so the code "sent" by SMS is the one that must be entered
         service = new PasswordResetService(userRepository, new OtpService(smsService), smsService,
-                mock(EmailService.class), encoder, new LoginAttemptService());
+                mock(EmailService.class), encoder, new LoginAttemptService(), refreshTokenService);
     }
 
     private String requestAndCaptureCode() {
@@ -76,6 +78,8 @@ class PasswordResetServiceTest {
 
         assertThat(encoder.matches("new-password", user.getPassword())).isTrue();
         verify(userRepository).save(user);
+        // Whoever knew the old password is logged out everywhere (docs/SAFER_LOGIN_TOKENS_PLAN.md)
+        verify(refreshTokenService).endEverywhere(user, SessionEndReason.PASSWORD_RESET);
         // The code cannot be reused
         assertThatThrownBy(() -> service.resetPassword("asha", code, "another-one"))
                 .isInstanceOf(BadRequestException.class);
@@ -89,5 +93,6 @@ class PasswordResetServiceTest {
         assertThatThrownBy(() -> service.resetPassword("asha", wrong, "new-password"))
                 .isInstanceOf(BadRequestException.class);
         assertThat(encoder.matches("old-password", user.getPassword())).isTrue();
+        verify(refreshTokenService, never()).endEverywhere(any(), any());
     }
 }

@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import ReceptionistProfile from "./ReceptionistProfile";
 import useAuthStore from "../auth/useAuthStore";
 import { getReceptionist, updateReceptionist } from "../../shared/profileApi";
@@ -25,13 +26,16 @@ test("the receptionist sees and changes their own details", async () => {
   updateReceptionist.mockImplementation(async (userId, form) => ({ data: { ...PROFILE, ...JSON.parse(await readBlob(form.get("receptionistDTO"))) } }));
   render(
     <ToastProvider>
-      <ReceptionistProfile />
+      <MemoryRouter>
+        <ReceptionistProfile />
+      </MemoryRouter>
     </ToastProvider>
   );
   const details = await screen.findByRole("region", { name: "Your details" });
   expect(getReceptionist).toHaveBeenCalledWith(5);
   expect(details).toHaveTextContent("desk1@example.com");
   expect(details).toHaveTextContent("Male");
+  expect(screen.getByRole("button", { name: "Log out of all devices" })).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   fireEvent.change(screen.getByLabelText("Phone number"), { target: { value: "9000000002" } });

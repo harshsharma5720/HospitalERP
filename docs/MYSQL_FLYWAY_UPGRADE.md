@@ -22,7 +22,8 @@ On the first start of the new code:
    - one that makes `patient.email` **optional** and **adds** `patient.created_at` (existing patients keep their email; no creation time) (`patients/V2026_10_08_1__patients_walk_in.sql`, from the walk-in feature, in `main` since PR #10).
    - one that **adds** `appointments.checked_in_at`, `token_number` and `called_at` for today's queue (empty for existing appointments) (`appointments/V2026_10_11_1__appointments_queue.sql`, from the queue feature, in `main` since PR #12).
    - one that **creates** the empty billing tables `doctor_fees`, `bills` and `bill_items` (`billing/V2026_10_12_1__billing.sql`, from the billing feature, in `main` since PR #13).
-   - one that **creates** the empty `online_payments` table (`billing/V2026_10_15_1__online_payments.sql`, from the online-payment feature — only once `feature/online-payment` is merged).
+   - one that **creates** the empty `online_payments` table (`billing/V2026_10_15_1__online_payments.sql`, from the online-payment feature, in `main` since PR #17).
+   - one that **creates** the empty `refresh_tokens` table (`identity/V2026_10_16_1__identity_refresh_tokens.sql`), and one that **adds** `users.token_version` (existing accounts: 0) (`identity/V2026_10_16_2__identity_token_version.sql`), both from the safer-logins feature — only once `feature/safer-login-tokens` is merged. Everyone is logged out once by the upgrade (old tokens are kept in the browser, which the new app drops) and logs in again.
    All other data stays.
 3. Hibernate then **validates** (`ddl-auto=validate`): every entity's table and column must exist with a compatible type. If not, the app stops with `Schema-validation: …`.
 
@@ -141,9 +142,11 @@ mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/reso
 mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/appointments/V2026_10_11_1__appointments_queue.sql"
 mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/billing/V2026_10_12_1__billing.sql"
 mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/billing/V2026_10_15_1__online_payments.sql"
+mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/identity/V2026_10_16_1__identity_refresh_tokens.sql"
+mysql -u root -p hospital_erp_reference -e "source hospitalERP/app/src/main/resources/db/migration/identity/V2026_10_16_2__identity_token_version.sql"
 ```
 
-(Run every `.sql` file that exists under `db/migration/` in version order — the last line only once the online-payment feature is merged, i.e. if that file exists in your checkout.)
+(Run every `.sql` file that exists under `db/migration/` in version order — the last two lines only once the safer-logins feature is merged, i.e. if those files exist in your checkout.)
 
 (Run these from the repository root; use forward slashes in the `source` paths.)
 
@@ -178,7 +181,7 @@ ORDER BY 1, 2, 3;
 |---|---|---|
 | Exactly 5 rows "only in hospital_erp": `doctor.password`, `doctor.role`, `patient.role`, `patient_relative.role`, `receptionist.role` | Perfect — these are the columns the migrations drop | Continue |
 | Other "only in hospital_erp" rows | Leftover columns from older versions (e.g. `receptionist.password`) | Harmless for the app (validation ignores extra columns). Note them; we can drop them later with a migration |
-| "missing in hospital_erp": `users.active`, `users.deactivated_at`, the 10 columns of `audit_log`, `users.created_at`, the 13 columns of `notification_outbox`, `patient.created_at`, `appointments.checked_in_at`, `token_number`, `called_at` the columns of `doctor_fees`, `bills` and `bill_items`, and (once the online-payment feature is merged) the columns of `online_payments` | Expected — migrations add them during the upgrade | Continue |
+| "missing in hospital_erp": `users.active`, `users.deactivated_at`, the 10 columns of `audit_log`, `users.created_at`, the 13 columns of `notification_outbox`, `patient.created_at`, `appointments.checked_in_at`, `token_number`, `called_at` the columns of `doctor_fees`, `bills` and `bill_items`, the columns of `online_payments`, and (once the safer-logins feature is merged) the columns of `refresh_tokens` and `users.token_version` | Expected — migrations add them during the upgrade | Continue |
 | Any other "missing in hospital_erp" row | The database is older than the code | Do 5.1 again (catch-up run on `49635d8`). If it stays, **stop** and send the list |
 | Any "different type" row (e.g. `varchar(255)` now, `enum(...)` target) | Column created by an older Hibernate version | **Stop.** Send the rows; the fix is a small migration (`ALTER TABLE … MODIFY COLUMN …`) added before the upgrade |
 
@@ -376,11 +379,11 @@ Remove-Item C:\db-backups\hospital_erp_before_flyway.sql   # patient data
 | Item | Value |
 |---|---|
 | Migration folder | `hospitalERP/app/src/main/resources/db/migration/` |
-| Migrations | `V1__baseline.sql` (full schema, only for empty databases), `staff/V2026_09_28_1__staff_drop_unused_columns.sql`, `patients/V2026_09_28_2__patients_drop_unused_columns.sql`, `identity/V2026_09_30_1__identity_account_status.sql` (adds `users.active`, `users.deactivated_at`), `audit/V2026_10_05_1__audit_log.sql` (creates the empty `audit_log` table), `identity/V2026_10_06_1__identity_user_created_at.sql` (adds `users.created_at`), `notifications/V2026_10_07_1__notifications_outbox.sql` (creates the empty `notification_outbox` table), `patients/V2026_10_08_1__patients_walk_in.sql` (`patient.email` optional, adds `patient.created_at`), `appointments/V2026_10_11_1__appointments_queue.sql` (adds `appointments.checked_in_at`, `token_number`, `called_at`), `billing/V2026_10_12_1__billing.sql` (creates `doctor_fees`, `bills`, `bill_items`), `billing/V2026_10_15_1__online_payments.sql` (creates `online_payments`) |
+| Migrations | `V1__baseline.sql` (full schema, only for empty databases), `staff/V2026_09_28_1__staff_drop_unused_columns.sql`, `patients/V2026_09_28_2__patients_drop_unused_columns.sql`, `identity/V2026_09_30_1__identity_account_status.sql` (adds `users.active`, `users.deactivated_at`), `audit/V2026_10_05_1__audit_log.sql` (creates the empty `audit_log` table), `identity/V2026_10_06_1__identity_user_created_at.sql` (adds `users.created_at`), `notifications/V2026_10_07_1__notifications_outbox.sql` (creates the empty `notification_outbox` table), `patients/V2026_10_08_1__patients_walk_in.sql` (`patient.email` optional, adds `patient.created_at`), `appointments/V2026_10_11_1__appointments_queue.sql` (adds `appointments.checked_in_at`, `token_number`, `called_at`), `billing/V2026_10_12_1__billing.sql` (creates `doctor_fees`, `bills`, `bill_items`), `billing/V2026_10_15_1__online_payments.sql` (creates `online_payments`), `identity/V2026_10_16_1__identity_refresh_tokens.sql` (creates `refresh_tokens`), `identity/V2026_10_16_2__identity_token_version.sql` (adds `users.token_version`) |
 | Last `main` before Flyway (for 5.1 and a rollback) | `49635d8` (2026-09-25, merge of PR #2; `ddl-auto=update`) |
 | Settings (`app/src/main/resources/application.properties`) | `spring.jpa.hibernate.ddl-auto=validate`, `spring.flyway.baseline-on-migrate=true`, `spring.flyway.baseline-version=1` |
-| Tables (19, once online payment is merged) | appointments, appointments_seq, audit_log, bill_items, bills, consultations, doctor, doctor_fees, doctor_schedules, doctor_seq, leave_request, notification_outbox, online_payments, patient, patient_relative, prescription_items, receptionist, slots, users (+ `flyway_schema_history` after the upgrade) |
+| Tables (20, once safer logins are merged) | appointments, appointments_seq, audit_log, bill_items, bills, consultations, doctor, doctor_fees, doctor_schedules, doctor_seq, leave_request, notification_outbox, online_payments, patient, patient_relative, prescription_items, receptionist, refresh_tokens, slots, users (+ `flyway_schema_history` after the upgrade) |
 | Columns dropped | doctor.password, doctor.role, patient.role, patient_relative.role, receptionist.role |
 | `.env` keys used here | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `REMINDERS_ENABLED` |
 | Automated proof | `DatabaseMigrationMySqlTest` (needs Docker): upgrade of a pre-Flyway database with data + fresh install give the identical schema |
-| Last tested | 2026-10-12 on MySQL 8.0 (Docker) with all 10 migrations, Flyway 11.7.2, Spring Boot 3.5.5 |
+| Last tested | 2026-10-15 on MySQL 8.0 (Docker) with the 11 migrations up to online payment, Flyway 11.7.2, Spring Boot 3.5.5. The two safer-logins migrations are in `DatabaseMigrationMySqlTest`'s list but haven't run on MySQL yet: Docker Desktop didn't answer on 2026-10-19. |

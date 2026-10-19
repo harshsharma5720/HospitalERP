@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import LeaveManagementPage from "./LeaveManagementPage";
 import { getMyLeaves, applyForLeave } from "../api";
 import { ToastProvider } from "../../../shared/ui";
+import useAuthStore from "../../auth/useAuthStore";
 
 jest.mock("../api");
 
@@ -12,12 +13,12 @@ const token = `x.${btoa(JSON.stringify({ sub: "rao", role: "ROLE_DOCTOR", userId
 const settle = () => new Promise((resolve) => setTimeout(resolve, 100));
 
 beforeEach(() => {
-  localStorage.setItem("jwtToken", token);
+  useAuthStore.setState({ token, role: "ROLE_DOCTOR", userId: 5 });
   getMyLeaves.mockResolvedValue({ data: [] });
 });
 
 afterEach(() => {
-  localStorage.clear();
+  useAuthStore.setState({ token: null, role: null, userId: null });
   jest.resetAllMocks();
 });
 

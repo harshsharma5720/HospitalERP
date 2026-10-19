@@ -6,6 +6,7 @@ import { hasProfile, getOwnProfile } from "../profileApi";
 import { getUsernameFromToken } from "../utils/jwtUtils";
 import { API_BASE_URL } from "../../app/config";
 import { Button, ThemeButton } from "../ui";
+import { LogOutEverywhereButton } from "../../features/auth/LogOutEverywhere";
 import { STAFF_MENUS, isActive } from "./staffMenus";
 
 // The staff portals' frame (docs/UI_REFRESH_PLAN.md): the logged-in role's menu on the left (a drawer on a phone)
@@ -61,6 +62,8 @@ export default function StaffLayout({ children }) {
           <div className="ml-auto flex items-center gap-1 sm:gap-2">
             <ThemeButton />
             <UserChip user={user} area={menu.area} profilePath={menu.profilePath} />
+            {/* The others have it on their profile page */}
+            {role === "ROLE_ADMIN" && <LogOutEverywhereButton />}
             <Button variant="ghost" size="sm" onClick={logout} aria-label="Log out">
               <LogOut size={16} aria-hidden="true" />
               <span className="hidden sm:inline">Log out</span>

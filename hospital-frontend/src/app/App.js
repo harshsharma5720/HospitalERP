@@ -59,6 +59,15 @@ function OwnAccount() {
 function App() {
   // Re-renders automatically on login/logout (no page reload needed)
   const role = useAuthStore((s) => s.role);
+  // Until the login is restored (or known to be gone), routes would send a logged-in user to the login page
+  const ready = useAuthStore((s) => s.ready);
+  if (!ready) {
+    return (
+      <p role="status" className="p-8 text-ink-muted">
+        Loading...
+      </p>
+    );
+  }
 
   return (
     <ToastProvider>

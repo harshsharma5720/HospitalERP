@@ -96,7 +96,7 @@ The main problems:
 - **Fix:**
   - Load the key from `.env` (`JWT_SECRET`, base64, at least 256 bits).
   - Upgrade jjwt from 0.11.5 to 0.12.x; the current code uses deprecated APIs.
-  - Consider shortening the 10-hour expiry and adding refresh tokens.
+  - Consider shortening the 10-hour expiry and adding refresh tokens. ✅ Done 2026-10-19: 15-minute access tokens and refresh tokens in an `httpOnly` cookie (see "Safer login tokens" in section 11).
 
 ### 2.8 OTP is weak and not enforced
 - **Where:** `BE/services/SmsService.java:27`, `OTPService.java:20`, and `AuthService.register` (the verification check is commented out).
@@ -439,9 +439,9 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ---
 
-## 11. Feature Status (updated 2026-10-16)
+## 11. Feature Status (updated 2026-10-19)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15), patients' bills (PR #16), online payment (PR #17), the cancellation cut-off (PR #18) and doctor analytics (branch `feature/doctor-analytics`). How to test each of them by hand: [END_TO_END_TEST_GUIDE.md](END_TO_END_TEST_GUIDE.md).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15), patients' bills (PR #16), online payment (PR #17), the cancellation cut-off (PR #18), doctor analytics (PR #19) and safer login tokens (branch `feature/safer-login-tokens`). How to test each of them by hand: [END_TO_END_TEST_GUIDE.md](END_TO_END_TEST_GUIDE.md).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
@@ -459,6 +459,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 - **Online payment with Razorpay:** patients pay an unpaid bill in the app; a webhook as a safety net; late payments refunded automatically; the desk refunds a cancelled visit paid online (2026-10-15, see below).
 - **Cancellation cut-off:** patients can't cancel or move a visit less than 2 hours before it (configurable); the front desk can (2026-10-15, see below).
 - **Doctor analytics:** visits per day, no-show and cancellation rates, busy hours and weekdays, waiting time and earnings, for the doctor and for admins (2026-10-16, see below).
+- **Safer login tokens:** a 15-minute access token kept in memory, the login kept by a refresh token in an `httpOnly` cookie; patients 7 days after the last use (at most 90), staff 12 hours; "Log out of all devices", also after a password reset or a deactivation (2026-10-19, see below).
 
 **Partly done**
 - **Paged lists:** patients and the front-desk appointments are paged; the admin users list and the doctor portal's lists still load everything.
@@ -469,7 +470,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 |---|---|---|---|
 | 1 | ~~Deactivate accounts instead of deleting them~~ ✅ done 2026-10-01 | compliance | — |
 | 2 | ~~Audit log of who viewed or changed medical records~~ ✅ done 2026-10-05 | compliance | — |
-| 3 | Safer login tokens (short access token + refresh token in an `httpOnly` cookie) | security | 2–3 days |
+| 3 | ~~Safer login tokens (short access token + refresh token in an `httpOnly` cookie)~~ ✅ done 2026-10-19 (also "Log out of all devices") | security | — |
 | 4 | ~~Automatic MySQL backups (backup container in docker-compose)~~ ✅ done 2026-10-08 (Docker and Windows) | operations | — |
 | 5 | ~~Notifications that aren't lost when SMS/email is down~~ ✅ done 2026-10-07 (an outbox instead of the Modulith event registry) | reliability | — |
 | 6 | In-app notification centre (bell icon) | platform | 3 days |
@@ -493,7 +494,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** safer login tokens (3) — the app now takes payments, so a stolen token matters more; then a daily cash summary for the desk (a follow-up of billing), the in-app notification centre (6) or the family view (14).
+**Suggested order:** a daily cash summary for the desk (a follow-up of billing: what was taken in cash, card, UPI and online, per day); then the in-app notification centre (6) or the family view (14).
 
 ### Account deactivation (done 2026-10-01)
 
@@ -819,3 +820,28 @@ From idea #8. The doctor's dashboard showed three counts, for which the browser 
 - Waiting times exist only since today's queue (2026-10-12), so older periods measure fewer visits.
 - No comparison with the previous period, and no export (CSV / PDF).
 
+### Safer login tokens (done 2026-10-19)
+
+From idea #3 and the review's item 2.7. A login used to be one token valid for 10 hours, kept in `localStorage`, where any script on the page could read it, and nothing could take it back. The app now takes payments, so that mattered more. Decisions, design and steps: [SAFER_LOGIN_TOKENS_PLAN.md](SAFER_LOGIN_TOKENS_PLAN.md).
+
+**What it does**
+- **Two tokens.** The access token (a JWT) lasts 15 minutes and lives in the app's memory only. The login is kept by a refresh token in the `httpOnly` cookie `hospital_refresh` (`SameSite=Strict`, sent only to `/api/auth`); the server keeps only its SHA-256 hash.
+- **Renewal.** The app gets a new access token a minute before it runs out, and after a 401 (once). Every refresh replaces the refresh token; an old one used again after 30 seconds means it was copied, and that login ends.
+- **How long:** patients 7 days after they last used the app, at most 90 days; staff 12 hours from logging in.
+- **Log out everywhere:** a "Log out of all devices" card on the account and profile pages (admins: the top bar), and automatically after a password reset and a deactivation. Access tokens carry the account's token version, so they stop working at once, not after 15 minutes.
+- **Tabs stay in step** (a logout in one logs the others out), and a reload keeps the login. Old tokens in `localStorage` are deleted.
+- **Behind it:** `refresh_tokens` and `users.token_version` (two Flyway migrations in identity), `POST /api/auth/refresh`, `/logout` and `/logout-all`, a nightly clean-up, and settings `AUTH_*` and `JWT_EXPIRATION_MS`.
+
+**Tests:**
+- Backend: unit tests with a clock moved by hand (lifetimes, rotation, reuse, ending everywhere), end-to-end tests over HTTP (the cookie's attributes, refresh and reuse, the header, logout, log out of all devices, a reactivated account, the clean-up); 213 (1 skipped; the 4 MySQL tests not run, see below) backend tests.
+- Frontend: the store, the request interceptor, the card and the pages; 281 tests.
+- Mutation checks for every step (50, all caught by a named test); screenshots on desktop and phone, light and dark.
+
+**Found on the way:**
+- The commit hook's secret scanner took a test's expected cookie lifetime (`"Max-Age=43200"`) and a made-up test signing key for real secrets. The test now writes the lifetime as `12 * 60 * 60` and makes a new key for every run.
+- A mutation that retries a refused request forever made the test runner run out of memory instead of failing; the test's fake server now answers from the fourth request, so the test fails by name.
+
+**Not covered yet:**
+- `DatabaseMigrationMySqlTest` hasn't run the two new migrations on MySQL: Docker Desktop didn't answer on 2026-10-19. Run it before merging, or right after.
+- No list of the logged-in devices (which browser, when); only "log out of all of them".
+- A role change takes effect on the next request, but the access token still shows the old role in the app until it is renewed (at most 15 minutes).

@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import PublicHeader from "./PublicHeader";
+import axios from "axios";
 import useAuthStore from "../../features/auth/useAuthStore";
 
 
@@ -9,7 +10,6 @@ const tokenFor = (sub, role) => `x.${btoa(JSON.stringify({ sub, role, userId: 1 
 
 const renderAs = (role, path = "/somewhere") => {
   const token = role ? tokenFor("asha", role) : null;
-  if (token) localStorage.setItem("jwtToken", token);
   useAuthStore.setState({ token, role, userId: role ? 1 : null });
   render(
     <MemoryRouter initialEntries={[path]}>
@@ -69,10 +69,14 @@ test("a patient gets their appointments and their account, and no staff portal",
 });
 
 test("Log out ends the session and goes to the home page", () => {
+  const post = jest.spyOn(axios, "post").mockResolvedValue({ data: {} });
   renderAs("ROLE_PATIENT");
   fireEvent.click(screen.getByRole("button", { name: "Log out asha" }));
   expect(screen.getByText("home page")).toBeInTheDocument();
-  expect(localStorage.getItem("jwtToken")).toBeNull();
+  expect(useAuthStore.getState().token).toBeNull();
+  // The server ends the login and clears the refresh cookie (docs/SAFER_LOGIN_TOKENS_PLAN.md)
+  expect(post).toHaveBeenCalledWith(expect.stringMatching(/\/api\/auth\/logout$/), null, expect.objectContaining({ withCredentials: true }));
+  post.mockRestore();
   expect(screen.getByRole("link", { name: "Log in" })).toBeInTheDocument();
 });
 

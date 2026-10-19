@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarCheck, CalendarPlus, CreditCard, Download, Receipt, UserPlus, Users } from "lucide-react";
 import useAuthStore from "../auth/useAuthStore";
+import LogOutEverywhereCard from "../auth/LogOutEverywhere";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import { calculateAgeFromDOB } from "../../shared/utils/calculateAgeFromDOB";
 import { toLocalISODate } from "../../shared/utils/dateUtils";
@@ -284,7 +285,7 @@ export default function MyAccount() {
           <Bills bills={bills} onOpen={setOpenBill} onReceipt={saveReceipt} onPay={payOnline} />
         </div>
 
-        <aside className="min-w-0 lg:self-start">
+        <aside className="min-w-0 space-y-6 lg:self-start">
           <Card aria-labelledby="account-appointments">
             <CardHeader id="account-appointments" title="Your appointments" />
             {upcoming === null && <p className="text-sm text-ink-muted">Loading...</p>}
@@ -314,6 +315,7 @@ export default function MyAccount() {
               </Button>
             </div>
           </Card>
+          <LogOutEverywhereCard />
         </aside>
       </div>
       {openBill && (

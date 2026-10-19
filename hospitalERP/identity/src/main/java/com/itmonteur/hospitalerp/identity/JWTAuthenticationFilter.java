@@ -51,10 +51,10 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
         try {
             String username = jwtService.extractUsername(jwt);
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                // Roles and the account status are loaded from the database, so a role change or a
-                // deactivation takes effect on the next request (a deactivated user's token is ignored)
+                // Roles, the account status and its token version are loaded from the database, so a role change,
+                // a deactivation or "log out of all devices" takes effect on the next request (the token is ignored)
                 UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
-                if (userDetails.isEnabled() && jwtService.isTokenValid(jwt, userDetails)) {
+                if (userDetails.isEnabled() && jwtService.isTokenValid(jwt, userDetails) && isCurrentVersion(jwt, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -66,5 +66,10 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    // Tokens given out before the account's version moved on (docs/SAFER_LOGIN_TOKENS_PLAN.md) are refused
+    private boolean isCurrentVersion(String jwt, UserDetails userDetails) {
+        return userDetails instanceof AccountDetails account && account.getTokenVersion() == jwtService.extractTokenVersion(jwt);
     }
 }

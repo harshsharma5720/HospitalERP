@@ -143,6 +143,14 @@ TWILIO_TRIAL_NUMBER=+1234567890
 # Security
 # Base64 secret, at least 32 bytes. Generate one with: openssl rand -base64 48
 JWT_SECRET=paste_generated_secret_here
+# Logins (docs/SAFER_LOGIN_TOKENS_PLAN.md) - optional; these are the defaults
+# true behind HTTPS: the refresh cookie is then sent only over HTTPS
+AUTH_COOKIE_SECURE=false
+# Patients stay logged in this many days after they last used the app, at most AUTH_PATIENT_MAX_DAYS after logging in
+AUTH_PATIENT_IDLE_DAYS=7
+AUTH_PATIENT_MAX_DAYS=90
+# Staff (admin, doctors, front desk) are logged out this many hours after logging in
+AUTH_STAFF_HOURS=12
 # Set to false for local development without Twilio (skips phone verification on sign-up)
 OTP_REQUIRED=true
 # Comma-separated frontend origins allowed to call the API
@@ -226,7 +234,7 @@ The app will open at **http://localhost:3000**.
 
 1. Open **http://localhost:3000** — you should see the HospitalERP home page.
 2. Go to **Register** and create a patient account (or use an admin account if one exists).
-3. Log in — you should receive a JWT token and be redirected based on your role:
+3. Log in — you are taken to your role's home page (and stay logged in after a reload: see [Logins](#logins)):
    - **Admin** → `/admin/dashboard`
    - **Doctor** → `/doctor/dashboard`
    - **Patient / Receptionist** → home page (`/`)
@@ -274,7 +282,8 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 | Medical history and prescription PDF download | Patient | `/appointment-details` (completed visits) |
 | Weekly working hours and slot length | Doctor (or admin via API) | `/doctor/schedule` |
 | Leave requests and approval / rejection | Doctor, Admin | `/doctor/leave-management`, `/admin/leave-approval` |
-| Forgot password (6-digit code by SMS / email) | Everyone | `/forgot-password` (link on the login page) |
+| Forgot password (6-digit code by SMS / email); a new password logs the account out on every device | Everyone | `/forgot-password` (link on the login page) |
+| Safer logins — patients stay logged in 7 days after they last used the app (at most 90), staff 12 hours from logging in; **Log out of all devices**, also automatic after a password reset or a deactivation ([details](docs/SAFER_LOGIN_TOKENS_PLAN.md), [Logins](#logins)) | Everyone | My account / Profile → **Logged-in devices**; admins: top bar |
 | Deactivate / reactivate accounts — no login, hidden from booking, upcoming appointments cancelled, **all history kept**; permanent delete only for accounts without appointments ([details](docs/ACCOUNT_DEACTIVATION_PLAN.md)) | Admin | `/admin/manage-users`, `/admin/manage-doctor` |
 | Audit log — who viewed or changed which medical record, patient profile or account, and when; filters by patient, user, action and dates; entries kept forever ([details](docs/AUDIT_LOG_PLAN.md)) | Admin | `/admin/audit-log` |
 | Admin dashboard with real figures — today's appointments, doctors on leave, active accounts; for the last 7 / 30 / 90 days: appointments per day (completed, upcoming, missed, cancelled), cancellation and missed rates, new patients, busiest specializations and doctors ([details](docs/ADMIN_DASHBOARD_PLAN.md)) | Admin | `/admin/dashboard` |
@@ -291,6 +300,16 @@ Doctors, receptionists and other admins are created by an admin from **Admin →
 | Patients' bills — each visit's bill with its receipt, for the patient and their family members ([details](docs/PATIENT_BILLS_PLAN.md)); **paid online** with Razorpay (UPI, cards, net banking) after check-in; a payment that comes too late is refunded automatically; the desk refunds a cancelled visit paid online with one click ([details](docs/ONLINE_PAYMENT_PLAN.md), set-up below) | Patient, Receptionist | My appointments → **Bill**, My account → **Bills** |
 
 Medical records (consultations, prescriptions) are visible only to the patient, their doctor(s) and admins — receptionists cannot read them.
+
+### Logins
+
+How a login is kept ([docs/SAFER_LOGIN_TOKENS_PLAN.md](docs/SAFER_LOGIN_TOKENS_PLAN.md)):
+
+- **Two tokens.** The app gets a short **access token** (a JWT, 15 minutes, `JWT_EXPIRATION_MS`) that it keeps in memory only, never in `localStorage`. The login itself is kept by a **refresh token** in the cookie `hospital_refresh`: `HttpOnly` (no script can read it), `SameSite=Strict`, sent only to `/api/auth`. The server stores only its SHA-256 hash (table `refresh_tokens`).
+- **Renewal.** A minute before the access token runs out, the app gets a new one with `POST /api/auth/refresh`, and the refresh token is replaced. An old refresh token used again (more than 30 seconds later) means it was copied: that login ends.
+- **How long.** Patients: 7 days after they last used the app, at most 90 days. Staff: 12 hours from logging in, used or not.
+- **Log out everywhere.** "Log out of all devices" (`POST /api/auth/logout-all`), a password reset and a deactivation end every login of the account. Access tokens already given out stop working at once: they carry the account's token version (`users.token_version`).
+- **Deploying.** Behind HTTPS set `AUTH_COOKIE_SECURE=true`. The site and the API must be on the **same site** (the same domain; ports and subdomains such as `app.` / `api.` are fine), or the browser doesn't send the cookie and nobody stays logged in.
 
 ---
 
@@ -311,6 +330,8 @@ The database schema is owned by the migration scripts in `hospitalERP/app/src/ma
 | `appointments/V2026_10_11_1__appointments_queue.sql` | Adds `appointments.checked_in_at`, `token_number` and `called_at` (all empty for existing appointments), for today's queue: check-in at the front desk, tokens, the doctor calling the next patient ([today's queue](docs/TODAYS_QUEUE_PLAN.md)). |
 | `billing/V2026_10_12_1__billing.sql` | Creates the empty `doctor_fees`, `bills` and `bill_items` tables ([billing](docs/BILLING_PLAN.md)). |
 | `billing/V2026_10_15_1__online_payments.sql` | Creates the empty `online_payments` table: the Razorpay orders made for bills, with their payment or refund ([online payment](docs/ONLINE_PAYMENT_PLAN.md)). |
+| `identity/V2026_10_16_1__identity_refresh_tokens.sql` | Creates the empty `refresh_tokens` table: the logins (sessions) and their refresh tokens, kept only as hashes ([safer logins](docs/SAFER_LOGIN_TOKENS_PLAN.md)). |
+| `identity/V2026_10_16_2__identity_token_version.sql` | Adds `users.token_version` (0 for existing accounts); moving it on logs an account out everywhere at once ([safer logins](docs/SAFER_LOGIN_TOKENS_PLAN.md)). |
 
 **Changing the schema:** add a new file to the owning module's folder, e.g. `db/migration/appointments/V2026_10_05_1__appointments_add_room.sql`, with the next date-based version. Never edit a migration that has already run anywhere — Flyway checks their checksums and refuses to start. Hibernate then validates the entities against the result, so an entity change without a migration stops the app with a clear "Schema-validation" message.
 
@@ -398,8 +419,11 @@ http://localhost:8080/uploads/profileImages/<filename>
 - If the API is not on `http://localhost:8080`, set `REACT_APP_API_URL` in `hospital-frontend/.env`.
 
 ### Login works but redirects to home instead of admin/doctor portal
-- Clear browser localStorage: open DevTools → Application → Local Storage → delete `jwtToken`.
-- Log in again; the app reads the role from the JWT and redirects accordingly.
+- Log out and log in again; the app reads the role from the new token and redirects accordingly. (Older versions kept the token in localStorage as `jwtToken`; the app now deletes it.)
+
+### "Your session ended. Please log in again."
+- Expected after 12 hours for staff, after 7 days without using the app for patients (90 days at most), and after "Log out of all devices", a password reset or a deactivation.
+- Right after logging in: the browser didn't keep or send the `hospital_refresh` cookie. Check that the site and the API are on the same site (see [Logins](#logins)), that `AUTH_COOKIE_SECURE=true` is used only with HTTPS, and that `CORS_ALLOWED_ORIGINS` has the site's exact origin.
 
 ### `npm install` fails
 - Use Node.js 18 or later: `node -v`
@@ -409,8 +433,8 @@ http://localhost:8080/uploads/profileImages/<filename>
   npm install
   ```
 
-### Everyone is logged out after a backend restart
-- `JWT_SECRET` is not set, so a random key is generated on every start (a warning is logged). Set `JWT_SECRET` in `.env`.
+### Access tokens stop working after a backend restart
+- `JWT_SECRET` is not set, so a random key is generated on every start (a warning is logged). The app gets new access tokens through the refresh cookie, so nobody has to log in again, but set `JWT_SECRET` in `.env`.
 
 ### "Too many failed login attempts"
 - After 5 wrong passwords a username is locked for 15 minutes. Wait, or restart the backend in development.
@@ -537,6 +561,10 @@ npm test        # Run tests
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | No | Razorpay API keys; online payment is off while either is empty |
 | `APPOINTMENT_CHANGE_CUTOFF_HOURS` | No | Hours before a visit from which patients can't cancel or move it themselves (default 2; 0 = no limit) |
 | `RAZORPAY_WEBHOOK_SECRET` | No | Secret of the Razorpay webhook (`/api/payments/razorpay/webhook`); without it the webhook is refused |
+| `JWT_EXPIRATION_MS` | No | The access token's lifetime (default 900000, 15 minutes) |
+| `AUTH_COOKIE_SECURE` | No | `true` behind HTTPS: the refresh cookie is sent only over HTTPS (default `false`) |
+| `AUTH_PATIENT_IDLE_DAYS`, `AUTH_PATIENT_MAX_DAYS` | No | A patient's login lasts this many days after the last use (default 7), at most this many after logging in (default 90) |
+| `AUTH_STAFF_HOURS` | No | A staff login lasts this many hours from logging in (default 12) |
 
 \* Required only if using OTP verification on registration.
 

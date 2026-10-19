@@ -4,6 +4,7 @@ import { getErrorMessage } from "../../shared/utils/apiError";
 import { getReceptionist, updateReceptionist } from "../../shared/profileApi";
 import ProfileDetails, { profileRequest } from "../../shared/ProfileDetails";
 import { Notice, PageHeader, useToast } from "../../shared/ui";
+import LogOutEverywhereCard from "../auth/LogOutEverywhere";
 
 // The receptionist's own profile, inside the staff portal (docs/PATIENT_AREA_REFRESH_PLAN.md, P.4)
 const FIELDS = [
@@ -47,11 +48,12 @@ export default function ReceptionistProfile() {
   };
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-3xl space-y-6">
       <PageHeader title="My profile" />
       <Notice tone="danger">{error}</Notice>
       {!profile && !error && <p className="text-ink-muted">Loading your profile...</p>}
       {profile && <ProfileDetails title="Your details" name={profile.name || profile.userName} data={profile} fields={FIELDS} onSave={save} />}
+      {profile && <LogOutEverywhereCard />}
     </div>
   );
 }

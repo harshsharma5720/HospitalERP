@@ -1,6 +1,6 @@
 # End-to-end test guide
 
-Every feature built so far, and how to check it by hand in the running app: where it is, who uses it, what to set up, the steps, and what you should see. It is kept up to date after each feature (last update: 2026-10-16, doctor analytics).
+Every feature built so far, and how to check it by hand in the running app: where it is, who uses it, what to set up, the steps, and what you should see. It is kept up to date after each feature (last update: 2026-10-19, safer logins).
 
 Tick the **Tested** column in the overview as you go. Each section links to the feature's plan for the details.
 
@@ -25,6 +25,8 @@ Tick the **Tested** column in the overview as you go. Each section links to the 
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | Online payment (test keys `rzp_test_…`); off while empty. |
 | `APPOINTMENT_CHANGE_CUTOFF_HOURS` | The cancellation cut-off (default 2). Set it to e.g. 48 to test the cut-off without waiting for a visit 2 hours away. |
 | `REMINDERS_CRON` | The reminder job (hourly). Set it to `0 * * * * *` (every minute) to see a reminder quickly. |
+| `JWT_EXPIRATION_MS` | The access token's lifetime (default 15 minutes). Set it to `60000` to see the app renew it every minute. |
+| `AUTH_STAFF_HOURS`, `AUTH_PATIENT_IDLE_DAYS`, `AUTH_PATIENT_MAX_DAYS` | How long a login lasts (staff 12 hours; patients 7 days after the last use, at most 90). Set `AUTH_STAFF_HOURS=1` to see a staff login end within an hour. |
 
 **A suggested order:** a hospital day, start to finish.
 1. Accounts.
@@ -66,6 +68,7 @@ Tick the **Tested** column in the overview as you go. Each section links to the 
 | 21 | Account deactivation, reactivation, permanent delete | Admin | `/admin/manage-users`, `/admin/manage-doctor` | ☐ |
 | 22 | Audit log | Admin | `/admin/audit-log` | ☐ |
 | 23 | Automatic backups | Operator | `backups/` (Docker) or the Windows task | ☐ |
+| 24 | Safer logins: staying logged in, log out of all devices | Everyone | My account / Profile → **Logged-in devices**; admins: top bar | ☐ |
 
 ---
 
@@ -73,7 +76,7 @@ Tick the **Tested** column in the overview as you go. Each section links to the 
 Plan: [PATIENT_AREA_REFRESH_PLAN.md](PATIENT_AREA_REFRESH_PLAN.md), section 10 of the [ideas doc](CODE_REVIEW_AND_IDEAS.md).
 1. **Register** a patient (with `OTP_REQUIRED=true` and Twilio, enter the code sent by SMS). Expect: you land logged in; the header shows **My appointments** and **My account**.
 2. Log out; log in with a wrong password, then the right one. Expect: a clear error, then success. After 5 wrong passwords the username is locked for 15 minutes ("Too many failed login attempts").
-3. **Forgot password?** → username → code by SMS / email → new password. Expect: the same message whether or not the account exists; you can log in with the new password.
+3. **Forgot password?** → username → code by SMS / email → new password. Expect: the same message whether or not the account exists; you can log in with the new password. A new password also logs the account out everywhere (section 24).
 4. Log in as admin, doctor and receptionist. Expect: each lands in their own portal.
 
 ## 2. Public site
@@ -216,3 +219,19 @@ Plan: [MYSQL_BACKUPS_PLAN.md](MYSQL_BACKUPS_PLAN.md); how to use and restore: [B
 1. Docker: the `backup` service writes to `backups/` every night at 02:00. Run one by hand as BACKUPS.md says, and check `LAST_RUN.txt` says OK.
 2. Windows: install the task (`tools/backup/install-backup-task.ps1`), run it once, and check the backup folder.
 3. **Practice a restore** on a test database (BACKUPS.md).
+
+## 24. Safer logins
+Plan: [SAFER_LOGIN_TOKENS_PLAN.md](SAFER_LOGIN_TOKENS_PLAN.md). You need two browsers (or a normal and a private window) and the browser's developer tools (F12).
+1. Log in as a patient and **reload** the page; open the site in a second tab. Expect: still logged in in both (a short "Loading..." first).
+2. Developer tools → **Application**. Expect: no `jwtToken` under Local Storage; under Cookies a `hospital_refresh` cookie, **HttpOnly**, path `/api/auth`, expiring in 7 days (for a staff login: 12 hours).
+3. Keep using the app for more than 15 minutes (or set `JWT_EXPIRATION_MS=60000` and wait a minute). Expect: no interruption; under **Network** a `refresh` call shortly before each access token runs out.
+4. **Log out** in one tab. Expect: the other tab is logged out too.
+5. Log the same patient in on both browsers. In one: **My account** → **Logged-in devices** → **Log out of all devices**. Expect:
+   - a question first ("Log out of all devices?"); **Cancel** changes nothing;
+   - after **Log out everywhere**: this browser shows the login page with "You're logged out of all devices.";
+   - in the other browser, the next click (e.g. **My appointments**) leads to the login page: "Your session ended. Please log in again."
+6. Staff: the doctor's **Profile** and the receptionist's **My profile** have the same card. Admins have **Log out everywhere** in the top bar (an icon on a phone). Try it as one of them.
+7. **Password reset:** logged in on browser A, use **Forgot password?** for the same account on browser B. Expect: browser A's next action leads to "Your session ended…".
+8. **Deactivation:** an admin deactivates a patient who is logged in, then reactivates them. Expect: in the patient's open browser the next action leads to the login page, also after the reactivation; logging in again works.
+9. **Staff limit (optional):** with `AUTH_STAFF_HOURS=1`, log in as the receptionist. Expect: an hour later, however busy, "Your session ended…".
+10. **After the upgrade:** a browser that was logged in with the old version is logged out once (its old token is dropped); logging in works as usual.

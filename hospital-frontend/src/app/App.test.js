@@ -11,6 +11,9 @@ jest.mock("../features/patients/api");
 jest.mock("../features/doctors/api");
 jest.mock("../shared/profileApi", () => ({ ...jest.requireActual("../shared/profileApi"), getReceptionist: jest.fn() }));
 
+// The login is restored on start (index.js); here the store says it is known
+beforeEach(() => useAuthStore.setState({ ready: true }));
+
 afterEach(() => {
   window.history.pushState({}, "", "/");
   useAuthStore.setState({ token: null, role: null, userId: null });
@@ -18,6 +21,14 @@ afterEach(() => {
 });
 
 const signIn = (role) => useAuthStore.setState({ token: `x.${btoa(JSON.stringify({ sub: "u", role }))}.y`, role, userId: 7 });
+
+test("until the login is known, the app waits instead of sending a logged-in user to the login page", () => {
+  useAuthStore.setState({ ready: false });
+  window.history.pushState({}, "", "/edit-profile");
+  render(<App />);
+  expect(screen.getByRole("status")).toHaveTextContent("Loading...");
+  expect(window.location.pathname).toBe("/edit-profile");
+});
 
 test("the waiting-room screen opens without a login, without the site's footer", async () => {
   localStorage.clear();

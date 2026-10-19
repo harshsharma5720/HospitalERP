@@ -25,7 +25,7 @@ public class JWTService {
     private final long expirationMs;
 
     public JWTService(@Value("${jwt.secret:}") String secret,
-                      @Value("${jwt.expiration-ms:36000000}") long expirationMs) {
+                      @Value("${jwt.expiration-ms:900000}") long expirationMs) {
         this.expirationMs = expirationMs;
         if (secret == null || secret.isBlank()) {
             logger.warn("JWT_SECRET is not set - using a random key. All tokens become invalid on every restart. "
@@ -56,10 +56,11 @@ public class JWTService {
         return claimsResolver.apply(claims);
     }
 
-    // Generate token
-    public String generateToken(UserDetails userDetails, Long userId) {
+    // Generate token; "ver" is the account's token version (log out everywhere, docs/SAFER_LOGIN_TOKENS_PLAN.md)
+    public String generateToken(UserDetails userDetails, Long userId, int tokenVersion) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
+        claims.put("ver", tokenVersion);
         // Add role information to the token
         if (userDetails.getAuthorities() != null && !userDetails.getAuthorities().isEmpty()) {
             String role = userDetails.getAuthorities().iterator().next().getAuthority();
@@ -85,6 +86,12 @@ public class JWTService {
     public Long extractUserId(String token) {
         Object userId = extractAllClaims(token).get("userId");
         return userId instanceof Number number ? number.longValue() : null;
+    }
+
+    // The account's token version the token was given out for; 0 for tokens older than the claim
+    public int extractTokenVersion(String token) {
+        Object version = extractAllClaims(token).get("ver");
+        return version instanceof Number number ? number.intValue() : 0;
     }
 
     // Private helpers

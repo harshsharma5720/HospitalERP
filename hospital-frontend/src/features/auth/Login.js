@@ -13,7 +13,10 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const login = useAuthStore((s) => s.login);
-  const expired = Boolean(new URLSearchParams(location.search).get("expired"));
+  const params = new URLSearchParams(location.search);
+  // The login ended (it ran out, or "log out of all devices" on another one), or this device logged out everywhere
+  const expired = Boolean(params.get("expired"));
+  const everywhere = params.get("loggedOut") === "everywhere";
 
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
@@ -56,7 +59,8 @@ export default function LoginPage() {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-5">
-        {expired && !error && <Notice tone="warning">Your session has expired. Please log in again.</Notice>}
+        {expired && !error && <Notice tone="warning">Your session ended. Please log in again.</Notice>}
+        {everywhere && !error && <Notice>You're logged out of all devices.</Notice>}
         <Notice tone="danger">{error}</Notice>
         <Field label="Username or email" htmlFor="login-username">
           <Input id="login-username" name="username" value={formData.username} onChange={handleChange} autoComplete="username" required />

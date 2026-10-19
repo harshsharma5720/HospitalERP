@@ -95,7 +95,8 @@ class DatabaseMigrationMySqlTest {
         assertThat(history).extracting(row -> row.get("version") + " " + row.get("type"))
                 .containsExactly("1 BASELINE", "2026.09.28.1 SQL", "2026.09.28.2 SQL", "2026.09.30.1 SQL",
                         "2026.10.05.1 SQL", "2026.10.06.1 SQL", "2026.10.07.1 SQL", "2026.10.08.1 SQL",
-                        "2026.10.11.1 SQL", "2026.10.12.1 SQL", "2026.10.15.1 SQL");
+                        "2026.10.11.1 SQL", "2026.10.12.1 SQL", "2026.10.15.1 SQL", "2026.10.16.1 SQL",
+                        "2026.10.16.2 SQL");
         assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isIn(true, 1));
 
         assertThat(legacyColumnsIn(jdbc, "hospital")).isEmpty();
@@ -104,6 +105,8 @@ class DatabaseMigrationMySqlTest {
                 .isEqualTo(2);
         // Existing accounts have no creation time; only new ones get one (docs/ADMIN_DASHBOARD_PLAN.md)
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE created_at IS NULL", Integer.class)).isEqualTo(2);
+        // Existing accounts start at token version 0, like their tokens (docs/SAFER_LOGIN_TOKENS_PLAN.md)
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE token_version = 0", Integer.class)).isEqualTo(2);
         // Walk-in records may have no email; existing patients keep theirs and get no creation time
         // (docs/WALK_IN_REGISTRATION_PLAN.md)
         assertThat(jdbc.queryForObject("SELECT is_nullable FROM information_schema.columns WHERE table_schema = DATABASE() "
@@ -114,7 +117,7 @@ class DatabaseMigrationMySqlTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM appointments WHERE appointmentid = 1 AND checked_in_at IS NULL"
                 + " AND token_number IS NULL AND called_at IS NULL", Integer.class)).isEqualTo(1);
         // Billing starts empty (docs/BILLING_PLAN.md)
-        for (String table : List.of("doctor_fees", "bills", "bill_items", "online_payments")) {
+        for (String table : List.of("doctor_fees", "bills", "bill_items", "online_payments", "refresh_tokens")) {
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM " + table, Integer.class)).as(table).isZero();
         }
         // The notification outbox starts empty (docs/RELIABLE_NOTIFICATIONS_PLAN.md)

@@ -39,6 +39,11 @@ services:
       DB_USERNAME: ${DB_USERNAME:-hospital}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:-}
+      # Logins (docs/SAFER_LOGIN_TOKENS_PLAN.md); plain http here, so the cookie isn't Secure
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      AUTH_PATIENT_IDLE_DAYS: ${AUTH_PATIENT_IDLE_DAYS:-7}
+      AUTH_PATIENT_MAX_DAYS: ${AUTH_PATIENT_MAX_DAYS:-90}
+      AUTH_STAFF_HOURS: ${AUTH_STAFF_HOURS:-12}
       # Without Twilio nobody could sign up with OTP on, so it defaults to off here
       OTP_REQUIRED: ${OTP_REQUIRED:-false}
       CORS_ALLOWED_ORIGINS: http://localhost:${FRONTEND_PORT:-3000}

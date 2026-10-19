@@ -1,13 +1,19 @@
 package com.itmonteur.hospitalerp.identity.web;
 
 import com.itmonteur.hospitalerp.identity.ModuleSecurityRules;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
 import org.springframework.stereotype.Component;
 
-/** Registration, login, OTP and password reset are public. */
+/** Registration, login, OTP and password reset are public; "log out of all devices" needs a login. */
 @Component
 public class IdentitySecurityRules implements ModuleSecurityRules {
+
+    @Override
+    public void endpointRules(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry rules) {
+        rules.requestMatchers(HttpMethod.POST, "/api/auth/logout-all").authenticated();
+    }
 
     @Override
     public void areaRules(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry rules) {
