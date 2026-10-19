@@ -5,6 +5,7 @@
 |Bean references
 |* `c.i.h.i.CurrentUserService` (in Identity)
 * `c.i.h.a.AppointmentService` (in Appointments)
+* `c.i.h.a.AuditLog` (in Audit)
 * `c.i.h.s.DoctorService` (in Staff)
 * `c.i.h.p.PtInfoService` (in Patients)
 |Events listened to

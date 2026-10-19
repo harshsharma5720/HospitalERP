@@ -109,6 +109,7 @@ POST /api/receptionist/bills/{billId}/items
 POST /api/receptionist/bills/{billId}/pay
 POST /api/receptionist/bills/{billId}/refund
 POST /api/receptionist/bills/{billId}/refund-online
+POST /api/receptionist/cash-closes
 POST /api/receptionist/walk-in
 POST /api/slots/generate/{doctorId}
 POST /appointment/NewAppointment

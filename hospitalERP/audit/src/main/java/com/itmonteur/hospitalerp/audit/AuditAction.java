@@ -20,10 +20,12 @@ public enum AuditAction {
     USER_CREATED(Target.USER),
     ACCOUNT_DEACTIVATED(Target.USER),
     ACCOUNT_REACTIVATED(Target.USER),
-    ACCOUNT_DELETED(Target.USER);
+    ACCOUNT_DELETED(Target.USER),
+    // The front desk's cash (billing, docs/DAILY_CASH_SUMMARY_PLAN.md)
+    CASH_DAY_CLOSED(Target.CASH_CLOSE);
 
     /** What the target id of an entry refers to. */
-    public enum Target { APPOINTMENT, PATIENT, USER, NONE }
+    public enum Target { APPOINTMENT, PATIENT, USER, CASH_CLOSE, NONE }
 
     private final Target target;
 

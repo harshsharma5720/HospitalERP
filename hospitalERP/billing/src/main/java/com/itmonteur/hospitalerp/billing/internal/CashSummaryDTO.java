@@ -8,10 +8,11 @@ import java.util.List;
 /**
  * What came in and went out on a day (docs/DAILY_CASH_SUMMARY_PLAN.md): per method (cash, card, UPI, online, always
  * all four), the totals, per person who took the money ({@code by} null: paid online by the patient), every payment
- * and refund in the order they happened, and the day's visits whose bills are still unpaid.
+ * and refund in the order they happened, the day's visits whose bills are still unpaid, and the closes made that day.
+ * {@code sinceLastClose}, for today only: the cash the drawer should hold now.
  */
 public record CashSummaryDTO(LocalDate date, List<MethodTotals> methods, Totals totals, List<PersonTotals> people,
-                             List<Line> lines, Unpaid unpaid) {
+                             List<Line> lines, Unpaid unpaid, List<CashCloseDTO> closes, CashSince sinceLastClose) {
 
     public record MethodTotals(PaymentMethod method, int payments, BigDecimal taken, int refunds, BigDecimal refunded,
                                BigDecimal net) {
@@ -29,5 +30,10 @@ public record CashSummaryDTO(LocalDate date, List<MethodTotals> methods, Totals 
     }
 
     public record Unpaid(int bills, BigDecimal amount) {
+    }
+
+    /** The cash since the last close (the first close: since the start of its day): in, out, and so expected. */
+    public record CashSince(LocalDateTime from, int payments, BigDecimal cashIn, int refunds, BigDecimal cashOut,
+                            BigDecimal expected) {
     }
 }

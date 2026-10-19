@@ -33,10 +33,12 @@ public class CashSummaryService {
     }
 
     private final BillRepository bills;
+    private final CashCloseRepository closes;
     private final Clock clock;
 
-    public CashSummaryService(BillRepository bills, Clock clock) {
+    public CashSummaryService(BillRepository bills, CashCloseRepository closes, Clock clock) {
         this.bills = bills;
+        this.closes = closes;
         this.clock = clock;
     }
 
@@ -69,23 +71,47 @@ public class CashSummaryService {
         List<Move> moves = moves(from, to);
         Map<LocalDate, List<Move>> perDay = new HashMap<>();
         moves.forEach(move -> perDay.computeIfAbsent(move.at().toLocalDate(), day -> new ArrayList<>()).add(move));
+        List<CashCloseDTO> closed = closedOn(from, to);
+        Map<LocalDate, List<CashCloseDTO>> closesPerDay = new HashMap<>();
+        closed.forEach(close -> closesPerDay.computeIfAbsent(close.closedAt().toLocalDate(), day -> new ArrayList<>()).add(close));
         List<CashRangeDTO.Day> days = new ArrayList<>();
         for (LocalDate date = from; !date.isAfter(to); date = date.plusDays(1)) {
             List<Move> ofDay = perDay.getOrDefault(date, List.of());
             CashSummaryDTO.Totals totals = totals(ofDay);
             List<Move> cash = ofDay.stream().filter(move -> move.method() == PaymentMethod.CASH).toList();
+            List<CashCloseDTO> closesOfDay = closesPerDay.getOrDefault(date, List.of());
+            BigDecimal difference = closesOfDay.isEmpty() ? null
+                    : sum(closesOfDay.stream().map(CashCloseDTO::difference).toList());
             days.add(new CashRangeDTO.Day(date, totals.payments(), totals.taken(), totals.refunds(), totals.refunded(),
-                    totals.net(), totals(cash).net()));
+                    totals.net(), totals(cash).net(), closesOfDay.size(), difference));
         }
-        return new CashRangeDTO(from, to, days, methods(moves), totals(moves));
+        return new CashRangeDTO(from, to, days, methods(moves), totals(moves), closed);
     }
 
     private CashSummaryDTO summaryOf(LocalDate date) {
         List<Move> moves = moves(date, date);
         List<Bill> unpaid = bills.findByVisitDateAndStatus(date, BillStatus.UNPAID);
+        LocalDateTime now = LocalDateTime.now(clock);
         return new CashSummaryDTO(date, methods(moves), totals(moves), people(moves),
                 moves.stream().map(CashSummaryService::line).toList(),
-                new CashSummaryDTO.Unpaid(unpaid.size(), sum(unpaid.stream().map(Bill::total).toList())));
+                new CashSummaryDTO.Unpaid(unpaid.size(), sum(unpaid.stream().map(Bill::total).toList())),
+                closedOn(date, date), date.equals(now.toLocalDate()) ? cashSince(now) : null);
+    }
+
+    /** The cash since the last close up to {@code now}; with no close yet, since the start of {@code now}'s day. */
+    CashSummaryDTO.CashSince cashSince(LocalDateTime now) {
+        LocalDateTime from = closes.findFirstByOrderByClosedAtDescIdDesc().map(CashClose::getClosedAt)
+                .orElse(now.toLocalDate().atStartOfDay());
+        List<Move> cash = movesBetween(from, now).stream().filter(move -> move.method() == PaymentMethod.CASH).toList();
+        CashSummaryDTO.Totals totals = totals(cash);
+        return new CashSummaryDTO.CashSince(from, totals.payments(), totals.taken(), totals.refunds(), totals.refunded(),
+                totals.net());
+    }
+
+    // The closes made on these days (both included), oldest first
+    private List<CashCloseDTO> closedOn(LocalDate from, LocalDate to) {
+        return closes.findByClosedAtGreaterThanEqualAndClosedAtLessThanOrderByClosedAtAscIdAsc(from.atStartOfDay(),
+                to.plusDays(1).atStartOfDay()).stream().map(CashCloseDTO::of).toList();
     }
 
     /** The payments and refunds of these days (both included), in the order they happened. */

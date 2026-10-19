@@ -113,6 +113,7 @@ POST /api/receptionist/bills/{billId}/items anonymous- patient- doctor- receptio
 POST /api/receptionist/bills/{billId}/pay anonymous- patient- doctor- receptionist+ admin+
 POST /api/receptionist/bills/{billId}/refund anonymous- patient- doctor- receptionist+ admin+
 POST /api/receptionist/bills/{billId}/refund-online anonymous- patient- doctor- receptionist+ admin+
+POST /api/receptionist/cash-closes anonymous- patient- doctor- receptionist+ admin+
 POST /api/receptionist/walk-in anonymous- patient- doctor- receptionist+ admin+
 POST /api/slots/generate/{doctorId} anonymous- patient- doctor- receptionist- admin+
 POST /appointment/NewAppointment anonymous- patient+ doctor+ receptionist+ admin+
