@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,4 +41,15 @@ public interface BillRepository extends JpaRepository<Bill, Long>, JpaSpecificat
             + "AND b.visitDate BETWEEN :from AND :to GROUP BY b.visitDate, b.status")
     List<Object[]> linesPerDayAndStatus(@Param("doctorId") Long doctorId, @Param("from") LocalDate from,
                                         @Param("to") LocalDate to);
+
+    // ------------------------------------------------------------------ the daily cash summary (CashSummaryService)
+
+    /** Bills paid or refunded from {@code from} (included) to {@code to} (not included), with their lines. */
+    @Query("SELECT DISTINCT b FROM Bill b LEFT JOIN FETCH b.items WHERE (b.paidAt >= :from AND b.paidAt < :to) "
+            + "OR (b.refundedAt >= :from AND b.refundedAt < :to)")
+    List<Bill> findPaidOrRefundedBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    // A day's visits whose bills are still unpaid, with their lines
+    @EntityGraph(attributePaths = "items")
+    List<Bill> findByVisitDateAndStatus(LocalDate visitDate, BillStatus status);
 }
