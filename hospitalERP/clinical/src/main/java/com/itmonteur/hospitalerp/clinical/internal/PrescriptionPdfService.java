@@ -5,6 +5,7 @@ import com.itmonteur.hospitalerp.staff.Specialist;
 import com.itmonteur.hospitalerp.appointments.Appointment;
 import com.itmonteur.hospitalerp.clinical.Consultation;
 import com.itmonteur.hospitalerp.clinical.PrescriptionItem;
+import com.itmonteur.hospitalerp.patients.AbhaNumber;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
@@ -71,9 +72,11 @@ public class PrescriptionPdfService {
                 "Dr. " + (doctor != null ? doctor.getName() : "-")
                         + (doctor != null && doctor.getSpecialist() != null && doctor.getSpecialist() != Specialist.NOT_ASSIGNED
                         ? "\n" + pretty(doctor.getSpecialist().name()) : ""), bold, normal));
+        String abha = appointment.abhaNumber(); // as it is now (docs/ABHA_NUMBER_PLAN.md)
         String patientLine = appointment.getPatientName()
                 + "\n" + (appointment.getAge() > 0 ? appointment.getAge() + " yrs, " : "")
-                + (appointment.getGender() != null ? pretty(appointment.getGender().name()) : "");
+                + (appointment.getGender() != null ? pretty(appointment.getGender().name()) : "")
+                + (abha != null ? "\nABHA " + AbhaNumber.format(abha) : "");
         info.addCell(block("Patient", patientLine, bold, normal));
         info.addCell(block("Date", appointment.getDate().format(DATE), bold, normal));
         info.addCell(block("Appointment #", String.valueOf(appointment.getAppointmentID()), bold, normal));

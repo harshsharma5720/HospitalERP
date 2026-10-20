@@ -7,14 +7,17 @@ import useAreaBase from "../../shared/useAreaBase";
 import { getFrontDeskAppointmentPage } from "../appointments/api";
 import { dayLabel, formatDate, timeRange, visitStatus } from "../appointments/appointmentFormat";
 import * as patientsApi from "./api";
-import { Badge, Button, Card, CardHeader, Notice, PageHeader, Pagination, Table, TableMessage, Td, Th } from "../../shared/ui";
+import AbhaEditor from "./AbhaEditor";
+import { Badge, Button, Card, CardHeader, Notice, PageHeader, Pagination, Table, TableMessage, Td, Th, useToast } from "../../shared/ui";
 
-// One patient at the front desk (docs/PATIENT_SEARCH_PLAN.md): details, upcoming appointments, every appointment
-// newest first (10 per page), and Book -> Walk-in booking with this patient chosen. /patients/:patientId for
+// One patient at the front desk (docs/PATIENT_SEARCH_PLAN.md): details, upcoming appointments, the family members, every
+// appointment newest first (10 per page), and Book -> Walk-in booking with this patient chosen. The patient's and each
+// family member's ABHA number are changed here (docs/ABHA_NUMBER_PLAN.md). /patients/:patientId for
 // receptionists, /admin/patients/:patientId for admins.
 
 const HISTORY_PAGE_SIZE = 10;
 const GENDER_LABELS = { FEMALE: "Female", MALE: "Male", OTHER: "Other" };
+const pretty = (value) => (value ? value.charAt(0) + value.slice(1).toLowerCase() : "");
 
 // Only the last 4 digits of the Aadhaar number are shown
 const maskAadhaar = (number) => (number ? `XXXX XXXX ${String(number).slice(-4)}` : null);
@@ -28,7 +31,10 @@ export default function FrontDeskPatient() {
   const { patientId } = useParams();
   const base = useAreaBase();
   const location = useLocation();
+  const toast = useToast();
   const [patient, setPatient] = useState(null);
+  // null while loading, false when they couldn't be loaded
+  const [relatives, setRelatives] = useState(null);
   const [error, setError] = useState("");
   const [upcoming, setUpcoming] = useState(null);
   const [history, setHistory] = useState(null);
@@ -38,6 +44,7 @@ export default function FrontDeskPatient() {
     setPatient(null);
     setError("");
     setUpcoming(null);
+    setRelatives(null);
     setHistoryPage(0);
     patientsApi
       .getFrontDeskPatient(patientId)
@@ -46,6 +53,10 @@ export default function FrontDeskPatient() {
     getFrontDeskAppointmentPage({ patientId, status: "upcoming", from: toLocalISODate(), size: 20 })
       .then((response) => setUpcoming(response.data.entries))
       .catch(() => setUpcoming([]));
+    patientsApi
+      .getPatientRelatives(patientId)
+      .then((response) => setRelatives(response.data))
+      .catch(() => setRelatives(false));
   }, [patientId]);
 
   useEffect(() => {
@@ -53,6 +64,18 @@ export default function FrontDeskPatient() {
       .then((response) => setHistory(response.data))
       .catch(() => setHistory(null));
   }, [patientId, historyPage]);
+
+  const savePatientAbha = async (text) => {
+    const { data } = await patientsApi.setPatientAbha(patientId, text);
+    setPatient((current) => ({ ...current, abhaNumber: data.abhaNumber }));
+    toast.success(data.abhaNumber ? "ABHA number saved." : "ABHA number removed.");
+  };
+
+  const saveRelativeAbha = (relative) => async (text) => {
+    const { data } = await patientsApi.setRelativeAbha(patientId, relative.id, text);
+    setRelatives((list) => list.map((r) => (r.id === relative.id ? { ...r, abhaNumber: data.abhaNumber } : r)));
+    toast.success(data.abhaNumber ? `${relative.name}'s ABHA number saved.` : `${relative.name}'s ABHA number removed.`);
+  };
 
   // Back to the list the patient was opened from (Patients or Appointments)
   const backTo = location.state?.from || `${base}/patients`;
@@ -83,6 +106,7 @@ export default function FrontDeskPatient() {
     ["Email", patient.email],
     ["Address", patient.patientAddress],
     ["Aadhaar", maskAadhaar(patient.patientAadharNo)],
+    ["ABHA", <AbhaEditor id="patient-abha" number={patient.abhaNumber} who={patient.patientName} onSave={savePatientAbha} />],
   ];
   const historyEntries = history?.entries ?? [];
   const historyPages = history?.totalPages ?? 0;
@@ -105,7 +129,7 @@ export default function FrontDeskPatient() {
           <CardHeader id="patient-details" title="Details" />
           <dl className="grid gap-y-2.5 text-sm">
             {details.map(([label, value]) => (
-              <div key={label} className="flex gap-3">
+              <div key={label} className="flex items-baseline gap-3">
                 <dt className="w-20 shrink-0 text-ink-muted">{label}</dt>
                 <dd>{value || "—"}</dd>
               </div>
@@ -137,6 +161,33 @@ export default function FrontDeskPatient() {
           )}
         </Card>
       </div>
+
+      <Card aria-labelledby="patient-family" className="mt-5">
+        <CardHeader id="patient-family" title="Family members" description="People this patient books for in the app, each with their own ABHA number." />
+        {relatives === null && <p className="text-sm text-ink-muted">Loading...</p>}
+        {relatives === false && <p className="text-sm text-ink-muted">The family members couldn't be loaded.</p>}
+        {relatives?.length === 0 && <p className="text-sm text-ink-muted">No family members.</p>}
+        {relatives?.length > 0 && (
+          <ul className="divide-y divide-line text-sm">
+            {relatives.map((relative) => (
+              <li key={relative.id} className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2 py-3 first:pt-0 last:pb-0">
+                <div>
+                  <p className="font-medium">{relative.name}</p>
+                  <p className="text-ink-muted">
+                    {[pretty(relative.relationship), relative.dob ? `${calculateAgeFromDOB(relative.dob)} years` : null, GENDER_LABELS[relative.gender]]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-ink-muted">ABHA</span>
+                  <AbhaEditor id={`relative-abha-${relative.id}`} number={relative.abhaNumber} who={relative.name} onSave={saveRelativeAbha(relative)} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
 
       <Card padding="none" aria-labelledby="patient-history" className="mt-5">
         <div className="px-5 pt-5">

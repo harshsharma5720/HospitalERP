@@ -4,7 +4,7 @@ import { API_BASE_URL } from "../app/config";
 import { Button, Card, CardHeader, Field, Input, Select } from "./ui";
 
 // A person's own details (the patient's account, the receptionist's profile): shown as a list, edited in place,
-// with the photo. fields: [{ key, label, type?, options?: [[value, label]], readOnly?, show?(value) }].
+// with the photo. fields: [{ key, label, type?, options?: [[value, label]], readOnly?, show?(value), hint?, inputProps? }].
 // onSave(details, photoFile) resolves when saved (it throws to keep the form open).
 
 const initials = (name) =>
@@ -91,7 +91,7 @@ export default function ProfileDetails({ title = "Your details", name, data, fie
 
         {editing ? (
           <div className="grid gap-4 sm:grid-cols-2">
-            {fields.map(({ key, label, type = "text", options, readOnly, show }) =>
+            {fields.map(({ key, label, type = "text", options, readOnly, show, hint, inputProps }) =>
               readOnly ? (
                 <div key={key}>
                   <p className="text-sm font-medium">{label}</p>
@@ -109,8 +109,8 @@ export default function ProfileDetails({ title = "Your details", name, data, fie
                   </Select>
                 </Field>
               ) : (
-                <Field key={key} label={label} htmlFor={`profile-${key}`}>
-                  <Input id={`profile-${key}`} type={type} value={draft[key] ?? ""} onChange={change(key)} />
+                <Field key={key} label={label} htmlFor={`profile-${key}`} hint={hint}>
+                  <Input id={`profile-${key}`} type={type} value={draft[key] ?? ""} onChange={change(key)} {...inputProps} />
                 </Field>
               )
             )}

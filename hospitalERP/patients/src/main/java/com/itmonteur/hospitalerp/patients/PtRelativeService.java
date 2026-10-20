@@ -5,6 +5,9 @@ import com.itmonteur.hospitalerp.identity.Role;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ForbiddenException;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
+import com.itmonteur.hospitalerp.audit.AuditAction;
+import com.itmonteur.hospitalerp.audit.AuditLog;
+import com.itmonteur.hospitalerp.patients.internal.AbhaRegistry;
 import com.itmonteur.hospitalerp.patients.internal.PtInfoRepository;
 import com.itmonteur.hospitalerp.patients.internal.PtRelativeRepository;
 import com.itmonteur.hospitalerp.identity.CurrentUserService;
@@ -27,13 +30,18 @@ public class PtRelativeService {
     private final PtInfoRepository ptInfoRepository;
     private final CurrentUserService currentUserService;
     private final ApplicationEventPublisher eventPublisher;
+    private final AbhaRegistry abhaRegistry;
+    private final AuditLog auditLog;
 
     public PtRelativeService(PtRelativeRepository ptRelativeRepository, PtInfoRepository ptInfoRepository,
-                             CurrentUserService currentUserService, ApplicationEventPublisher eventPublisher) {
+                             CurrentUserService currentUserService, ApplicationEventPublisher eventPublisher,
+                             AbhaRegistry abhaRegistry, AuditLog auditLog) {
         this.ptRelativeRepository = ptRelativeRepository;
         this.ptInfoRepository = ptInfoRepository;
         this.currentUserService = currentUserService;
         this.eventPublisher = eventPublisher;
+        this.abhaRegistry = abhaRegistry;
+        this.auditLog = auditLog;
     }
 
     /** Patients always add to their own account; admins must pass patientId. */
@@ -52,6 +60,7 @@ public class PtRelativeService {
         }
         PtRelative relative = new PtRelative();
         copyFields(dto, relative);
+        setAbha(relative, dto.getAbhaNumber());
         relative.setPtInfo(patient);
         PtRelative saved = ptRelativeRepository.save(relative);
         logger.info("Relative {} added for patient {}", saved.getId(), patient.getPatientId());
@@ -77,6 +86,7 @@ public class PtRelativeService {
         PtRelative relative = findRelative(id);
         requireOwner(relative.getPtInfo());
         copyFields(dto, relative);
+        setAbha(relative, dto.getAbhaNumber()); // the form sends them all: an empty one removes it
         return convertToDTO(ptRelativeRepository.save(relative));
     }
 
@@ -90,6 +100,38 @@ public class PtRelativeService {
         ptRelativeRepository.delete(relative);
         logger.info("Relative deleted with ID: {}", id);
         return "Relative removed successfully!";
+    }
+
+    // ---------------------------------------------------------------- the front desk (docs/ABHA_NUMBER_PLAN.md)
+
+    /** A patient's family members, for the front desk's patient page (access is checked on its URL). */
+    public List<PtRelativeDTO> relativesForDesk(long patientId) {
+        if (!ptInfoRepository.existsById(patientId)) {
+            throw new ResourceNotFoundException("Patient", "patientId", patientId);
+        }
+        return ptRelativeRepository.findByPtInfoPatientId(patientId).stream().map(this::convertToDTO).toList();
+    }
+
+    /** The front desk sets a family member's ABHA number; the family member must be the patient's. */
+    @Transactional
+    public PtRelativeDTO setAbhaNumber(long patientId, long relativeId, String abhaNumber) {
+        PtRelative relative = findRelative(relativeId);
+        if (relative.getPtInfo() == null || !Objects.equals(relative.getPtInfo().getPatientId(), patientId)) {
+            throw new ResourceNotFoundException("Relative", "relativeId", relativeId);
+        }
+        String before = relative.getAbhaNumber();
+        setAbha(relative, abhaNumber);
+        PtRelativeDTO updated = convertToDTO(ptRelativeRepository.save(relative));
+        auditLog.record(AuditAction.PATIENT_PROFILE_UPDATED, patientId, patientId,
+                Objects.equals(before, relative.getAbhaNumber()) ? "no change" : "changed: a family member's ABHA number");
+        return updated;
+    }
+
+    // 14 digits or none; refused when it is on another record
+    private void setAbha(PtRelative relative, String abhaNumber) {
+        String abha = AbhaNumber.normalize(abhaNumber);
+        abhaRegistry.requireFree(abha, null, relative.getId());
+        relative.setAbhaNumber(abha);
     }
 
     private void requireOwner(PtInfo patient) {
@@ -108,7 +150,7 @@ public class PtRelativeService {
     }
 
     private PtRelativeDTO convertToDTO(PtRelative relative) {
-        return new PtRelativeDTO(
+        PtRelativeDTO dto = new PtRelativeDTO(
                 relative.getId(),
                 relative.getName(),
                 relative.getGender(),
@@ -117,6 +159,8 @@ public class PtRelativeService {
                 relative.getPatientAadharNo(),
                 relative.getPtInfo() != null ? relative.getPtInfo().getPatientId() : null
         );
+        dto.setAbhaNumber(relative.getAbhaNumber());
+        return dto;
     }
 
     private static void copyFields(PtRelativeDTO dto, PtRelative relative) {

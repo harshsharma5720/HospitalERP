@@ -28,7 +28,7 @@ Access rules (`clinical.web.ClinicalSecurityRules`, a `ModuleSecurityRules` bean
 
 ## Internal — `clinical.internal`
 
-`ConsultationRepository`, `PrescriptionPdfService` (builds the PDF with OpenPDF).
+`ConsultationRepository`, `PrescriptionPdfService` (builds the PDF with OpenPDF; under the patient's details the **ABHA number** of the person the visit is for, as it is when the PDF is made — `Appointment.abhaNumber()`, [docs/ABHA_NUMBER_PLAN.md](../../docs/ABHA_NUMBER_PLAN.md)).
 
 ## Configuration
 
@@ -39,6 +39,6 @@ Access rules (`clinical.web.ClinicalSecurityRules`, a `ModuleSecurityRules` bean
 
 ## Tests
 
-`ConsultationServiceTest`, `PrescriptionPdfServiceTest`; the full booking → consultation → PDF flow and the audit entries for every read and write (`medicalRecordAccessIsAudited`) are in `FeatureFlowH2Test` (`app`).
+`ConsultationServiceTest`, `PrescriptionPdfServiceTest` (also read back as text: the ABHA number, and none on someone else's visit); the full booking → consultation → PDF flow and the audit entries for every read and write (`medicalRecordAccessIsAudited`) are in `FeatureFlowH2Test` (`app`); the ABHA number on real prescriptions in `AbhaNumberPdfH2Test` (`app`).
 
 Module diagram: [docs/modules/module-clinical.puml](../../docs/modules/module-clinical.puml).

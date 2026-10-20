@@ -8,4 +8,6 @@ import java.util.List;
 public interface PtRelativeRepository extends JpaRepository<PtRelative,Long> {
 
     List<PtRelative> findByPtInfoPatientId(Long patientId);
+
+    boolean existsByAbhaNumberAndIdNot(String abhaNumber, Long id);
 }

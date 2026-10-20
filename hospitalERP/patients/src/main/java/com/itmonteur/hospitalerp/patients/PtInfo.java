@@ -22,6 +22,9 @@ public class PtInfo {
     private String patientAddress;
     @Column(unique = false, nullable = true)
     private Long patientAadharNo;
+    // The ABHA number, 14 digits (docs/ABHA_NUMBER_PLAN.md); one per person, also across family members
+    @Column(length = 14, unique = true)
+    private String abhaNumber;
     @Column(nullable = true ,length = 15)
     private String contactNo;
     private LocalDate dob;
@@ -93,6 +96,15 @@ public class PtInfo {
 
     public Long getPatientAadharNo() {
         return patientAadharNo;
+    }
+
+    // ABHA number (docs/ABHA_NUMBER_PLAN.md): the 14 digits, or null
+    public String getAbhaNumber() {
+        return abhaNumber;
+    }
+
+    public void setAbhaNumber(String abhaNumber) {
+        this.abhaNumber = abhaNumber;
     }
 
     public void setPatientAadharNo(Long patientAadharNo) {

@@ -75,6 +75,7 @@ GET /api/receptionist/getReceptionist/{receptionistId}
 GET /api/receptionist/patients
 GET /api/receptionist/patients/search
 GET /api/receptionist/patients/{patientId}
+GET /api/receptionist/patients/{patientId}/relatives
 GET /api/slots/available/{doctorId}
 GET /appointment/allCompletedAppointments
 GET /appointment/allPendingAppointments
@@ -133,5 +134,7 @@ PUT /api/leaves/{id}/status auth=hasRole('ADMIN')
 PUT /api/patient/relative/update/{id}
 PUT /api/patient/updateAccount/{ptId} consumes=multipart/form-data
 PUT /api/receptionist/bills/{billId}/discount
+PUT /api/receptionist/patients/{patientId}/abha
+PUT /api/receptionist/patients/{patientId}/relatives/{relativeId}/abha
 PUT /api/receptionist/{id} consumes=multipart/form-data
 PUT /appointment/update/{appointmentId}

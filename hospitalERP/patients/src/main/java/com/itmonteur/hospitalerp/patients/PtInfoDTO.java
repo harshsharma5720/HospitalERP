@@ -10,6 +10,7 @@ public class PtInfoDTO {
     private String email;
     private String patientAddress;
     private Long patientAadharNo;  // boxed so a missing Aadhaar stays null instead of 0
+    private String abhaNumber;     // 14 digits; in an update: null = unchanged, "" = removed
     private String contactNo;
     private LocalDate dob;
     private Gender gender;
@@ -70,6 +71,15 @@ public class PtInfoDTO {
 
     public Long getPatientAadharNo() {
         return patientAadharNo;
+    }
+
+    // ABHA number (docs/ABHA_NUMBER_PLAN.md): the 14 digits, or null
+    public String getAbhaNumber() {
+        return abhaNumber;
+    }
+
+    public void setAbhaNumber(String abhaNumber) {
+        this.abhaNumber = abhaNumber;
     }
 
     public void setPatientAadharNo(Long patientAadharNo) {

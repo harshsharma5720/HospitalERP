@@ -19,6 +19,9 @@ public class PtRelative {
     private RelationShip relationship;
     @Column(nullable = true)
     private Long patientAadharNo;
+    // The ABHA number, 14 digits (docs/ABHA_NUMBER_PLAN.md); one per person, also across patients
+    @Column(length = 14, unique = true)
+    private String abhaNumber;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id")
     private PtInfo ptInfo;
@@ -80,6 +83,15 @@ public class PtRelative {
 
     public Long getPatientAadharNo() {
         return patientAadharNo;
+    }
+
+    // ABHA number (docs/ABHA_NUMBER_PLAN.md): the 14 digits, or null
+    public String getAbhaNumber() {
+        return abhaNumber;
+    }
+
+    public void setAbhaNumber(String abhaNumber) {
+        this.abhaNumber = abhaNumber;
     }
 
     public void setPatientAadharNo(Long patientAadharNo) {

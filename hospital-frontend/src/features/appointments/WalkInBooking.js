@@ -3,6 +3,7 @@ import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import { calculateAgeFromDOB } from "../../shared/utils/calculateAgeFromDOB";
 import { toLocalISODate } from "../../shared/utils/dateUtils";
+import { ABHA_ERROR, ABHA_HINT, abhaInputProps, isAbhaOrEmpty } from "../../shared/utils/abha";
 import useAreaBase from "../../shared/useAreaBase";
 import { getAllDoctors } from "../doctors/api";
 import { getFrontDeskPatient } from "../patients/api";
@@ -37,7 +38,7 @@ function Step({ number, children }) {
   );
 }
 
-const EMPTY_NEW_PATIENT = { name: "", gender: "", dob: "", email: "" };
+const EMPTY_NEW_PATIENT = { name: "", gender: "", dob: "", email: "", abhaNumber: "" };
 
 export default function WalkInBooking() {
   const base = useAreaBase();
@@ -87,14 +88,15 @@ export default function WalkInBooking() {
       .catch((err) => setError(getErrorMessage(err, "Could not load the patient.")));
   }, [preselectedId, preselected]);
 
-  const loadSlots = useCallback(async (forDoctor, limit) => {
+  // keep: the slot to stay chosen if it is still free
+  const loadSlots = useCallback(async (forDoctor, limit, keep = null) => {
     setSlots(null);
     setSlotId(null);
     if (!forDoctor) return;
     try {
       const response = await appointmentsApi.getNextFreeSlots(forDoctor, limit);
       setSlots(response.data);
-      setSlotId(response.data[0]?.slotId ?? null); // the earliest
+      setSlotId(response.data.some((slot) => slot.slotId === keep) ? keep : response.data[0]?.slotId ?? null); // else the earliest
     } catch (err) {
       setSlots([]);
       setError(getErrorMessage(err, "Could not load the free slots."));
@@ -149,6 +151,10 @@ export default function WalkInBooking() {
       setError("Please enter the patient's name and gender.");
       return;
     }
+    if (isNew && !isAbhaOrEmpty(newPatient.abhaNumber)) {
+      setError(ABHA_ERROR);
+      return;
+    }
     if (!slotId) {
       setError("Please choose a doctor and a time.");
       return;
@@ -169,6 +175,7 @@ export default function WalkInBooking() {
         gender: newPatient.gender,
         dob: newPatient.dob || null,
         email: newPatient.email.trim() || null,
+        abhaNumber: newPatient.abhaNumber.trim() || null,
       };
     } else {
       request.patientId = patient.patientId;
@@ -180,7 +187,8 @@ export default function WalkInBooking() {
       setConfirmation({ ...response.data, phone: searchedPhone, doctor });
     } catch (err) {
       setError(getErrorMessage(err, "Could not book the appointment."));
-      if (err?.response?.status === 409) loadSlots(doctorId, slotLimit); // the slot is gone: show what is free now
+      // The slot gone (or the ABHA number taken): show what is free now, the chosen time kept if it still is
+      if (err?.response?.status === 409) loadSlots(doctorId, slotLimit, slotId);
     } finally {
       setBooking(false);
     }
@@ -342,6 +350,9 @@ export default function WalkInBooking() {
               </Field>
               <Field label="Email (optional)" htmlFor="walkin-email">
                 <Input id="walkin-email" type="email" value={newPatient.email} onChange={changeNewPatient("email")} />
+              </Field>
+              <Field label="ABHA number (optional)" htmlFor="walkin-abha" hint={ABHA_HINT}>
+                <Input id="walkin-abha" value={newPatient.abhaNumber} onChange={changeNewPatient("abhaNumber")} {...abhaInputProps} />
               </Field>
             </div>
           )}

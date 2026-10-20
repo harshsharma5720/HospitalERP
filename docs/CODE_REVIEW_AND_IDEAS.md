@@ -439,9 +439,9 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ---
 
-## 11. Feature Status (updated 2026-10-19)
+## 11. Feature Status (updated 2026-10-20)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15), patients' bills (PR #16), online payment (PR #17), the cancellation cut-off (PR #18), doctor analytics (PR #19), safer login tokens (PR #20), the daily cash summary (PR #21) and the notification centre (branch `feature/notification-centre`). How to test each of them by hand: [END_TO_END_TEST_GUIDE.md](END_TO_END_TEST_GUIDE.md).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15), patients' bills (PR #16), online payment (PR #17), the cancellation cut-off (PR #18), doctor analytics (PR #19), safer login tokens (PR #20), the daily cash summary (PR #21), the notification centre (PR #22) and the ABHA number on patient records (branch `feature/abha-number`). How to test each of them by hand: [END_TO_END_TEST_GUIDE.md](END_TO_END_TEST_GUIDE.md).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
@@ -459,6 +459,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 - **Online payment with Razorpay:** patients pay an unpaid bill in the app; a webhook as a safety net; late payments refunded automatically; the desk refunds a cancelled visit paid online (2026-10-15, see below).
 - **Cancellation cut-off:** patients can't cancel or move a visit less than 2 hours before it (configurable); the front desk can (2026-10-15, see below).
 - **Doctor analytics:** visits per day, no-show and cancellation rates, busy hours and weekdays, waiting time and earnings, for the doctor and for admins (2026-10-16, see below).
+- **ABHA number on patient records:** each patient's and family member's own health ID, entered by the patient or the desk, one number per person, on prescriptions and receipts (2026-10-20, see below).
 - **Notification centre:** a bell with each user's messages — visits, bills and payments, leave — for patients, doctors, the desk and admins; new ones within 30 seconds (2026-10-19, see below).
 - **Daily cash summary and closing the day:** what the desk took and gave back per method and person, every payment and refund; the desk counts the cash and closes the day, a difference needs a note; a PDF; admins any day or up to 31 days (2026-10-19, see below).
 - **Safer login tokens:** a 15-minute access token kept in memory, the login kept by a refresh token in an `httpOnly` cookie; patients 7 days after the last use (at most 90), staff 12 hours; "Log out of all devices", also after a password reset or a deactivation (2026-10-19, see below).
@@ -483,7 +484,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 11 | ~~Today's queue: check-in, token numbers, live "now serving" screen~~ ✅ done 2026-10-12 | front desk | — |
 | 12 | ~~Patient search (phone / name / ID) and pagination on all lists~~ ✅ done 2026-10-11 (patients and front-desk appointments; the admin users list and the doctor portal's lists not yet) | front desk / platform | — |
 | 13 | Waitlist, notified when a slot frees up | patients | 3–4 days |
-| 14 | Family view (each relative's appointments and prescriptions) | patients | 2 days |
+| 14 | ~~Family view (each relative's appointments and prescriptions)~~ replaced 2026-10-20 by the **ABHA number on patient records** ✅: each family member, children too, has their own ABHA and is their own record, so a joint family view isn't needed | patients | — |
 | 15 | Lab report upload, served only to authorised users | clinical | 3 days |
 | 16 | Doctor ratings and feedback (the stars on the doctor page are only decoration) | patients | 2 days |
 | 17 | Departments table instead of the fixed specialist list | admin | 2 days |
@@ -496,7 +497,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** the family view (14) — each family member's visits, prescriptions and bills under them —; then the waitlist (13), which the notification centre can now tell about a freed slot. Small follow-ups: bill figures on the admin dashboard, and an SMS / email when a visit is moved.
+**Suggested order:** the waitlist (13), which the notification centre can now tell about a freed slot; then lab report upload (15). Small follow-ups: the ABHA number on the patient search results and the walk-in matches, bill figures on the admin dashboard, and an SMS / email when a visit is moved.
 
 ### Account deactivation (done 2026-10-01)
 
@@ -844,7 +845,7 @@ From idea #3 and the review's item 2.7. A login used to be one token valid for 1
 - A mutation that retries a refused request forever made the test runner run out of memory instead of failing; the test's fake server now answers from the fourth request, so the test fails by name.
 
 **Not covered yet:**
-- `DatabaseMigrationMySqlTest` hasn't run the two new migrations on MySQL: Docker Desktop didn't answer on 2026-10-19. Run it before merging, or right after.
+- ~~`DatabaseMigrationMySqlTest` hasn't run the two new migrations on MySQL~~ ran on 2026-10-20 (Docker answered again): 4 of 4, with the cash-closes, inbox and ABHA migrations too.
 - No list of the logged-in devices (which browser, when); only "log out of all of them".
 - A role change takes effect on the next request, but the access token still shows the old role in the app until it is renewed (at most 15 minutes).
 
@@ -869,7 +870,6 @@ A follow-up of billing, and the first item of the suggested order after safer lo
 - Two full backend runs failed in clinical with `NoClassDefFoundError`: the editor had rebuilt classes against old jars after the audit module changed, and Maven reused them. A clean build fixed it.
 
 **Not covered yet:**
-- `DatabaseMigrationMySqlTest` hasn't run the new migration on MySQL (Docker Desktop didn't answer on 2026-10-19).
 - One drawer for the whole desk; separate drawers per receptionist or a change float aren't modelled.
 - Card, UPI and online totals aren't matched against the card machine's or the bank's statements; a CSV export; bill figures on the admin dashboard.
 
@@ -895,6 +895,31 @@ From idea #6. The app told people what happened only by email and SMS, only for 
 - On a phone the first panel hung from the bell and ran off the left edge; it now spans the screen under the header.
 
 **Not covered yet:**
-- `DatabaseMigrationMySqlTest` hasn't run the new migration on MySQL (Docker Desktop didn't answer on 2026-10-19).
 - No SMS / email for a moved visit yet; no message settings per user; no messages for undelivered emails or a day closed short (left out on purpose).
 - Polling, not push: a message can take up to 30 seconds to show.
+
+### ABHA number on patient records (done 2026-10-20)
+
+Instead of idea #14, the family view: every person in India, children too, can have their own ABHA number (Ayushman Bharat Health Account), so each family member is their own record rather than part of a joint family account. The app had nowhere to keep the number, and the prescriptions and receipts it hands out couldn't carry it. Decisions, design and steps: [ABHA_NUMBER_PLAN.md](ABHA_NUMBER_PLAN.md).
+
+**What it does**
+- **The number:** 14 digits, optional, typed with or without dashes or spaces and shown as `12-3456-7890-1234`. **One number, one person:** a number already on another patient or family member is refused ("This ABHA number is already on another patient's record").
+- **The patient** enters their own in My account and each family member's in the family member form; **the front desk** on a patient's page — the patient's and, in a new **Family members** card, each member's — and for a new walk-in patient.
+- **On paper:** the prescription PDF and the receipt show "ABHA 12-3456-7890-1234" under the name of the person the visit was for: a family member's own for their visit (never the account holder's), the patient's for a visit under their own name, nothing when the visit was booked under a typed name or for a family member since removed. Read when the PDF is made, so a number added later shows on later prints.
+- Changes are in the audit log like the other profile fields — the field's name, never the number.
+- **Behind it:** `patient.abha_number` and `patient_relative.abha_number` with a unique key each (Flyway); `AbhaNumber` and `AbhaRegistry` in the patients module (the check across both tables); three desk endpoints under `/api/receptionist/patients/{patientId}`; `Appointment.abhaNumber()` decides whose number a visit shows.
+
+**Tests:**
+- Backend: the formats, the patient's and the desk's edits, family members, duplicates both ways, walk-ins, access and audit over HTTP; whose number a visit shows; the PDFs read back as text and end to end (the desk's and the patient's receipts, prescriptions, a member removed); 243 backend tests (1 skipped), with `DatabaseMigrationMySqlTest` 4 of 4 on MySQL 8 — its first run since 2026-10-15, so the safer-logins, cash-closes and inbox migrations ran on MySQL too.
+- Frontend: My account, the family member form, the walk-in form, the desk's page and the editor, the format helper; 305 tests.
+- Mutation checks for every step (67, all caught by a named test); screenshots on desktop and phone, light and dark, and the two PDFs rendered.
+
+**Found on the way:**
+- A visit without a family member isn't always the account holder's: a patient could type another name when booking, and a removed family member's visits are unlinked. Printing the account holder's number on those would put the wrong person's health ID on a medical record, so the patient's number shows only on a visit under their own name.
+- After a refused walk-in booking the time list reloaded and jumped to the earliest free time, silently changing the desk's choice; the chosen time now stays chosen when it is still free.
+- The shared `Field` showed its hint and error but didn't tie them to the control, so screen readers never read them (e.g. "14 digits", "12 digits", the walk-in's age hint); they are the control's description now.
+
+**Not covered yet:**
+- Verifying a number with ABDM (OTP) or sharing records through it — that needs the hospital's ABDM registration. The ABHA address (`name@abdm`) isn't kept.
+- The number isn't shown on the patient search results or the walk-in matches yet, and the desk can't search by it.
+
