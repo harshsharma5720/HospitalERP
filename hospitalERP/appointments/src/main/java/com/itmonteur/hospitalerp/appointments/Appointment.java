@@ -147,6 +147,21 @@ public class Appointment {
     public PtInfo getPtInfo() { return ptInfo; }
     public void setPtInfo(PtInfo ptInfo) { this.ptInfo = ptInfo; }
 
+    /**
+     * The ABHA number of the person this visit is for, as it is now (docs/ABHA_NUMBER_PLAN.md): a family member's own
+     * for a family member's visit, the patient's for a visit under the patient's own name, and none otherwise - a name
+     * typed at booking, or a family member since removed, is someone else, and the patient's number isn't theirs.
+     */
+    public String abhaNumber() {
+        if (relative != null) {
+            return relative.getAbhaNumber();
+        }
+        if (ptInfo == null || ptInfo.getPatientName() == null || patientName == null) {
+            return null;
+        }
+        return ptInfo.getPatientName().trim().equalsIgnoreCase(patientName.trim()) ? ptInfo.getAbhaNumber() : null;
+    }
+
     public Slot getSlot() {
         return slot;
     }

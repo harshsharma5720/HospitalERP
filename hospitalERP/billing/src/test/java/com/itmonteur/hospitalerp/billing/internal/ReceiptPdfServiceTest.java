@@ -47,13 +47,19 @@ class ReceiptPdfServiceTest {
 
     @Test
     void aReceiptShowsTheLinesTheAmountsAndThePayment() throws IOException {
-        String receipt = text(pdf.render(paidBill()));
+        String receipt = text(pdf.render(paidBill(), null));
 
         assertThat(receipt).contains("Shreya Hospital", "12 MG Road, Pune", "+91 20 5555 1234", "Receipt B-2026-000042",
                 "Asha Rao", "Dr. Anita Rao", "12 Oct 2026", "Consultation with Dr. Anita Rao", "Rs. 500.00", "Dressing",
                 "Rs. 1,250.50", "Subtotal", "Rs. 1,750.50", "Discount", "- Rs. 50.50", "Total", "Rs. 1,700.00",
                 "by UPI (ref. UPI-123)", "12 Oct 2026, 10:05", "received by deskmeena");
-        assertThat(receipt).doesNotContain("Refund");
+        assertThat(receipt).doesNotContain("Refund", "ABHA");
+    }
+
+    @Test
+    void theABHANumberIsUnderThePatientsName() throws IOException {
+        String receipt = text(pdf.render(paidBill(), "91000000000001"));
+        assertThat(receipt).containsPattern("Asha Rao\\s+ABHA 91-0000-0000-0001");
     }
 
     @Test
@@ -61,13 +67,13 @@ class ReceiptPdfServiceTest {
         Bill bill = paidBill();
         bill.setDiscount(BigDecimal.ZERO.setScale(2));
         bill.setStatus(BillStatus.REFUND_DUE);
-        assertThat(text(pdf.render(bill))).contains("Refund due: Rs. 1,750.50").doesNotContain("Discount");
+        assertThat(text(pdf.render(bill, null))).contains("Refund due: Rs. 1,750.50").doesNotContain("Discount");
 
         bill.setStatus(BillStatus.REFUNDED);
         bill.setRefundMethod(PaymentMethod.CASH);
         bill.setRefundedAt(LocalDateTime.of(2026, 10, 13, 9, 30));
         bill.setRefundedBy("deskravi");
-        String receipt = text(pdf.render(bill));
+        String receipt = text(pdf.render(bill, null));
         assertThat(receipt).contains("Refunded Rs. 1,750.50 by cash", "13 Oct 2026, 09:30", "by deskravi")
                 .doesNotContain("Refund due");
     }

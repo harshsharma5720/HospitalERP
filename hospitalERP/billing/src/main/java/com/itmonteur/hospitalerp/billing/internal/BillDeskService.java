@@ -1,5 +1,7 @@
 package com.itmonteur.hospitalerp.billing.internal;
 
+import com.itmonteur.hospitalerp.appointments.Appointment;
+import com.itmonteur.hospitalerp.appointments.AppointmentService;
 import com.itmonteur.hospitalerp.billing.BillNotificationEvent;
 import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.ConflictException;
@@ -42,16 +44,18 @@ public class BillDeskService {
     private final ReceiptPdfService receiptPdfService;
     private final CurrentUserService currentUserService;
     private final BillNotifications notifications;
+    private final AppointmentService appointmentService;
     private final Clock clock;
 
     public BillDeskService(BillRepository billRepository, OnlinePaymentRepository onlinePayments,
                            ReceiptPdfService receiptPdfService, CurrentUserService currentUserService,
-                           BillNotifications notifications, Clock clock) {
+                           BillNotifications notifications, AppointmentService appointmentService, Clock clock) {
         this.billRepository = billRepository;
         this.onlinePayments = onlinePayments;
         this.receiptPdfService = receiptPdfService;
         this.currentUserService = currentUserService;
         this.notifications = notifications;
+        this.appointmentService = appointmentService;
         this.clock = clock;
     }
 
@@ -189,7 +193,10 @@ public class BillDeskService {
         if (bill.getStatus() == BillStatus.UNPAID || bill.getStatus() == BillStatus.CANCELLED) {
             throw new ConflictException("This bill is " + label(bill.getStatus()) + ": there is no receipt");
         }
-        return receiptPdfService.render(bill);
+        // The ABHA number of the person the visit was for, as it is now (docs/ABHA_NUMBER_PLAN.md)
+        String abha = bill.getAppointmentId() == null ? null : appointmentService.findAppointmentEntity(bill.getAppointmentId())
+                .map(Appointment::abhaNumber).orElse(null);
+        return receiptPdfService.render(bill, abha);
     }
 
     /** The receipt's number, for its file name. */

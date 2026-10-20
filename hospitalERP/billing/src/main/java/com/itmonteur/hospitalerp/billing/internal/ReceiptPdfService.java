@@ -1,5 +1,6 @@
 package com.itmonteur.hospitalerp.billing.internal;
 
+import com.itmonteur.hospitalerp.patients.AbhaNumber;
 import com.lowagie.text.Document;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
@@ -52,7 +53,8 @@ public class ReceiptPdfService {
         return String.format(Locale.ENGLISH, "Rs. %,.2f", amount);
     }
 
-    public byte[] render(Bill bill) {
+    /** {@code abhaNumber}: of the person the visit was for (docs/ABHA_NUMBER_PLAN.md), shown under the name; or null. */
+    public byte[] render(Bill bill, String abhaNumber) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4, 40, 40, 40, 40);
         PdfWriter.getInstance(document, out);
@@ -78,7 +80,11 @@ public class ReceiptPdfService {
 
         PdfPTable info = new PdfPTable(2);
         info.setWidthPercentage(100);
-        info.addCell(block("Patient", bill.getPatientName(), bold, normal));
+        PdfPCell patient = block("Patient", bill.getPatientName(), bold, normal);
+        if (abhaNumber != null) {
+            patient.addElement(new Phrase("ABHA " + AbhaNumber.format(abhaNumber), normal));
+        }
+        info.addCell(patient);
         info.addCell(block("Doctor", bill.getDoctorName() == null ? "-" : "Dr. " + bill.getDoctorName(), bold, normal));
         info.addCell(block("Visit date", bill.getVisitDate().format(DATE), bold, normal));
         info.addCell(block("Bill number", bill.getBillNumber(), bold, normal));
