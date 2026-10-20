@@ -76,6 +76,7 @@ GET /api/receptionist/getReceptionist/{receptionistId} anonymous- patient- docto
 GET /api/receptionist/patients anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/patients/search anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/patients/{patientId} anonymous- patient- doctor- receptionist+ admin+
+GET /api/receptionist/patients/{patientId}/relatives anonymous- patient- doctor- receptionist+ admin+
 GET /api/slots/available/{doctorId} anonymous- patient+ doctor+ receptionist+ admin+
 GET /api/unknown anonymous- patient+ doctor+ receptionist+ admin+
 GET /appointment/allCompletedAppointments anonymous- patient- doctor- receptionist+ admin+
@@ -137,5 +138,7 @@ PUT /api/leaves/{id}/status anonymous- patient- doctor+ receptionist+ admin+
 PUT /api/patient/relative/update/{id} anonymous- patient+ doctor- receptionist- admin+
 PUT /api/patient/updateAccount/{ptId} anonymous- patient+ doctor- receptionist- admin+
 PUT /api/receptionist/bills/{billId}/discount anonymous- patient- doctor- receptionist+ admin+
+PUT /api/receptionist/patients/{patientId}/abha anonymous- patient- doctor- receptionist+ admin+
+PUT /api/receptionist/patients/{patientId}/relatives/{relativeId}/abha anonymous- patient- doctor- receptionist+ admin+
 PUT /api/receptionist/{id} anonymous- patient- doctor- receptionist+ admin+
 PUT /appointment/update/{appointmentId} anonymous- patient+ doctor+ receptionist+ admin+

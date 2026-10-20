@@ -18,6 +18,7 @@ public class PtRelativeDTO {
     @NotNull(message = "Relationship is required")
     private RelationShip relationship;
     private Long patientAadharNo;
+    private String abhaNumber; // 14 digits, or null (docs/ABHA_NUMBER_PLAN.md)
 
     // ID of the patient to which this relative belongs
     private Long patientId;
@@ -36,6 +37,15 @@ public class PtRelativeDTO {
     }
 
     // Getters & Setters
+
+    // ABHA number (docs/ABHA_NUMBER_PLAN.md): the 14 digits, or null
+    public String getAbhaNumber() {
+        return abhaNumber;
+    }
+
+    public void setAbhaNumber(String abhaNumber) {
+        this.abhaNumber = abhaNumber;
+    }
 
     public Long getId() {
         return id;

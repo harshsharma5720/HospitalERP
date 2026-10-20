@@ -97,7 +97,7 @@ class DatabaseMigrationMySqlTest {
                         "2026.10.05.1 SQL", "2026.10.06.1 SQL", "2026.10.07.1 SQL", "2026.10.08.1 SQL",
                         "2026.10.11.1 SQL", "2026.10.12.1 SQL", "2026.10.15.1 SQL", "2026.10.16.1 SQL",
                         "2026.10.16.2 SQL", "2026.10.19.1 SQL",
-                        "2026.10.19.2 SQL");
+                        "2026.10.19.2 SQL", "2026.10.20.1 SQL");
         assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isIn(true, 1));
 
         assertThat(legacyColumnsIn(jdbc, "hospital")).isEmpty();
@@ -114,6 +114,8 @@ class DatabaseMigrationMySqlTest {
                 + "AND table_name = 'patient' AND column_name = 'email'", String.class)).isEqualTo("YES");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM patient WHERE email = 'asha@example.com' AND created_at IS NULL",
                 Integer.class)).isEqualTo(1);
+        // Existing patients have no ABHA number (docs/ABHA_NUMBER_PLAN.md)
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM patient WHERE abha_number IS NOT NULL", Integer.class)).isZero();
         // Today's queue (docs/TODAYS_QUEUE_PLAN.md): existing appointments are not checked in
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM appointments WHERE appointmentid = 1 AND checked_in_at IS NULL"
                 + " AND token_number IS NULL AND called_at IS NULL", Integer.class)).isEqualTo(1);

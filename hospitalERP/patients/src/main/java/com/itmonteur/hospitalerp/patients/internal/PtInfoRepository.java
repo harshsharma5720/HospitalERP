@@ -18,6 +18,8 @@ public interface PtInfoRepository extends JpaRepository<PtInfo, Long> {
     Optional<PtInfo> findByUserName(String userName);
     Optional<PtInfo> findByUser_Id(Long id);
 
+    boolean existsByAbhaNumberAndPatientIdNot(String abhaNumber, Long patientId);
+
     // Front desk (docs/WALK_IN_REGISTRATION_PLAN.md): a cheap first filter; PtInfoService compares the digits exactly
     List<PtInfo> findByContactNoEndingWith(String suffix);
 

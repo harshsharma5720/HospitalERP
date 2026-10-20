@@ -13,6 +13,7 @@ public final class PatientMapper {
         dto.setEmail(ptInfo.getEmail());
         dto.setPatientAddress(ptInfo.getPatientAddress());
         dto.setPatientAadharNo(ptInfo.getPatientAadharNo());
+        dto.setAbhaNumber(ptInfo.getAbhaNumber());
         dto.setContactNo(ptInfo.getContactNo());
         dto.setDob(ptInfo.getDob());
         dto.setGender(ptInfo.getGender());

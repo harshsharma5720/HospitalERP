@@ -9,6 +9,7 @@ import com.itmonteur.hospitalerp.common.BadRequestException;
 import com.itmonteur.hospitalerp.common.LikePattern;
 import com.itmonteur.hospitalerp.common.PageResult;
 import com.itmonteur.hospitalerp.common.ResourceNotFoundException;
+import com.itmonteur.hospitalerp.patients.internal.AbhaRegistry;
 import com.itmonteur.hospitalerp.patients.internal.PtInfoRepository;
 import com.itmonteur.hospitalerp.common.FileStorageService;
 import com.itmonteur.hospitalerp.identity.CurrentUserService;
@@ -48,6 +49,7 @@ public class PtInfoService {
     private final CurrentUserService currentUserService;
     private final FileStorageService fileStorageService;
     private final AuditLog auditLog;
+    private final AbhaRegistry abhaRegistry;
     private final Clock clock;
 
     private static final Pattern PHONE = Pattern.compile("\\+?\\d{10,14}");
@@ -63,12 +65,13 @@ public class PtInfoService {
 
     public PtInfoService(PtInfoRepository ptInfoRepository, UserService userService,
                          CurrentUserService currentUserService, FileStorageService fileStorageService,
-                         AuditLog auditLog, Clock clock) {
+                         AuditLog auditLog, AbhaRegistry abhaRegistry, Clock clock) {
         this.ptInfoRepository = ptInfoRepository;
         this.userService = userService;
         this.currentUserService = currentUserService;
         this.fileStorageService = fileStorageService;
         this.auditLog = auditLog;
+        this.abhaRegistry = abhaRegistry;
         this.clock = clock;
     }
 
@@ -121,6 +124,11 @@ public class PtInfoService {
         if (dto.getPatientAddress() != null) {
             ptInfo.setPatientAddress(dto.getPatientAddress());
         }
+        if (dto.getAbhaNumber() != null) { // "" removes it
+            String abha = AbhaNumber.normalize(dto.getAbhaNumber());
+            abhaRegistry.requireFree(abha, ptInfo.getPatientId(), null);
+            ptInfo.setAbhaNumber(abha);
+        }
         if (profileImage != null && !profileImage.isEmpty()) {
             ptInfo.setProfileImage(fileStorageService.storeProfileImage(profileImage));
         }
@@ -145,6 +153,7 @@ public class PtInfoService {
         fields.put("gender", p.getGender());
         fields.put("phone", p.getContactNo());
         fields.put("Aadhaar number", p.getPatientAadharNo());
+        fields.put("ABHA number", p.getAbhaNumber());
         fields.put("address", p.getPatientAddress());
         fields.put("photo", p.getProfileImage());
         return fields;
@@ -155,6 +164,24 @@ public class PtInfoService {
                 .filter(field -> !Objects.equals(before.get(field), after.get(field)))
                 .toList();
         return changed.isEmpty() ? "no change" : "changed: " + String.join(", ", changed);
+    }
+
+    /**
+     * The front desk sets a patient's ABHA number (docs/ABHA_NUMBER_PLAN.md; access is checked on its URL): 14 digits,
+     * or empty to remove it; refused when it is on another record. In the audit log like the patient's own edits.
+     */
+    @Transactional
+    public PtInfoDTO setAbhaNumber(long patientId, String abhaNumber) {
+        PtInfo patient = ptInfoRepository.findById(patientId)
+                .orElseThrow(() -> new ResourceNotFoundException("Patient", "id", patientId));
+        String abha = AbhaNumber.normalize(abhaNumber);
+        abhaRegistry.requireFree(abha, patientId, null);
+        boolean changed = !Objects.equals(abha, patient.getAbhaNumber());
+        patient.setAbhaNumber(abha);
+        PtInfoDTO updated = PatientMapper.toDTO(ptInfoRepository.save(patient));
+        auditLog.record(AuditAction.PATIENT_PROFILE_UPDATED, patientId, patientId,
+                changed ? "changed: ABHA number" : "no change");
+        return updated;
     }
 
     /** One patient by patient id, for the front desk (access is checked on its URL); recorded as a profile view. */
@@ -208,12 +235,15 @@ public class PtInfoService {
         if (email != null && !EMAIL.matcher(email).matches()) {
             throw new BadRequestException("Please enter a valid email address, or leave it empty");
         }
+        String abha = AbhaNumber.normalize(details.abhaNumber());
+        abhaRegistry.requireFree(abha, null, null);
         PtInfo patient = new PtInfo();
         patient.setPatientName(name);
         patient.setContactNo(phone);
         patient.setGender(details.gender());
         patient.setDob(details.dob());
         patient.setEmail(email);
+        patient.setAbhaNumber(abha);
         patient.setCreatedAt(LocalDateTime.now(clock));
         PtInfo saved = ptInfoRepository.save(patient);
         auditLog.record(AuditAction.WALK_IN_REGISTERED, saved.getPatientId(), saved.getPatientId(), null);

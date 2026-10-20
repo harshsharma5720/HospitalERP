@@ -7,6 +7,7 @@ import com.itmonteur.hospitalerp.common.FileStorageService;
 import com.itmonteur.hospitalerp.common.PageResult;
 import com.itmonteur.hospitalerp.identity.CurrentUserService;
 import com.itmonteur.hospitalerp.identity.UserService;
+import com.itmonteur.hospitalerp.patients.internal.AbhaRegistry;
 import com.itmonteur.hospitalerp.patients.internal.PtInfoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,7 @@ class PtInfoServiceSearchTest {
         repository = mock(PtInfoRepository.class);
         auditLog = mock(AuditLog.class);
         service = new PtInfoService(repository, mock(UserService.class), mock(CurrentUserService.class),
-                mock(FileStorageService.class), auditLog, Clock.systemDefaultZone());
+                mock(FileStorageService.class), auditLog, mock(AbhaRegistry.class), Clock.systemDefaultZone());
     }
 
     private static PtInfo patient(long id, String name, String phone) {
