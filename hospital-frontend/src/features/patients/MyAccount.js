@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarCheck, CalendarPlus, CreditCard, Download, Receipt, UserPlus, Users } from "lucide-react";
 import useAuthStore from "../auth/useAuthStore";
@@ -7,6 +7,7 @@ import { getErrorMessage } from "../../shared/utils/apiError";
 import { calculateAgeFromDOB } from "../../shared/utils/calculateAgeFromDOB";
 import { toLocalISODate } from "../../shared/utils/dateUtils";
 import { formatRupees } from "../../shared/utils/money";
+import { ABHA_HINT, abhaInputProps, formatAbha } from "../../shared/utils/abha";
 import { PageIntro, PublicPage } from "../../shared/layout/PublicSections";
 import ProfileDetails, { profileRequest } from "../../shared/ProfileDetails";
 import { Button, Card, CardHeader, EmptyState, Notice, useConfirm, useToast } from "../../shared/ui";
@@ -41,6 +42,8 @@ const FIELDS = [
   { key: "gender", label: "Gender", options: GENDERS },
   { key: "dob", label: "Date of birth", type: "date", show: (dob) => (dob ? formatDate(dob, true) : "") },
   { key: "patientAadharNo", label: "Aadhaar number", show: maskAadhaar },
+  // docs/ABHA_NUMBER_PLAN.md: optional; emptied, it is removed
+  { key: "abhaNumber", label: "ABHA number", show: formatAbha, hint: `Optional. ${ABHA_HINT}`, inputProps: abhaInputProps },
   { key: "patientAddress", label: "Address" },
 ];
 
@@ -129,6 +132,8 @@ export default function MyAccount() {
   // null while loading, false when they couldn't be loaded
   const [bills, setBills] = useState(null);
   const [openBill, setOpenBill] = useState(null);
+  // The details as the form shows them (one object per account: the form starts over when it changes)
+  const details = useMemo(() => account && { ...account, abhaNumber: formatAbha(account.abhaNumber) }, [account]);
   // After an online payment: the paid bill in place, or all bills again when it couldn't be applied
   const payment = useOnlinePayment({
     onPaid: (paid) => {
@@ -236,7 +241,12 @@ export default function MyAccount() {
 
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-12 sm:px-6 lg:grid-cols-3 lg:px-8">
         <div className="min-w-0 space-y-6 lg:col-span-2">
-          <ProfileDetails name={account.patientName || account.userName} data={account} fields={FIELDS} onSave={saveDetails} />
+          <ProfileDetails
+            name={account.patientName || account.userName}
+            data={details}
+            fields={FIELDS}
+            onSave={saveDetails}
+          />
 
           <Card aria-labelledby="family-members">
             <CardHeader
@@ -263,7 +273,12 @@ export default function MyAccount() {
                     <div>
                       <p className="font-medium">{relative.name}</p>
                       <p className="text-sm text-ink-muted">
-                        {[pretty(relative.relationship), relative.dob ? `${calculateAgeFromDOB(relative.dob)} y` : null, pretty(relative.gender)]
+                        {[
+                          pretty(relative.relationship),
+                          relative.dob ? `${calculateAgeFromDOB(relative.dob)} y` : null,
+                          pretty(relative.gender),
+                          relative.abhaNumber ? `ABHA ${formatAbha(relative.abhaNumber)}` : null,
+                        ]
                           .filter(Boolean)
                           .join(" · ")}
                       </p>

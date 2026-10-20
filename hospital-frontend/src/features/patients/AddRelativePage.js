@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { getErrorMessage } from "../../shared/utils/apiError";
 import { toLocalISODate } from "../../shared/utils/dateUtils";
+import { ABHA_HINT, abhaInputProps, formatAbha } from "../../shared/utils/abha";
 import { PublicPage } from "../../shared/layout/PublicSections";
 import { Button, Card, Field, Input, Select, useToast } from "../../shared/ui";
 import * as patientsApi from "./api";
@@ -25,14 +26,20 @@ export default function AddRelativePage() {
     dob: editing?.dob || "",
     relationship: editing?.relationship || "",
     patientAadharNo: editing?.patientAadharNo ? String(editing.patientAadharNo) : "",
+    abhaNumber: formatAbha(editing?.abhaNumber),
   });
 
   const change = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // The backend links the relative to the logged-in patient, so no patientId is sent
-    const payload = { ...form, name: form.name.trim(), patientAadharNo: form.patientAadharNo ? Number(form.patientAadharNo) : null };
+    // The backend links the relative to the logged-in patient, so no patientId is sent. An empty ABHA number: none.
+    const payload = {
+      ...form,
+      name: form.name.trim(),
+      patientAadharNo: form.patientAadharNo ? Number(form.patientAadharNo) : null,
+      abhaNumber: form.abhaNumber.trim(),
+    };
     setSaving(true);
     try {
       if (editing) {
@@ -99,6 +106,9 @@ export default function AddRelativePage() {
                 value={form.patientAadharNo}
                 onChange={change}
               />
+            </Field>
+            <Field label="ABHA number (optional)" htmlFor="relative-abha" hint={`Their own health ID: ${ABHA_HINT}`}>
+              <Input id="relative-abha" name="abhaNumber" value={form.abhaNumber} onChange={change} {...abhaInputProps} />
             </Field>
             <div className="flex justify-end gap-2 border-t border-line pt-4">
               <Button as={Link} to={back} variant="secondary">

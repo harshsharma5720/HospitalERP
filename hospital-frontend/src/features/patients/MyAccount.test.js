@@ -95,6 +95,32 @@ test("editing the details sends them as the profile endpoint expects; an empty A
   expect(screen.getByRole("region", { name: "Your details" })).toHaveTextContent("9000011111");
 });
 
+test("the ABHA number: in four groups, entered with or without dashes, emptied to remove it; each family member's too", async () => {
+  patientsApi.getPatientAccount.mockResolvedValue({ data: { ...ACCOUNT, abhaNumber: "12345678901234" } });
+  patientsApi.getRelatives.mockResolvedValue({
+    data: [{ id: 6, name: "Mira Verma", relationship: "DAUGHTER", gender: "FEMALE", dob: "2018-06-01", abhaNumber: "91000000000002" }],
+  });
+  patientsApi.updatePatientAccount.mockResolvedValue({ data: { ...ACCOUNT, abhaNumber: null } });
+  renderPage();
+  const details = await screen.findByRole("region", { name: "Your details" });
+  expect(within(details).getByText("ABHA number").nextSibling).toHaveTextContent("12-3456-7890-1234");
+  const family = await screen.findByRole("region", { name: "Family members" });
+  expect(await within(family).findByText(/Daughter · \d+ y · Female · ABHA 91-0000-0000-0002/)).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const input = screen.getByLabelText("ABHA number");
+  expect(input).toHaveValue("12-3456-7890-1234");
+  expect(input).toHaveAccessibleDescription("Optional. 14 digits, e.g. 12-3456-7890-1234.");
+  expect(input).toHaveAttribute("inputmode", "numeric");
+  fireEvent.change(input, { target: { value: "" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+  expect(await screen.findByRole("status")).toHaveTextContent("Your details are saved.");
+  const sent = JSON.parse(await readBlob(patientsApi.updatePatientAccount.mock.calls[0][1].get("ptInfoDTO")));
+  expect(sent.abhaNumber).toBe(""); // removed; not sent at all would leave it as it is
+  expect(within(details).getByText("ABHA number").nextSibling).toHaveTextContent("—");
+});
+
 test("a refused change keeps the form open; Cancel drops the changes", async () => {
   patientsApi.updatePatientAccount.mockRejectedValue({ response: { data: { message: "Email already in use" } } });
   renderPage();

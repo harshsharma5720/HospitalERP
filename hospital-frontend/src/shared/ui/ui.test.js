@@ -88,15 +88,29 @@ describe("page parts", () => {
       </Field>
     );
     expect(screen.getByLabelText("Phone")).toHaveAttribute("id", "phone");
-    expect(screen.getByText("10 digits")).toBeInTheDocument();
+    expect(screen.getByLabelText("Phone")).toHaveAccessibleDescription("10 digits"); // read out with the label
 
     rerender(
       <Field label="Phone" htmlFor="phone" hint="10 digits" error="Phone is required">
         <Input id="phone" />
       </Field>
     );
-    expect(screen.getByText("Phone is required")).toBeInTheDocument();
+    expect(screen.getByLabelText("Phone")).toHaveAccessibleDescription("Phone is required");
     expect(screen.queryByText("10 digits")).not.toBeInTheDocument();
+
+    // A control that names its own description keeps it; without a hint there is none
+    rerender(
+      <Field label="Phone" htmlFor="phone" hint="10 digits">
+        <Input id="phone" aria-describedby="elsewhere" />
+      </Field>
+    );
+    expect(screen.getByLabelText("Phone")).toHaveAttribute("aria-describedby", "elsewhere");
+    rerender(
+      <Field label="Phone" htmlFor="phone">
+        <Input id="phone" />
+      </Field>
+    );
+    expect(screen.getByLabelText("Phone")).not.toHaveAttribute("aria-describedby");
   });
 
   test("a select is labelled the same way", () => {

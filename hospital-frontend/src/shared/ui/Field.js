@@ -9,6 +9,12 @@ export const controlClasses =
   "disabled:bg-surface-2 disabled:text-ink-muted";
 
 export function Field({ label, htmlFor, hint, error, className = "", children }) {
+  // The hint or error is the control's description, so screen readers read it with the label
+  const noteId = htmlFor && (error || hint) ? `${htmlFor}-note` : undefined;
+  const control =
+    noteId && React.isValidElement(children) && !children.props["aria-describedby"]
+      ? React.cloneElement(children, { "aria-describedby": noteId })
+      : children;
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
       {label && (
@@ -16,11 +22,17 @@ export function Field({ label, htmlFor, hint, error, className = "", children })
           {label}
         </label>
       )}
-      {children}
+      {control}
       {error ? (
-        <p className="text-xs text-danger-ink">{error}</p>
+        <p id={noteId} className="text-xs text-danger-ink">
+          {error}
+        </p>
       ) : (
-        hint && <p className="text-xs text-ink-muted">{hint}</p>
+        hint && (
+          <p id={noteId} className="text-xs text-ink-muted">
+            {hint}
+          </p>
+        )
       )}
     </div>
   );

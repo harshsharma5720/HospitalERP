@@ -27,3 +27,14 @@ export const searchPatients = (q, page, size) =>
 
 // One patient's details, by patient id (recorded as a profile view)
 export const getFrontDeskPatient = (patientId) => axios.get(`${API_BASE_URL}/api/receptionist/patients/${patientId}`);
+
+// ---------- front desk: ABHA numbers (docs/ABHA_NUMBER_PLAN.md) ----------
+// abhaNumber: 14 digits (dashes and spaces allowed), or "" to remove it. 409 when it is on another record.
+export const setPatientAbha = (patientId, abhaNumber) =>
+  axios.put(`${API_BASE_URL}/api/receptionist/patients/${patientId}/abha`, { abhaNumber });
+
+// The patient's family members, each with their ABHA number
+export const getPatientRelatives = (patientId) => axios.get(`${API_BASE_URL}/api/receptionist/patients/${patientId}/relatives`);
+
+export const setRelativeAbha = (patientId, relativeId, abhaNumber) =>
+  axios.put(`${API_BASE_URL}/api/receptionist/patients/${patientId}/relatives/${relativeId}/abha`, { abhaNumber });

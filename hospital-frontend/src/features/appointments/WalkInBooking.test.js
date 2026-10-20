@@ -89,7 +89,7 @@ test("a new number: registers the patient and books the earliest free time", asy
 
   await waitFor(() =>
     expect(appointmentsApi.bookWalkIn).toHaveBeenCalledWith({
-      newPatient: { name: "Lakshmi Iyer", phone: "+91 90000 11120", gender: "FEMALE", dob: null, email: null },
+      newPatient: { name: "Lakshmi Iyer", phone: "+91 90000 11120", gender: "FEMALE", dob: null, email: null, abhaNumber: null },
       slotId: 101,
       age: 52,
       message: "Fever",
@@ -163,6 +163,42 @@ test("a time taken meanwhile: says so and offers the times still free", async ()
   expect(screen.queryByRole("radio", { name: "Tomorrow 10:00" })).not.toBeInTheDocument();
   expect(appointmentsApi.getNextFreeSlots).toHaveBeenCalledTimes(2);
   expect(screen.queryByRole("status")).not.toBeInTheDocument();
+});
+
+test("a new patient's ABHA number: checked before sending; one already on a record keeps the time chosen", async () => {
+  appointmentsApi.bookWalkIn.mockRejectedValueOnce({
+    response: { status: 409, data: { message: "This ABHA number is already on another patient's record" } },
+  });
+  renderPage();
+  await findPhone("9000011123");
+  fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Lakshmi Iyer" } });
+  fireEvent.change(screen.getByLabelText("Gender"), { target: { value: "FEMALE" } });
+  expect(screen.getByLabelText("ABHA number (optional)")).toHaveAccessibleDescription("14 digits, e.g. 12-3456-7890-1234.");
+  await chooseDoctor();
+  fireEvent.click(screen.getByRole("radio", { name: "Tomorrow 16:00" }));
+  fireEvent.change(screen.getByLabelText("Age"), { target: { value: "52" } });
+
+  fireEvent.change(screen.getByLabelText("ABHA number (optional)"), { target: { value: "12-3456-7890-123" } });
+  fireEvent.click(screen.getByRole("button", { name: "Register and book" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("An ABHA number has 14 digits, e.g. 12-3456-7890-1234.");
+  expect(appointmentsApi.bookWalkIn).not.toHaveBeenCalled();
+
+  fireEvent.change(screen.getByLabelText("ABHA number (optional)"), { target: { value: " 12-3456-7890-1234 " } });
+  fireEvent.click(screen.getByRole("button", { name: "Register and book" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("This ABHA number is already on another patient's record");
+  expect(appointmentsApi.bookWalkIn).toHaveBeenLastCalledWith(
+    expect.objectContaining({ newPatient: expect.objectContaining({ abhaNumber: "12-3456-7890-1234" }), slotId: 102 })
+  );
+  await waitFor(() => expect(appointmentsApi.getNextFreeSlots).toHaveBeenCalledTimes(2));
+  expect(await screen.findByRole("radio", { name: "Tomorrow 16:00" })).toBeChecked(); // still free: still chosen
+
+  fireEvent.change(screen.getByLabelText("ABHA number (optional)"), { target: { value: "" } });
+  fireEvent.click(screen.getByRole("button", { name: "Register and book" }));
+  await waitFor(() =>
+    expect(appointmentsApi.bookWalkIn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ newPatient: expect.objectContaining({ abhaNumber: null }), slotId: 102 })
+    )
+  );
 });
 
 test("the server's message for a wrong number; a new patient needs a name and gender", async () => {
