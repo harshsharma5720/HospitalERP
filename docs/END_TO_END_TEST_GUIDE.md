@@ -1,6 +1,6 @@
 # End-to-end test guide
 
-Every feature built so far, and how to check it by hand in the running app: where it is, who uses it, what to set up, the steps, and what you should see. It is kept up to date after each feature (last update: 2026-10-19, notification centre).
+Every feature built so far, and how to check it by hand in the running app: where it is, who uses it, what to set up, the steps, and what you should see. It is kept up to date after each feature (last update: 2026-10-20, ABHA number).
 
 Tick the **Tested** column in the overview as you go. Each section links to the feature's plan for the details.
 
@@ -72,6 +72,7 @@ Tick the **Tested** column in the overview as you go. Each section links to the 
 | 24 | Safer logins: staying logged in, log out of all devices | Everyone | My account / Profile → **Logged-in devices**; admins: top bar | ☐ |
 | 25 | Daily cash summary and closing the day | Front desk, admin | **Day summary**: `/cash-summary`, `/admin/cash-summary` | ☐ |
 | 26 | Notification centre (the bell) | Everyone logged in | The bell in the top bar / header | ☐ |
+| 27 | ABHA number on patient records | Patients, front desk, admin | **My account** and the family member form; a patient's page (`/patients/:id`); **Walk-in**; on prescriptions and receipts | ☐ |
 
 ---
 
@@ -262,3 +263,15 @@ Plan: [NOTIFICATION_CENTRE_PLAN.md](NOTIFICATION_CENTRE_PLAN.md). Best with thre
 7. The day before a visit (or with `REMINDERS_CRON` every minute): the patient's "Your appointment is tomorrow".
 8. A walk-in at the desk (no login): only the doctor gets "New appointment"; nobody gets the bill's messages, until a refund is due (the desk).
 9. On a phone the panel spans the screen under the header; dark mode reads well. Logged out: no bell.
+
+## 27. ABHA number on patient records
+Plan: [ABHA_NUMBER_PLAN.md](ABHA_NUMBER_PLAN.md). A patient with two family members (7), a doctor with a schedule and the front desk. Test numbers: any 14 digits, e.g. `91-0000-0000-0001`.
+1. **Patient** → **My account** → **Edit**: "ABHA number" (optional, "14 digits, e.g. 12-3456-7890-1234") — type it with or without dashes or spaces → **Save changes**. Expect: shown as `91-0000-0000-0001`. Fewer digits or a letter: the browser asks for the shape and nothing is sent. Empty it and save: removed ("—").
+2. **Family members** → **Edit** one: "ABHA number (optional)", their own health ID. Expect: listed as "… · ABHA 91-0000-0000-0002". Type the patient's own number there: "This ABHA number is already on another patient's record". The second family member keeps none.
+3. A **second patient** enters the first one's number (or a family member's): refused with the same message. One number, one person, whichever table it's on.
+4. **Front desk** → **Patients** → open the first patient. Expect: under **Details**, "ABHA" with the number and **Change** (or **Add**); a **Family members** card with each member — relationship, age, gender — and their number with **Add** / **Change**. Change one: a wrong shape says "An ABHA number has 14 digits…" before anything is sent; a taken one says why and stays open; empty removes it ("ABHA number removed."). A walk-in record has no family members ("No family members.").
+5. **Walk-in**: a new patient with an ABHA number (optional field under Email) → **Register and book**. Expect: the patient's page shows it. Try a number already on a record: "already on another patient's record", nothing is booked and no record is made, and the time you chose is still chosen.
+6. **On paper:** book one visit for the patient (under their own name) and one for each family member; check them in, write the consultations, take the payments. Download the **prescription** (patient: My appointments → **Prescription**) and the **receipt** (desk: **Bills** → the bill → receipt; patient: My account → **Receipt**). Expect: "ABHA 91-0000-0000-0001" under the patient's name; the family member's own number on their visit; nothing for the family member without one — never the account holder's. Add that member's number at the desk, download again: it is there now.
+7. **Remove** a family member who had a visit (My account). Expect: that visit's prescription and receipt show no ABHA number (it isn't the account holder's either).
+8. **Admin** → **Audit log**, action "Patient profile updated". Expect: "changed: ABHA number" (by the patient or the desk) and "changed: a family member's ABHA number" (by the desk) — the number itself is never written there.
+9. On a phone the patient's page and the forms fit the screen; dark mode reads well.
