@@ -1,6 +1,7 @@
 package com.itmonteur.hospitalerp.waitlist.internal;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -27,6 +28,21 @@ public interface WaitlistRepository extends JpaRepository<WaitlistEntry, Long> {
     // Everyone waiting for a doctor (from a day on)
     @Query("SELECT e FROM WaitlistEntry e WHERE e.doctor.id = :doctorId AND e.status =" + WAITING + "AND e.date >= :from")
     List<WaitlistEntry> findWaitingForDoctor(@Param("doctorId") Long doctorId, @Param("from") LocalDate from);
+
+    // Who waits for a doctor on a day, in the order they joined
+    @Query("SELECT e FROM WaitlistEntry e WHERE e.doctor.id = :doctorId AND e.date = :date AND e.status =" + WAITING
+            + "ORDER BY e.joinedAt")
+    List<WaitlistEntry> findWaitingForDay(@Param("doctorId") Long doctorId, @Param("date") LocalDate date);
+
+    // Who waits for a doctor between two days (both included)
+    @Query("SELECT e FROM WaitlistEntry e WHERE e.doctor.id = :doctorId AND e.status =" + WAITING
+            + "AND e.date BETWEEN :from AND :to")
+    List<WaitlistEntry> findWaitingForDoctorBetween(@Param("doctorId") Long doctorId, @Param("from") LocalDate from,
+                                                   @Param("to") LocalDate to);
+
+    @Modifying
+    @Query("DELETE FROM WaitlistEntry e WHERE e.date < :before")
+    int deleteDaysBefore(@Param("before") LocalDate before);
 
     // The front desk's list of a day: every wait, by doctor and in the order they were joined (doctorId null: all)
     @Query("SELECT e FROM WaitlistEntry e WHERE e.date = :date AND (:doctorId IS NULL OR e.doctor.id = :doctorId)"

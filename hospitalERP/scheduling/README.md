@@ -9,14 +9,14 @@ When doctors can be booked: each doctor's weekly working hours and slot length, 
 | Class | Purpose |
 |---|---|
 | `DoctorSchedule`, `Slot`, `Shift` | Entities for a doctor's weekly schedule and a bookable time slot, and the `MORNING` / `EVENING` shift enum. |
-| `SlotService` | `generateSlots`, `getAvailableSlots`, `nextFreeSlots` (a doctor's next free slots from now on, in time order, at most N - for the front desk), `positionInDay` (a slot's place in its doctor's day, from 1, both shifts - the queue's token; makes sure the day's slots exist first), `lockAndBook` (pessimistic lock so a slot can't be double-booked), `releaseSlot`, `deleteUnusedSlots`, `deleteAllForDoctor`, `hoursFor`, `hasTimesAhead` (whether a doctor works a shift that day and has a time in it that hasn't started yet, free or booked — for the waitlist, [docs/WAITLIST_PLAN.md](../../docs/WAITLIST_PLAN.md)). A deactivated doctor has no available slots and `lockAndBook` refuses their slots (409). |
+| `SlotService` | `generateSlots`, `getAvailableSlots`, `nextFreeSlots` (a doctor's next free slots from now on, in time order, at most N - for the front desk), `positionInDay` (a slot's place in its doctor's day, from 1, both shifts - the queue's token; makes sure the day's slots exist first), `lockAndBook` (pessimistic lock so a slot can't be double-booked), `releaseSlot` (publishes `SlotFreedEvent` when the time is bookable again), `isOpenForBooking` (free, not started, the doctor active and not away — for the waitlist), `deleteUnusedSlots`, `deleteAllForDoctor`, `hoursFor`, `hasTimesAhead` (whether a doctor works a shift that day and has a time in it that hasn't started yet, free or booked — for the waitlist, [docs/WAITLIST_PLAN.md](../../docs/WAITLIST_PLAN.md)). A deactivated doctor has no available slots and `lockAndBook` refuses their slots (409). |
 | `DoctorScheduleService` | `getSchedule`, `updateSchedule`, `deleteAllForDoctor`. |
 | `DoctorScheduleDTO` | Request/response object for a weekly schedule. |
 | `DoctorScheduleChangedEvent` | Published when a schedule is changed. |
 
 ## Events
 
-- **Publishes:** `DoctorScheduleChangedEvent(Long doctorId)` — appointments looks up which future slots are still booked and calls `SlotService.deleteUnusedSlots`, so booked slots survive and only unused ones are removed.
+- **Publishes:** `SlotFreedEvent(slotId, doctorId, date, shift, startTime, endTime)` — a booked time bookable again (a visit cancelled or moved, a deactivated account's visits; not when the doctor is away), inside the freeing transaction; the waitlist tells who is waiting ([docs/WAITLIST_PLAN.md](../../docs/WAITLIST_PLAN.md)). `DoctorScheduleChangedEvent(Long doctorId)` — appointments looks up which future slots are still booked and calls `SlotService.deleteUnusedSlots`, so booked slots survive and only unused ones are removed.
 - **Listens to:** `DoctorLeaveApprovedEvent` (staff) — `SlotLeaveBlocker` marks the doctor's slots in the leave dates as unavailable.
 
 ## Endpoints — `scheduling.web`
@@ -38,6 +38,6 @@ None.
 
 ## Tests
 
-`DoctorScheduleValidationTest`, `SlotServiceScheduleTest`, `SlotServiceNextFreeSlotsTest`, `SlotServiceTimesAheadTest`; the leave listener is covered by `DoctorLeaveListenersTest` (`app`).
+`DoctorScheduleValidationTest`, `SlotServiceScheduleTest`, `SlotServiceNextFreeSlotsTest`, `SlotServiceTimesAheadTest`, `SlotServiceFreedTest` (a freed time published, unless the doctor is away; open for booking); the leave listener is covered by `DoctorLeaveListenersTest` (`app`).
 
 Module diagram: [docs/modules/module-scheduling.puml](../../docs/modules/module-scheduling.puml).

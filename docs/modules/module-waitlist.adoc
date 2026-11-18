@@ -4,6 +4,8 @@
 |`com.itmonteur.hospitalerp.waitlist`
 |Bean references
 |* `c.i.h.a.AppointmentService` (in Appointments)
+* `c.i.h.i.Inbox` (in Inbox)
+* `c.i.h.n.NotificationOutbox` (in Notifications)
 * `c.i.h.p.PtInfoService` (in Patients)
 * `c.i.h.p.PtRelativeService` (in Patients)
 * `c.i.h.s.DoctorService` (in Staff)
@@ -13,4 +15,6 @@
 |Events listened to
 |* `c.i.h.a.AppointmentNotificationEvent` 
 * `c.i.h.i.UserDeactivatedEvent` 
+* `c.i.h.s.DoctorLeaveApprovedEvent` 
+* `c.i.h.s.SlotFreedEvent` 
 |===

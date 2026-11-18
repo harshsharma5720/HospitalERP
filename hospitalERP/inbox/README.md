@@ -2,16 +2,16 @@
 
 The notification centre ([docs/NOTIFICATION_CENTRE_PLAN.md](../../docs/NOTIFICATION_CENTRE_PLAN.md)): each user's messages in the app — a visit booked, moved, cancelled or due tomorrow; a bill made, paid, due for refund or refunded; a leave request to decide, or a leave approved or rejected. Read or unread; kept 90 days.
 
-It writes messages for what other modules tell it through their events; none of them calls it.
+It writes messages for what other modules tell it through their events; only the waitlist calls it (`Inbox.toUser`).
 
-**Depends on:** common, notifications (the appointment event's details), identity, staff, appointments, billing · **Used by:** app
+**Depends on:** common, notifications (the appointment event's details), identity, staff, appointments, billing · **Used by:** waitlist, app
 
 ## Public API — `com.itmonteur.hospitalerp.inbox`
 
 | Class | Purpose |
 |---|---|
 | `Inbox` | `toUser(userId, kind, title, body, link)` (nothing for a null user, e.g. a walk-in without a login) and `toRole(role, …)` (every active account of the role). Written in the caller's transaction; a title longer than 120 or a text longer than 500 characters is cut ("…"), a link longer than 200 dropped. |
-| `InboxKind` | What a message is about: `VISIT_BOOKED`, `VISIT_MOVED`, `VISIT_CANCELLED`, `VISIT_CANCELLED_BY_LEAVE`, `VISIT_REMINDER`, `BILL_READY`, `PAYMENT_RECEIVED`, `REFUND_DUE`, `REFUND_GIVEN`, `LEAVE_REQUESTED`, `LEAVE_APPROVED`, `LEAVE_REJECTED`. |
+| `InboxKind` | What a message is about: `VISIT_BOOKED`, `VISIT_MOVED`, `VISIT_CANCELLED`, `VISIT_CANCELLED_BY_LEAVE`, `VISIT_REMINDER`, `BILL_READY`, `PAYMENT_RECEIVED`, `REFUND_DUE`, `REFUND_GIVEN`, `LEAVE_REQUESTED`, `LEAVE_APPROVED`, `LEAVE_REJECTED`, `WAITLIST_TIME_FREE`, `WAITLIST_ENDED` (written by the waitlist module through `Inbox.toUser`, [docs/WAITLIST_PLAN.md](../../docs/WAITLIST_PLAN.md)). |
 
 ## Endpoints — `inbox.web`
 

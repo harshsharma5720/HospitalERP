@@ -7,6 +7,7 @@ import com.itmonteur.hospitalerp.staff.DoctorService;
 import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -33,7 +34,8 @@ class SlotServiceTimesAheadTest {
         Doctor doctor = new Doctor();
         doctor.setId(7L);
         when(doctorService.findDoctorEntity(7L)).thenReturn(Optional.of(doctor));
-        service = new SlotService(mock(SlotRepository.class), doctorService, mock(LeaveRequestService.class), scheduleRepository);
+        service = new SlotService(mock(SlotRepository.class), doctorService, mock(LeaveRequestService.class), scheduleRepository,
+                mock(ApplicationEventPublisher.class));
     }
 
     private void mornings(boolean working, LocalTime start, LocalTime end, int minutes) {

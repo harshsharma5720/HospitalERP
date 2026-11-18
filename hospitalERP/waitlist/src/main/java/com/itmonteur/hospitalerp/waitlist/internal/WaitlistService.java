@@ -12,6 +12,7 @@ import com.itmonteur.hospitalerp.patients.PtInfoService;
 import com.itmonteur.hospitalerp.patients.PtRelative;
 import com.itmonteur.hospitalerp.patients.PtRelativeService;
 import com.itmonteur.hospitalerp.scheduling.Shift;
+import com.itmonteur.hospitalerp.scheduling.SlotFreedEvent;
 import com.itmonteur.hospitalerp.scheduling.SlotService;
 import com.itmonteur.hospitalerp.staff.Doctor;
 import com.itmonteur.hospitalerp.staff.DoctorService;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,13 +33,16 @@ import java.util.Objects;
  * The waitlist's rules (docs/WAITLIST_PLAN.md): a patient - or one of their family members - waits for a doctor on a
  * day that has no free time left, in one shift or either; at most {@value #MAX_WAITING} waits per account. Joined by
  * the patient in the app or by the front desk; left by the patient, removed by the desk; ended by a booking with the
- * doctor that day or a deactivated account.
+ * doctor that day, the doctor's leave or a deactivated account. When a time they wait for frees up, everyone waiting
+ * is told - each wait at most once in {@link #QUIET}.
  */
 @Service
 public class WaitlistService {
 
     private static final Logger logger = LoggerFactory.getLogger(WaitlistService.class);
     public static final int MAX_WAITING = 5;
+    static final Duration QUIET = Duration.ofMinutes(30);
+    static final int KEEP_DAYS = 30;
 
     private final WaitlistRepository repository;
     private final PtInfoService ptInfoService;
@@ -47,11 +52,13 @@ public class WaitlistService {
     private final LeaveRequestService leaveRequestService;
     private final AppointmentService appointmentService;
     private final CurrentUserService currentUserService;
+    private final WaitlistMessages messages;
     private final Clock clock;
 
     public WaitlistService(WaitlistRepository repository, PtInfoService ptInfoService, PtRelativeService ptRelativeService,
                            DoctorService doctorService, SlotService slotService, LeaveRequestService leaveRequestService,
-                           AppointmentService appointmentService, CurrentUserService currentUserService, Clock clock) {
+                           AppointmentService appointmentService, CurrentUserService currentUserService,
+                           WaitlistMessages messages, Clock clock) {
         this.repository = repository;
         this.ptInfoService = ptInfoService;
         this.ptRelativeService = ptRelativeService;
@@ -60,6 +67,7 @@ public class WaitlistService {
         this.leaveRequestService = leaveRequestService;
         this.appointmentService = appointmentService;
         this.currentUserService = currentUserService;
+        this.messages = messages;
         this.clock = clock;
     }
 
@@ -125,7 +133,7 @@ public class WaitlistService {
                 .ifPresent(entry -> entry.end(WaitlistStatus.BOOKED, now()));
     }
 
-    /** A deactivated patient's waits end, and everyone's waits for a deactivated doctor. */
+    /** A deactivated patient's waits end (not told), and everyone's waits for a deactivated doctor (told). */
     @Transactional
     public void endForAccount(Long userId, Role role) {
         List<WaitlistEntry> ending = switch (role) {
@@ -135,10 +143,52 @@ public class WaitlistService {
                     .map(d -> repository.findWaitingForDoctor(d.getId(), today())).orElse(List.of());
             default -> List.of();
         };
-        ending.forEach(entry -> entry.end(WaitlistStatus.ENDED, now()));
+        for (WaitlistEntry entry : ending) {
+            entry.end(WaitlistStatus.ENDED, now());
+            if (role == Role.DOCTOR) {
+                messages.ended(entry, "isn't seeing patients any more");
+            }
+        }
         if (!ending.isEmpty()) {
             logger.info("Ended {} waits of deactivated user {} ({})", ending.size(), userId, role);
         }
+    }
+
+    /** The doctor's leave is approved: the waits for those days end, and the people waiting are told. */
+    @Transactional
+    public void endForLeave(Long doctorId, LocalDate from, LocalDate to) {
+        for (WaitlistEntry entry : repository.findWaitingForDoctorBetween(doctorId, from, to)) {
+            entry.end(WaitlistStatus.ENDED, now());
+            messages.ended(entry, "is away on " + WaitlistMessages.day(entry.getDate()));
+        }
+    }
+
+    // ---------------------------------------------------------------- telling (as the freeing change commits)
+
+    /**
+     * A time freed up: if it can still be booked (free, not started, the doctor there), everyone waiting for that
+     * doctor, day and shift is told - unless told in the last {@link #QUIET} (several times freed together).
+     */
+    @Transactional
+    public void tellFreed(SlotFreedEvent time) {
+        if (!slotService.isOpenForBooking(time.slotId())) {
+            return;
+        }
+        LocalDateTime now = now();
+        for (WaitlistEntry entry : repository.findWaitingForDay(time.doctorId(), time.date())) {
+            boolean shiftWaited = entry.getShift() == null || entry.getShift() == time.shift();
+            boolean toldLately = entry.getToldAt() != null && entry.getToldAt().isAfter(now.minus(QUIET));
+            if (shiftWaited && !toldLately) {
+                entry.setToldAt(now);
+                messages.timeFree(entry, time);
+            }
+        }
+    }
+
+    /** Waits are deleted {@value #KEEP_DAYS} days after their day; how many. */
+    @Transactional
+    public int deleteOld() {
+        return repository.deleteDaysBefore(today().minusDays(KEEP_DAYS));
     }
 
     // ---------------------------------------------------------------- the rules

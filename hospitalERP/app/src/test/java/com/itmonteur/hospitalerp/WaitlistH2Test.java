@@ -254,6 +254,8 @@ class WaitlistH2Test {
         assertThat(api.get(desk, DESK + "?date=" + TOMORROW + "&doctorId=" + doctorId))
                 .extracting(e -> e.get("name").asText() + " " + e.get("status").asText())
                 .containsExactly("wlkiran ENDED", "Kiran's son BOOKED");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inbox_messages WHERE user_id = ? AND kind = 'WAITLIST_ENDED'",
+                Integer.class, userId("wlkiran"))).as("a closed account isn't told").isZero();
 
         // A deactivated doctor's waits end (the walk-in's visit fills the other doctor's morning)
         String nina = api.registerPatient("wlnina");
