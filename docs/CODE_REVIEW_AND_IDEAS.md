@@ -439,9 +439,9 @@ These four ideas from section 7 are now implemented (backend, frontend and tests
 
 ---
 
-## 11. Feature Status (updated 2026-10-20)
+## 11. Feature Status (updated 2026-11-18)
 
-Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15), patients' bills (PR #16), online payment (PR #17), the cancellation cut-off (PR #18), doctor analytics (PR #19), safer login tokens (PR #20), the daily cash summary (PR #21), the notification centre (PR #22) and the ABHA number on patient records (branch `feature/abha-number`). How to test each of them by hand: [END_TO_END_TEST_GUIDE.md](END_TO_END_TEST_GUIDE.md).
+Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, the four features in section 10, the multi-module refactor and Docker), then updated for account deactivation (PR #5), the audit log (PR #6), the real admin dashboard (PR #7), reliable notifications (PR #8), automatic backups (PR #9), walk-in registration (PR #10), patient search with paged front-desk lists (PR #11), today's queue (PR #12), billing (PR #13), the UI refresh (PR #14), the patient area refresh (PR #15), patients' bills (PR #16), online payment (PR #17), the cancellation cut-off (PR #18), doctor analytics (PR #19), safer login tokens (PR #20), the daily cash summary (PR #21), the notification centre (PR #22), the ABHA number on patient records (PR #23) and the waitlist (branch `feature/waitlist`). How to test each of them by hand: [END_TO_END_TEST_GUIDE.md](END_TO_END_TEST_GUIDE.md).
 
 **Done**
 - Appointment reminders, consultation notes, e-prescription PDFs, doctor schedule management, forgot password (section 10).
@@ -459,6 +459,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 - **Online payment with Razorpay:** patients pay an unpaid bill in the app; a webhook as a safety net; late payments refunded automatically; the desk refunds a cancelled visit paid online (2026-10-15, see below).
 - **Cancellation cut-off:** patients can't cancel or move a visit less than 2 hours before it (configurable); the front desk can (2026-10-15, see below).
 - **Doctor analytics:** visits per day, no-show and cancellation rates, busy hours and weekdays, waiting time and earnings, for the doctor and for admins (2026-10-16, see below).
+- **Waitlist:** a patient (or the desk) waits for a doctor on a full day; when a time frees up everyone waiting is told — the bell and SMS — and the first to book gets it (2026-11-18, see below).
 - **ABHA number on patient records:** each patient's and family member's own health ID, entered by the patient or the desk, one number per person, on prescriptions and receipts (2026-10-20, see below).
 - **Notification centre:** a bell with each user's messages — visits, bills and payments, leave — for patients, doctors, the desk and admins; new ones within 30 seconds (2026-10-19, see below).
 - **Daily cash summary and closing the day:** what the desk took and gave back per method and person, every payment and refund; the desk counts the cash and closes the day, a difference needs a note; a PDF; admins any day or up to 31 days (2026-10-19, see below).
@@ -483,7 +484,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 10 | ~~Walk-in patient registration at the front desk~~ ✅ done 2026-10-08 | front desk | — |
 | 11 | ~~Today's queue: check-in, token numbers, live "now serving" screen~~ ✅ done 2026-10-12 | front desk | — |
 | 12 | ~~Patient search (phone / name / ID) and pagination on all lists~~ ✅ done 2026-10-11 (patients and front-desk appointments; the admin users list and the doctor portal's lists not yet) | front desk / platform | — |
-| 13 | Waitlist, notified when a slot frees up | patients | 3–4 days |
+| 13 | ~~Waitlist, notified when a slot frees up~~ ✅ done 2026-11-18 (the bell and SMS; patients and the front desk) | patients | — |
 | 14 | ~~Family view (each relative's appointments and prescriptions)~~ replaced 2026-10-20 by the **ABHA number on patient records** ✅: each family member, children too, has their own ABHA and is their own record, so a joint family view isn't needed | patients | — |
 | 15 | Lab report upload, served only to authorised users | clinical | 3 days |
 | 16 | Doctor ratings and feedback (the stars on the doctor page are only decoration) | patients | 2 days |
@@ -497,7 +498,7 @@ Section 7 checked against the code on `main` on 2026-09-30 (the review fixes, th
 | 24 | Monitoring (Prometheus + Grafana) | tooling | 1 day |
 | 25 | Caching of the doctor list and specializations | platform | ½ day |
 
-**Suggested order:** the waitlist (13), which the notification centre can now tell about a freed slot; then lab report upload (15). Small follow-ups: the ABHA number on the patient search results and the walk-in matches, bill figures on the admin dashboard, and an SMS / email when a visit is moved.
+**Suggested order:** lab report upload (15); then doctor ratings (16) — the stars on the doctor page are still decoration. Small follow-ups: the ABHA number on the patient search results and the walk-in matches, bill figures on the admin dashboard, and an SMS / email when a visit is moved.
 
 ### Account deactivation (done 2026-10-01)
 
@@ -922,4 +923,31 @@ Instead of idea #14, the family view: every person in India, children too, can h
 **Not covered yet:**
 - Verifying a number with ABDM (OTP) or sharing records through it — that needs the hospital's ABDM registration. The ABHA address (`name@abdm`) isn't kept.
 - The number isn't shown on the patient search results or the walk-in matches yet, and the desk can't search by it.
+
+### Waitlist (done 2026-11-18)
+
+From idea #13. When a doctor's day was full, a patient could only keep looking: times free up — a cancellation, a moved visit, a closed account — but nobody waiting for them knew. Decisions, design and steps: [WAITLIST_PLAN.md](WAITLIST_PLAN.md).
+
+**What it does**
+- **Joining:** on a full day of the booking page, a patient joins the waitlist for the doctor and the day — the morning, the evening or any time that day — for themself or a family member. The front desk adds anyone from their page, also a walk-in record without a login. Refused while there are free times, on a day the doctor doesn't work or is away, when the person already has a booking with that doctor that day, and beyond 5 waits per account.
+- **Telling:** when a time frees up, everyone waiting for that doctor, day and shift is told at once: the bell ("A time is free: Dr. …", opening the booking page on that day) and an SMS. First come, first served: nothing is held. The same wait is told at most once in 30 minutes, so several times freed together send one message.
+- **Ending:** a booking or a move with the doctor that day ends the wait; the doctor's approved leave or deactivation ends it and tells them; a deactivated patient's waits end quietly; waits are deleted 30 days after their day.
+- **Seeing them:** the patient's waits on My appointments (free times, leave); the desk's **Waitlist** page — a day and a doctor, who waits in the order they joined, the phone, when they were told, Book (Walk-in with the patient and doctor chosen) and Remove.
+- **Behind it:** a new module **`waitlist`** (`waitlist_entries`, Flyway); the scheduling module publishes `SlotFreedEvent` when a booked time becomes bookable again, and the waitlist looks at it as the change commits — when, for example, a doctor being deactivated is already inactive, so nobody is told about times that are going away. Identity publishes `UserDeactivatedEvent`.
+
+**Tests:**
+- Backend: joining and its rules, the lists and access, the endings (a booking, a move, deactivations, a removed family member), telling (the shift, either shift, the quiet 30 minutes, a walk-in by SMS only, a deactivated doctor, a two-day leave, a time already started), the clean-up, the texts with `HOSPITAL_PHONE`; 259 backend tests (1 skipped), with `DatabaseMigrationMySqlTest` 4 of 4 on MySQL 8.
+- Frontend: the booking page (a link, joining, a refusal, already waiting, another person), My appointments, the desk's Waitlist page, the add dialog, Walk-in from the waitlist, the menus; 324 tests.
+- Mutation checks for every step (108, all caught by a named test); screenshots on desktop and phone, light and dark.
+
+**Found on the way:**
+- Deactivating an account published nothing; other modules had no way to react. Identity now publishes `UserDeactivatedEvent`.
+- A notification event can come without an appointment (a test sends one); the waitlist's listener skips it — the first full run caught it.
+- A wait's first test only checked statuses; the mutation checks showed that telling about a time already started (a no-show cleared later) wasn't covered, and a test was added.
+- Walk-in's new "doctor from the waitlist" effect used the slot loader before it was defined; every Walk-in test failed at once, and it moved below it.
+
+**Not covered yet:**
+- New hours added to a doctor's schedule for a day aren't announced to the waitlist (only times freed by a booking).
+- The desk's Walk-in booking can't book a family member, so the Waitlist page's Book is for the patient themself; a family member books in the app.
+- No email; no link in the SMS (the app has no public address setting yet).
 

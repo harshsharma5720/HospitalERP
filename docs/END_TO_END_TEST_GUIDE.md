@@ -1,6 +1,6 @@
 # End-to-end test guide
 
-Every feature built so far, and how to check it by hand in the running app: where it is, who uses it, what to set up, the steps, and what you should see. It is kept up to date after each feature (last update: 2026-10-20, ABHA number).
+Every feature built so far, and how to check it by hand in the running app: where it is, who uses it, what to set up, the steps, and what you should see. It is kept up to date after each feature (last update: 2026-11-18, waitlist).
 
 Tick the **Tested** column in the overview as you go. Each section links to the feature's plan for the details.
 
@@ -73,6 +73,7 @@ Tick the **Tested** column in the overview as you go. Each section links to the 
 | 25 | Daily cash summary and closing the day | Front desk, admin | **Day summary**: `/cash-summary`, `/admin/cash-summary` | ☐ |
 | 26 | Notification centre (the bell) | Everyone logged in | The bell in the top bar / header | ☐ |
 | 27 | ABHA number on patient records | Patients, front desk, admin | **My account** and the family member form; a patient's page (`/patients/:id`); **Walk-in**; on prescriptions and receipts | ☐ |
+| 28 | Waitlist | Patients, front desk, admin | The booking page (a full day), My appointments; **Waitlist** (`/waitlist`, `/admin/waitlist`), a patient's page | ☐ |
 
 ---
 
@@ -275,3 +276,17 @@ Plan: [ABHA_NUMBER_PLAN.md](ABHA_NUMBER_PLAN.md). A patient with two family memb
 7. **Remove** a family member who had a visit (My account). Expect: that visit's prescription and receipt show no ABHA number (it isn't the account holder's either).
 8. **Admin** → **Audit log**, action "Patient profile updated". Expect: "changed: ABHA number" (by the patient or the desk) and "changed: a family member's ABHA number" (by the desk) — the number itself is never written there.
 9. On a phone the patient's page and the forms fit the screen; dark mode reads well.
+
+## 28. Waitlist
+Plan: [WAITLIST_PLAN.md](WAITLIST_PLAN.md). A doctor with a short schedule (e.g. one morning time and two evening times tomorrow), three patient accounts — two to fill the day, one to wait (with a family member) — and the front desk. Messages arrive in the bell within 30 seconds; SMS show under Admin → **Notifications** (or on the phone, with Twilio).
+1. Fill tomorrow: book every time with the doctor (two patients).
+2. Third patient → **Book an appointment**: the doctor, tomorrow, the morning. Expect: "No free times then" and **Full? Join the waitlist** — When: Morning, Evening or Any time that day. **Join the waitlist** (morning). Expect: "… is on the waitlist", and the box now says so with **Leave the waitlist**. Choose the family member and join for **Any time that day**: refused while the evening still has a free time ("There are free times then. Please book one."); fill the evening first, then it works.
+3. **My appointments**: an **On the waitlist** card with both waits — the doctor, the day, the shift, for whom — **Free times** (the booking page on that doctor, day and shift) and **Leave** (asks first).
+4. Front desk → **Waitlist**: today by default; choose tomorrow and the doctor. Expect: both waits in the order they joined, the phone, the shift, when and by whom they joined, Told "—", **Waiting**, **Book** (not for a family member: they book in the app) and **Remove**.
+5. Front desk → **Patients** → open a walk-in record (no login) → **Add to a waitlist** (the doctor, tomorrow, any time). Expect: on the Waitlist page with "front-desk record: SMS only". Refused with the reason for a day with free times, a day the doctor doesn't work or is away, a person already booked with that doctor that day, or a 6th wait for one account.
+6. One of the first two patients **cancels the morning visit**. Expect within 30 seconds: the waiting patient's bell "A time is free: Dr. …" (the day and time, for whom; it opens the booking page on that doctor, day and morning) — once for themself, once for the family member waiting for any time; an SMS to their phone; the walk-in's SMS ("contact the front desk", or the hospital's number with `HOSPITAL_PHONE`). Nobody waiting only for the evening is told. On the Waitlist page, Told shows the time.
+7. Cancel an evening visit within half an hour. Expect: those waiting for the evening are told; those told minutes ago (any time that day) are not told again.
+8. The waiting patient books the freed time (from the bell's message). Expect: that wait shows **Booked** on the Waitlist page and leaves My appointments. **Book** from the Waitlist page opens Walk-in with the patient and doctor chosen.
+9. The doctor applies for **leave** on that day and an admin approves it. Expect: everyone still waiting for that day gets "Waitlist ended: Dr. … is away on …" (bell and SMS) and the waits show **Ended**. Deactivating a doctor does the same ("isn't seeing patients any more"); deactivating a patient ends their waits without a message.
+10. On a phone, the booking page's waitlist box, My appointments and the Waitlist page fit the screen; dark mode reads well.
+
