@@ -15,13 +15,14 @@ It does **not** create patient or staff profiles: it publishes `UserRegisteredEv
 | `CurrentUserService` | The logged-in user: `getCurrentUser`, `getCurrentUserId`, `hasRole`, `hasAnyRole`, `isStaff`, `requireSelfOrRole`. |
 | `AuthService` | `register` (self sign-up, always a patient; logged in at once), `createUser(request, role)` (used by administration), `login`, `refresh`, `logout`, `logoutEverywhere` (the current user), `isOtpRequired`, `parseRole`. A login is a `Session`: the access token for the response body and the refresh token for the cookie, with its lifetime. |
 | `UserRegisteredEvent` | Published when an account is created. |
+| `UserDeactivatedEvent` | Published when an account is deactivated (`UserService.deactivate`). |
 | `CustomUserDetailsService`, `JWTAuthenticationFilter` | Spring Security wiring, used by `SecurityConfig` in `app`. The account is an `AccountDetails` (package-private) with its token version. A deactivated account is a *disabled* user, and the filter ignores its tokens and tokens of an older version. |
 | `ModuleSecurityRules` | Interface for a module's URL access rules (`endpointRules`, `areaRules`); every module with endpoints has one bean, `SecurityConfig` combines them. |
 | `UserDTO`, `RegisterRequestDTO`, `LoginRequestDTO`, `AuthResponseDTO`, `ForgotPasswordRequestDTO`, `ResetPasswordRequestDTO` | Request/response objects. |
 
 ## Events
 
-- **Publishes:** `UserRegisteredEvent(User user)`, inside the registration transaction.
+- **Publishes:** `UserRegisteredEvent(User user)`, inside the registration transaction; `UserDeactivatedEvent(Long userId, Role role)`, inside the deactivating transaction — the waitlist ends the account's waits ([docs/WAITLIST_PLAN.md](../../docs/WAITLIST_PLAN.md)).
 - **Listens to:** nothing.
 
 ## Endpoints — `identity.web`

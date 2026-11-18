@@ -8,6 +8,8 @@ DELETE /api/receptionist/appointments/{appointmentId}/check-in
 DELETE /api/receptionist/bills/{billId}/items/{itemId}
 DELETE /api/receptionist/delete/{receptionistId} auth=hasRole('ADMIN')
 DELETE /api/receptionist/deleteAppointment/{appointmentId}
+DELETE /api/receptionist/waitlist/{entryId}
+DELETE /api/waitlist/{entryId}
 DELETE /appointment/CancelAppointment/{appointmentId}
 GET /api/admin/allApproved
 GET /api/admin/allPending
@@ -76,7 +78,9 @@ GET /api/receptionist/patients
 GET /api/receptionist/patients/search
 GET /api/receptionist/patients/{patientId}
 GET /api/receptionist/patients/{patientId}/relatives
+GET /api/receptionist/waitlist
 GET /api/slots/available/{doctorId}
+GET /api/waitlist/my
 GET /appointment/allCompletedAppointments
 GET /appointment/allPendingAppointments
 GET /appointment/appointmentId/{myId}
@@ -117,8 +121,10 @@ POST /api/receptionist/bills/{billId}/pay
 POST /api/receptionist/bills/{billId}/refund
 POST /api/receptionist/bills/{billId}/refund-online
 POST /api/receptionist/cash-closes
+POST /api/receptionist/waitlist
 POST /api/receptionist/walk-in
 POST /api/slots/generate/{doctorId}
+POST /api/waitlist
 POST /appointment/NewAppointment
 PUT /api/admin/approve/{leaveId}
 PUT /api/admin/fees/{doctorId}

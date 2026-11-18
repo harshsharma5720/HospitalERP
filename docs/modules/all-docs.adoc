@@ -41,6 +41,10 @@ include::module-billing.adoc[]
 plantuml::module-clinical.puml[,,format=svg]
 include::module-clinical.adoc[]
 
+== Waitlist
+plantuml::module-waitlist.puml[,,format=svg]
+include::module-waitlist.adoc[]
+
 == Administration
 plantuml::module-administration.puml[,,format=svg]
 include::module-administration.adoc[]

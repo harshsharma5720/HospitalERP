@@ -9,7 +9,7 @@ When doctors can be booked: each doctor's weekly working hours and slot length, 
 | Class | Purpose |
 |---|---|
 | `DoctorSchedule`, `Slot`, `Shift` | Entities for a doctor's weekly schedule and a bookable time slot, and the `MORNING` / `EVENING` shift enum. |
-| `SlotService` | `generateSlots`, `getAvailableSlots`, `nextFreeSlots` (a doctor's next free slots from now on, in time order, at most N - for the front desk), `positionInDay` (a slot's place in its doctor's day, from 1, both shifts - the queue's token; makes sure the day's slots exist first), `lockAndBook` (pessimistic lock so a slot can't be double-booked), `releaseSlot`, `deleteUnusedSlots`, `deleteAllForDoctor`, `hoursFor`. A deactivated doctor has no available slots and `lockAndBook` refuses their slots (409). |
+| `SlotService` | `generateSlots`, `getAvailableSlots`, `nextFreeSlots` (a doctor's next free slots from now on, in time order, at most N - for the front desk), `positionInDay` (a slot's place in its doctor's day, from 1, both shifts - the queue's token; makes sure the day's slots exist first), `lockAndBook` (pessimistic lock so a slot can't be double-booked), `releaseSlot`, `deleteUnusedSlots`, `deleteAllForDoctor`, `hoursFor`, `hasTimesAhead` (whether a doctor works a shift that day and has a time in it that hasn't started yet, free or booked — for the waitlist, [docs/WAITLIST_PLAN.md](../../docs/WAITLIST_PLAN.md)). A deactivated doctor has no available slots and `lockAndBook` refuses their slots (409). |
 | `DoctorScheduleService` | `getSchedule`, `updateSchedule`, `deleteAllForDoctor`. |
 | `DoctorScheduleDTO` | Request/response object for a weekly schedule. |
 | `DoctorScheduleChangedEvent` | Published when a schedule is changed. |
@@ -38,6 +38,6 @@ None.
 
 ## Tests
 
-`DoctorScheduleValidationTest`, `SlotServiceScheduleTest`, `SlotServiceNextFreeSlotsTest`; the leave listener is covered by `DoctorLeaveListenersTest` (`app`).
+`DoctorScheduleValidationTest`, `SlotServiceScheduleTest`, `SlotServiceNextFreeSlotsTest`, `SlotServiceTimesAheadTest`; the leave listener is covered by `DoctorLeaveListenersTest` (`app`).
 
 Module diagram: [docs/modules/module-scheduling.puml](../../docs/modules/module-scheduling.puml).

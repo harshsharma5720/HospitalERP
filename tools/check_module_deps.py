@@ -34,7 +34,7 @@ TARGET_ROOT_PACKAGE = 'com.itmonteur.hospitalerp'
 
 # Plan section 2.1: which modules each module may use. (audit added with docs/AUDIT_LOG_PLAN.md, billing with
 # docs/BILLING_PLAN.md, billing's use of audit with docs/DAILY_CASH_SUMMARY_PLAN.md, inbox with
-# docs/NOTIFICATION_CENTRE_PLAN.md)
+# docs/NOTIFICATION_CENTRE_PLAN.md, waitlist with docs/WAITLIST_PLAN.md)
 ALLOWED = {
     'common': set(),
     'notifications': {'common'},
@@ -49,8 +49,9 @@ ALLOWED = {
     'administration': {'common', 'notifications', 'identity', 'audit', 'patients', 'staff', 'scheduling',
                        'appointments', 'clinical'},
     'inbox': {'common', 'notifications', 'identity', 'staff', 'appointments', 'billing'},
+    'waitlist': {'common', 'notifications', 'identity', 'patients', 'staff', 'scheduling', 'appointments', 'inbox'},
     'app': {'common', 'notifications', 'identity', 'audit', 'patients', 'staff', 'scheduling', 'appointments',
-            'clinical', 'billing', 'administration', 'inbox'},
+            'clinical', 'billing', 'administration', 'inbox', 'waitlist'},
 }
 
 def strip_comments(src):

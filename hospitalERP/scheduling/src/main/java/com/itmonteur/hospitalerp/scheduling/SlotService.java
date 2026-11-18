@@ -95,6 +95,21 @@ public class SlotService {
         return slotRepository.findByDoctorAndDateAndShift(doctor, date, shift);
     }
 
+    /**
+     * Whether the doctor works that shift on that day and has a time in it that hasn't started yet, free or booked -
+     * a booked time can still free up. For the waitlist (docs/WAITLIST_PLAN.md).
+     */
+    public boolean hasTimesAhead(Long doctorId, LocalDate date, Shift shift) {
+        ScheduleDefaults.Hours hours = hoursFor(findDoctor(doctorId), date, shift);
+        int times = hours.working()
+                ? (hours.end().toSecondOfDay() - hours.start().toSecondOfDay()) / 60 / hours.slotMinutes() : 0;
+        if (times <= 0 || date.isBefore(LocalDate.now())) {
+            return false;
+        }
+        LocalTime lastStart = hours.start().plusMinutes((long) (times - 1) * hours.slotMinutes());
+        return date.isAfter(LocalDate.now()) || lastStart.isAfter(LocalTime.now());
+    }
+
     /** The working hours that apply to a doctor on a given date and shift. */
     public ScheduleDefaults.Hours hoursFor(Doctor doctor, LocalDate date, Shift shift) {
         return doctorScheduleRepository.findByDoctor_IdAndDayOfWeekAndShift(doctor.getId(), date.getDayOfWeek(), shift)

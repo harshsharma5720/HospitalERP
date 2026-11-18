@@ -92,6 +92,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long>,
 
     boolean existsByDoctor_Id(Long doctorId);
 
+    // Upcoming bookings of one person (the patient, or a family member: relativeId) with a doctor on a day
+    @Query("SELECT COUNT(a) FROM Appointment a LEFT JOIN a.relative r WHERE a.ptInfo.patientId = :patientId"
+            + " AND a.doctor.id = :doctorId AND a.date = :date"
+            + " AND ((:relativeId IS NULL AND r IS NULL) OR r.id = :relativeId) AND" + PENDING)
+    long countPendingFor(@Param("patientId") Long patientId, @Param("relativeId") Long relativeId,
+                         @Param("doctorId") Long doctorId, @Param("date") LocalDate date);
+
     // Upcoming appointments on the given date that have not been reminded yet
     @Query("SELECT a FROM Appointment a WHERE a.date = :date AND" + PENDING
             + "AND (a.reminderSent IS NULL OR a.reminderSent = false)")

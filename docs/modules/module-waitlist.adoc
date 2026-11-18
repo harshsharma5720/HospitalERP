@@ -1,0 +1,16 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`com.itmonteur.hospitalerp.waitlist`
+|Bean references
+|* `c.i.h.a.AppointmentService` (in Appointments)
+* `c.i.h.p.PtInfoService` (in Patients)
+* `c.i.h.p.PtRelativeService` (in Patients)
+* `c.i.h.s.DoctorService` (in Staff)
+* `c.i.h.s.SlotService` (in Scheduling)
+* `c.i.h.s.LeaveRequestService` (in Staff)
+* `c.i.h.i.CurrentUserService` (in Identity)
+|Events listened to
+|* `c.i.h.a.AppointmentNotificationEvent` 
+* `c.i.h.i.UserDeactivatedEvent` 
+|===

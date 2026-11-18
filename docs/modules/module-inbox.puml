@@ -18,8 +18,6 @@ Container_Boundary("HospitalErpApplication.HospitalErpApplication_boundary", "Ho
   Component(HospitalErpApplication.HospitalErpApplication.Staff, "Staff", $techn="Module", $descr="", $tags="", $link="")
 }
 
-Rel(HospitalErpApplication.HospitalErpApplication.Notifications, HospitalErpApplication.HospitalErpApplication.Common, "depends on", $techn="", $tags="", $link="")
-Rel(HospitalErpApplication.HospitalErpApplication.Staff, HospitalErpApplication.HospitalErpApplication.Identity, "listens to", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Staff, HospitalErpApplication.HospitalErpApplication.Identity, "uses", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Staff, HospitalErpApplication.HospitalErpApplication.Common, "uses", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Billing, HospitalErpApplication.HospitalErpApplication.Appointments, "listens to", $techn="", $tags="", $link="")
@@ -33,13 +31,15 @@ Rel(HospitalErpApplication.HospitalErpApplication.Inbox, HospitalErpApplication.
 Rel(HospitalErpApplication.HospitalErpApplication.Inbox, HospitalErpApplication.HospitalErpApplication.Common, "depends on", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Inbox, HospitalErpApplication.HospitalErpApplication.Notifications, "depends on", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Inbox, HospitalErpApplication.HospitalErpApplication.Identity, "uses", $techn="", $tags="", $link="")
-Rel(HospitalErpApplication.HospitalErpApplication.Identity, HospitalErpApplication.HospitalErpApplication.Common, "depends on", $techn="", $tags="", $link="")
-Rel(HospitalErpApplication.HospitalErpApplication.Identity, HospitalErpApplication.HospitalErpApplication.Notifications, "uses", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Appointments, HospitalErpApplication.HospitalErpApplication.Staff, "listens to", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Appointments, HospitalErpApplication.HospitalErpApplication.Common, "depends on", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Appointments, HospitalErpApplication.HospitalErpApplication.Staff, "uses", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Appointments, HospitalErpApplication.HospitalErpApplication.Identity, "uses", $techn="", $tags="", $link="")
 Rel(HospitalErpApplication.HospitalErpApplication.Appointments, HospitalErpApplication.HospitalErpApplication.Notifications, "uses", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Identity, HospitalErpApplication.HospitalErpApplication.Common, "depends on", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Identity, HospitalErpApplication.HospitalErpApplication.Notifications, "uses", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Notifications, HospitalErpApplication.HospitalErpApplication.Common, "depends on", $techn="", $tags="", $link="")
+Rel(HospitalErpApplication.HospitalErpApplication.Staff, HospitalErpApplication.HospitalErpApplication.Identity, "listens to", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 @enduml
