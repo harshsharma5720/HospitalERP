@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import React, { useCallback, useEffect, useState } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { CalendarCheck, CheckCircle2, Moon, Sun, UserPlus } from "lucide-react";
 import useAuthStore from "../auth/useAuthStore";
 import { calculateAgeFromDOB } from "../../shared/utils/calculateAgeFromDOB";
@@ -9,14 +9,19 @@ import { PageIntro, PublicPage } from "../../shared/layout/PublicSections";
 import { Button, Card, Field, Input, Notice, Select, Textarea, useToast } from "../../shared/ui";
 import useDoctorDirectory from "../doctors/useDoctorDirectory";
 import { getPatientAccount, getRelatives } from "../patients/api";
+import JoinWaitlist from "../waitlist/JoinWaitlist";
+import { getMyWaits } from "../waitlist/api";
 import { dayLabel, doctorLabel, formatDate, formatTime } from "./appointmentFormat";
 import * as appointmentsApi from "./api";
 
 // Booking an appointment, step by step on one page (docs/PATIENT_AREA_REFRESH_PLAN.md, P.2): who it is for (the
 // patient or a family member), the doctor, the day (today and the next 6) and a free time, the reason - with a
 // summary beside the steps. The same page reschedules (state.rescheduleAppointment: the person stays the same).
+// A link can choose the doctor, the day (up to 30 days ahead) and the part of the day - ?doctorId=3&date=…&shift=…,
+// as the waitlist's messages do; a full day offers the waitlist (docs/WAITLIST_PLAN.md).
 
 const DAYS_AHEAD = 7;
+const BOOKING_WINDOW_DAYS = 30;
 const SHIFTS = [
   ["MORNING", "Morning", Sun],
   ["EVENING", "Evening", Moon],
@@ -47,13 +52,24 @@ function Step({ number, title, children }) {
 
 const nextDays = () => Array.from({ length: DAYS_AHEAD }, (_, i) => toLocalISODate(addDays(new Date(), i)));
 
+// A day from a link, if it can be booked: today up to the end of the booking window
+const bookableDay = (day) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(day ?? "") && day >= toLocalISODate() && day <= toLocalISODate(addDays(new Date(), BOOKING_WINDOW_DAYS - 1))
+    ? day
+    : null;
+
 export default function AppointmentPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const toast = useToast();
   const userId = useAuthStore((s) => s.userId);
   const reschedule = location.state?.rescheduleAppointment || null;
-  const wantedDoctor = { id: location.state?.doctorId ?? reschedule?.doctorId, name: location.state?.doctorName ?? reschedule?.doctorName };
+  const wantedDoctor = {
+    id: location.state?.doctorId ?? reschedule?.doctorId ?? params.get("doctorId"),
+    name: location.state?.doctorName ?? reschedule?.doctorName,
+  };
+  const linkedShift = ["MORNING", "EVENING"].includes(params.get("shift")) ? params.get("shift") : null;
 
   const { doctors } = useDoctorDirectory();
   const [people, setPeople] = useState(null); // the patient and their family members
@@ -61,8 +77,8 @@ export default function AppointmentPage() {
   const [personKey, setPersonKey] = useState("");
   const [extra, setExtra] = useState({ gender: "", age: "" }); // when the profile doesn't say
   const [doctorId, setDoctorId] = useState("");
-  const [date, setDate] = useState(toLocalISODate());
-  const [shift, setShift] = useState(reschedule?.shift || "MORNING");
+  const [date, setDate] = useState((!reschedule && bookableDay(params.get("date"))) || toLocalISODate());
+  const [shift, setShift] = useState(reschedule?.shift || linkedShift || "MORNING");
   const [slots, setSlots] = useState(null);
   const [slotError, setSlotError] = useState("");
   const [slotId, setSlotId] = useState(null);
@@ -70,6 +86,7 @@ export default function AppointmentPage() {
   const [saving, setSaving] = useState(false);
   const [booked, setBooked] = useState(null);
   const [refresh, setRefresh] = useState(0);
+  const [waits, setWaits] = useState(null); // the patient's waitlists
 
   // Who the appointment can be for
   useEffect(() => {
@@ -98,7 +115,19 @@ export default function AppointmentPage() {
     };
   }, [userId, reschedule]);
 
-  // The doctor asked for (from a doctor's page, Book again or the visit being rescheduled)
+  const loadWaits = useCallback(
+    () =>
+      getMyWaits()
+        .then((res) => setWaits(res.data))
+        .catch(() => setWaits([])),
+    []
+  );
+
+  useEffect(() => {
+    if (!reschedule) loadWaits();
+  }, [reschedule, loadWaits]);
+
+  // The doctor asked for (from a doctor's page, Book again, a link or the visit being rescheduled)
   useEffect(() => {
     if (!doctors || doctorId) return;
     const match =
@@ -285,7 +314,7 @@ export default function AppointmentPage() {
 
           <Step number={reschedule ? 2 : 3} title="Day and time">
             <div role="group" aria-label="Day" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-              {nextDays().map((day) => (
+              {(nextDays().includes(date) ? nextDays() : [...nextDays(), date]).map((day) => (
                 <button
                   key={day}
                   type="button"
@@ -322,6 +351,17 @@ export default function AppointmentPage() {
               <Notice tone="danger">{slotError}</Notice>
               {slots && slots.length === 0 && !slotError && (
                 <Notice tone="info">No free times then. Try another day or the {shift === "MORNING" ? "evening" : "morning"}.</Notice>
+              )}
+              {slots && slots.length === 0 && !slotError && !reschedule && person && doctor && (
+                <JoinWaitlist
+                  key={`${person.key}-${doctorId}-${date}-${shift}`}
+                  person={person}
+                  doctor={doctor}
+                  date={date}
+                  shift={shift}
+                  waits={waits}
+                  onChange={loadWaits}
+                />
               )}
               {slots && slots.length > 0 && (
                 <fieldset>

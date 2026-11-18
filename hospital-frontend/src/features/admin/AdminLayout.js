@@ -18,6 +18,7 @@ import WalkInBooking from "../appointments/WalkInBooking";
 import FrontDeskAppointments from "../appointments/FrontDeskAppointments";
 import PatientSearch from "../patients/PatientSearch";
 import FrontDeskPatient from "../patients/FrontDeskPatient";
+import WaitlistPage from "../waitlist/WaitlistPage";
 
 // The admin portal: its pages in the staff layout (menu: shared/layout/staffMenus.js)
 export default function AdminLayout() {
@@ -42,6 +43,7 @@ export default function AdminLayout() {
         <Route path="appointments" element={<FrontDeskAppointments />} />
         <Route path="patients" element={<PatientSearch />} />
         <Route path="patients/:patientId" element={<FrontDeskPatient />} />
+        <Route path="waitlist" element={<WaitlistPage />} />
         <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Routes>
     </StaffLayout>
