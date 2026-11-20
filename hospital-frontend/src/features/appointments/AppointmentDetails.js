@@ -16,6 +16,7 @@ import useOnlinePayment from "../billing/useOnlinePayment";
 import { HOSPITAL, phoneHref } from "../../shared/hospitalInfo";
 import { deadlineText, formatDate, timeRange, visitStatus } from "./appointmentFormat";
 import * as appointmentsApi from "./api";
+import MyWaitlist from "../waitlist/MyWaitlist";
 
 // The patient's appointments (docs/PATIENT_AREA_REFRESH_PLAN.md, P.3): upcoming ones to move or cancel, past ones
 // with the doctor's notes, the prescription and Book again; a checked-in visit's bill (docs/PATIENT_BILLS_PLAN.md)
@@ -270,6 +271,7 @@ export default function AppointmentDetails() {
 
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="max-w-4xl">
+        <MyWaitlist />
         <div role="group" aria-label="Which appointments" className="mb-6 inline-flex rounded-lg border border-line bg-surface p-1 shadow-card">
           {[
             ["upcoming", "Upcoming", upcoming.length],

@@ -45,6 +45,7 @@ export default function WalkInBooking() {
   const location = useLocation();
   const [params, setParams] = useSearchParams();
   const preselectedId = params.get("patientId");
+  const preselectedDoctor = params.get("doctorId"); // from the waitlist (docs/WAITLIST_PLAN.md)
   const preselected = location.state?.patient; // passed by the patient page, saves loading it again
   const [doctors, setDoctors] = useState([]);
   const [phone, setPhone] = useState("");
@@ -102,6 +103,13 @@ export default function WalkInBooking() {
       setError(getErrorMessage(err, "Could not load the free slots."));
     }
   }, []);
+
+  // Opened from the waitlist: that doctor is chosen too, with their next free times
+  useEffect(() => {
+    if (!preselectedDoctor || !doctors.some((d) => String(d.id) === preselectedDoctor)) return;
+    setDoctorId(preselectedDoctor);
+    loadSlots(preselectedDoctor, SLOTS_SHOWN);
+  }, [preselectedDoctor, doctors, loadSlots]);
 
   const search = async (e) => {
     e.preventDefault();

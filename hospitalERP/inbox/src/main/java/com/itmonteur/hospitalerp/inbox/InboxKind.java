@@ -16,5 +16,8 @@ public enum InboxKind {
     // Leave
     LEAVE_REQUESTED,
     LEAVE_APPROVED,
-    LEAVE_REJECTED
+    LEAVE_REJECTED,
+    // The waitlist (docs/WAITLIST_PLAN.md)
+    WAITLIST_TIME_FREE,
+    WAITLIST_ENDED
 }

@@ -8,6 +8,7 @@ import com.itmonteur.hospitalerp.staff.DoctorService;
 import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -43,7 +44,7 @@ class SlotServiceNextFreeSlotsTest {
                     : List.of(slot(Shift.EVENING, 16), slot(Shift.EVENING, 15));
         });
         service = new SlotService(slotRepository, doctorService, mock(LeaveRequestService.class),
-                mock(DoctorScheduleRepository.class));
+                mock(DoctorScheduleRepository.class), mock(ApplicationEventPublisher.class));
     }
 
     private Slot slot(Shift shift, int hour) {

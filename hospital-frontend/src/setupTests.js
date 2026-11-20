@@ -19,3 +19,12 @@ beforeEach(() => {
   inboxApi.markRead.mockResolvedValue({ data: {} });
   inboxApi.markAllRead.mockResolvedValue({ data: { read: 0 } });
 });
+
+// The waitlist (docs/WAITLIST_PLAN.md) is on the booking page and My appointments: no test calls the server for it,
+// and every test starts with no waits. Its own tests set their answers.
+jest.mock('./features/waitlist/api');
+const waitlistApi = require('./features/waitlist/api');
+beforeEach(() => {
+  waitlistApi.getMyWaits.mockResolvedValue({ data: [] });
+  waitlistApi.getDeskWaitlist.mockResolvedValue({ data: [] });
+});

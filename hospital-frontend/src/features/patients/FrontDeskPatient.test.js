@@ -6,9 +6,12 @@ import { getFrontDeskAppointmentPage } from "../appointments/api";
 import { addDays, toLocalISODate } from "../../shared/utils/dateUtils";
 import { calculateAgeFromDOB } from "../../shared/utils/calculateAgeFromDOB";
 import { ToastProvider } from "../../shared/ui";
+import * as waitlistApi from "../waitlist/api";
+import { getAllDoctors } from "../doctors/api";
 
 jest.mock("./api");
 jest.mock("../appointments/api");
+jest.mock("../doctors/api");
 
 const TODAY = toLocalISODate();
 const TOMORROW = toLocalISODate(addDays(new Date(), 1));
@@ -220,3 +223,62 @@ test("an unknown patient: the server's message", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("Patient not found");
   expect(screen.getByRole("link", { name: "← Patients" })).toHaveAttribute("href", "/patients");
 });
+
+// ---- Add to a waitlist (docs/WAITLIST_PLAN.md); the waitlist api is mocked for every test (setupTests.js)
+
+test("adds the patient or a family member to a waitlist; a refusal shows in the dialog", async () => {
+  getAllDoctors.mockResolvedValue({
+    data: [
+      { id: 3, name: "Anita Rao", specialist: "CARDIOLOGY", active: true },
+      { id: 4, name: "Gone", specialist: "NEUROLOGY", active: false },
+    ],
+  });
+  waitlistApi.addToWaitlist
+    .mockRejectedValueOnce({ response: { status: 409, data: { message: "There are free times then. Please book one." } } })
+    .mockResolvedValueOnce({ data: { name: "Mira Das", doctorName: "Anita Rao", date: "2026-11-20" } });
+  renderAt("/patients/7");
+  fireEvent.click(await screen.findByRole("button", { name: "Add to a waitlist" }));
+  const dialog = screen.getByRole("dialog", { name: "Add to a waitlist" });
+  await within(dialog).findByRole("option", { name: "Mira Das (family member)" });
+  expect(within(dialog).getByLabelText("Who")).toHaveValue(""); // the patient
+  expect(within(dialog).queryByRole("option", { name: /Gone/ })).not.toBeInTheDocument();
+  expect(within(dialog).getByLabelText("Day")).toHaveAttribute("min", TODAY);
+
+  fireEvent.click(within(dialog).getByRole("button", { name: "Add to the waitlist" }));
+  expect(within(dialog).getByRole("alert")).toHaveTextContent("Please choose a doctor and a day.");
+  expect(waitlistApi.addToWaitlist).not.toHaveBeenCalled();
+
+  await within(dialog).findByRole("option", { name: "Dr. Anita Rao — Cardiology" });
+  fireEvent.change(within(dialog).getByLabelText("Who"), { target: { value: "32" } });
+  fireEvent.change(within(dialog).getByLabelText("Doctor"), { target: { value: "3" } });
+  fireEvent.change(within(dialog).getByLabelText("Day"), { target: { value: "2026-11-20" } });
+  fireEvent.change(within(dialog).getByLabelText("When"), { target: { value: "EVENING" } });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Add to the waitlist" }));
+  expect(await within(dialog).findByRole("alert")).toHaveTextContent("There are free times then. Please book one.");
+  expect(waitlistApi.addToWaitlist).toHaveBeenCalledWith({ patientId: 7, relativeId: 32, doctorId: 3, date: "2026-11-20", shift: "EVENING" });
+
+  fireEvent.change(within(dialog).getByLabelText("When"), { target: { value: "" } });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Add to the waitlist" }));
+  expect(await screen.findByRole("status")).toHaveTextContent("Mira Das is on the waitlist for Dr. Anita Rao on Fri 20 Nov 2026.");
+  expect(waitlistApi.addToWaitlist).toHaveBeenLastCalledWith(expect.objectContaining({ relativeId: 32, shift: null }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+test("the patient themself; Cancel closes the dialog", async () => {
+  getAllDoctors.mockResolvedValue({ data: [{ id: 3, name: "Anita Rao", specialist: "CARDIOLOGY", active: true }] });
+  waitlistApi.addToWaitlist.mockResolvedValue({ data: { name: "Arjun Das", doctorName: "Anita Rao", date: "2026-11-20" } });
+  renderAt("/patients/7");
+  fireEvent.click(await screen.findByRole("button", { name: "Add to a waitlist" }));
+  const dialog = screen.getByRole("dialog", { name: "Add to a waitlist" });
+  fireEvent.change(await within(dialog).findByLabelText("Doctor"), { target: { value: "3" } });
+  await waitFor(() => expect(within(dialog).getByLabelText("Doctor")).toHaveValue("3"));
+  fireEvent.click(within(dialog).getByRole("button", { name: "Add to the waitlist" }));
+  await waitFor(() =>
+    expect(waitlistApi.addToWaitlist).toHaveBeenCalledWith(expect.objectContaining({ patientId: 7, relativeId: null, doctorId: 3, shift: null }))
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Add to a waitlist" }));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+

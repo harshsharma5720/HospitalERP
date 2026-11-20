@@ -7,6 +7,7 @@ import com.itmonteur.hospitalerp.staff.DoctorService;
 import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -44,7 +45,8 @@ class SlotServiceScheduleTest {
             }
             return inv.getArgument(0);
         });
-        service = new SlotService(slotRepository, doctorService, leaveService, scheduleRepository);
+        service = new SlotService(slotRepository, doctorService, leaveService, scheduleRepository,
+                mock(ApplicationEventPublisher.class));
     }
 
     private void schedule(boolean working, LocalTime start, LocalTime end, int minutes) {

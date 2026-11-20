@@ -8,6 +8,8 @@ import { getFrontDeskAppointmentPage } from "../appointments/api";
 import { dayLabel, formatDate, timeRange, visitStatus } from "../appointments/appointmentFormat";
 import * as patientsApi from "./api";
 import AbhaEditor from "./AbhaEditor";
+import AddToWaitlist from "../waitlist/AddToWaitlist";
+import { formatDate as longDate } from "../appointments/appointmentFormat";
 import { Badge, Button, Card, CardHeader, Notice, PageHeader, Pagination, Table, TableMessage, Td, Th, useToast } from "../../shared/ui";
 
 // One patient at the front desk (docs/PATIENT_SEARCH_PLAN.md): details, upcoming appointments, the family members, every
@@ -35,6 +37,7 @@ export default function FrontDeskPatient() {
   const [patient, setPatient] = useState(null);
   // null while loading, false when they couldn't be loaded
   const [relatives, setRelatives] = useState(null);
+  const [addingWait, setAddingWait] = useState(false);
   const [error, setError] = useState("");
   const [upcoming, setUpcoming] = useState(null);
   const [history, setHistory] = useState(null);
@@ -118,11 +121,28 @@ export default function FrontDeskPatient() {
         title={patient.patientName}
         description={`#${patient.patientId} · ${patient.hasLogin ? "App account" : "Front-desk record"}`}
         actions={
-          <Button as={Link} to={`${base}/walk-in?patientId=${patient.patientId}`} state={{ patient }} variant="success">
-            Book an appointment
-          </Button>
+          <>
+            <Button variant="secondary" onClick={() => setAddingWait(true)}>
+              Add to a waitlist
+            </Button>
+            <Button as={Link} to={`${base}/walk-in?patientId=${patient.patientId}`} state={{ patient }} variant="success">
+              Book an appointment
+            </Button>
+          </>
         }
       />
+
+      {addingWait && (
+        <AddToWaitlist
+          patient={patient}
+          relatives={relatives || []}
+          onClose={() => setAddingWait(false)}
+          onAdded={(wait) => {
+            setAddingWait(false);
+            toast.success(`${wait.name} is on the waitlist for Dr. ${wait.doctorName} on ${longDate(wait.date, true)}.`);
+          }}
+        />
+      )}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card aria-labelledby="patient-details">

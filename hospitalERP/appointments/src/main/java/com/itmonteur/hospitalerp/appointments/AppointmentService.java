@@ -273,6 +273,14 @@ public class AppointmentService {
         return appointmentRepository.findById(appointmentId);
     }
 
+    /**
+     * Whether the person - the patient, or one of their family members (relativeId) - has an upcoming booking with the
+     * doctor that day. For the waitlist (docs/WAITLIST_PLAN.md).
+     */
+    public boolean hasBookingWith(Long patientId, Long relativeId, Long doctorId, LocalDate date) {
+        return appointmentRepository.countPendingFor(patientId, relativeId, doctorId, date) > 0;
+    }
+
     /** Called by the clinical module when a consultation is saved for an upcoming appointment. */
     @Transactional
     public void markCompletedByConsultation(Appointment appointment) {

@@ -3,6 +3,7 @@ package com.itmonteur.hospitalerp.identity;
 import com.itmonteur.hospitalerp.identity.internal.RefreshTokenService;
 import com.itmonteur.hospitalerp.identity.internal.SessionEndReason;
 import com.itmonteur.hospitalerp.identity.internal.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -22,10 +23,13 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final RefreshTokenService refreshTokenService;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public UserService(UserRepository userRepository, RefreshTokenService refreshTokenService) {
+    public UserService(UserRepository userRepository, RefreshTokenService refreshTokenService,
+                       ApplicationEventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.refreshTokenService = refreshTokenService;
+        this.eventPublisher = eventPublisher;
     }
 
     public List<User> getAllUsers() {
@@ -84,13 +88,15 @@ public class UserService {
 
     /**
      * No login any more, hidden from directories; all history stays (docs/ACCOUNT_DEACTIVATION_PLAN.md). Every login
-     * ends, so a reactivation doesn't bring back the old ones (docs/SAFER_LOGIN_TOKENS_PLAN.md).
+     * ends, so a reactivation doesn't bring back the old ones (docs/SAFER_LOGIN_TOKENS_PLAN.md). Published as
+     * {@link UserDeactivatedEvent} (the waitlist ends the account's waits, docs/WAITLIST_PLAN.md).
      */
     public void deactivate(User user) {
         user.setActive(false);
         user.setDeactivatedAt(LocalDateTime.now());
         userRepository.save(user);
         refreshTokenService.endEverywhere(user, SessionEndReason.DEACTIVATED);
+        eventPublisher.publishEvent(new UserDeactivatedEvent(user.getId(), user.getRole()));
     }
 
     public void reactivate(User user) {

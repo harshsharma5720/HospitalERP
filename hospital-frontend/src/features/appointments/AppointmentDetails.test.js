@@ -6,6 +6,7 @@ import { getMyHistory, getPrescriptionPdf } from "../clinical/api";
 import { confirmOnlinePayment, getMyBills, getMyReceiptPdf, startOnlinePayment } from "../billing/api";
 import { addDays, toLocalISODate } from "../../shared/utils/dateUtils";
 import { ConfirmProvider, ToastProvider } from "../../shared/ui";
+import * as waitlistApi from "../waitlist/api";
 
 jest.mock("./api");
 jest.mock("../clinical/api");
@@ -360,3 +361,13 @@ test("a page left open past the deadline: the server's refusal is shown", async 
   fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel appointment" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Less than 2 hours to go: this visit can't be cancelled or moved online any more.");
 });
+
+test("the patient's waitlists show above the appointments (docs/WAITLIST_PLAN.md)", async () => {
+  waitlistApi.getMyWaits.mockResolvedValue({
+    data: [{ id: 1, relativeId: null, name: "Asha Verma", doctorId: 3, doctorName: "Anita Rao", date: "2026-11-20", shift: "MORNING", toldAt: null }],
+  });
+  renderPage();
+  const card = await screen.findByRole("region", { name: "On the waitlist" });
+  expect(card).toHaveTextContent("Dr. Anita Rao · Fri 20 Nov 2026");
+});
+

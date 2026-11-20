@@ -49,3 +49,7 @@ include::module-administration.adoc[]
 plantuml::module-inbox.puml[,,format=svg]
 include::module-inbox.adoc[]
 
+== Waitlist
+plantuml::module-waitlist.puml[,,format=svg]
+include::module-waitlist.adoc[]
+

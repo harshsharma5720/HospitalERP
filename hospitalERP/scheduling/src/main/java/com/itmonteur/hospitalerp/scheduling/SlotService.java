@@ -11,10 +11,12 @@ import com.itmonteur.hospitalerp.staff.LeaveRequestService;
 import com.itmonteur.hospitalerp.scheduling.internal.ScheduleDefaults;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -37,14 +39,16 @@ public class SlotService {
     private final DoctorService doctorService;
     private final LeaveRequestService leaveRequestService;
     private final DoctorScheduleRepository doctorScheduleRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public SlotService(SlotRepository slotRepository, DoctorService doctorService,
                        LeaveRequestService leaveRequestService,
-                       DoctorScheduleRepository doctorScheduleRepository) {
+                       DoctorScheduleRepository doctorScheduleRepository, ApplicationEventPublisher eventPublisher) {
         this.slotRepository = slotRepository;
         this.doctorService = doctorService;
         this.leaveRequestService = leaveRequestService;
         this.doctorScheduleRepository = doctorScheduleRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -93,6 +97,21 @@ public class SlotService {
             logger.debug("Reconciled {} slots for doctor {} on {} ({})", changed.size(), doctorId, date, shift);
         }
         return slotRepository.findByDoctorAndDateAndShift(doctor, date, shift);
+    }
+
+    /**
+     * Whether the doctor works that shift on that day and has a time in it that hasn't started yet, free or booked -
+     * a booked time can still free up. For the waitlist (docs/WAITLIST_PLAN.md).
+     */
+    public boolean hasTimesAhead(Long doctorId, LocalDate date, Shift shift) {
+        ScheduleDefaults.Hours hours = hoursFor(findDoctor(doctorId), date, shift);
+        int times = hours.working()
+                ? (hours.end().toSecondOfDay() - hours.start().toSecondOfDay()) / 60 / hours.slotMinutes() : 0;
+        if (times <= 0 || date.isBefore(LocalDate.now())) {
+            return false;
+        }
+        LocalTime lastStart = hours.start().plusMinutes((long) (times - 1) * hours.slotMinutes());
+        return date.isAfter(LocalDate.now()) || lastStart.isAfter(LocalTime.now());
     }
 
     /** The working hours that apply to a doctor on a given date and shift. */
@@ -196,13 +215,32 @@ public class SlotService {
         return slotRepository.save(slot);
     }
 
-    /** Makes a slot bookable again, unless the doctor is on approved leave that day. */
+    /**
+     * Makes a slot bookable again, unless the doctor is on approved leave that day; a bookable one is published as
+     * {@link SlotFreedEvent} (the waitlist, docs/WAITLIST_PLAN.md).
+     */
     public void releaseSlot(Slot slot) {
         if (slot == null) {
             return;
         }
         slot.setAvailable(!isDoctorOnLeave(slot.getDoctor(), slot.getDate()));
         slotRepository.save(slot);
+        if (slot.isAvailable() && slot.getDoctor() != null) {
+            eventPublisher.publishEvent(new SlotFreedEvent(slot.getId(), slot.getDoctor().getId(), slot.getDate(),
+                    slot.getShift(), slot.getStartTime(), slot.getEndTime()));
+        }
+    }
+
+    /**
+     * Whether a slot can be booked now: free, not started, and its doctor active and not away that day. For the
+     * waitlist, as a freeing change commits (docs/WAITLIST_PLAN.md).
+     */
+    public boolean isOpenForBooking(Long slotId) {
+        return slotRepository.findById(slotId)
+                .filter(slot -> slot.isAvailable() && slot.getDoctor() != null && slot.getDoctor().isAccountActive()
+                        && !isDoctorOnLeave(slot.getDoctor(), slot.getDate())
+                        && LocalDateTime.of(slot.getDate(), slot.getStartTime()).isAfter(LocalDateTime.now()))
+                .isPresent();
     }
 
     private boolean isDoctorOnLeave(Doctor doctor, LocalDate date) {

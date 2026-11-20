@@ -8,6 +8,8 @@ DELETE /api/receptionist/appointments/{appointmentId}/check-in anonymous- patien
 DELETE /api/receptionist/bills/{billId}/items/{itemId} anonymous- patient- doctor- receptionist+ admin+
 DELETE /api/receptionist/delete/{receptionistId} anonymous- patient- doctor- receptionist+ admin+
 DELETE /api/receptionist/deleteAppointment/{appointmentId} anonymous- patient- doctor- receptionist+ admin+
+DELETE /api/receptionist/waitlist/{entryId} anonymous- patient- doctor- receptionist+ admin+
+DELETE /api/waitlist/{entryId} anonymous- patient+ doctor- receptionist- admin-
 DELETE /appointment/CancelAppointment/{appointmentId} anonymous- patient+ doctor+ receptionist+ admin+
 GET /actuator/health anonymous+ patient+ doctor+ receptionist+ admin+
 GET /api/admin/allApproved anonymous- patient- doctor- receptionist- admin+
@@ -77,8 +79,10 @@ GET /api/receptionist/patients anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/patients/search anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/patients/{patientId} anonymous- patient- doctor- receptionist+ admin+
 GET /api/receptionist/patients/{patientId}/relatives anonymous- patient- doctor- receptionist+ admin+
+GET /api/receptionist/waitlist anonymous- patient- doctor- receptionist+ admin+
 GET /api/slots/available/{doctorId} anonymous- patient+ doctor+ receptionist+ admin+
 GET /api/unknown anonymous- patient+ doctor+ receptionist+ admin+
+GET /api/waitlist/my anonymous- patient+ doctor- receptionist- admin-
 GET /appointment/allCompletedAppointments anonymous- patient- doctor- receptionist+ admin+
 GET /appointment/allPendingAppointments anonymous- patient- doctor- receptionist+ admin+
 GET /appointment/appointmentId/{myId} anonymous- patient+ doctor+ receptionist+ admin+
@@ -121,8 +125,10 @@ POST /api/receptionist/bills/{billId}/pay anonymous- patient- doctor- receptioni
 POST /api/receptionist/bills/{billId}/refund anonymous- patient- doctor- receptionist+ admin+
 POST /api/receptionist/bills/{billId}/refund-online anonymous- patient- doctor- receptionist+ admin+
 POST /api/receptionist/cash-closes anonymous- patient- doctor- receptionist+ admin+
+POST /api/receptionist/waitlist anonymous- patient- doctor- receptionist+ admin+
 POST /api/receptionist/walk-in anonymous- patient- doctor- receptionist+ admin+
 POST /api/slots/generate/{doctorId} anonymous- patient- doctor- receptionist- admin+
+POST /api/waitlist anonymous- patient+ doctor- receptionist- admin-
 POST /appointment/NewAppointment anonymous- patient+ doctor+ receptionist+ admin+
 PUT /api/admin/approve/{leaveId} anonymous- patient- doctor- receptionist- admin+
 PUT /api/admin/fees/{doctorId} anonymous- patient- doctor- receptionist- admin+

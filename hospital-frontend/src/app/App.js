@@ -25,6 +25,7 @@ import BillPage from "../features/billing/BillPage";
 import WalkInBooking from "../features/appointments/WalkInBooking";
 import PatientSearch from "../features/patients/PatientSearch";
 import FrontDeskPatient from "../features/patients/FrontDeskPatient";
+import WaitlistPage from "../features/waitlist/WaitlistPage";
 import StaffLayout from "../shared/layout/StaffLayout";
 
 /* ADMIN / DOCTOR */
@@ -112,6 +113,7 @@ function App() {
               <Route path="/walk-in" element={<WalkInBooking />} />
               <Route path="/patients" element={<PatientSearch />} />
               <Route path="/patients/:patientId" element={<FrontDeskPatient />} />
+              <Route path="/waitlist" element={<WaitlistPage />} />
               <Route path="/bills" element={<BillsPage />} />
               <Route path="/bills/:billId" element={<BillPage />} />
               <Route path="/bills/visit/:appointmentId" element={<BillPage />} />

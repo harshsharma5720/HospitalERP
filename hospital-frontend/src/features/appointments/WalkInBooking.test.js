@@ -273,3 +273,23 @@ test("a walk-in booked for today is checked in: the confirmation shows the token
 
   expect(await screen.findByText("Checked in for today: token 5")).toBeInTheDocument();
 });
+
+test("opened from the waitlist: the patient and the doctor are chosen, with the doctor's next free times", async () => {
+  getFrontDeskPatient.mockResolvedValue({ data: ARJUN });
+  renderPage("/walk-in?patientId=7&doctorId=3");
+
+  expect(await screen.findByRole("button", { name: "Book for Arjun Das" })).toHaveAttribute("aria-pressed", "true");
+  await waitFor(() => expect(screen.getByLabelText("Doctor")).toHaveValue("3"));
+  expect(await screen.findByRole("radio", { name: "Tomorrow 10:00" })).toBeChecked();
+  expect(appointmentsApi.getNextFreeSlots).toHaveBeenCalledWith("3", 6);
+});
+
+test("a doctor from the waitlist who is no longer bookable isn't chosen", async () => {
+  getFrontDeskPatient.mockResolvedValue({ data: ARJUN });
+  renderPage("/walk-in?patientId=7&doctorId=4");
+  await screen.findByRole("button", { name: "Book for Arjun Das" });
+  await screen.findByRole("option", { name: "Dr. Rao — Cardiology" });
+  expect(screen.getByLabelText("Doctor")).toHaveValue("");
+  expect(appointmentsApi.getNextFreeSlots).not.toHaveBeenCalled();
+});
+
